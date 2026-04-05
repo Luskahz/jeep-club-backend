@@ -7,6 +7,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -14,6 +18,9 @@ import java.time.LocalDate;
  * Entidade de Banco de Dados.
  * Mapeamento ORM focado APENAS em como o Modelo se salva nas tabelas do SQL através do Hibernate.
  */
+@Getter
+@Setter
+@NoArgsConstructor
 @Entity
 @Table(name = "users")
 public class UserEntity {
@@ -61,51 +68,4 @@ public class UserEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    // Obrigações do JPA (Hibernate)
-    public UserEntity() {
-    }
-
-    // Getters and Setters
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public LocalDate getBirthData() { return birthData; }
-    public void setBirthData(LocalDate birthData) { this.birthData = birthData; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getCpf() { return cpf; }
-    public void setCpf(String cpf) { this.cpf = cpf; }
-
-    public String getRg() { return rg; }
-    public void setRg(String rg) { this.rg = rg; }
-
-    public String getPasswordHash() { return passwordHash; }
-    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
-
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
-
-    public String getProfilePhotoUrl() { return profilePhotoUrl; }
-    public void setProfilePhotoUrl(String profilePhotoUrl) { this.profilePhotoUrl = profilePhotoUrl; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public Instant getLastLoginAt() { return lastLoginAt; }
-    public void setLastLoginAt(Instant lastLoginAt) { this.lastLoginAt = lastLoginAt; }
-
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-
-    public Instant getDisabledAt() { return disabledAt; }
-    public void setDisabledAt(Instant disabledAt) { this.disabledAt = disabledAt; }
-
-    public Instant getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 }

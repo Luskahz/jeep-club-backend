@@ -9,21 +9,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * Porta Principal / Adaptador de Entrada Primária (Primary Inbound Adapter).
  * Única e exclusiva camada a se preocupar com transporte da web (JSON, HTTP Headers, Códigos de Status).
  */
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/users")
 public class UserController {
 
     private final AuthService authService;
 
-    // A dependência é exigida e construída através da Injeção do Spring.
-    // O Spring instanciará a configuração que cria o AuthService no futuro.
-    public UserController(AuthService authService) {
-        this.authService = authService;
-    }
 
     /**
      * Endpoint isolado focando em injetar o fluxo de Registro (Task BACK-81).

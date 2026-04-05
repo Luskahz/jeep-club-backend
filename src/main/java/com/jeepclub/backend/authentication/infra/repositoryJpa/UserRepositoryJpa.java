@@ -7,6 +7,8 @@ import com.jeepclub.backend.authentication.infra.jpa.UserJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.UserMapper;
 import org.springframework.stereotype.Repository;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.Optional;
 
 /**
@@ -14,14 +16,12 @@ import java.util.Optional;
  * Esta classe IMPLEMENTA a interface contida no CORE, mas injeta o componente do Spring.
  * Assim o Core não sabe quem faz as buscas ao banco, mascarando o Spring Data.
  */
+@RequiredArgsConstructor
 @Repository
 public class UserRepositoryJpa implements UserRepository {
 
     private final UserJpaRepository jpaRepository;
 
-    public UserRepositoryJpa(UserJpaRepository jpaRepository) {
-        this.jpaRepository = jpaRepository;
-    }
 
     @Override
     public User save(User user) {

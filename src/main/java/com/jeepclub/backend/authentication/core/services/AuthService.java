@@ -3,6 +3,8 @@ package com.jeepclub.backend.authentication.core.services;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 
+import lombok.RequiredArgsConstructor;
+
 import java.time.LocalDate;
 
 /**
@@ -10,13 +12,11 @@ import java.time.LocalDate;
  * Seguindo a Arquitetura Hexagonal, esta classe do Core não possui anotações como @Service do Spring.
  * Ela é instanciada e injetada na camada de configuração (Infra).
  */
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
 
-    public AuthService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
 
     /**
      * Registra um novo sócio ou administrador validando regras cruciais de negócio.
