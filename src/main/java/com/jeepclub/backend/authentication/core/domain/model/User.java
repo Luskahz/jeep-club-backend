@@ -56,4 +56,6 @@ public class User {
                 profilePhotoUrl, status, lastLoginAt, createdAt, disabledAt, updatedAt);
     }
 
+
+
 }

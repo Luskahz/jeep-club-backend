@@ -1,10 +1,14 @@
 package com.jeepclub.backend.authentication.api.controllers;
 
+import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.services.AuthService;
 
+import com.jeepclub.backend.authentication.core.services.AuthTokens;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -51,5 +55,18 @@ public class AuthController {
             // (Para arquiteturas completas costuma-se usar o @ControllerAdvice)
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    @PostMapping("/login") public AuthTokenResponseDTO login(
+            @RequestBody @Valid @NotNull UserLoginRequest request
+    ){
+
+        AuthTokens tokens = authService.login(request.cpf(), request.senha());
+        return new AuthTokenResponseDTO(
+                tokens.refreshToken(),
+                tokens.accessToken(),
+                tokens.expiresInSeconds()
+        );
+
     }
 }

@@ -1,10 +1,15 @@
 package com.jeepclub.backend.authentication.core.services;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.exception.CpfNotFoundException;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 
+import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 /**
@@ -16,6 +21,7 @@ import java.time.LocalDate;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordHasher passwordHasher;
 
 
     /**
@@ -38,5 +44,51 @@ public class AuthService {
         
         // 3. Porta de Saída acionada
         return userRepository.save(newUser);
+    }
+
+    @Transactional
+    public AuthTokens login(@NotNull String cpf, String senha) {
+        Instant now = Instant.now();
+        User user = userRepository.findByCpf(cpf)
+                .orElseThrow(() ->
+                        new CpfNotFoundException("User not found for provided employee number")
+                );
+
+        if (!passwordHasher.matches(senha, user.getPasswordHash())) {
+            user.registerFailedLogin();
+            userRepository.save(user);
+            throw new SecurityException("wrong password");
+        }
+
+        Session session = findSessionByUserAndDeviceIdAndSessionStatus(user, deviceId, SessionStatus.ACTIVE)
+                .map(existingSession -> {
+                    if(existingSession.isValid(now)){
+                        existingSession.updateIpAddress(ip, now);
+                        sessionRepository.save(existingSession);
+                        return existingSession;
+                    }
+                    return sessionRegister(
+                            user, deviceId, ip
+                    );
+                })
+                .orElseGet(() -> sessionRegister(user, deviceId, ip));
+
+
+
+        IssuedRefreshToken issuedRefreshToken = refreshTokenRegister(session);
+        IssuedAccessToken issuedAccessToken = jwtService.generateAccessToken(user, session);
+        long expiresInSeconds = Math.max(Duration.between(now, issuedAccessToken.expiresAt()).getSeconds(), 0);
+
+        user.recordSuccessfulLogin(now);
+        userRepository.save(user);
+        return new AuthTokens(
+                issuedRefreshToken.rawToken(),
+                issuedAccessToken.token(),
+                expiresInSeconds
+        );
+    }
+    public User registerUser(String username, Long employeeId, String password, String ip){
+        if(!userCanBeCreated(employeeId)) throw new IllegalStateException("the Employee is not available to an new user");
+        return userRegister(username, employeeId, password, ip);
     }
 }
