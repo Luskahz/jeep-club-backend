@@ -16,6 +16,7 @@ import java.time.LocalDate;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final TokenService tokenService;
 
 
     /**
