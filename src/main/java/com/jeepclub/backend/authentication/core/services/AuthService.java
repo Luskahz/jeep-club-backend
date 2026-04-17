@@ -1,9 +1,11 @@
 package com.jeepclub.backend.authentication.core.services;
 
+import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.domain.model.exception.CpfNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.exception.InvalidPasswordException;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 
 import jakarta.transaction.Transactional;
@@ -16,6 +18,7 @@ import java.time.LocalDate;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final SessionRepository sessionRepository;
     private final PasswordHasher passwordHasher;
     private final TokenService tokenService;
 
@@ -44,13 +47,36 @@ public class AuthService {
             throw new InvalidPasswordException();
         }
 
+        String newRefreshToken = tokenService.generateRefreshToken(user);
+        Instant refreshExpiresAt = now.plusSeconds(tokenService.getRefreshTokenExpiresInSeconds());
+
+        // stateful: reutiliza sessão ativa ou cria uma nova
+        Session session = sessionRepository.findActiveByUserId(user.getId())
+                .map(existing -> {
+                    if (existing.isValid(now)) {
+                        existing.renew(newRefreshToken, refreshExpiresAt);
+                        return existing;
+                    }
+                    return Session.create(user.getId(), newRefreshToken, refreshExpiresAt);
+                })
+                .orElseGet(() -> Session.create(user.getId(), newRefreshToken, refreshExpiresAt));
+
+        sessionRepository.save(session);
+
         String accessToken = tokenService.generateAccessToken(user);
-        String refreshToken = tokenService.generateRefreshToken(user);
         long expiresInSeconds = tokenService.getAccessTokenExpiresInSeconds();
 
         user.recordSuccessfulLogin(now);
         userRepository.save(user);
 
-        return new AuthTokens(refreshToken, accessToken, expiresInSeconds);
+        return new AuthTokens(newRefreshToken, accessToken, expiresInSeconds);
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        sessionRepository.findByRefreshToken(refreshToken).ifPresent(session -> {
+            session.revoke();
+            sessionRepository.save(session);
+        });
     }
 }
