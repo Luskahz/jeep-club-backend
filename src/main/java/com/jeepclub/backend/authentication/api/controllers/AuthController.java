@@ -1,18 +1,17 @@
 package com.jeepclub.backend.authentication.api.controllers;
 
 import com.jeepclub.backend.authentication.api.dtos.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
 import com.jeepclub.backend.authentication.core.services.AuthService;
 import com.jeepclub.backend.authentication.core.services.AuthTokens;
+import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @RestController
@@ -43,5 +42,11 @@ public class AuthController {
                 tokens.accessToken(),
                 tokens.expiresInSeconds()
         );
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader("Refresh-Token") String refreshToken) {
+        authService.logout(refreshToken);
+        return ResponseEntity.noContent().build();
     }
 }
