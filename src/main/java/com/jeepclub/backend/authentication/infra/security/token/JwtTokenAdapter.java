@@ -53,6 +53,11 @@ public class JwtTokenAdapter implements TokenService {
     }
 
     @Override
+    public long getRefreshTokenExpiresInSeconds() {
+        return REFRESH_TOKEN_EXPIRY_SECONDS;
+    }
+
+    @Override
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(signingKey()).build().parseSignedClaims(token);

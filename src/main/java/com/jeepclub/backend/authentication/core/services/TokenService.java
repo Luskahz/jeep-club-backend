@@ -6,6 +6,7 @@ public interface TokenService {
     String generateAccessToken(User user);
     String generateRefreshToken(User user);
     long getAccessTokenExpiresInSeconds();
+    long getRefreshTokenExpiresInSeconds();
     boolean validateToken(String token);
     Long getUserIdFromToken(String token);
 }
