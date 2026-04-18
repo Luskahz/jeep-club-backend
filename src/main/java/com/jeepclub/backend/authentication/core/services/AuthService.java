@@ -19,6 +19,7 @@ import java.util.Objects;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final TokenService tokenService;
 
     public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
