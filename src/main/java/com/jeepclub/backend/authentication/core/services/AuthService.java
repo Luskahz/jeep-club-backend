@@ -1,11 +1,15 @@
 package com.jeepclub.backend.authentication.core.services;
 
-import com.jeepclub.backend.authentication.api.dtos.UserMeResponse;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
+import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 
 /**
  * Casos de Uso (Use Cases) e Serviço de Domínio para Autenticação.
@@ -44,27 +48,28 @@ public class AuthService {
      * Decodifica o token e retorna as informações da sessão do usuário.
      * (Task BACK-XX: Obter usuário autenticado /me)
      */
-    public UserMeResponse getUserSessionInfoFromToken(String token) {
-
-        try {
-            /* * EXPLICAÇÃO PARA O SEU PROJETO:
-             * Na arquitetura hexagonal, o ideal é que você tenha uma porta (Interface)
-             * chamada 'TokenService' ou 'TokenProvider'. O AuthService usaria essa interface
-             * para extrair os dados sem saber se você usa JWT, Auth0, etc.
-             */
-
-            // SIMULAÇÃO: Aqui você chamaria seu decodificador de JWT.
-            // Por enquanto, vamos retornar dados mockados (fictícios) para você testar a rota.
-
-            String userId = "USER-777"; // No futuro: jwtService.getSubject(token)
-            String sessionId = "SESS-999"; // No futuro: jwtService.getClaim(token, "jti")
-            Long expiresIn = 3600L; // No futuro: calcular tempo restante do token
-
-            return new UserMeResponse(userId, sessionId, expiresIn);
-
-        } catch (Exception e) {
-            // Caso o token esteja corrompido ou mal formatado
-            throw new IllegalArgumentException("Erro ao processar o token de acesso.");
+    @Transactional public MeResponse me(
+            @NotNull Long userId,
+            @NotNull Long sessionId,
+            Instant accessTokenExpiresAt
+    ) {
+        Instant now = Instant.now();
+        RefreshToken existingToken = findRefreshTokenByToken(refreshToken)
+                .orElseThrow(() -> new SecurityException("Invalid refresh token"));
+        if (!existingToken.isValid(now)) {
+            throw new SecurityException("Refresh token invalid");
         }
+
+        User user = userRepository.findById(existingToken.getSession().getUserId())
+                .orElseThrow(() -> new SecurityException("User not found in session"));
+
+        IssuedRefreshToken issuedRefreshToken = rotateRefreshTokenFromExisting(existingToken, now);
+        IssuedAccessToken issuedAccessToken = jwtService.generateAccessToken(user, issuedRefreshToken.refreshToken().getSession());
+        long expiresInSeconds = Math.max(Duration.between(now, issuedAccessToken.expiresAt()).getSeconds(), 0);
+        return new AuthTokens(
+                issuedRefreshToken.rawToken(),
+                issuedAccessToken.token(),
+                expiresInSeconds
+        );
     }
 }

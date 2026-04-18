@@ -1,11 +1,14 @@
 package com.jeepclub.backend.authentication.api.controllers;
 
-import com.jeepclub.backend.authentication.api.dtos.UserMeResponse;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
+import com.jeepclub.backend.authentication.api.dtos.me.AuthMeResponseDTO;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.services.AuthService;
 
+import com.jeepclub.backend.authentication.core.services.MeResponse;
+import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -58,18 +61,30 @@ public class AuthController {
         }
     }
 
+
+
     /**
      * Endpoint para obter os dados da sessão/token do usuário logado.
      */
     @GetMapping("/me")
-    public ResponseEntity<UserMeResponse> getMe(@RequestHeader("Authorization") String authorizationHeader) {
+    public AuthMeResponseDTO getMe(
+            Authentication authentication
+    ) {
 
-        // Remove o prefixo "Bearer " do token para pegar apenas a chave
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+
         String token = authorizationHeader.replace("Bearer ", "");
 
-        // Delegamos para o AuthService decodificar o token e extrair as informações
-        UserMeResponse response = authService.getUserSessionInfoFromToken(token);
-
-        return ResponseEntity.ok(response);
+        MeResponse response = authService.me(
+                principal.getUserId(),
+                principal.getSessionId(),
+                principal.getAccessTokenExpiresAt()
+        );
+        return new AuthMeResponseDTO(
+                response.userId(),
+                response.sessionId(),
+                response.sessionActive(),
+                response.expiresInSeconds()
+        )
     }
 }
