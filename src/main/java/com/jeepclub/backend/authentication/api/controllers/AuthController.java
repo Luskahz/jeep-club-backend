@@ -3,6 +3,9 @@ package com.jeepclub.backend.authentication.api.controllers;
 import com.jeepclub.backend.authentication.api.dtos.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
+import com.jeepclub.backend.authentication.api.dtos.logout.LogoutRequestDTO;
+import com.jeepclub.backend.authentication.api.dtos.logout.LogoutResponseDTO;
+import com.jeepclub.backend.authentication.core.domain.model.LogoutResult;
 import com.jeepclub.backend.authentication.core.services.AuthService;
 import com.jeepclub.backend.authentication.core.services.AuthTokens;
 import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
@@ -43,10 +46,12 @@ public class AuthController {
                 tokens.expiresInSeconds()
         );
     }
-
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader("Refresh-Token") String refreshToken) {
-        authService.logout(refreshToken);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<LogoutResponseDTO> logout(
+            @RequestBody @Valid LogoutRequestDTO request
+    ) {
+        var result = authService.logout(request.refreshToken());
+
+        return ResponseEntity.ok(new LogoutResponseDTO(result.message()));
     }
 }

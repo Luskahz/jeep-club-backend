@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.core.services;
 
+import com.jeepclub.backend.authentication.core.domain.model.LogoutResult;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.domain.model.exception.CpfNotFoundException;
@@ -73,10 +74,23 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String refreshToken) {
-        sessionRepository.findByRefreshToken(refreshToken).ifPresent(session -> {
-            session.revoke();
-            sessionRepository.save(session);
-        });
+    public LogoutResult logout(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new IllegalArgumentException("Refresh token não informado");
+        }
+
+        tokenService.validateToken(refreshToken);
+
+        Session session = sessionRepository.findByRefreshToken(refreshToken)
+                .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada"));
+
+        userRepository.findById(session.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+        session.revoke();
+        sessionRepository.save(session);
+
+        return new LogoutResult("Logout realizado com sucesso");
     }
+
 }
