@@ -11,6 +11,7 @@ import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -74,20 +75,17 @@ public class AuthService {
     }
 
     @Transactional
-    public LogoutResult logout(String refreshToken) {
-        if (refreshToken == null || refreshToken.isBlank()) {
-            throw new IllegalArgumentException("Refresh token não informado");
-        }
+    public LogoutResult logout(Long userId) {
 
-        tokenService.validateToken(refreshToken);
 
-        Session session = sessionRepository.findByRefreshToken(refreshToken)
+        Session session = sessionRepository.findActiveByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada"));
 
         userRepository.findById(session.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
 
         session.revoke();
+        
         sessionRepository.save(session);
 
         return new LogoutResult("Logout realizado com sucesso");

@@ -9,9 +9,11 @@ import com.jeepclub.backend.authentication.core.domain.model.LogoutResult;
 import com.jeepclub.backend.authentication.core.services.AuthService;
 import com.jeepclub.backend.authentication.core.services.AuthTokens;
 import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
+import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,9 +50,12 @@ public class AuthController {
     }
     @PostMapping("/logout")
     public ResponseEntity<LogoutResponseDTO> logout(
-            @RequestBody @Valid LogoutRequestDTO request
+            @NotNull Authentication auth
     ) {
-        var result = authService.logout(request.refreshToken());
+        if(!(auth.getPrincipal() instanceof UserPrincipal principal)){
+            throw new IllegalArgumentException("Autentificação inválida");
+        }
+        var result = authService.logout(principal.getUserId());
 
         return ResponseEntity.ok(new LogoutResponseDTO(result.message()));
     }
