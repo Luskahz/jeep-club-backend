@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.core.domain.model.exception;
+package com.jeepclub.backend.authentication.core.domain.exception;
 
 public class InvalidPasswordException extends RuntimeException {
     public InvalidPasswordException() {

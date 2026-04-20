@@ -2,8 +2,7 @@ package com.jeepclub.backend.authentication.api.controllers;
 
 import com.jeepclub.backend.authentication.api.dtos.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
-import com.jeepclub.backend.authentication.core.services.AuthService;
-import com.jeepclub.backend.authentication.core.services.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/auth/login")
+@RequestMapping("/auth")
 public class LoginController {
 
     private final AuthService authService;

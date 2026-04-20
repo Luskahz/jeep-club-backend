@@ -3,7 +3,6 @@ package com.jeepclub.backend.authentication.api.controllers;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterRequest;
 import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.services.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

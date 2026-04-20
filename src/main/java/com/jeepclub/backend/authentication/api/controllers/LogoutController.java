@@ -2,7 +2,6 @@ package com.jeepclub.backend.authentication.api.controllers;
 
 
 import com.jeepclub.backend.authentication.api.dtos.logout.LogoutResponseDTO;
-import com.jeepclub.backend.authentication.core.services.AuthService;
 import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RequiredArgsConstructor
 @RestController
-@RequestMapping("/auth/logout")
+@RequestMapping("/auth")
 public class LogoutController {
 
     private final AuthService authService;

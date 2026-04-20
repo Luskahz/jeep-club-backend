@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.security;
 
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
-import com.jeepclub.backend.authentication.core.services.TokenService;
+import com.jeepclub.backend.authentication.core.application.services.TokenService;
 import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

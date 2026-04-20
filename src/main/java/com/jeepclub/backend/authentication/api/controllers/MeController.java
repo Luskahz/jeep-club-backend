@@ -1,8 +1,7 @@
 package com.jeepclub.backend.authentication.api.controllers;
 
 import com.jeepclub.backend.authentication.api.dtos.me.AuthMeResponseDTO;
-import com.jeepclub.backend.authentication.core.services.AuthService;
-import com.jeepclub.backend.authentication.core.services.MeResponse;
+import com.jeepclub.backend.authentication.core.application.results.MeResponse;
 import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;

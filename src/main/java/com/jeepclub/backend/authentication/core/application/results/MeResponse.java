@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.core.services;
+package com.jeepclub.backend.authentication.core.application.results;
 
 public record MeResponse(
         Long userId,

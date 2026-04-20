@@ -3,8 +3,7 @@ package com.jeepclub.backend.authentication.infra.config;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
-import com.jeepclub.backend.authentication.core.services.AuthService;
-import com.jeepclub.backend.authentication.core.services.TokenService;
+import com.jeepclub.backend.authentication.core.application.services.TokenService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
