@@ -24,6 +24,22 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+
+import com.jeepclub.backend.authentication.core.domain.model.LogoutResult;
+import com.jeepclub.backend.authentication.core.domain.model.Session;
+import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.exception.CpfNotFoundException;
+import com.jeepclub.backend.authentication.core.domain.model.exception.InvalidPasswordException;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
+import com.jeepclub.backend.authentication.core.repositories.UserRepository;
+
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
+
+import java.time.Instant;
+import java.time.LocalDate;
 /**
  * Casos de Uso (Use Cases) e Serviço de Domínio para Autenticação.
  * Seguindo a Arquitetura Hexagonal, esta classe do Core não possui anotações como @Service do Spring.
@@ -125,11 +141,20 @@ public class AuthService {
     }
 
     @Transactional
-    public void logout(String refreshToken) {
-        sessionRepository.findByRefreshToken(refreshToken).ifPresent(session -> {
-            session.revoke();
-            sessionRepository.save(session);
-        });
+    public LogoutResult logout(Long userId) {
+
+
+        Session session = sessionRepository.findActiveByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada"));
+
+        userRepository.findById(session.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+        session.revoke();
+
+        sessionRepository.save(session);
+
+        return new LogoutResult("Logout realizado com sucesso");
     }
 
 
