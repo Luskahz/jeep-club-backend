@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.entities;
+package com.jeepclub.backend.authentication.infra.persistence.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

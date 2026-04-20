@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.entities;
+package com.jeepclub.backend.authentication.infra.persistence.entities;
 
 import com.jeepclub.backend.authentication.core.domain.model.SessionStatus;
 import jakarta.persistence.*;

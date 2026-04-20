@@ -1,9 +1,9 @@
-package com.jeepclub.backend.authentication.infra.repositoryJpa;
+package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
 
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.SessionStatus;
 import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
-import com.jeepclub.backend.authentication.infra.jpa.SessionJpaRepository;
+import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.SessionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.mapper;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.infra.entities.UserEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entities.UserEntity;
 
 /**
  * Utilitário responsável pela conversão bidirecional entre Camada de Infra (Entity) 

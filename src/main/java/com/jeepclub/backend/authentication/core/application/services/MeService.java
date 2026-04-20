@@ -3,7 +3,7 @@ package com.jeepclub.backend.authentication.core.application.services;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.port.TokenService;
+import com.jeepclub.backend.authentication.core.port.TokenHashService;
 import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
@@ -25,7 +25,7 @@ public class MeService {
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
     private final PasswordHasher passwordHasher;
-    private final TokenService tokenService;
+    private final TokenHashService tokenService;
 
     @Transactional
     public MeResult me(

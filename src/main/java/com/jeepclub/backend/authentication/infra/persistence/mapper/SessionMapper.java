@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.mapper;
 
 import com.jeepclub.backend.authentication.core.domain.model.Session;
-import com.jeepclub.backend.authentication.infra.entities.SessionEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entities.SessionEntity;
 
 public class SessionMapper {
 

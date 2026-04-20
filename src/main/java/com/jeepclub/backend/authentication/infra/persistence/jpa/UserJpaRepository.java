@@ -1,6 +1,6 @@
-package com.jeepclub.backend.authentication.infra.jpa;
+package com.jeepclub.backend.authentication.infra.persistence.jpa;
 
-import com.jeepclub.backend.authentication.infra.entities.UserEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entities.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
