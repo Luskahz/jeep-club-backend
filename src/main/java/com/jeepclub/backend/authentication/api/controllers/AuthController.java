@@ -5,12 +5,17 @@ import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
 import com.jeepclub.backend.authentication.api.dtos.me.AuthMeResponseDTO;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.services.AuthService;
-
+import com.jeepclub.backend.authentication.core.services.AuthTokens;
+import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
 import com.jeepclub.backend.authentication.core.services.MeResponse;
 import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
-import org.springframework.security.core.Authentication;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -20,16 +25,12 @@ import org.springframework.web.bind.annotation.*;
  * Única e exclusiva camada a se preocupar com transporte da web (JSON, HTTP
  * Headers, Códigos de Status).
  */
-
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/users")
 public class AuthController {
 
     private final AuthService authService;
-
-    public AuthController(AuthService authService) {
-        this.authService = authService;
-    }
 
     /**
      * Endpoint isolado focando em injetar o fluxo de Registro (Task BACK-81).
@@ -61,6 +62,15 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/login")
+    public AuthTokenResponseDTO login(@RequestBody @Valid @NotNull UserLoginRequest request) {
+        AuthTokens tokens = authService.login(request.cpf(), request.senha());
+        return new AuthTokenResponseDTO(
+                tokens.refreshToken(),
+                tokens.accessToken(),
+                tokens.expiresInSeconds()
+        );
+    }
 
 
     /**
@@ -85,6 +95,12 @@ public class AuthController {
                 response.sessionId(),
                 response.sessionActive(),
                 response.expiresInSeconds()
-        )
+        );
     }
+
+        @PostMapping("/logout")
+        public ResponseEntity<Void> logout(@RequestHeader("Refresh-Token") String refreshToken) {
+            authService.logout(refreshToken);
+            return ResponseEntity.noContent().build();
+        }
 }

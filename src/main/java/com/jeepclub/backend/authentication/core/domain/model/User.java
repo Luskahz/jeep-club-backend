@@ -56,4 +56,13 @@ public class User {
                 profilePhotoUrl, status, lastLoginAt, createdAt, disabledAt, updatedAt);
     }
 
+    public void registerFailedLogin() {
+        this.updatedAt = Instant.now();
+    }
+
+    public void recordSuccessfulLogin(Instant now) {
+        this.lastLoginAt = now;
+        this.updatedAt = now;
+    }
+
 }

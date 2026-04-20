@@ -10,20 +10,32 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
+import com.jeepclub.backend.authentication.core.domain.model.Session;
+import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.exception.CpfNotFoundException;
+import com.jeepclub.backend.authentication.core.domain.model.exception.InvalidPasswordException;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
+import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.time.LocalDate;
 /**
  * Casos de Uso (Use Cases) e Serviço de Domínio para Autenticação.
  * Seguindo a Arquitetura Hexagonal, esta classe do Core não possui anotações como @Service do Spring.
  */
 
+@Service
 public class AuthService {
-
     private final UserRepository userRepository;
+    private final SessionRepository sessionRepository;
+    private final PasswordHasher passwordHasher;
     private final TokenService tokenService;
 
-    public AuthService(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
     /**
      * Registra um novo sócio ou administrador validando regras cruciais de negócio.
      */
@@ -73,4 +85,53 @@ public class AuthService {
                 expiresInSeconds
         );
     }
+
+    @Transactional
+    public AuthTokens login(String cpf, String senha) {
+        Instant now = Instant.now();
+
+        User user = userRepository.findByCpf(cpf)
+                .orElseThrow(() -> new CpfNotFoundException("CPF não encontrado"));
+
+        if (!passwordHasher.matches(senha, user.getPasswordHash())) {
+            user.registerFailedLogin();
+            userRepository.save(user);
+            throw new InvalidPasswordException();
+        }
+
+        String newRefreshToken = tokenService.generateRefreshToken(user);
+        Instant refreshExpiresAt = now.plusSeconds(tokenService.getRefreshTokenExpiresInSeconds());
+
+        // stateful: reutiliza sessão ativa ou cria uma nova
+        Session session = sessionRepository.findActiveByUserId(user.getId())
+                .map(existing -> {
+                    if (existing.isValid(now)) {
+                        existing.renew(newRefreshToken, refreshExpiresAt);
+                        return existing;
+                    }
+                    return Session.create(user.getId(), newRefreshToken, refreshExpiresAt);
+                })
+                .orElseGet(() -> Session.create(user.getId(), newRefreshToken, refreshExpiresAt));
+
+        sessionRepository.save(session);
+
+        String accessToken = tokenService.generateAccessToken(user);
+        long expiresInSeconds = tokenService.getAccessTokenExpiresInSeconds();
+
+        user.recordSuccessfulLogin(now);
+        userRepository.save(user);
+
+        return new AuthTokens(newRefreshToken, accessToken, expiresInSeconds);
+    }
+
+    @Transactional
+    public void logout(String refreshToken) {
+        sessionRepository.findByRefreshToken(refreshToken).ifPresent(session -> {
+            session.revoke();
+            sessionRepository.save(session);
+        });
+    }
+
+
+
 }

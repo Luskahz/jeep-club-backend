@@ -1,5 +1,7 @@
 package com.jeepclub.backend.authentication.infra.config;
 
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 import com.jeepclub.backend.authentication.core.services.AuthService;
 import com.jeepclub.backend.authentication.core.services.TokenService;
@@ -10,7 +12,10 @@ import org.springframework.context.annotation.Configuration;
 public class AuthConfiguration {
 
     @Bean
-    public AuthService authService(UserRepository userRepository, TokenService tokenService) {
-        return new AuthService(userRepository, tokenService);
+    public AuthService authService(UserRepository userRepository,
+                                   SessionRepository sessionRepository,
+                                   PasswordHasher passwordHasher,
+                                   TokenService tokenService) {
+        return new AuthService(userRepository, sessionRepository, passwordHasher, tokenService);
     }
 }
