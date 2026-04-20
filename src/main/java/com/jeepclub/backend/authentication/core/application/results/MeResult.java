@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.results;
 
-public record MeResponse(
+public record MeResult(
         Long userId,
         Long sessionId,
         boolean sessionActive,

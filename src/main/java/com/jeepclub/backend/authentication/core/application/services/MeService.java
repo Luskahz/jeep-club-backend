@@ -1,8 +1,9 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
-import com.jeepclub.backend.authentication.core.application.results.MeResponse;
+import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.port.TokenService;
 import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
@@ -27,7 +28,7 @@ public class MeService {
     private final TokenService tokenService;
 
     @Transactional
-    public MeResponse me(
+    public MeResult me(
             @NotNull Long userId,
             @NotNull Long sessionId,
             Instant accessTokenExpiresAt

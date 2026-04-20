@@ -2,7 +2,7 @@ package com.jeepclub.backend.authentication.infra.security.token;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.dtos.UserPayload;
-import com.jeepclub.backend.authentication.core.application.services.TokenService;
+import com.jeepclub.backend.authentication.core.port.TokenService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.api.controllers;
 
 import com.jeepclub.backend.authentication.api.dtos.me.AuthMeResponseDTO;
-import com.jeepclub.backend.authentication.core.application.results.MeResponse;
+import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
@@ -32,7 +32,7 @@ public class MeController {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
-        MeResponse response = authService.me(
+        MeResult response = authService.me(
                 principal.getUserId(),
                 principal.getSessionId(),
                 principal.getAccessTokenExpiresAt()

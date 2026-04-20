@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.core.application.services;
+package com.jeepclub.backend.authentication.core.port;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.dtos.UserPayload;
