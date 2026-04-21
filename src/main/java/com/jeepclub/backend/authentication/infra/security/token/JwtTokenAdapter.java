@@ -19,7 +19,6 @@ import java.util.Objects;
 @Component
 public class JwtTokenAdapter implements TokenService {
 
-    private final String CLAIM_USER_ID = "id";
     private final String CLAIM_NAME = "name";
     private final String CLAIM_TOKEN_TYPE = "type";
     private final String TOKEN_TYPE_ACCESS = "access";
@@ -72,10 +71,15 @@ public class JwtTokenAdapter implements TokenService {
     @Override
     public UserPayload getPayload(String token) {
         DecodedJWT decodedJWT = verifyAndDecode(token);
-        Long userId = decodedJWT.getClaim(CLAIM_USER_ID).asLong();
+        Long userId;
+        try {
+            userId = Long.parseLong(decodedJWT.getSubject());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid ID format");
+        }
         String name = decodedJWT.getClaim(CLAIM_NAME).asString();
 
-        if (userId == null || name == null || name.isBlank()) {
+        if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Token payload is missing required user data");
         }
 
@@ -92,7 +96,6 @@ public class JwtTokenAdapter implements TokenService {
         return JWT.create()
                 .withIssuer(issuer)
                 .withSubject(String.valueOf(domainUser.getId()))
-                .withClaim(CLAIM_USER_ID, domainUser.getId())
                 .withClaim(CLAIM_NAME, domainUser.getName())
                 .withClaim(CLAIM_TOKEN_TYPE, tokenType)
                 .withIssuedAt(Date.from(now))
