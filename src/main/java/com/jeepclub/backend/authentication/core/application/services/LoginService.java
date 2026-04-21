@@ -5,14 +5,23 @@ import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.domain.exception.CpfNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.exception.InvalidPasswordException;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.port.TokenHashService;
+import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 
 @Service
+@RequiredArgsConstructor
 public class LoginService {
     private final UserRepository userRepository;
+    private final PasswordHasher passwordHasher;
+    private final TokenHashService tokenHashService;
+    private final SessionRepository sessionRepository;
 
     @Transactional
     public AuthTokens login(String cpf, String senha) {
@@ -27,14 +36,9 @@ public class LoginService {
             throw new InvalidPasswordException();
         }
 
-        String newRefreshToken = tokenService.generateRefreshToken(user);
-        Instant refreshExpiresAt = now.plusSeconds(tokenService.getRefreshTokenExpiresInSeconds());
-
-        // stateful: reutiliza sessão ativa ou cria uma nova
         Session session = sessionRepository.findActiveByUserId(user.getId())
                 .map(existing -> {
                     if (existing.isValid(now)) {
-                        existing.renew(newRefreshToken, refreshExpiresAt);
                         return existing;
                     }
                     return Session.create(user.getId(), newRefreshToken, refreshExpiresAt);
