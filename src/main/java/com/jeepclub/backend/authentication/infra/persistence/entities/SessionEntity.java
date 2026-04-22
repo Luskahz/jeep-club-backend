@@ -22,16 +22,16 @@ public class SessionEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "refresh_token", nullable = false, unique = true, length = 512)
-    private String refreshToken;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SessionStatus status;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
+
+    @Column(name = "logged_out_at")
+    private Instant loggedOutAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "session_status", nullable = false, length = 30)
+    private SessionStatus status;
 }

@@ -1,31 +1,24 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
+import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.port.TokenHashService;
 import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.results.IssuedRefreshToken;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
 
-
-/**
- * Decodifica o token e retorna as informações da sessão do usuário.
- * (Task BACK-XX: Obter usuário autenticado /me)
- */
 @Service
+@RequiredArgsConstructor
 public class MeService {
+
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
-    private final PasswordHasher passwordHasher;
-    private final TokenHashService tokenService;
 
     @Transactional
     public MeResult me(
@@ -34,21 +27,21 @@ public class MeService {
             Instant accessTokenExpiresAt
     ) {
         Instant now = Instant.now();
-        RefreshToken existingToken = findRefreshTokenByToken(refreshToken)
-                .orElseThrow(() -> new SecurityException("Invalid refresh token"));
-        if (!existingToken.isValid(now)) {
-            throw new SecurityException("Refresh token invalid");
-        }
 
-        User user = userRepository.findById(existingToken.getSession().getUserId())
-                .orElseThrow(() -> new SecurityException("User not found in session"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new SecurityException("Usuário não encontrado"));
 
-        IssuedRefreshToken issuedRefreshToken = rotateRefreshTokenFromExisting(existingToken, now);
-        IssuedAccessToken issuedAccessToken = jwtService.generateAccessToken(user, issuedRefreshToken.refreshToken().getSession());
-        long expiresInSeconds = Math.max(Duration.between(now, issuedAccessToken.expiresAt()).getSeconds(), 0);
-        return new AuthTokens(
-                issuedRefreshToken.rawToken(),
-                issuedAccessToken.token(),
+        Session session = sessionRepository.findActiveByUserId(userId)
+                .orElseThrow(() -> new SecurityException("Sessão não encontrada"));
+
+        long expiresInSeconds = Math.max(
+                Duration.between(now, accessTokenExpiresAt).getSeconds(), 0
+        );
+
+        return new MeResult(
+                user.getId(),
+                sessionId,
+                session.isValid(now),
                 expiresInSeconds
         );
     }

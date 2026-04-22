@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authentication.api.controllers;
 
-
 import com.jeepclub.backend.authentication.api.dtos.logout.LogoutResponseDTO;
-import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
+import com.jeepclub.backend.authentication.core.application.services.LogoutService;
+import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -11,27 +11,22 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * necessario melhorar este docs @Kauan
- */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
 public class LogoutController {
 
-    private final AuthService authService;
+    private final LogoutService logoutService;
 
-    /**
-     * necessario melhorar este docs @Kauan
-     */
     @PostMapping("/logout")
     public ResponseEntity<LogoutResponseDTO> logout(
             @NotNull Authentication auth
     ) {
-        if(!(auth.getPrincipal() instanceof UserPrincipal principal)){
-            throw new IllegalArgumentException("Autentificação inválida");
+        if (!(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new IllegalArgumentException("Autenticação inválida");
         }
-        var result = authService.logout(principal.getUserId());
+
+        var result = logoutService.logout(principal.getUserId());
 
         return ResponseEntity.ok(new LogoutResponseDTO(result.message()));
     }

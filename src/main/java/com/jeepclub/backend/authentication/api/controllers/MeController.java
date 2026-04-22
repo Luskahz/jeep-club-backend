@@ -2,41 +2,32 @@ package com.jeepclub.backend.authentication.api.controllers;
 
 import com.jeepclub.backend.authentication.api.dtos.me.AuthMeResponseDTO;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
-import com.jeepclub.backend.authentication.infra.config.UserPrincipal;
+import com.jeepclub.backend.authentication.core.application.services.MeService;
+import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
-
-
-/**
- * Melhorar esse docs vinicius
- */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
 public class MeController {
 
-    private final AuthService authService;
+    private final MeService meService;
 
-    /**
-     * Endpoint para obter os dados da sessão/token do usuário logado.
-     */
     @GetMapping("/me")
-    public AuthMeResponseDTO getMe(
-            Authentication authentication
-    ) {
+    public AuthMeResponseDTO getMe(Authentication authentication) {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
-        MeResult response = authService.me(
+        MeResult response = meService.me(
                 principal.getUserId(),
                 principal.getSessionId(),
                 principal.getAccessTokenExpiresAt()
         );
+
         return new AuthMeResponseDTO(
                 response.userId(),
                 response.sessionId(),
