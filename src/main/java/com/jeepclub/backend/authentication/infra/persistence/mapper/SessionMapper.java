@@ -12,10 +12,10 @@ public class SessionMapper {
         return Session.reconstitute(
                 entity.getId(),
                 entity.getUserId(),
-                entity.getRefreshToken(),
-                entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getExpiresAt()
+                entity.getExpiresAt(),
+                entity.getLoggedOutAt(),
+                entity.getStatus()
         );
     }
 
@@ -24,10 +24,10 @@ public class SessionMapper {
         SessionEntity entity = new SessionEntity();
         entity.setId(domain.getId());
         entity.setUserId(domain.getUserId());
-        entity.setRefreshToken(domain.getRefreshToken());
-        entity.setStatus(domain.getStatus());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setExpiresAt(domain.getExpiresAt());
+        entity.setLoggedOutAt(domain.getLoggedOutAt());
+        entity.setStatus(domain.getStatus());
         return entity;
     }
 }
