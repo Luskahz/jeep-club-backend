@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.infra.security.token;
 
-import com.jeepclub.backend.authentication.core.port.TokenHashService;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -9,7 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 
 @Component
-public class Sha256TokenHashService implements TokenHashService {
+public class Sha256TokenHashService implements RefreshTokenHashService {
 
     @Override
     public String hash(String rawToken) {

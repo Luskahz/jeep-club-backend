@@ -150,13 +150,11 @@ public class RefreshToken {
             throw new IllegalArgumentException("ttl must be greater than zero");
         }
     }
-
     private static void validateTokenHash(String tokenHash) {
         if (tokenHash == null || tokenHash.isBlank()) {
             throw new IllegalArgumentException("tokenHash is required");
         }
     }
-
     private static void validateStatusConsistency(
             RefreshTokenStatus status,
             Long replacedByTokenId

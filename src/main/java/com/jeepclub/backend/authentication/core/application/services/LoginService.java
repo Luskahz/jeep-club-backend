@@ -1,7 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.results.IssuedRefreshToken;
 import com.jeepclub.backend.authentication.core.domain.exception.CpfNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.exception.InvalidPasswordException;
 import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
@@ -11,8 +10,8 @@ import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.AuthTimeProperties;
 import com.jeepclub.backend.authentication.core.port.JwtService;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.port.TokenGenerator;
-import com.jeepclub.backend.authentication.core.port.TokenHashService;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repositories.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
 import com.jeepclub.backend.authentication.core.repositories.UserRepository;
@@ -31,8 +30,8 @@ public class LoginService {
     private final SessionRepository sessionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordHasher passwordHasher;
-    private final TokenHashService tokenHashService;
-    private final TokenGenerator tokenGenerator;
+    private final RefreshTokenHashService tokenHashService;
+    private final RefreshTokenGenerator tokenGenerator;
     private final JwtService jwtService;
     private final AuthTimeProperties authTimeProperties;
 

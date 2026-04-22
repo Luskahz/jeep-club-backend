@@ -1,5 +1,5 @@
 package com.jeepclub.backend.authentication.core.port;
 
-public interface TokenGenerator {
+public interface RefreshTokenGenerator {
     String generate();
 }
