@@ -19,15 +19,13 @@ public class LogoutController {
     private final LogoutService logoutService;
 
     @PostMapping("/logout")
-    public ResponseEntity<LogoutResponseDTO> logout(
+    public void logout(
             @NotNull Authentication auth
     ) {
         if (!(auth.getPrincipal() instanceof UserPrincipal principal)) {
             throw new IllegalArgumentException("Autenticação inválida");
         }
 
-        var result = logoutService.logout(principal.getUserId());
-
-        return ResponseEntity.ok(new LogoutResponseDTO(result.message()));
+        logoutService.logout(principal.getUserId());
     }
 }

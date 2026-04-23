@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -31,18 +32,25 @@ public class MeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new SecurityException("Usuário não encontrado"));
 
-        Session session = sessionRepository.findActiveByUserId(userId)
+        Session session = sessionRepository.findById(userId)
                 .orElseThrow(() -> new SecurityException("Sessão não encontrada"));
 
-        long expiresInSeconds = Math.max(
-                Duration.between(now, accessTokenExpiresAt).getSeconds(), 0
-        );
+        if (!Objects.equals(session.getUserId(), userId)){
+            throw new SecurityException("Sessão não pertence a este usuário");
+        }
 
         return new MeResult(
-                user.getId(),
+                userId,
                 sessionId,
                 session.isValid(now),
-                expiresInSeconds
+                getAccessTokenRemainingSeconds(now, accessTokenExpiresAt)
+        );
+    }
+
+    private long getAccessTokenRemainingSeconds(Instant now, Instant accessTokenExpiresAt) {
+        return Math.max(
+                Duration.between(now, accessTokenExpiresAt).getSeconds(),
+                0
         );
     }
 }

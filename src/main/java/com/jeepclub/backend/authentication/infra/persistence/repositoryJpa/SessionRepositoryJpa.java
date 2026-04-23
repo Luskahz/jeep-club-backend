@@ -22,6 +22,12 @@ public class SessionRepositoryJpa implements SessionRepository {
     }
 
     @Override
+    public Optional<Session> findById(Long sessionId) {
+        return jpaRepository.findById(sessionId)
+                .map(SessionMapper::toDomain);
+    }
+
+    @Override
     public Optional<Session> findActiveByUserId(Long userId) {
         return jpaRepository.findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
                 .map(SessionMapper::toDomain);
