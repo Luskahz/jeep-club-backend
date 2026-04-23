@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dtos.logout;
+package com.jeepclub.backend.authentication.api.dto.logout;
 
 import jakarta.validation.constraints.NotBlank;
 import org.apache.tomcat.util.net.openssl.ciphers.Authentication;

@@ -1,9 +1,9 @@
-package com.jeepclub.backend.authentication.api.controllers;
+package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dtos.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dtos.login.UserLoginRequest;
+import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.refresh.RefreshRequestDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.services.LoginService;
+import com.jeepclub.backend.authentication.core.application.services.RefreshService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -12,25 +12,19 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
-/**
- * necessario melhorar este docs @joao
- */
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
-public class LoginController {
+public class RefreshController {
 
-    private final LoginService loginService;
+    private final RefreshService refreshService;
 
-    /**
-     * necessario melhorar este docs @joao
-     */
-    @PostMapping("/login")
-    public AuthTokenResponseDTO login(
-            @RequestBody @Valid @NotNull UserLoginRequest request
+    @PostMapping("/refresh")
+    public AuthTokenResponseDTO refresh(
+            @RequestBody @Valid @NotNull RefreshRequestDTO request
     ) {
-        AuthTokens tokens = loginService.login(request.cpf(), request.senha());
+        AuthTokens tokens = refreshService.refresh(request.refreshToken());
+
         return new AuthTokenResponseDTO(
                 tokens.refreshToken(),
                 tokens.accessToken(),

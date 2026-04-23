@@ -1,11 +1,9 @@
-package com.jeepclub.backend.authentication.api.controllers;
+package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dtos.logout.LogoutResponseDTO;
 import com.jeepclub.backend.authentication.core.application.services.LogoutService;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

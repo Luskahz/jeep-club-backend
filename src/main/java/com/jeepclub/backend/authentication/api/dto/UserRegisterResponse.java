@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dtos;
+package com.jeepclub.backend.authentication.api.dto;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import java.time.Instant;

@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dtos.refresh;
+package com.jeepclub.backend.authentication.api.dto.refresh;
 
 import jakarta.validation.constraints.NotBlank;
 

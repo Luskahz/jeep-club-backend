@@ -1,8 +1,7 @@
-package com.jeepclub.backend.authentication.api.controllers;
+package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dtos.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dtos.UserRegisterRequest;
-import com.jeepclub.backend.authentication.api.dtos.UserRegisterResponse;
+import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.UserRegisterRequest;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;

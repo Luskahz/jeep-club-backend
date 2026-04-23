@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dtos.me;
+package com.jeepclub.backend.authentication.api.dto.me;
 
 public record AuthMeResponseDTO(
         Long userId,

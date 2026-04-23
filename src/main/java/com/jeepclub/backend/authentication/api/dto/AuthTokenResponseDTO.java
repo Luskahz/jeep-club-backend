@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dtos;
+package com.jeepclub.backend.authentication.api.dto;
 
 public record AuthTokenResponseDTO(
         String refreshToken,

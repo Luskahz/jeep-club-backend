@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.controllers;
+package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.domain.exception.CpfNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.exception.InvalidPasswordException;

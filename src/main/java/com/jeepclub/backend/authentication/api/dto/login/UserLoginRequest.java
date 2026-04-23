@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dtos.login;
+package com.jeepclub.backend.authentication.api.dto.login;
 
 import jakarta.validation.constraints.NotNull;
 import org.hibernate.validator.constraints.br.CPF;

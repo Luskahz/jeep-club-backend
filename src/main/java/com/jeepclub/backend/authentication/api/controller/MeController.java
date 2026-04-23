@@ -1,6 +1,6 @@
-package com.jeepclub.backend.authentication.api.controllers;
+package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dtos.me.AuthMeResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.me.AuthMeResponseDTO;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.services.MeService;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
