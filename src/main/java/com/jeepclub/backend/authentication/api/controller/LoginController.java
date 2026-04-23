@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.login.UserLoginRequest;
+import com.jeepclub.backend.authentication.api.dto.login.LoginRequestDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import jakarta.validation.Valid;
@@ -28,7 +28,7 @@ public class LoginController {
      */
     @PostMapping("/login")
     public AuthTokenResponseDTO login(
-            @RequestBody @Valid @NotNull UserLoginRequest request
+            @RequestBody @Valid @NotNull LoginRequestDTO request
     ) {
         AuthTokens tokens = loginService.login(request.cpf(), request.senha());
         return new AuthTokenResponseDTO(

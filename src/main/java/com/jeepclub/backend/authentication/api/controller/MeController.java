@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.me.AuthMeResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.me.MeResponseDTO;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.services.MeService;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
@@ -18,7 +18,7 @@ public class    MeController {
     private final MeService meService;
 
     @GetMapping("/me")
-    public AuthMeResponseDTO getMe(Authentication authentication) {
+    public MeResponseDTO getMe(Authentication authentication) {
 
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
@@ -28,7 +28,7 @@ public class    MeController {
                 principal.getAccessTokenExpiresAt()
         );
 
-        return new AuthMeResponseDTO(
+        return new MeResponseDTO(
                 response.userId(),
                 response.sessionId(),
                 response.sessionActive(),

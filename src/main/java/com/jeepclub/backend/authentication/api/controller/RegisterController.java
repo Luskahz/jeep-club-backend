@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.UserRegisterRequest;
+import com.jeepclub.backend.authentication.api.dto.register.RegisterRequestDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;
@@ -26,7 +26,7 @@ public class RegisterController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(
-            @RequestBody @Valid @NotNull UserRegisterRequest request) {
+            @RequestBody @Valid @NotNull RegisterRequestDTO request) {
         try {
             User newUser = registerService.registerUser(
                     request.name(),
