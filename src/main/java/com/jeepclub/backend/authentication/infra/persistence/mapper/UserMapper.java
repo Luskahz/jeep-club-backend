@@ -37,7 +37,9 @@ public class UserMapper {
                 entity.getLastLoginAt(),
                 entity.getCreatedAt(),
                 entity.getDisabledAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getPasswordChangeAt(),
+                entity.getFailedLoginAttempts()
         );
     }
 
@@ -50,8 +52,6 @@ public class UserMapper {
         }
 
         UserEntity entity = new UserEntity();
-        
-        // Atualiza todos os parâmetros que a entidade do banco possui
         entity.setId(domain.getId());
         entity.setName(domain.getName());
         entity.setBirthData(domain.getBirthData());

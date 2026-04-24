@@ -8,7 +8,10 @@ public class RefreshTokenMapper {
 
     private RefreshTokenMapper() {}
 
-    public static RefreshToken toDomain(RefreshTokenEntity entity, Session session) {
+    public static RefreshToken toDomain(
+            RefreshTokenEntity entity,
+            Session session
+    ) {
         if (entity == null) return null;
         return RefreshToken.reconstitute(
                 entity.getId(),
