@@ -12,9 +12,9 @@ import com.jeepclub.backend.authentication.core.port.JwtService;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
-import com.jeepclub.backend.authentication.core.repositories.RefreshTokenRepository;
-import com.jeepclub.backend.authentication.core.repositories.SessionRepository;
-import com.jeepclub.backend.authentication.core.repositories.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
+import com.jeepclub.backend.authentication.core.repository.SessionRepository;
+import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,10 +38,8 @@ public class LoginService {
     @Transactional
     public AuthTokens login(String cpf, String senha) {
         Instant now = Instant.now();
-
         User user = userRepository.findByCpf(cpf)
                 .orElseThrow(() -> new CpfNotFoundException("CPF não encontrado"));
-
         if (!passwordHasher.matches(senha, user.getPasswordHash())) {
             user.registerFailedLogin();
             userRepository.save(user);

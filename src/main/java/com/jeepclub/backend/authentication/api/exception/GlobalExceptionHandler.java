@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public  class GlobalExceptionHandler {
 
     private Map<String, Object> resposta(String msg, HttpStatus status) {
         Map<String, Object> erro = new HashMap<>();
@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(CpfNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleCpfNotFound(CpfNotFoundException ex) {
+    public ResponseEntity<Map<String, Object>> handleCpfNotFound( CpfNotFoundException ex) {
         HttpStatus status = HttpStatus.NOT_FOUND;
         return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
     }

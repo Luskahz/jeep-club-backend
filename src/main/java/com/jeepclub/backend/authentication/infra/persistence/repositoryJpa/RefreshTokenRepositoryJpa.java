@@ -3,7 +3,7 @@ package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
-import com.jeepclub.backend.authentication.core.repositories.RefreshTokenRepository;
+import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.RefreshTokenMapper;

@@ -49,12 +49,16 @@ public class Session {
     public static Session reconstitute(
             Long id,
             Long userId,
-            @NotNull Instant createdAt,
-            @NotNull Instant expiresAt,
+            Instant createdAt,
+            Instant expiresAt,
             Instant loggedOutAt,
-            @NotNull @NotBlank SessionStatus status
+            SessionStatus status
 
     ) {
+        if (createdAt == null) throw new IllegalArgumentException("createdAt is required");
+        if (expiresAt == null) throw new IllegalArgumentException("expiresAt is required");
+        if (status == null) throw new IllegalArgumentException("sessionStatus is required");
+
         if(!expiresAt.isAfter(createdAt)){
             throw new IllegalArgumentException("A expiração deve ser após a criação");
         }
@@ -81,11 +85,15 @@ public class Session {
         session.status = status;
         return session;
     }
-    public boolean isExpired(Instant now) {
-        return !expiresAt.isAfter(now);
+    public boolean isNotExpired(Instant now) {
+        if (now == null) {
+            throw new IllegalArgumentException("now is required");
+        }
+
+        return expiresAt.isAfter(now);
     }
     public boolean isActive(Instant now) {
-        return status == SessionStatus.ACTIVE && !isExpired(now);
+        return status == SessionStatus.ACTIVE && isNotExpired(now);
     }
     public boolean isRevoked() {
         return status == SessionStatus.REVOKED;
@@ -94,16 +102,14 @@ public class Session {
         return status == SessionStatus.LOGGED_OUT;
     }
     public boolean isValid(Instant now) {
-        return !isExpired(now) && !isRevoked() && !isLoggedOut();
+        return isNotExpired(now) && !isRevoked() && !isLoggedOut();
     }
-
     public void revoke() {
         if (status != SessionStatus.ACTIVE) {
             throw new IllegalStateException("Só é possivel revogar sessões ativas");
         }
         this.status = SessionStatus.REVOKED;
     }
-
     public void logout(Instant now) {
         if (this.status != SessionStatus.ACTIVE) {
             return;

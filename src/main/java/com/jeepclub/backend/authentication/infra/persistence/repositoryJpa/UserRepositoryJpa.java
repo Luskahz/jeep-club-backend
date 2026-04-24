@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.repositories.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.authentication.infra.persistence.entities.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.UserMapper;

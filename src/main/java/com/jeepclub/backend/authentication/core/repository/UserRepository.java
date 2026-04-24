@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.core.repositories;
+package com.jeepclub.backend.authentication.core.repository;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
 
