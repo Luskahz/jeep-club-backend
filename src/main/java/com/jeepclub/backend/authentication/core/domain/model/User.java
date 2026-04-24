@@ -1,8 +1,6 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
