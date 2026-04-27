@@ -1,0 +1,2 @@
+GET http://localhost:8080/users/me
+Authorization: Bearer teste123
