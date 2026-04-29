@@ -32,10 +32,4 @@ public class SessionRepositoryJpa implements SessionRepository {
         return jpaRepository.findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
                 .map(SessionMapper::toDomain);
     }
-
-    @Override
-    public Optional<Session> findByRefreshToken(String refreshToken) {
-        return jpaRepository.findByRefreshToken(refreshToken)
-                .map(SessionMapper::toDomain);
-    }
 }
