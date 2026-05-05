@@ -1,10 +1,16 @@
 package com.jeepclub.backend.authorization.api.controller;
 
 
+import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
+import com.jeepclub.backend.authorization.api.dto.ReplaceRolePermissionsRequestDTO;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/authorization/roles")
