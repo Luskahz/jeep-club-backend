@@ -23,18 +23,4 @@ public class AuthorizationExceptionHandler {
                         status
                 ));
     }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(
-            IllegalArgumentException exception
-    ) {
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-
-        return ResponseEntity.status(status)
-                .body(ApiErrorResponse.of(
-                        "INVALID_ARGUMENT",
-                        exception.getMessage(),
-                        status
-                ));
-    }
 }

@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authorization.api.controller;
 
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
-import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
-import com.jeepclub.backend.authorization.core.application.result.FindPermissionResult;
+import com.jeepclub.backend.authorization.core.application.result.permission.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.result.permission.FindPermissionResult;
 import com.jeepclub.backend.authorization.core.application.service.PermissionService;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -22,21 +22,18 @@ public class PermissionController {
 
     @GetMapping
     public ResponseEntity<List<PermissionResponseDTO>> findAllPermissions() {
-        FindAllPermissionsResult result = permissionService.findAllPermissionsFromCatalog();
+        FindAllPermissionsResult result = permissionService.findAllPermissions();
 
-        List<PermissionResponseDTO> response = result.permissions()
-                .stream()
-                .map(PermissionResponseDTO::from)
-                .toList();
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                PermissionResponseDTO.from(result.permissions())
+        );
     }
 
     @GetMapping("/{permissionId}")
     public ResponseEntity<PermissionResponseDTO> findPermissionById(
             @PathVariable @Positive Long permissionId
     ) {
-        FindPermissionResult result = permissionService.findPersistedPermissionById(permissionId);
+        FindPermissionResult result = permissionService.findPermissionById(permissionId);
 
         return ResponseEntity.ok(PermissionResponseDTO.from(result.permission()));
     }
@@ -45,8 +42,10 @@ public class PermissionController {
     public ResponseEntity<PermissionResponseDTO> findPermissionByCode(
             @PathVariable String permissionCode
     ) {
-        FindPermissionResult result = permissionService.findPermissionByCodeFromCatalog(permissionCode);
+        FindPermissionResult result = permissionService.findPermissionByCode(permissionCode);
 
-        return ResponseEntity.ok(PermissionResponseDTO.from(result.permission()));
+        return ResponseEntity.ok(
+                PermissionResponseDTO.from(result.permission())
+        );
     }
 }

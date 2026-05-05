@@ -18,23 +18,30 @@ public class PermissionSynchronizationService {
 
     @Transactional
     public void synchronizePermissions() {
+        Instant synchronizedAt = Instant.now();
+
         Arrays.stream(PermissionDefinition.values())
-                .forEach(this::synchronizePermission);
+                .forEach(definition -> synchronizePermission(definition, synchronizedAt));
     }
 
-    private void synchronizePermission(PermissionDefinition definition) {
+    private void synchronizePermission(PermissionDefinition definition, Instant synchronizedAt) {
         permissionRepository.findByCode(definition.getCode())
                 .ifPresentOrElse(
-                        existingPermission -> updateExistingPermissionIfNeeded(existingPermission, definition),
+                        existingPermission -> updateExistingPermissionIfNeeded(
+                                existingPermission,
+                                definition,
+                                synchronizedAt
+                        ),
                         () -> createPermission(definition)
                 );
     }
 
     private void updateExistingPermissionIfNeeded(
             Permission existingPermission,
-            PermissionDefinition definition
+            PermissionDefinition definition,
+            Instant synchronizedAt
     ) {
-        boolean changed = existingPermission.synchronizeWith(definition, Instant.now());
+        boolean changed = existingPermission.synchronizeWith(definition, synchronizedAt);
 
         if (changed) {
             permissionRepository.save(existingPermission);

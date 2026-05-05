@@ -6,6 +6,6 @@ public class PermissionNotFoundException extends RuntimeException {
         super("Permission not found with id: " + permissionId);
     }
     public PermissionNotFoundException(String permissionRawCode) {
-        super("Permission not found with id: " + permissionRawCode);
+        super("Permission not found with code: " + permissionRawCode);
     }
 }

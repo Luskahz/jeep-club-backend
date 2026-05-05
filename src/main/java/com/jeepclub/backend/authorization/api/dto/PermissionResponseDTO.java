@@ -1,9 +1,9 @@
 package com.jeepclub.backend.authorization.api.dto;
 
-import com.jeepclub.backend.authorization.core.domain.enums.ModuleCode;
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.List;
 
 @Schema(description = "Dados de uma permissão")
 public record PermissionResponseDTO(
@@ -12,20 +12,26 @@ public record PermissionResponseDTO(
         Long id,
 
         @Schema(description = "Código técnico da permissão", example = "AUTHZ_ROLE_CREATE")
-        PermissionCode code,
+        String code,
 
         @Schema(description = "Descrição funcional da permissão", example = "Permite criar papéis de acesso")
         String description,
 
         @Schema(description = "Módulo ao qual a permissão pertence", example = "AUTHORIZATION")
-        ModuleCode module
+        String module
 ) {
-        public static PermissionResponseDTO from(Permission permission) {
-            return new PermissionResponseDTO(
-                    permission.getId(),
-                    permission.getCode(),
-                    permission.getDescription(),
-                    permission.getModule()
-            );
-        }
+    public static PermissionResponseDTO from(Permission permission) {
+        return new PermissionResponseDTO(
+                permission.getId(),
+                permission.getCode().name(),
+                permission.getDescription(),
+                permission.getModule().name()
+        );
     }
+
+    public static List<PermissionResponseDTO> from(List<Permission> permissions) {
+        return permissions.stream()
+                .map(PermissionResponseDTO::from)
+                .toList();
+    }
+}

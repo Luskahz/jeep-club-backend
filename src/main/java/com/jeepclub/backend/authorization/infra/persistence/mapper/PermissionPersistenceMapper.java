@@ -4,10 +4,14 @@ import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.infra.persistence.entity.PermissionEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 @Component
 public class PermissionPersistenceMapper {
 
     public Permission toDomain(PermissionEntity entity) {
+        Objects.requireNonNull(entity, "PermissionEntity cannot be null");
+
         return Permission.reconstitute(
                 entity.getId(),
                 entity.getCode(),
@@ -19,8 +23,9 @@ public class PermissionPersistenceMapper {
     }
 
     public PermissionEntity toEntity(Permission permission) {
-        PermissionEntity entity = new PermissionEntity();
+        Objects.requireNonNull(permission, "Permission cannot be null");
 
+        PermissionEntity entity = new PermissionEntity();
         entity.setId(permission.getId());
         entity.setCode(permission.getCode());
         entity.setDescription(permission.getDescription());
