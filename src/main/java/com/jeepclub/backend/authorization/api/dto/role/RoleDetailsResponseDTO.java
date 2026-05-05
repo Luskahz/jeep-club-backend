@@ -1,6 +1,7 @@
-package com.jeepclub.backend.authorization.api.dto;
+package com.jeepclub.backend.authorization.api.dto.role;
 
 
+import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Set;
