@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 import java.util.Objects;
 
 @Component
-public class PermissionPersistenceMapper {
+public class PermissionMapper {
 
     public Permission toDomain(PermissionEntity entity) {
         Objects.requireNonNull(entity, "PermissionEntity cannot be null");

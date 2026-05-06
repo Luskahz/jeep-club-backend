@@ -100,6 +100,12 @@
             <version>4.0.0</version>
             <scope>test</scope>
         </dependency>
+        <!-- OpenAPI / Swagger UI -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.0.3</version>
+        </dependency>
     </dependencies>
 
     <build>

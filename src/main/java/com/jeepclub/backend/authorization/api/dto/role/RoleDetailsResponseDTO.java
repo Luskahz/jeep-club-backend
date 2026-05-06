@@ -2,6 +2,7 @@ package com.jeepclub.backend.authorization.api.dto.role;
 
 
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
+import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Set;

@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.infra.persistence.entity;
 
-import com.logimarui.authorization.core.domain.enums.RoleStatus;
+import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;

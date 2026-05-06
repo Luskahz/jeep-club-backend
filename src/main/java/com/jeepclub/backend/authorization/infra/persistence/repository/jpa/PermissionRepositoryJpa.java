@@ -5,7 +5,7 @@ import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.repository.PermissionRepository;
 import com.jeepclub.backend.authorization.infra.persistence.entity.PermissionEntity;
 import com.jeepclub.backend.authorization.infra.persistence.jpa.PermissionJpaRepository;
-import com.jeepclub.backend.authorization.infra.persistence.mapper.PermissionPersistenceMapper;
+import com.jeepclub.backend.authorization.infra.persistence.mapper.PermissionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -17,7 +17,7 @@ import java.util.Optional;
 public class PermissionRepositoryJpa implements PermissionRepository {
 
     private final PermissionJpaRepository jpa;
-    private final PermissionPersistenceMapper mapper;
+    private final PermissionMapper mapper;
 
     @Override
     public List<Permission> findAll() {

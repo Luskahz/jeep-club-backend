@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.api.dto;
 
+import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Resumo de uma role")

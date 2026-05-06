@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authorization.core.repository;
 
 import com.jeepclub.backend.authorization.core.domain.model.Role;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
