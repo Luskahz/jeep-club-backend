@@ -1,0 +1,29 @@
+### 1. Fazer Login (Para pegar o Token JWT)
+# Ajuste o email e a senha para um usuário que exista no seu banco de dados local.
+POST http://localhost:8080/login
+Content-Type: application/json
+
+{
+  "email": "teste@email.com",
+  "password": "senha"
+}
+
+### ==========================================
+
+### 2. Cenário de Sucesso: Logout com Token Válido
+# Copie o token que retornou no passo 1 e cole no lugar de COLE_SEU_TOKEN_AQUI
+POST http://localhost:8080/logout
+Authorization: Bearer COLE_SEU_TOKEN_AQUI
+
+### ==========================================
+
+### 3. Cenário de Falha: Logout sem enviar o Token
+# A API deve bloquear e retornar 401 (Unauthorized) ou 403 (Forbidden)
+POST http://localhost:8080/logout
+
+### ==========================================
+
+### 4. Cenário de Falha: Logout com Token Inválido ou Forjado
+# A API deve rejeitar o token falso e retornar 401 (Unauthorized) ou 403 (Forbidden)
+POST http://localhost:8080/logout
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.token.invalido.123
