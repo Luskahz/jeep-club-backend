@@ -3,7 +3,7 @@ package com.jeepclub.backend.authorization.core.application.service;
 import com.jeepclub.backend.authorization.core.application.exception.RoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
-import com.jeepclub.backend.authorization.core.application.result.role.RoleResult;
+import com.jeepclub.backend.authorization.core.application.result.RoleResult;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;

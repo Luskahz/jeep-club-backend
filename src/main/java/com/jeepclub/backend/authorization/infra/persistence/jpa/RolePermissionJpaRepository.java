@@ -3,38 +3,24 @@ package com.jeepclub.backend.authorization.infra.persistence.jpa;
 import com.jeepclub.backend.authorization.infra.persistence.entity.PermissionEntity;
 import com.jeepclub.backend.authorization.infra.persistence.entity.RolePermissionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
 public interface RolePermissionJpaRepository extends JpaRepository<RolePermissionEntity, Long> {
 
-    boolean existsByRoleIdAndPermissionId(
-            Long roleId,
-            Long permissionId
-    );
+    boolean existsByRole_IdAndPermission_Id(Long roleId, Long permissionId);
+
+    void deleteByRole_IdAndPermission_Id(Long roleId, Long permissionId);
+
+    void deleteByRole_Id(Long roleId);
 
     @Query("""
-            select permission
-            from PermissionEntity permission
-            where permission.id in (
-                select rolePermission.permissionId
-                from RolePermissionEntity rolePermission
-                where rolePermission.roleId = :roleId
-            )
-            order by permission.code
-            """)
-    List<PermissionEntity> findPermissionsByRoleId(Long roleId);
-
-    @Modifying
-    @Query("""
-            delete from RolePermissionEntity rolePermission
-            where rolePermission.roleId = :roleId
-            and rolePermission.permissionId = :permissionId
-            """)
-    void deleteByRoleIdAndPermissionId(
-            Long roleId,
-            Long permissionId
-    );
+        select rolePermission.permission
+        from RolePermissionEntity rolePermission
+        where rolePermission.role.id = :roleId
+        order by rolePermission.permission.code
+    """)
+    List<PermissionEntity> findPermissionsByRoleId(@Param("roleId") Long roleId);
 }

@@ -46,7 +46,7 @@ public class UserRoleRepositoryJpa implements UserRoleRepository {
             Long userId,
             Long roleId
     ) {
-        return jpa.existsByUserIdAndRoleId(userId, roleId);
+        return jpa.existsByUserIdAndRole_Id(userId, roleId);
     }
 
     @Override
@@ -62,7 +62,7 @@ public class UserRoleRepositoryJpa implements UserRoleRepository {
             Long userId,
             Long roleId
     ) {
-        jpa.deleteByUserIdAndRoleId(userId, roleId);
+        jpa.deleteByUserIdAndRole_Id(userId, roleId);
     }
 
     @Override

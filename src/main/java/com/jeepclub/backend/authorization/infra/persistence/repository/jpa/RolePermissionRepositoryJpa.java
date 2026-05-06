@@ -34,7 +34,7 @@ public class RolePermissionRepositoryJpa implements RolePermissionRepository {
             Long roleId,
             Long permissionId
     ) {
-        return jpa.existsByRoleIdAndPermissionId(roleId, permissionId);
+        return jpa.existsByRole_IdAndPermission_Id(roleId, permissionId);
     }
 
     @Override
@@ -50,6 +50,6 @@ public class RolePermissionRepositoryJpa implements RolePermissionRepository {
             Long roleId,
             Long permissionId
     ) {
-        jpa.deleteByRoleIdAndPermissionId(roleId, permissionId);
+        jpa.deleteByRole_IdAndPermission_Id(roleId, permissionId);
     }
 }
