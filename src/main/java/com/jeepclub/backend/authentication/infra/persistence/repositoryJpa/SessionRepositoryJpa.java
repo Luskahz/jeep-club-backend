@@ -33,9 +33,4 @@ public class SessionRepositoryJpa implements SessionRepository {
                 .map(SessionMapper::toDomain);
     }
 
-    @Override
-    public Optional<Session> findByRefreshToken(String refreshToken) {
-        return jpaRepository.findByRefreshToken(refreshToken)
-                .map(SessionMapper::toDomain);
-    }
 }

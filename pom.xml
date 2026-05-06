@@ -86,20 +86,41 @@
             <version>${jetbrains.annotations.version}</version>
         </dependency>
 
-        <!-- Testes -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+
+        <!-- Testes gerais -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Spring REST Docs com MockMvc -->
+        <!-- Testes Spring MVC / MockMvc no Spring Boot 4 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Auto-configuração do Spring REST Docs no Spring Boot 4 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restdocs</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Biblioteca do Spring REST Docs para MockMvc -->
         <dependency>
             <groupId>org.springframework.restdocs</groupId>
             <artifactId>spring-restdocs-mockmvc</artifactId>
             <version>4.0.0</version>
             <scope>test</scope>
         </dependency>
+
     </dependencies>
 
     <build>
