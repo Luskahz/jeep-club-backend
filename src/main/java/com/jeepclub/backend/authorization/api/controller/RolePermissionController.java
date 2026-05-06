@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.api.controller;
 
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
-import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.application.service.RolePermissionService;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class RolePermissionController {
     public ResponseEntity<List<PermissionResponseDTO>> findPermissionsByRoleId(
             @PathVariable @Positive Long roleId
     ) {
-        FindAllPermissionsResult result = rolePermissionService.findPermissionsByRoleId(roleId);
+        PermissionsResult result = rolePermissionService.findPermissionsByRoleId(roleId);
 
         return ResponseEntity.ok(
                 PermissionResponseDTO.from(result.permissions())

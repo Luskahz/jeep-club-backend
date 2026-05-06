@@ -4,7 +4,7 @@ import com.jeepclub.backend.authorization.core.domain.model.Permission;
 
 import java.util.List;
 
-public record FindAllPermissionsResult(
+public record PermissionsResult(
         List<Permission> permissions
 ) {
 }

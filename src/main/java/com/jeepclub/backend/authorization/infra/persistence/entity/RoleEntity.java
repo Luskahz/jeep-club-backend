@@ -18,6 +18,12 @@ import java.time.Instant;
                         name = "uk_authorization_roles_name",
                         columnNames = "name"
                 )
+        },
+        indexes = {
+                @Index(
+                        name = "idx_authorization_roles_status",
+                        columnList = "status"
+                )
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -31,7 +37,7 @@ public class RoleEntity {
     @Column(
             name = "name",
             nullable = false,
-            length = 80
+            length = 100
     )
     private String name;
 

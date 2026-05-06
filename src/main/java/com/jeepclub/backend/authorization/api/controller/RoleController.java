@@ -3,7 +3,7 @@ package com.jeepclub.backend.authorization.api.controller;
 import com.jeepclub.backend.authorization.api.dto.role.CreateRoleRequestDTO;
 import com.jeepclub.backend.authorization.api.dto.RoleResponseDTO;
 import com.jeepclub.backend.authorization.api.dto.role.UpdateRoleRequestDTO;
-import com.jeepclub.backend.authorization.core.application.result.FindAllRolesResult;
+import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.application.result.role.RoleResult;
 import com.jeepclub.backend.authorization.core.application.service.RoleService;
 import jakarta.validation.Valid;
@@ -39,7 +39,7 @@ public class RoleController {
 
     @GetMapping
     public ResponseEntity<List<RoleResponseDTO>> findAllRoles() {
-        FindAllRolesResult result = roleService.findAllRoles();
+        RolesResult result = roleService.findAllRoles();
 
         return ResponseEntity.ok(
                 RoleResponseDTO.from(result.roles())

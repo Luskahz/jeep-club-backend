@@ -25,14 +25,13 @@ public class PermissionMapper {
     public PermissionEntity toEntity(Permission permission) {
         Objects.requireNonNull(permission, "Permission cannot be null");
 
-        PermissionEntity entity = new PermissionEntity();
-        entity.setId(permission.getId());
-        entity.setCode(permission.getCode());
-        entity.setDescription(permission.getDescription());
-        entity.setModule(permission.getModule());
-        entity.setCreatedAt(permission.getCreatedAt());
-        entity.setUpdatedAt(permission.getUpdatedAt());
-
-        return entity;
+        return new PermissionEntity(
+                permission.getId(),
+                permission.getCode(),
+                permission.getDescription(),
+                permission.getModule(),
+                permission.getCreatedAt(),
+                permission.getUpdatedAt()
+        );
     }
 }

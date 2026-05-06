@@ -2,7 +2,7 @@ package com.jeepclub.backend.authorization.api.controller;
 
 import com.jeepclub.backend.authorization.api.dto.ReplaceUserRolesRequestDTO;
 import com.jeepclub.backend.authorization.api.dto.RoleResponseDTO;
-import com.jeepclub.backend.authorization.core.application.result.FindAllRolesResult;
+import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.application.service.UserRoleService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -26,7 +26,7 @@ public class UserRoleController {
     public ResponseEntity<List<RoleResponseDTO>> findRolesByUser(
             @PathVariable @Positive Long userId
     ) {
-        FindAllRolesResult result = userRoleService.findRolesByUserId(userId);
+        RolesResult result = userRoleService.findRolesByUserId(userId);
 
         return ResponseEntity.ok(
                 RoleResponseDTO.from(result.roles())

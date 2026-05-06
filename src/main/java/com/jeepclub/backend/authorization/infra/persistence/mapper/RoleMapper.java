@@ -4,13 +4,13 @@ import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.infra.persistence.entity.RoleEntity;
 import org.springframework.stereotype.Component;
 
+import java.util.Objects;
+
 @Component
 public class RoleMapper {
 
     public Role toDomain(RoleEntity entity) {
-        if (entity == null) {
-            return null;
-        }
+        Objects.requireNonNull(entity, "RoleEntity cannot be null");
 
         return Role.reconstitute(
                 entity.getId(),
@@ -24,9 +24,7 @@ public class RoleMapper {
     }
 
     public RoleEntity toEntity(Role role) {
-        if (role == null) {
-            return null;
-        }
+        Objects.requireNonNull(role, "Role cannot be null");
 
         return new RoleEntity(
                 role.getId(),

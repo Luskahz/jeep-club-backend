@@ -43,11 +43,13 @@ public class UserRoleEntity {
     )
     private Long userId;
 
-    @Column(
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
             name = "role_id",
-            nullable = false
+            nullable = false,
+            foreignKey = @ForeignKey(name = "fk_authorization_user_roles_role")
     )
-    private Long roleId;
+    private RoleEntity role;
 
     @Column(
             name = "created_at",
@@ -55,10 +57,4 @@ public class UserRoleEntity {
             updatable = false
     )
     private Instant createdAt;
-
-    @Column(
-            name = "updated_at",
-            nullable = false
-    )
-    private Instant updatedAt;
 }

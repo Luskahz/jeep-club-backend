@@ -31,9 +31,9 @@ public class Permission {
     ) {
         this.id = id;
         this.code = Objects.requireNonNull(code, "Permission code cannot be null");
-        this.description = Objects.requireNonNull(description, "Permission description cannot be null");
+        this.description = validateDescription(description);
         this.module = Objects.requireNonNull(module, "Permission module cannot be null");
-        this.createdAt = createdAt;
+        this.createdAt = Objects.requireNonNull(createdAt, "Permission createdAt cannot be null");
         this.updatedAt = updatedAt;
     }
 
@@ -63,7 +63,6 @@ public class Permission {
             Instant updatedAt
     ) {
         Objects.requireNonNull(id, "Permission id cannot be null when reconstituting");
-        Objects.requireNonNull(createdAt, "Permission createdAt cannot be null when reconstituting");
 
         return new Permission(
                 id,
@@ -75,7 +74,10 @@ public class Permission {
         );
     }
 
-    public boolean synchronizeWith(PermissionDefinition definition, Instant synchronizedAt) {
+    public boolean synchronizeWith(
+            PermissionDefinition definition,
+            Instant synchronizedAt
+    ) {
         Objects.requireNonNull(definition, "Permission definition cannot be null");
         Objects.requireNonNull(synchronizedAt, "Synchronized at cannot be null");
 
@@ -83,15 +85,21 @@ public class Permission {
             throw new IllegalArgumentException("Cannot synchronize permission with different code");
         }
 
+        String synchronizedDescription = validateDescription(definition.getDescription());
+        ModuleCode synchronizedModule = Objects.requireNonNull(
+                definition.getModule(),
+                "Permission module cannot be null"
+        );
+
         boolean changed = false;
 
-        if (!Objects.equals(this.description, definition.getDescription())) {
-            this.description = definition.getDescription();
+        if (!Objects.equals(this.description, synchronizedDescription)) {
+            this.description = synchronizedDescription;
             changed = true;
         }
 
-        if (this.module != definition.getModule()) {
-            this.module = definition.getModule();
+        if (this.module != synchronizedModule) {
+            this.module = synchronizedModule;
             changed = true;
         }
 
@@ -100,5 +108,19 @@ public class Permission {
         }
 
         return changed;
+    }
+
+    private static String validateDescription(String description) {
+        if (description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Permission description cannot be blank");
+        }
+
+        String normalizedDescription = description.trim();
+
+        if (normalizedDescription.length() > 255) {
+            throw new IllegalArgumentException("Permission description cannot exceed 255 characters");
+        }
+
+        return normalizedDescription;
     }
 }

@@ -4,7 +4,7 @@ import com.jeepclub.backend.authorization.core.application.exception.PermissionN
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.RolePermissionAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.RolePermissionNotFoundException;
-import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.domain.model.RolePermission;
@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -25,15 +26,16 @@ public class RolePermissionService {
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
-    public FindAllPermissionsResult findPermissionsByRoleId(Long roleId) {
+    public PermissionsResult findPermissionsByRoleId(Long roleId) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
 
         List<Permission> permissions = rolePermissionRepository.findPermissionsByRoleId(role.getId());
 
-        return new FindAllPermissionsResult(permissions);
+        return new PermissionsResult(permissions);
     }
 
     @Transactional
@@ -61,7 +63,7 @@ public class RolePermissionService {
             );
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         RolePermission rolePermission = RolePermission.create(
                 role.getId(),
@@ -83,7 +85,7 @@ public class RolePermissionService {
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new PermissionNotFoundException(permissionId));
 
-        role.ensureActive();
+        role.ensureCanBeChanged();
 
         boolean assigned = rolePermissionRepository.existsByRoleIdAndPermissionId(
                 role.getId(),

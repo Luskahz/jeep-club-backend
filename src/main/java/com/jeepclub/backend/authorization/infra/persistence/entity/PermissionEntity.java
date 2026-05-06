@@ -8,7 +8,6 @@ import lombok.*;
 import java.time.Instant;
 
 @Getter
-@Setter
 @Entity
 @Table(
         name = "authorization_permissions",
@@ -25,7 +24,7 @@ import java.time.Instant;
                 )
         }
 )
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class PermissionEntity {
 

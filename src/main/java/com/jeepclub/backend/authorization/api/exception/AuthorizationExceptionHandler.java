@@ -1,6 +1,15 @@
 package com.jeepclub.backend.authorization.api.exception;
 
-import com.jeepclub.backend.authorization.core.application.exception.*;
+import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.RoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.RolePermissionAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.RolePermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
+import com.jeepclub.backend.authorization.core.domain.exception.DeletedRoleCannotBeChangedException;
+import com.jeepclub.backend.authorization.core.domain.exception.InactiveRoleCannotBeUsedException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +51,7 @@ public class AuthorizationExceptionHandler {
                 HttpStatus.CONFLICT
         );
     }
+
     @ExceptionHandler(RolePermissionAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleRolePermissionAlreadyExists(
             RolePermissionAlreadyExistsException exception
@@ -64,27 +74,60 @@ public class AuthorizationExceptionHandler {
         );
     }
 
-//    @ExceptionHandler(RoleAlreadyDeletedException.class)
-//    public ResponseEntity<ApiErrorResponse> handleRoleAlreadyDeleted(
-//            RoleAlreadyDeletedException exception
-//    ) {
-//        return buildErrorResponse(
-//                "ROLE_ALREADY_DELETED",
-//                exception.getMessage(),
-//                HttpStatus.CONFLICT
-//        );
-//    }
+    @ExceptionHandler(UserRoleAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserRoleAlreadyExists(
+            UserRoleAlreadyExistsException exception
+    ) {
+        return buildErrorResponse(
+                "USER_ROLE_ALREADY_EXISTS",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
 
-//    @ExceptionHandler(RoleInactiveException.class)
-//    public ResponseEntity<ApiErrorResponse> handleRoleInactive(
-//            RoleInactiveException exception
-//    ) {
-//        return buildErrorResponse(
-//                "ROLE_INACTIVE",
-//                exception.getMessage(),
-//                HttpStatus.CONFLICT
-//        );
-//    }
+    @ExceptionHandler(UserRoleNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserRoleNotFound(
+            UserRoleNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "USER_ROLE_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotFound(
+            UserNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "USER_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(DeletedRoleCannotBeChangedException.class)
+    public ResponseEntity<ApiErrorResponse> handleDeletedRoleCannotBeChanged(
+            DeletedRoleCannotBeChangedException exception
+    ) {
+        return buildErrorResponse(
+                "DELETED_ROLE_CANNOT_BE_CHANGED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InactiveRoleCannotBeUsedException.class)
+    public ResponseEntity<ApiErrorResponse> handleInactiveRoleCannotBeUsed(
+            InactiveRoleCannotBeUsedException exception
+    ) {
+        return buildErrorResponse(
+                "INACTIVE_ROLE_CANNOT_BE_USED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
 
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String code,

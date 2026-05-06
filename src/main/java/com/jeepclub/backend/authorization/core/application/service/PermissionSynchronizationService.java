@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 
@@ -15,10 +16,11 @@ import java.util.Arrays;
 public class PermissionSynchronizationService {
 
     private final PermissionRepository permissionRepository;
+    private final Clock clock;
 
     @Transactional
     public void synchronizePermissions() {
-        Instant synchronizedAt = Instant.now();
+        Instant synchronizedAt = Instant.now(clock);
 
         Arrays.stream(PermissionDefinition.values())
                 .forEach(definition -> synchronizePermission(definition, synchronizedAt));
@@ -44,7 +46,10 @@ public class PermissionSynchronizationService {
             PermissionDefinition definition,
             Instant synchronizedAt
     ) {
-        boolean changed = existingPermission.synchronizeWith(definition, synchronizedAt);
+        boolean changed = existingPermission.synchronizeWith(
+                definition,
+                synchronizedAt
+        );
 
         if (changed) {
             permissionRepository.save(existingPermission);
@@ -55,7 +60,10 @@ public class PermissionSynchronizationService {
             PermissionDefinition definition,
             Instant synchronizedAt
     ) {
-        Permission permission = Permission.fromDefinition(definition, synchronizedAt);
+        Permission permission = Permission.fromDefinition(
+                definition,
+                synchronizedAt
+        );
 
         permissionRepository.save(permission);
     }

@@ -1,9 +1,8 @@
 package com.jeepclub.backend.authorization.core.application.service;
 
-
 import com.jeepclub.backend.authorization.core.application.exception.RoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
-import com.jeepclub.backend.authorization.core.application.result.FindAllRolesResult;
+import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.application.result.role.RoleResult;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.repository.RoleRepository;
@@ -11,22 +10,35 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class RoleService {
+
     private final RoleRepository roleRepository;
+    private final Clock clock;
 
     @Transactional
-    public RoleResult createRole(String name, String description) {
-        Instant now = Instant.now();
-        if (roleRepository.existsByName(name)) {
-            throw new RoleAlreadyExistsException(name);
+    public RoleResult createRole(
+            String name,
+            String description
+    ) {
+        String normalizedName = Role.normalizeName(name);
+
+        if (roleRepository.existsByName(normalizedName)) {
+            throw new RoleAlreadyExistsException(normalizedName);
         }
 
-        Role role = Role.create(name, description, now);
+        Instant now = Instant.now(clock);
+
+        Role role = Role.create(
+                normalizedName,
+                description,
+                now
+        );
 
         Role savedRole = roleRepository.save(role);
 
@@ -34,15 +46,16 @@ public class RoleService {
     }
 
     @Transactional(readOnly = true)
-    public FindAllRolesResult findAllRoles(){
+    public RolesResult findAllRoles() {
         List<Role> roles = roleRepository.findAll();
 
-        return new FindAllRolesResult(roles);
+        return new RolesResult(roles);
     }
 
     @Transactional(readOnly = true)
-    public RoleResult findRoleById(Long id){
-        Role role = roleRepository.findById(id).orElseThrow(() -> new RoleNotFoundException(id));
+    public RoleResult findRoleById(Long id) {
+        Role role = roleRepository.findById(id)
+                .orElseThrow(() -> new RoleNotFoundException(id));
 
         return new RoleResult(role);
     }
@@ -56,9 +69,19 @@ public class RoleService {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
 
-        Instant now = Instant.now();
+        String normalizedName = Role.normalizeName(name);
 
-        boolean changed = role.update(name, description, now);
+        if (roleRepository.existsByNameAndIdNot(normalizedName, roleId)) {
+            throw new RoleAlreadyExistsException(normalizedName);
+        }
+
+        Instant now = Instant.now(clock);
+
+        boolean changed = role.update(
+                normalizedName,
+                description,
+                now
+        );
 
         if (changed) {
             role = roleRepository.save(role);
@@ -72,7 +95,7 @@ public class RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RoleNotFoundException(id));
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         boolean changed = role.deactivate(now);
 
@@ -90,7 +113,7 @@ public class RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RoleNotFoundException(id));
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         boolean changed = role.activate(now);
 
@@ -102,12 +125,13 @@ public class RoleService {
 
         return new RoleResult(activatedRole);
     }
+
     @Transactional
     public RoleResult deleteRole(Long id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new RoleNotFoundException(id));
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         role.delete(now);
 

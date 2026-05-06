@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.core.application.service;
 
 import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
-import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.application.result.permission.FindPermissionResult;
 import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
@@ -19,10 +19,10 @@ public class PermissionService {
     private final PermissionRepository permissionRepository;
 
     @Transactional(readOnly = true)
-    public FindAllPermissionsResult findAllPermissions() {
+    public PermissionsResult findAllPermissions() {
         List<Permission> permissions = permissionRepository.findAll();
 
-        return new FindAllPermissionsResult(permissions);
+        return new PermissionsResult(permissions);
     }
 
     @Transactional(readOnly = true)
@@ -43,9 +43,13 @@ public class PermissionService {
     }
 
     private PermissionCode parsePermissionCode(String rawCode) {
+        if (rawCode == null || rawCode.isBlank()) {
+            throw new PermissionNotFoundException(rawCode);
+        }
+
         try {
             return PermissionCode.valueOf(rawCode.trim().toUpperCase());
-        } catch (RuntimeException exception) {
+        } catch (IllegalArgumentException exception) {
             throw new PermissionNotFoundException(rawCode);
         }
     }

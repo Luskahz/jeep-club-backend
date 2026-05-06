@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.api.controller;
 
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
-import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.application.result.permission.FindPermissionResult;
 import com.jeepclub.backend.authorization.core.application.service.PermissionService;
 import jakarta.validation.constraints.Positive;
@@ -22,7 +22,7 @@ public class PermissionController {
 
     @GetMapping
     public ResponseEntity<List<PermissionResponseDTO>> findAllPermissions() {
-        FindAllPermissionsResult result = permissionService.findAllPermissions();
+        PermissionsResult result = permissionService.findAllPermissions();
 
         return ResponseEntity.ok(
                 PermissionResponseDTO.from(result.permissions())

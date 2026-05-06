@@ -1,19 +1,24 @@
 package com.jeepclub.backend.authorization.core.application.service;
 
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.result.FindAllRolesResult;
+import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.domain.model.UserRole;
+import com.jeepclub.backend.authorization.core.port.UserIdentityProvider;
 import com.jeepclub.backend.authorization.core.repository.RoleRepository;
 import com.jeepclub.backend.authorization.core.repository.UserRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -22,12 +27,16 @@ public class UserRoleService {
 
     private final UserRoleRepository userRoleRepository;
     private final RoleRepository roleRepository;
+    private final UserIdentityProvider userIdentityProvider;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
-    public FindAllRolesResult findRolesByUserId(Long userId) {
+    public RolesResult findRolesByUserId(Long userId) {
+        ensureUserExists(userId);
+
         List<Role> roles = userRoleRepository.findRolesByUserId(userId);
 
-        return new FindAllRolesResult(roles);
+        return new RolesResult(roles);
     }
 
     @Transactional
@@ -35,6 +44,8 @@ public class UserRoleService {
             Long userId,
             Long roleId
     ) {
+        ensureUserExists(userId);
+
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
 
@@ -49,7 +60,7 @@ public class UserRoleService {
             throw new UserRoleAlreadyExistsException(userId, role.getId());
         }
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         UserRole userRole = UserRole.create(
                 userId,
@@ -65,8 +76,22 @@ public class UserRoleService {
             Long userId,
             Long roleId
     ) {
+        ensureUserExists(userId);
+
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
+
+        boolean assigned = userRoleRepository.existsByUserIdAndRoleId(
+                userId,
+                role.getId()
+        );
+
+        if (!assigned) {
+            throw new UserRoleNotFoundException(
+                    userId,
+                    role.getId()
+            );
+        }
 
         userRoleRepository.deleteByUserIdAndRoleId(
                 userId,
@@ -79,6 +104,9 @@ public class UserRoleService {
             Long userId,
             List<Long> roleIds
     ) {
+        ensureUserExists(userId);
+        Objects.requireNonNull(roleIds, "roleIds cannot be null");
+
         Set<Long> uniqueRoleIds = new HashSet<>(roleIds);
 
         List<Role> roles = uniqueRoleIds.stream()
@@ -90,7 +118,7 @@ public class UserRoleService {
 
         userRoleRepository.deleteByUserId(userId);
 
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         List<UserRole> userRoles = roles.stream()
                 .map(role -> UserRole.create(
@@ -101,5 +129,11 @@ public class UserRoleService {
                 .toList();
 
         userRoleRepository.saveAll(userRoles);
+    }
+
+    private void ensureUserExists(Long userId) {
+        if (!userIdentityProvider.existsById(userId)) {
+            throw new UserNotFoundException(userId);
+        }
     }
 }

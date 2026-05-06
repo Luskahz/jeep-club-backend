@@ -1,6 +1,8 @@
 package com.jeepclub.backend.authorization.core.domain.model;
 
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
+import com.jeepclub.backend.authorization.core.domain.exception.DeletedRoleCannotBeChangedException;
+import com.jeepclub.backend.authorization.core.domain.exception.InactiveRoleCannotBeUsedException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,9 +35,11 @@ public class Role {
         this.name = validateName(name);
         this.description = normalizeDescription(description);
         this.status = Objects.requireNonNull(status, "Role status cannot be null");
-        this.createdAt = createdAt;
+        this.createdAt = Objects.requireNonNull(createdAt, "Role createdAt cannot be null");
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
+
+        validateDeletionConsistency();
     }
 
     public static Role create(
@@ -113,7 +117,6 @@ public class Role {
             return false;
         }
 
-
         this.status = RoleStatus.ACTIVE;
         this.updatedAt = updatedAt;
         return true;
@@ -152,12 +155,14 @@ public class Role {
 
     private void ensureNotDeleted() {
         if (isDeleted()) {
-            throw new IllegalStateException("Cannot change a deleted role");
+            throw new DeletedRoleCannotBeChangedException(this.id);
         }
     }
     public void ensureActive() {
-        if (!isActive()) {
-            throw new IllegalStateException("Role is not active");
+        ensureNotDeleted();
+
+        if (this.status != RoleStatus.ACTIVE) {
+            throw new InactiveRoleCannotBeUsedException(this.id);
         }
     }
 
@@ -175,6 +180,14 @@ public class Role {
         return normalizedName;
     }
 
+    public void ensureCanBeChanged() {
+        ensureNotDeleted();
+    }
+
+    public static String normalizeName(String name) {
+        return validateName(name);
+    }
+
     private static String normalizeDescription(String description) {
         if (description == null || description.isBlank()) {
             return null;
@@ -187,5 +200,15 @@ public class Role {
         }
 
         return normalizedDescription;
+    }
+
+    private void validateDeletionConsistency() {
+        if (this.status == RoleStatus.DELETED && this.deletedAt == null) {
+            throw new IllegalArgumentException("Deleted role must have deletedAt");
+        }
+
+        if (this.deletedAt != null && this.status != RoleStatus.DELETED) {
+            throw new IllegalArgumentException("Role with deletedAt must have DELETED status");
+        }
     }
 }

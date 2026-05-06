@@ -44,6 +44,11 @@ public class RoleRepositoryJpa implements RoleRepository {
     }
 
     @Override
+    public boolean existsByNameAndIdNot(String name, Long id) {
+        return jpa.existsByNameAndIdNot(name, id);
+    }
+
+    @Override
     public Role save(Role role) {
         RoleEntity entity = mapper.toEntity(role);
 

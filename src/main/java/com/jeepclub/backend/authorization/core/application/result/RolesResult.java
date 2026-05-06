@@ -4,7 +4,7 @@ import com.jeepclub.backend.authorization.core.domain.model.Role;
 
 import java.util.List;
 
-public record FindAllRolesResult(
+public record RolesResult(
         List<Role> roles
 ) {
 }

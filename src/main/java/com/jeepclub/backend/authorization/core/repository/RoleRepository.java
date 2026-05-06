@@ -1,7 +1,6 @@
 package com.jeepclub.backend.authorization.core.repository;
 
 import com.jeepclub.backend.authorization.core.domain.model.Role;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +14,8 @@ public interface RoleRepository {
     Optional<Role> findByName(String name);
 
     boolean existsByName(String name);
+
+    boolean existsByNameAndIdNot(String name, Long id);
 
     Role save(Role role);
 }
