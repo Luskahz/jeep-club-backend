@@ -30,6 +30,7 @@ public class JwtServiceImpl implements JwtService {
         String token = Jwts.builder()
                 .setIssuer(jwtProperties.getIssuer())
                 .setSubject(user.getId().toString())
+                .claim("typ", "access")
                 .claim("sid", session.getId())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiresAt))

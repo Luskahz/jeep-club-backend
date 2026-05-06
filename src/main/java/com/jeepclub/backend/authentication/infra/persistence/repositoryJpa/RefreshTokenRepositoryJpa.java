@@ -47,14 +47,4 @@ public class RefreshTokenRepositoryJpa implements RefreshTokenRepository {
                 );
     }
 
-    @Override
-    public Optional<RefreshToken> findBySessionIdAndStatus(Long sessionId, RefreshTokenStatus status) {
-        return jpa.findBySessionIdAndStatus(sessionId, status)
-                .flatMap(entity ->
-                        sessionJpa.findById(entity.getSessionId())
-                                .map(sessionEntity ->
-                                        RefreshTokenMapper.toDomain(entity, SessionMapper.toDomain(sessionEntity))
-                                )
-                );
-    }
 }

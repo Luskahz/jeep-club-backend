@@ -32,4 +32,5 @@ public class SessionRepositoryJpa implements SessionRepository {
         return jpaRepository.findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
                 .map(SessionMapper::toDomain);
     }
+
 }
