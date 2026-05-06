@@ -62,7 +62,7 @@ public class UserEntity {
     @Column(name = "disabled_at")
     private Instant disabledAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private Instant updatedAt;
 
     @Column(name = "password_change_at")
