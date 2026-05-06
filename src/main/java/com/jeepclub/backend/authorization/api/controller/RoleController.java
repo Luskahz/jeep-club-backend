@@ -75,6 +75,7 @@ public class RoleController {
 //        );
 //    }
 
+
 //    @PatchMapping("/{roleId}/deactivate")
 //    public ResponseEntity<RoleResponseDTO> deactivateRole(
 //            @PathVariable @Positive Long roleId
