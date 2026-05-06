@@ -1,11 +1,11 @@
 package com.jeepclub.backend.authorization.api.controller;
 
-
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
-import com.jeepclub.backend.authorization.api.dto.ReplaceRolePermissionsRequestDTO;
-import jakarta.validation.Valid;
+import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.service.RolePermissionService;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -13,39 +13,41 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/authorization/roles")
+@RequestMapping("/authorization/roles/{roleId}/permissions")
 @RequiredArgsConstructor
 @Validated
 public class RolePermissionController {
 
-    @GetMapping("/{roleId}/permissions")
-    public ResponseEntity<List<PermissionResponseDTO>> findPermissionsByRole(
+    private final RolePermissionService rolePermissionService;
+
+    @GetMapping
+    public ResponseEntity<List<PermissionResponseDTO>> findPermissionsByRoleId(
             @PathVariable @Positive Long roleId
     ) {
-        return null;
+        FindAllPermissionsResult result = rolePermissionService.findPermissionsByRoleId(roleId);
+
+        return ResponseEntity.ok(
+                PermissionResponseDTO.from(result.permissions())
+        );
     }
 
-    @PutMapping("/{roleId}/permissions")
-    public ResponseEntity<Void> replaceRolePermissions(
-            @PathVariable @Positive Long roleId,
-            @RequestBody @Valid ReplaceRolePermissionsRequestDTO request
-    ) {
-        return null;
-    }
-
-    @PostMapping("/{roleId}/permissions/{permissionId}")
+    @PostMapping("/{permissionId}")
     public ResponseEntity<Void> assignPermissionToRole(
             @PathVariable @Positive Long roleId,
             @PathVariable @Positive Long permissionId
     ) {
-        return null;
+        rolePermissionService.assignPermissionToRole(roleId, permissionId);
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @DeleteMapping("/{roleId}/permissions/{permissionId}")
-    public ResponseEntity<Void> revokePermissionFromRole(
+    @DeleteMapping("/{permissionId}")
+    public ResponseEntity<Void> removePermissionFromRole(
             @PathVariable @Positive Long roleId,
             @PathVariable @Positive Long permissionId
     ) {
-        return null;
+        rolePermissionService.removePermissionFromRole(roleId, permissionId);
+
+        return ResponseEntity.noContent().build();
     }
 }

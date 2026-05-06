@@ -57,8 +57,7 @@ public class RoleEntity {
     private Instant createdAt;
 
     @Column(
-            name = "updated_at",
-            nullable = false
+            name = "updated_at"
     )
     private Instant updatedAt;
 

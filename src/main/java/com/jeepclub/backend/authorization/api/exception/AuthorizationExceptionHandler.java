@@ -1,8 +1,6 @@
 package com.jeepclub.backend.authorization.api.exception;
 
-import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.*;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +40,27 @@ public class AuthorizationExceptionHandler {
                 "ROLE_ALREADY_EXISTS",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
+        );
+    }
+    @ExceptionHandler(RolePermissionAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleRolePermissionAlreadyExists(
+            RolePermissionAlreadyExistsException exception
+    ) {
+        return buildErrorResponse(
+                "ROLE_PERMISSION_ALREADY_EXISTS",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(RolePermissionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleRolePermissionNotFound(
+            RolePermissionNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "ROLE_PERMISSION_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
         );
     }
 

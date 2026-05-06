@@ -65,11 +65,4 @@ public class PermissionEntity {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
-
-    @PrePersist
-    public void prePersist() {
-        if (createdAt == null) {
-            createdAt = Instant.now();
-        }
-    }
 }

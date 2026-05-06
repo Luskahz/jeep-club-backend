@@ -37,16 +37,20 @@ public class Permission {
         this.updatedAt = updatedAt;
     }
 
-    public static Permission fromDefinition(PermissionDefinition definition) {
+    public static Permission fromDefinition(
+            PermissionDefinition definition,
+            Instant now
+    ) {
         Objects.requireNonNull(definition, "Permission definition cannot be null");
+        Objects.requireNonNull(now, "now cannot be null");
 
         return new Permission(
                 null,
                 definition.getCode(),
                 definition.getDescription(),
                 definition.getModule(),
-                null,
-                null
+                now,
+                now
         );
     }
 

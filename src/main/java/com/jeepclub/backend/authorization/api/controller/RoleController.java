@@ -1,10 +1,10 @@
 package com.jeepclub.backend.authorization.api.controller;
 
 import com.jeepclub.backend.authorization.api.dto.role.CreateRoleRequestDTO;
-import com.jeepclub.backend.authorization.api.dto.role.RoleResponseDTO;
+import com.jeepclub.backend.authorization.api.dto.RoleResponseDTO;
 import com.jeepclub.backend.authorization.api.dto.role.UpdateRoleRequestDTO;
-import com.jeepclub.backend.authorization.core.application.result.role.CreateRoleResult;
-import com.jeepclub.backend.authorization.core.application.result.role.FindAllRolesResult;
+import com.jeepclub.backend.authorization.core.application.result.FindAllRolesResult;
+import com.jeepclub.backend.authorization.core.application.result.role.RoleResult;
 import com.jeepclub.backend.authorization.core.application.service.RoleService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -28,7 +28,7 @@ public class RoleController {
     public ResponseEntity<RoleResponseDTO> createRole(
             @RequestBody @Valid CreateRoleRequestDTO request
     ) {
-        CreateRoleResult result = roleService.createRole(
+        RoleResult result = roleService.createRole(
                 request.name(),
                 request.description()
         );
@@ -36,8 +36,6 @@ public class RoleController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(RoleResponseDTO.from(result.role()));
     }
-
-
 
     @GetMapping
     public ResponseEntity<List<RoleResponseDTO>> findAllRoles() {
@@ -48,62 +46,62 @@ public class RoleController {
         );
     }
 
-//    @GetMapping("/{roleId}")
-//    public ResponseEntity<RoleResponseDTO> findRoleById(
-//            @PathVariable @Positive Long roleId
-//    ) {
-//        FindRoleResult result = roleService.findRoleById(roleId);
-//
-//        return ResponseEntity.ok(
-//                RoleResponseDTO.from(result.role())
-//        );
-//    }
+    @GetMapping("/{roleId}")
+    public ResponseEntity<RoleResponseDTO> findRoleById(
+            @PathVariable @Positive Long roleId
+    ) {
+        RoleResult result = roleService.findRoleById(roleId);
 
-//    @PutMapping("/{roleId}")
-//    public ResponseEntity<RoleResponseDTO> updateRole(
-//            @PathVariable @Positive Long roleId,
-//            @RequestBody @Valid UpdateRoleRequestDTO request
-//    ) {
-//        UpdateRoleResult result = roleService.updateRole(
-//                roleId,
-//                request.name(),
-//                request.description()
-//        );
-//
-//        return ResponseEntity.ok(
-//                RoleResponseDTO.from(result.role())
-//        );
-//    }
+        return ResponseEntity.ok(
+                RoleResponseDTO.from(result.role())
+        );
+    }
+
+    @PutMapping("/{roleId}")
+    public ResponseEntity<RoleResponseDTO> updateRole(
+            @PathVariable @Positive Long roleId,
+            @RequestBody @Valid UpdateRoleRequestDTO request
+    ) {
+        RoleResult result = roleService.updateRole(
+                roleId,
+                request.name(),
+                request.description()
+        );
+
+        return ResponseEntity.ok(
+                RoleResponseDTO.from(result.role())
+        );
+    }
 
 
-//    @PatchMapping("/{roleId}/deactivate")
-//    public ResponseEntity<RoleResponseDTO> deactivateRole(
-//            @PathVariable @Positive Long roleId
-//    ) {
-//        UpdateRoleResult result = roleService.deactivateRole(roleId);
-//
-//        return ResponseEntity.ok(
-//                RoleResponseDTO.from(result.role())
-//        );
-//    }
-//
-//    @PatchMapping("/{roleId}/activate")
-//    public ResponseEntity<RoleResponseDTO> activateRole(
-//            @PathVariable @Positive Long roleId
-//    ) {
-//        UpdateRoleResult result = roleService.activateRole(roleId);
-//
-//        return ResponseEntity.ok(
-//                RoleResponseDTO.from(result.role())
-//        );
-//    }
-//
-//    @DeleteMapping("/{roleId}")
-//    public ResponseEntity<Void> deleteRole(
-//            @PathVariable @Positive Long roleId
-//    ) {
-//        roleService.deleteRole(roleId);
-//
-//        return ResponseEntity.noContent().build();
-//    }
+    @PatchMapping("/{roleId}/deactivate")
+    public ResponseEntity<RoleResponseDTO> deactivateRole(
+            @PathVariable @Positive Long roleId
+    ) {
+        RoleResult result = roleService.deactivateRole(roleId);
+
+        return ResponseEntity.ok(
+                RoleResponseDTO.from(result.role())
+        );
+    }
+
+    @PatchMapping("/{roleId}/activate")
+    public ResponseEntity<RoleResponseDTO> activateRole(
+            @PathVariable @Positive Long roleId
+    ) {
+        RoleResult result = roleService.activateRole(roleId);
+
+        return ResponseEntity.ok(
+                RoleResponseDTO.from(result.role())
+        );
+    }
+
+    @DeleteMapping("/{roleId}")
+    public ResponseEntity<Void> deleteRole(
+            @PathVariable @Positive Long roleId
+    ) {
+        roleService.deleteRole(roleId);
+
+        return ResponseEntity.noContent().build();
+    }
 }

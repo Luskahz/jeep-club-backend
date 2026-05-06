@@ -40,15 +40,18 @@ public class Role {
 
     public static Role create(
             String name,
-            String description
+            String description,
+            Instant now
     ) {
+        Objects.requireNonNull(now, "now cannot be null");
+
         return new Role(
                 null,
                 name,
                 description,
                 RoleStatus.ACTIVE,
-                null,
-                null,
+                now,
+                now,
                 null
         );
     }
@@ -76,7 +79,7 @@ public class Role {
         );
     }
 
-    public void update(
+    public boolean update(
             String name,
             String description,
             Instant updatedAt
@@ -84,25 +87,50 @@ public class Role {
         ensureNotDeleted();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
 
-        this.name = validateName(name);
-        this.description = normalizeDescription(description);
+        String normalizedName = validateName(name);
+        String normalizedDescription = normalizeDescription(description);
+
+        boolean unchanged =
+                Objects.equals(this.name, normalizedName)
+                        && Objects.equals(this.description, normalizedDescription);
+
+        if (unchanged) {
+            return false;
+        }
+
+        this.name = normalizedName;
+        this.description = normalizedDescription;
         this.updatedAt = updatedAt;
+
+        return true;
     }
 
-    public void activate(Instant updatedAt) {
+    public boolean activate(Instant updatedAt) {
         ensureNotDeleted();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
+
+        if (this.status == RoleStatus.ACTIVE) {
+            return false;
+        }
+
 
         this.status = RoleStatus.ACTIVE;
         this.updatedAt = updatedAt;
+        return true;
     }
 
-    public void deactivate(Instant updatedAt) {
+    public boolean deactivate(Instant updatedAt) {
         ensureNotDeleted();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
 
+        if (this.status == RoleStatus.INACTIVE) {
+            return false;
+        }
+
         this.status = RoleStatus.INACTIVE;
         this.updatedAt = updatedAt;
+
+        return true;
     }
 
     public void delete(Instant deletedAt) {
@@ -125,6 +153,11 @@ public class Role {
     private void ensureNotDeleted() {
         if (isDeleted()) {
             throw new IllegalStateException("Cannot change a deleted role");
+        }
+    }
+    public void ensureActive() {
+        if (!isActive()) {
+            throw new IllegalStateException("Role is not active");
         }
     }
 

@@ -24,7 +24,10 @@ public class PermissionSynchronizationService {
                 .forEach(definition -> synchronizePermission(definition, synchronizedAt));
     }
 
-    private void synchronizePermission(PermissionDefinition definition, Instant synchronizedAt) {
+    private void synchronizePermission(
+            PermissionDefinition definition,
+            Instant synchronizedAt
+    ) {
         permissionRepository.findByCode(definition.getCode())
                 .ifPresentOrElse(
                         existingPermission -> updateExistingPermissionIfNeeded(
@@ -32,7 +35,7 @@ public class PermissionSynchronizationService {
                                 definition,
                                 synchronizedAt
                         ),
-                        () -> createPermission(definition)
+                        () -> createPermission(definition, synchronizedAt)
                 );
     }
 
@@ -48,8 +51,11 @@ public class PermissionSynchronizationService {
         }
     }
 
-    private void createPermission(PermissionDefinition definition) {
-        Permission permission = Permission.fromDefinition(definition);
+    private void createPermission(
+            PermissionDefinition definition,
+            Instant synchronizedAt
+    ) {
+        Permission permission = Permission.fromDefinition(definition, synchronizedAt);
 
         permissionRepository.save(permission);
     }

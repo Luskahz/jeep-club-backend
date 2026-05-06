@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.api.controller;
 
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
-import com.jeepclub.backend.authorization.core.application.result.permission.FindAllPermissionsResult;
+import com.jeepclub.backend.authorization.core.application.result.FindAllPermissionsResult;
 import com.jeepclub.backend.authorization.core.application.result.permission.FindPermissionResult;
 import com.jeepclub.backend.authorization.core.application.service.PermissionService;
 import jakarta.validation.constraints.Positive;
