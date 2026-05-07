@@ -2,6 +2,7 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
+import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class LoginControllerRestDocsTest {
 
     @MockitoBean
     private JwtTokenParser jwtTokenParser;
+
+    @MockitoBean
+    private UserAuthoritiesProvider userAuthoritiesProvider;
 
     @Test
     void shouldDocumentLoginSuccess() throws Exception {
