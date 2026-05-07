@@ -12,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
-public  class GlobalExceptionHandler {
+public  class AuthenticationExceptionHandler {
 
     private Map<String, Object> resposta(String msg, HttpStatus status) {
         Map<String, Object> erro = new HashMap<>();

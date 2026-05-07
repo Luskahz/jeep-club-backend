@@ -6,4 +6,5 @@ public record JwtAuthenticatedUser(
         Long userId,
         Long sessionId,
         Instant expiresAt
-) {}
+) {
+}
