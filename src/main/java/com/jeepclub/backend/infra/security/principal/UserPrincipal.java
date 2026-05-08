@@ -3,6 +3,7 @@ package com.jeepclub.backend.infra.security.principal;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Getter
 public class UserPrincipal {
@@ -16,8 +17,11 @@ public class UserPrincipal {
             Long sessionId,
             Instant accessTokenExpiresAt
     ) {
-        this.userId = userId;
-        this.sessionId = sessionId;
-        this.accessTokenExpiresAt = accessTokenExpiresAt;
+        this.userId = Objects.requireNonNull(userId, "userId is required");
+        this.sessionId = Objects.requireNonNull(sessionId, "sessionId is required");
+        this.accessTokenExpiresAt = Objects.requireNonNull(
+                accessTokenExpiresAt,
+                "accessTokenExpiresAt is required"
+        );
     }
 }
