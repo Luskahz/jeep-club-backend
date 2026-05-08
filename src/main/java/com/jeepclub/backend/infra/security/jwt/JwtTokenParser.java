@@ -26,7 +26,13 @@ public class JwtTokenParser {
             throw new IllegalArgumentException("JWT subject is required.");
         }
 
-        Long userId = Long.valueOf(claims.getSubject());
+        Long userId;
+
+        try {
+            userId = Long.valueOf(claims.getSubject());
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("JWT subject must be a valid user id.");
+        }
 
         Number sidNum = claims.get("sid", Number.class);
 
@@ -36,8 +42,16 @@ public class JwtTokenParser {
 
         Long sessionId = sidNum.longValue();
 
+        if (claims.getExpiration() == null) {
+            throw new IllegalArgumentException("JWT expiration is required.");
+        }
+
         Instant expiresAt = claims.getExpiration().toInstant();
 
-        return new JwtAuthenticatedUser(userId, sessionId, expiresAt);
+        return new JwtAuthenticatedUser(
+                userId,
+                sessionId,
+                expiresAt
+        );
     }
 }

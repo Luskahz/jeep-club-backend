@@ -1,5 +1,6 @@
 package com.jeepclub.backend.infra.security.filter;
 
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
@@ -26,6 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenParser tokenParser;
     private final UserAuthoritiesProvider userAuthoritiesProvider;
+    private final AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Override
     protected void doFilterInternal(
@@ -44,8 +46,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = header.substring(7);
 
         try {
-            JwtAuthenticatedUser jwtUser =
-                    tokenParser.parseAndValidate(token);
+            JwtAuthenticatedUser jwtUser = tokenParser.parseAndValidate(token);
+
+            accessTokenAuthenticationService.validate(
+                    jwtUser.userId(),
+                    jwtUser.sessionId()
+            );
 
             List<SimpleGrantedAuthority> authorities =
                     userAuthoritiesProvider.findAuthorityCodesByUserId(jwtUser.userId())

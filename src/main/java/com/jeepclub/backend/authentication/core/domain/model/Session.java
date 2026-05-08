@@ -1,17 +1,13 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -26,23 +22,51 @@ public class Session {
 
     private Session(
             Long userId,
-            Duration ttl
-    ){
+            Duration ttl,
+            Instant now
+    ) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId is required");
+        }
+
+        if (ttl == null) {
+            throw new IllegalArgumentException("ttl is required");
+        }
+
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("ttl must be positive");
+        }
+
+        if (now == null) {
+            throw new IllegalArgumentException("now is required");
+        }
+
         this.userId = userId;
-        Instant now = Instant.now();
         this.createdAt = now;
         this.expiresAt = now.plus(ttl);
         this.status = SessionStatus.ACTIVE;
     }
 
-    @Contract("_, _, _, _ -> new")
     public static Session create(
             @NotNull Long userId,
-            @NotNull @Positive Duration ttl
+            @NotNull Duration ttl
     ) {
         return new Session(
                 userId,
-                ttl
+                ttl,
+                Instant.now()
+        );
+    }
+
+    public static Session create(
+            @NotNull Long userId,
+            @NotNull Duration ttl,
+            @NotNull Instant now
+    ) {
+        return new Session(
+                userId,
+                ttl,
+                now
         );
     }
 
@@ -53,26 +77,52 @@ public class Session {
             Instant expiresAt,
             Instant loggedOutAt,
             SessionStatus status
-
     ) {
-        if (createdAt == null) throw new IllegalArgumentException("createdAt is required");
-        if (expiresAt == null) throw new IllegalArgumentException("expiresAt is required");
-        if (status == null) throw new IllegalArgumentException("sessionStatus is required");
+        if (id == null) {
+            throw new IllegalArgumentException("id is required");
+        }
 
-        if(!expiresAt.isAfter(createdAt)){
-            throw new IllegalArgumentException("A expiração deve ser após a criação");
+        if (userId == null) {
+            throw new IllegalArgumentException("userId is required");
+        }
+
+        if (createdAt == null) {
+            throw new IllegalArgumentException("createdAt is required");
+        }
+
+        if (expiresAt == null) {
+            throw new IllegalArgumentException("expiresAt is required");
+        }
+
+        if (status == null) {
+            throw new IllegalArgumentException("status is required");
+        }
+
+        if (!expiresAt.isAfter(createdAt)) {
+            throw new IllegalArgumentException("expiresAt must be after createdAt");
         }
 
         switch (status) {
             case ACTIVE -> {
-                if (loggedOutAt != null) throw new IllegalStateException("Sessão ativa não deveria estar deslogada...");
+                if (loggedOutAt != null) {
+                    throw new IllegalStateException("Active session must not have loggedOutAt");
+                }
             }
+
             case LOGGED_OUT -> {
-                if (loggedOutAt == null) throw new IllegalStateException("O status da sessão deslogada deveria ter sido atualizado...");
-                if (loggedOutAt.isBefore(createdAt)) throw new IllegalStateException("A sessão deveria ter sido deslogada após a criação");
+                if (loggedOutAt == null) {
+                    throw new IllegalStateException("Logged out session must have loggedOutAt");
+                }
+
+                if (loggedOutAt.isBefore(createdAt)) {
+                    throw new IllegalStateException("loggedOutAt must be after createdAt");
+                }
             }
+
             case REVOKED -> {
-                if (loggedOutAt != null) throw new IllegalStateException("O status Revogado não deve ser usado para registrar logout");
+                if (loggedOutAt != null) {
+                    throw new IllegalStateException("Revoked session must not have loggedOutAt");
+                }
             }
         }
 
@@ -83,8 +133,10 @@ public class Session {
         session.expiresAt = expiresAt;
         session.loggedOutAt = loggedOutAt;
         session.status = status;
+
         return session;
     }
+
     public boolean isNotExpired(Instant now) {
         if (now == null) {
             throw new IllegalArgumentException("now is required");
@@ -92,28 +144,40 @@ public class Session {
 
         return expiresAt.isAfter(now);
     }
+
     public boolean isActive(Instant now) {
         return status == SessionStatus.ACTIVE && isNotExpired(now);
     }
+
     public boolean isRevoked() {
         return status == SessionStatus.REVOKED;
     }
+
     public boolean isLoggedOut() {
         return status == SessionStatus.LOGGED_OUT;
     }
+
     public boolean isValid(Instant now) {
-        return isNotExpired(now) && !isRevoked() && !isLoggedOut();
+        return isActive(now);
     }
+
     public void revoke() {
         if (status != SessionStatus.ACTIVE) {
-            throw new IllegalStateException("Só é possivel revogar sessões ativas");
+            throw new IllegalStateException("Only active sessions can be revoked");
         }
+
         this.status = SessionStatus.REVOKED;
     }
+
     public void logout(Instant now) {
+        if (now == null) {
+            throw new IllegalArgumentException("now is required");
+        }
+
         if (this.status != SessionStatus.ACTIVE) {
             return;
         }
+
         this.status = SessionStatus.LOGGED_OUT;
         this.loggedOutAt = now;
     }
