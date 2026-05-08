@@ -7,9 +7,11 @@ import com.jeepclub.backend.authorization.core.application.service.PermissionSer
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,6 +21,7 @@ import java.util.List;
 @RequestMapping("/authorization/permissions")
 @RequiredArgsConstructor
 @Validated
+@PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_READ')")
 @Tag(
         name = "Authorization - Permissions",
         description = "Consulta de permissões disponíveis no módulo de autorização."
@@ -70,10 +73,11 @@ public class PermissionController {
     public ResponseEntity<PermissionResponseDTO> findPermissionByCode(
             @Parameter(
                     description = "Código técnico da permissão.",
-                    example = "AUTHZ_ROLE_CREATE",
+                    example = "AUTHORIZATION_ROLE_CREATE",
                     required = true
             )
             @PathVariable
+            @NotBlank(message = "Código da permissão é obrigatório.")
             String permissionCode
     ) {
         PermissionResult result = permissionService.findPermissionByCode(permissionCode);
