@@ -52,7 +52,7 @@ public class User {
     }
 
 
-    @Contract("_, _, _ -> new")
+    @Contract("_, _, _, _, _, _, _, _ -> new")
     public static @NotNull User create(
             String name,
             LocalDate birthData,
