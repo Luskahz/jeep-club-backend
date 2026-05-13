@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
+import com.jeepclub.backend.authentication.core.domain.exception.UserLockoutException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -120,7 +121,7 @@ public class User {
 
     public void registerFailedLogin() {
         if(isBlockedForLogin()){
-            throw new IllegalStateException("User is not Available to login");
+            throw new UserLockoutException("Usuário bloqueado por excesso de tentativas.");
         }
         failedLoginAttempts++;
 
