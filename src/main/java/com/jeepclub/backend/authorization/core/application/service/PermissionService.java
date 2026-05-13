@@ -3,7 +3,7 @@ package com.jeepclub.backend.authorization.core.application.service;
 import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.PermissionResult;
 import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
+import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.repository.PermissionRepository;
 import lombok.RequiredArgsConstructor;

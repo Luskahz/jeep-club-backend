@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,6 +29,7 @@ public class RolePermissionController {
     private final RolePermissionService rolePermissionService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_READ')")
     @Operation(
             summary = "Listar permissões de uma role",
             description = "Retorna todas as permissões vinculadas a uma role de autorização."
@@ -50,6 +52,7 @@ public class RolePermissionController {
     }
 
     @PostMapping("/{permissionId}")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_ASSIGN')")
     @Operation(
             summary = "Atribuir permissão a uma role",
             description = "Cria o vínculo entre uma role e uma permissão."
@@ -79,6 +82,7 @@ public class RolePermissionController {
     }
 
     @DeleteMapping("/{permissionId}")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_REVOKE')")
     @Operation(
             summary = "Remover permissão de uma role",
             description = "Remove o vínculo entre uma role e uma permissão."

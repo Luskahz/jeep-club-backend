@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.core.domain.enums;
+package com.jeepclub.backend.shared.authorization;
 
 public enum ModuleCode {
     AUTHENTICATION,

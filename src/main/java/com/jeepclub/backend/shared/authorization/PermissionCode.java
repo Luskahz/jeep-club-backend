@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.core.domain.enums;
+package com.jeepclub.backend.shared.authorization;
 
 public enum PermissionCode {
 
@@ -13,6 +13,8 @@ public enum PermissionCode {
     AUTHORIZATION_ROLE_READ,
     AUTHORIZATION_ROLE_CREATE,
     AUTHORIZATION_ROLE_UPDATE,
+    AUTHORIZATION_ROLE_DISABLE,
+    AUTHORIZATION_ROLE_ENABLE,
     AUTHORIZATION_ROLE_DELETE,
 
     // AUTHORIZATION / PERMISSIONS
@@ -21,6 +23,7 @@ public enum PermissionCode {
     AUTHORIZATION_PERMISSION_REVOKE,
 
     // AUTHORIZATION / USER ROLES
+    AUTHORIZATION_USER_ROLE_READ,
     AUTHORIZATION_USER_ROLE_ASSIGN,
     AUTHORIZATION_USER_ROLE_REVOKE
 }
