@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authorization.core.domain.model;
 
-import com.jeepclub.backend.authorization.core.domain.exception.PermissionCodeMismatchException;
-import com.jeepclub.backend.authorization.core.domain.exception.PermissionDescriptionCannotBeBlankException;
-import com.jeepclub.backend.authorization.core.domain.exception.PermissionDescriptionTooLongException;
+import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionCodeMismatchException;
+import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionDescriptionCannotBeBlankException;
+import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionDescriptionTooLongException;
 import com.jeepclub.backend.shared.authorization.ModuleCode;
 import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.shared.authorization.PermissionDefinition;

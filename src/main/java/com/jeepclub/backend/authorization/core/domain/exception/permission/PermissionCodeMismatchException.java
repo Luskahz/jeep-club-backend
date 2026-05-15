@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.core.domain.exception;
+package com.jeepclub.backend.authorization.core.domain.exception.permission;
 
 import com.jeepclub.backend.shared.authorization.PermissionCode;
 

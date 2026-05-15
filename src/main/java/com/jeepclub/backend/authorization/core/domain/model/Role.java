@@ -1,8 +1,7 @@
 package com.jeepclub.backend.authorization.core.domain.model;
 
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
-import com.jeepclub.backend.authorization.core.domain.exception.DeletedRoleCannotBeChangedException;
-import com.jeepclub.backend.authorization.core.domain.exception.InactiveRoleCannotBeUsedException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,6 +20,9 @@ public class Role {
     private Instant createdAt;
     private Instant updatedAt;
     private Instant deletedAt;
+
+    private static final int MAX_NAME_LENGTH = 100;
+    private static final int MAX_DESCRIPTION_LENGTH = 255;
 
     private Role(
             Long id,
@@ -168,13 +170,13 @@ public class Role {
 
     private static String validateName(String name) {
         if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Role name cannot be blank");
+            throw new RoleNameCannotBeBlankException();
         }
 
         String normalizedName = name.trim();
 
-        if (normalizedName.length() > 100) {
-            throw new IllegalArgumentException("Role name cannot exceed 100 characters");
+        if (normalizedName.length() > MAX_NAME_LENGTH) {
+            throw new RoleNameTooLongException(MAX_NAME_LENGTH);
         }
 
         return normalizedName;
@@ -195,8 +197,8 @@ public class Role {
 
         String normalizedDescription = description.trim();
 
-        if (normalizedDescription.length() > 255) {
-            throw new IllegalArgumentException("Role description cannot exceed 255 characters");
+        if (normalizedDescription.length() > MAX_DESCRIPTION_LENGTH) {
+            throw new RoleDescriptionTooLongException(MAX_DESCRIPTION_LENGTH);
         }
 
         return normalizedDescription;
@@ -204,11 +206,11 @@ public class Role {
 
     private void validateDeletionConsistency() {
         if (this.status == RoleStatus.DELETED && this.deletedAt == null) {
-            throw new IllegalArgumentException("Deleted role must have deletedAt");
+            throw new IllegalStateException("Deleted role must have deletedAt.");
         }
 
         if (this.deletedAt != null && this.status != RoleStatus.DELETED) {
-            throw new IllegalArgumentException("Role with deletedAt must have DELETED status");
+            throw new IllegalStateException("Role with deletedAt must have DELETED status.");
         }
     }
 }

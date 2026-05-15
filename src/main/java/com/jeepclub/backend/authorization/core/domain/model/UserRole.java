@@ -63,9 +63,7 @@ public class UserRole {
             Long id,
             String fieldName
     ) {
-        if (id == null) {
-            throw new IllegalArgumentException(fieldName + " cannot be null");
-        }
+        Objects.requireNonNull(id, fieldName + " cannot be null");
 
         if (id <= 0) {
             throw new IllegalArgumentException(fieldName + " must be positive");

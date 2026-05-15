@@ -8,8 +8,8 @@ import com.jeepclub.backend.authorization.core.application.exception.RolePermiss
 import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
-import com.jeepclub.backend.authorization.core.domain.exception.DeletedRoleCannotBeChangedException;
-import com.jeepclub.backend.authorization.core.domain.exception.InactiveRoleCannotBeUsedException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.InactiveRoleCannotBeUsedException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
