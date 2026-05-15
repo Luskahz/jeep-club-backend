@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
+import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RTInvalidExpiresAtValueException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -69,7 +70,7 @@ public class RefreshToken {
         Objects.requireNonNull(status, "status is required");
 
         if (!expiresAt.isAfter(createdAt)) {
-            throw new IllegalArgumentException("expiresAt must be after createdAt");
+            throw new RTInvalidExpiresAtValueException("expiresAt must be after createdAt");
         }
 
         validateStatusConsistency(status, replacedByTokenId);

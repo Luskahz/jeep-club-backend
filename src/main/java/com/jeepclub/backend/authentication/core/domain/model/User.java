@@ -139,47 +139,47 @@ public class User {
         this.passwordChangedAt = now;
         this.failedLoginAttempts = 0;
     }
-    //
+
     public void recordSuccessfulLogin(Instant now) {
         this.lastLoginAt = now;
         this.failedLoginAttempts = 0;
         this.updatedAt = now;
     }
-    //
+
     public boolean isBlockedForLogin() {
         return isLocked() || isDisabled();
     }
-    //
+
     public boolean isActive() {
         return status == UserStatus.ACTIVE;
     }
-    //
+
     public boolean isLocked() {
         return status == UserStatus.LOCKED;
     }
-    //
+
     public boolean isDisabled() {
         return status == UserStatus.DISABLED;
     }
-    //
+
     public void unlock() {
         if (status != UserStatus.LOCKED) throw new UserNotLockoutException("User is not locked.");
         this.status = UserStatus.ACTIVE;
         this.failedLoginAttempts = 0;
     }
-    //
+
     public void reactivate() {
         if (status != UserStatus.DISABLED) throw new UserNotDisableException("User is not disable.");
         this.status = UserStatus.ACTIVE;
     }
-    //
+
     public User assertCanAuthenticate() {
         if (isBlockedForLogin()) {
             throw new UserBlockedForLoginException("User can not authenticate, user is disabled.");
         }
         return this;
     }
-    //
+
     public void assertCanRequestPasswordChange() {
         if (status == UserStatus.DISABLED) {
             throw new UserCannotChangePasswordException("User cannot request password change, user is disabled.");
