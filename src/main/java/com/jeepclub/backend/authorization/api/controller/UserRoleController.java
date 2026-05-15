@@ -12,6 +12,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,7 @@ public class UserRoleController {
     private final UserRoleService userRoleService;
 
     @GetMapping("/{userId}/roles")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_READ')")
     @Operation(
             summary = "Listar roles de um usuário",
             description = "Retorna todas as roles vinculadas a um usuário."
@@ -52,6 +54,7 @@ public class UserRoleController {
     }
 
     @PutMapping("/{userId}/roles")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_ASSIGN') and hasAuthority('AUTHORIZATION_USER_ROLE_REVOKE')")
     @Operation(
             summary = "Substituir roles de um usuário",
             description = "Substitui completamente o conjunto de roles vinculadas ao usuário. Uma lista vazia remove todas as roles."
@@ -77,6 +80,7 @@ public class UserRoleController {
     }
 
     @PostMapping("/{userId}/roles/{roleId}")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_ASSIGN')")
     @Operation(
             summary = "Atribuir role a um usuário",
             description = "Cria o vínculo entre um usuário e uma role ativa."
@@ -106,6 +110,7 @@ public class UserRoleController {
     }
 
     @DeleteMapping("/{userId}/roles/{roleId}")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_REVOKE')")
     @Operation(
             summary = "Remover role de um usuário",
             description = "Remove o vínculo entre um usuário e uma role."

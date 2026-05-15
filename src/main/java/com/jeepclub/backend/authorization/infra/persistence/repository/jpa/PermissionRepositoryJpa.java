@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.infra.persistence.repository.jpa;
 
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
+import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.repository.PermissionRepository;
 import com.jeepclub.backend.authorization.infra.persistence.entity.PermissionEntity;

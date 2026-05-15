@@ -1,15 +1,14 @@
 package com.jeepclub.backend.authorization.infra.persistence.jpa;
 
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
+import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import com.jeepclub.backend.authorization.infra.persistence.entity.UserRoleEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-@Repository
 public interface UserPermissionQueryJpaRepository extends JpaRepository<UserRoleEntity, Long> {
 
     @Query("""
@@ -24,7 +23,7 @@ public interface UserPermissionQueryJpaRepository extends JpaRepository<UserRole
             order by permission.code
             """)
     List<PermissionCode> findPermissionCodesByUserId(
-            Long userId,
-            RoleStatus activeStatus
+            @Param("userId") Long userId,
+            @Param("activeStatus") RoleStatus activeStatus
     );
 }

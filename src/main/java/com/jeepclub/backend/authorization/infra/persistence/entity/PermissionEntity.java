@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.infra.persistence.entity;
 
-import com.jeepclub.backend.authorization.core.domain.enums.ModuleCode;
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
+import com.jeepclub.backend.shared.authorization.ModuleCode;
+import com.jeepclub.backend.shared.authorization.PermissionCode;
 import jakarta.persistence.*;
 import lombok.*;
 
