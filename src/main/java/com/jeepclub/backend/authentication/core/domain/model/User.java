@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
-import com.jeepclub.backend.authentication.core.domain.exception.*;
+import com.jeepclub.backend.authentication.core.domain.exception.user.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

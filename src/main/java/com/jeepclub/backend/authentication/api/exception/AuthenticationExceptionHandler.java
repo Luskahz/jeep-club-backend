@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.api.exception;
 
-import com.jeepclub.backend.authentication.core.domain.exception.*;
+import com.jeepclub.backend.authentication.core.domain.exception.session.*;
+import com.jeepclub.backend.authentication.core.domain.exception.user.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -98,6 +99,84 @@ public  class AuthenticationExceptionHandler {
     /// Session             ///
     ///                     ///
     ///////////////////////////
+    @ExceptionHandler(SessionInvalidActiveStateException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionInvalidActiveState(SessionInvalidActiveStateException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionInvalidExpirationDateException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionInvalidExpirationDate(SessionInvalidExpirationDateException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionInvalidLogoutStateException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionInvalidLogoutState(SessionInvalidLogoutStateException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionInvalidRevokeStateException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionInvalidRevokeState(SessionInvalidRevokeStateException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionInvalidTtlValueException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionInvalidTtlValue(SessionInvalidTtlValueException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionMissingCreatedAtException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionMissingCreatedAt(SessionMissingCreatedAtException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionMissingExpiresAtException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionMissingExpiresAt(SessionMissingExpiresAtException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionMissingIdException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionMissingId(SessionMissingIdException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionMissingStatusException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionMissingStatus(SessionMissingStatusException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionMissingTtlException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionMissingTtl(SessionMissingTtlException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionMissingUserIdException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionMissingUserId(SessionMissingUserIdException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionNotActiveException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionNotActive(SessionNotActiveException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
+    @ExceptionHandler(SessionNowInstantRequiredException.class)
+    public ResponseEntity<Map<String, Object>> handleSessionNowInstantRequired(SessionNowInstantRequiredException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        return ResponseEntity.status(status).body(resposta(ex.getMessage(), status));
+    }
+
 
 
 
