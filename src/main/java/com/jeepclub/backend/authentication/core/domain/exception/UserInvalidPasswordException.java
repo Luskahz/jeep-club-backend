@@ -1,9 +1,8 @@
 package com.jeepclub.backend.authentication.core.domain.exception;
 
-public class InvalidPasswordException extends RuntimeException {
+public class UserInvalidPasswordException extends RuntimeException {
 
-    public
-    InvalidPasswordException(Long userId) {
+    public UserInvalidPasswordException(Long userId) {
         super("Invalid password for user id: " + userId);
     }
 }

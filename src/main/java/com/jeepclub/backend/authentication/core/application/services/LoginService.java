@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.domain.exception.CpfNotFoundException;
-import com.jeepclub.backend.authentication.core.domain.exception.InvalidPasswordException;
+import com.jeepclub.backend.authentication.core.domain.exception.UserCpfNotFoundException;
+import com.jeepclub.backend.authentication.core.domain.exception.UserInvalidPasswordException;
 import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
@@ -39,11 +39,11 @@ public class LoginService {
     public AuthTokens login(String cpf, String senha) {
         Instant now = Instant.now();
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(CpfNotFoundException::new);
+                .orElseThrow(UserCpfNotFoundException::new);
         if (!passwordHasher.matches(senha, user.getPasswordHash())) {
             user.registerFailedLogin();
             userRepository.save(user);
-            throw new InvalidPasswordException(user.getId());
+            throw new UserInvalidPasswordException(user.getId());
         }
 
         Session session = sessionRepository.findActiveByUserId(user.getId())

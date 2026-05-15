@@ -117,7 +117,7 @@ public class User {
 
     public void registerFailedLogin() {
         if(isBlockedForLogin()){
-            throw new UserLockoutException("User blocked for many attemtps");
+            throw new UserLockoutException("Account temporarily locked due to multiple failed login attempts. Please try again later.");
         }
         failedLoginAttempts++;
 
@@ -131,9 +131,9 @@ public class User {
             Instant now
     ) {
 
-        if (newHash == null || newHash.isBlank()) throw new IllegalArgumentException("newHash is required");
+        if (newHash == null || newHash.isBlank()) throw new UserNewHashRequiredException("newHash is required");
 
-        if (now == null) throw new IllegalArgumentException("now is required");
+        if (now == null) throw new UserNowInstantRequiredException("now is required");
 
         this.passwordHash = newHash;
         this.passwordChangedAt = now;
@@ -163,26 +163,26 @@ public class User {
     }
     //
     public void unlock() {
-        if (status != UserStatus.LOCKED) throw new UserNotLockoutException("User is not locked");
+        if (status != UserStatus.LOCKED) throw new UserNotLockoutException("User is not locked.");
         this.status = UserStatus.ACTIVE;
         this.failedLoginAttempts = 0;
     }
     //
     public void reactivate() {
-        if (status != UserStatus.DISABLED) throw new UserNotDisableException("User is not disable");
+        if (status != UserStatus.DISABLED) throw new UserNotDisableException("User is not disable.");
         this.status = UserStatus.ACTIVE;
     }
     //
     public User assertCanAuthenticate() {
         if (isBlockedForLogin()) {
-            throw new UserBlockedForLoginException("User can not authenticate");
+            throw new UserBlockedForLoginException("User can not authenticate, user is disabled.");
         }
         return this;
     }
     //
     public void assertCanRequestPasswordChange() {
         if (status == UserStatus.DISABLED) {
-            throw new UserCannotChangePasswordException("User cannot request password change");
+            throw new UserCannotChangePasswordException("User cannot request password change, user is disabled.");
         }
     }
 }

@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authentication.core.domain.exception;
 
-public class CpfNotFoundException extends RuntimeException {
+public class UserCpfNotFoundException extends RuntimeException {
 
-    public CpfNotFoundException() {
+    public UserCpfNotFoundException() {
         super("Cpf not found");
     }
 }
