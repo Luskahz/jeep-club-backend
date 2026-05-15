@@ -46,4 +46,9 @@ public class UserRepositoryJpa implements UserRepository {
     public boolean existsByCpf(String cpf) {
         return jpaRepository.existsByCpf(cpf);
     }
+
+    @Override
+    public boolean existsById(Long id) {
+        return jpaRepository.existsById(id);
+    }
 }

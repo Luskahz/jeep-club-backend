@@ -17,5 +17,7 @@ public interface UserRepository {
     Optional<User> findByCpf(String cpf);
     
     boolean existsByCpf(String cpf);
+
+    boolean existsById(Long id);
     
 }
