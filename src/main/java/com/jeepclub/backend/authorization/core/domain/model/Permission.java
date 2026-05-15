@@ -1,5 +1,8 @@
 package com.jeepclub.backend.authorization.core.domain.model;
 
+import com.jeepclub.backend.authorization.core.domain.exception.PermissionCodeMismatchException;
+import com.jeepclub.backend.authorization.core.domain.exception.PermissionDescriptionCannotBeBlankException;
+import com.jeepclub.backend.authorization.core.domain.exception.PermissionDescriptionTooLongException;
 import com.jeepclub.backend.shared.authorization.ModuleCode;
 import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.shared.authorization.PermissionDefinition;
@@ -79,10 +82,10 @@ public class Permission {
             Instant synchronizedAt
     ) {
         Objects.requireNonNull(definition, "Permission definition cannot be null");
-        Objects.requireNonNull(synchronizedAt, "Synchronized at cannot be null");
+        Objects.requireNonNull(synchronizedAt, "synchronizedAt cannot be null");
 
         if (this.code != definition.getCode()) {
-            throw new IllegalArgumentException("Cannot synchronize permission with different code");
+            throw new PermissionCodeMismatchException(this.code, definition.getCode());
         }
 
         String synchronizedDescription = validateDescription(definition.getDescription());
@@ -112,13 +115,13 @@ public class Permission {
 
     private static String validateDescription(String description) {
         if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Permission description cannot be blank");
+            throw new PermissionDescriptionCannotBeBlankException();
         }
 
         String normalizedDescription = description.trim();
 
         if (normalizedDescription.length() > 255) {
-            throw new IllegalArgumentException("Permission description cannot exceed 255 characters");
+            throw new PermissionDescriptionTooLongException(255);
         }
 
         return normalizedDescription;
