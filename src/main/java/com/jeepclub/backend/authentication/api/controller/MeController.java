@@ -13,6 +13,13 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(
+        name = "Autenticação",
+        description = "Endpoints relacionados à autenticação e gerenciamento de sessão."
+)
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
@@ -20,6 +27,10 @@ public class MeController {
 
     private final MeService meService;
 
+    @Operation(
+            summary = "Consultar dados da sessão",
+            description = "Retorna os dados do usuário autenticado e suas permissões atuais."
+    )
     @GetMapping("/me")
     public MeResponseDTO getMe(Authentication authentication) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
