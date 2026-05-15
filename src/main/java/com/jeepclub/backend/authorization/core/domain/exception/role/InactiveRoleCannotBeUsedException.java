@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.core.domain.exception;
+package com.jeepclub.backend.authorization.core.domain.exception.role;
 
 public class InactiveRoleCannotBeUsedException extends RuntimeException {
 

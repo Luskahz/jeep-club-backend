@@ -67,13 +67,8 @@ public class RolePermission {
         return Objects.equals(this.permissionId, permissionId);
     }
 
-    private static Long validateId(
-            Long id,
-            String fieldName
-    ) {
-        if (id == null) {
-            throw new IllegalArgumentException(fieldName + " cannot be null");
-        }
+    private static Long validateId(Long id, String fieldName) {
+        Objects.requireNonNull(id, fieldName + " cannot be null");
 
         if (id <= 0) {
             throw new IllegalArgumentException(fieldName + " must be positive");
