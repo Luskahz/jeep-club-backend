@@ -1,6 +1,8 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
+import com.jeepclub.backend.authentication.core.domain.exception.session.*;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserIdRequiredException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,19 +28,19 @@ public class Session {
             Instant now
     ) {
         if (userId == null) {
-            throw new IllegalArgumentException("userId is required");
+            throw new SessionMissingUserIdException("userId is required");
         }
 
         if (ttl == null) {
-            throw new IllegalArgumentException("ttl is required");
+            throw new SessionMissingTtlException("ttl is required");
         }
 
         if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException("ttl must be positive");
+            throw new SessionInvalidTtlValueException("ttl must be positive");
         }
 
         if (now == null) {
-            throw new IllegalArgumentException("now is required");
+            throw new SessionNowInstantRequiredException("now is required");
         }
 
         this.userId = userId;
@@ -79,49 +81,49 @@ public class Session {
             SessionStatus status
     ) {
         if (id == null) {
-            throw new IllegalArgumentException("id is required");
+            throw new SessionMissingIdException("id is required");
         }
 
         if (userId == null) {
-            throw new IllegalArgumentException("userId is required");
+            throw new SessionMissingUserIdException("userId is required");
         }
 
         if (createdAt == null) {
-            throw new IllegalArgumentException("createdAt is required");
+            throw new SessionMissingCreatedAtException("createdAt is required");
         }
 
         if (expiresAt == null) {
-            throw new IllegalArgumentException("expiresAt is required");
+            throw new SessionMissingExpiresAtException("expiresAt is required");
         }
 
         if (status == null) {
-            throw new IllegalArgumentException("status is required");
+            throw new SessionMissingStatusException("status is required");
         }
 
         if (!expiresAt.isAfter(createdAt)) {
-            throw new IllegalArgumentException("expiresAt must be after createdAt");
+            throw new SessionInvalidExpirationDateException("expiresAt must be after createdAt");
         }
 
         switch (status) {
             case ACTIVE -> {
                 if (loggedOutAt != null) {
-                    throw new IllegalStateException("Active session must not have loggedOutAt");
+                    throw new SessionInvalidActiveStateException("Active session must not have loggedOutAt");
                 }
             }
 
             case LOGGED_OUT -> {
                 if (loggedOutAt == null) {
-                    throw new IllegalStateException("Logged out session must have loggedOutAt");
+                    throw new SessionInvalidLogoutStateException("Logged out session must have loggedOutAt");
                 }
 
                 if (loggedOutAt.isBefore(createdAt)) {
-                    throw new IllegalStateException("loggedOutAt must be after createdAt");
+                    throw new SessionInvalidLogoutStateException("loggedOutAt must be after createdAt");
                 }
             }
 
             case REVOKED -> {
                 if (loggedOutAt != null) {
-                    throw new IllegalStateException("Revoked session must not have loggedOutAt");
+                    throw new SessionInvalidRevokeStateException("Revoked session must not have loggedOutAt");
                 }
             }
         }
@@ -139,7 +141,7 @@ public class Session {
 
     public boolean isNotExpired(Instant now) {
         if (now == null) {
-            throw new IllegalArgumentException("now is required");
+            throw new SessionNowInstantRequiredException("now is required");
         }
 
         return expiresAt.isAfter(now);
@@ -163,7 +165,7 @@ public class Session {
 
     public void revoke() {
         if (status != SessionStatus.ACTIVE) {
-            throw new IllegalStateException("Only active sessions can be revoked");
+            throw new SessionNotActiveException("Only active sessions can be revoked");
         }
 
         this.status = SessionStatus.REVOKED;
@@ -171,7 +173,7 @@ public class Session {
 
     public void logout(Instant now) {
         if (now == null) {
-            throw new IllegalArgumentException("now is required");
+            throw new SessionNowInstantRequiredException("now is required");
         }
 
         if (this.status != SessionStatus.ACTIVE) {

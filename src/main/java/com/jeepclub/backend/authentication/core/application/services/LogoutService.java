@@ -1,9 +1,12 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.TemQueVerISSO;
 import com.jeepclub.backend.authentication.core.application.results.LogoutResult;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,14 +24,14 @@ public class LogoutService {
     public LogoutResult logout(Long userId) {
         Instant now = Instant.now();
         Session session = sessionRepository.findActiveByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada"));
+                .orElseThrow(() -> new SessionNotFoundException("Session not found."));
 
         userRepository.findById(session.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+                .orElseThrow(() -> new TemQueVerISSO("User not found."));
 
         session.logout(now);
         sessionRepository.save(session);
 
-        return new LogoutResult("Logout realizado com sucesso");
+        return new LogoutResult("Logout successful!");
     }
 }

@@ -1,5 +1,9 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.TemQueVerISSO;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
@@ -20,21 +24,21 @@ public class AccessTokenAuthenticationService {
         Instant now = Instant.now();
 
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("Sessão não encontrada"));
+                .orElseThrow(() -> new SessionNotFoundException("Session not found."));
 
         if (!session.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Sessão não pertence ao usuário");
+            throw new SessionUserMismatchException("Session does not belong to this user.");
         }
 
         if (!session.isValid(now)) {
-            throw new IllegalArgumentException("Sessão inválida, expirada ou encerrada");
+            throw new IllegalArgumentException("Session invalid.");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+                .orElseThrow(() -> new TemQueVerISSO("User not found."));
 
         if (!user.isActive()) {
-            throw new IllegalArgumentException("Usuário inativo");
+            throw new UserDisabledException("User inactive.");
         }
     }
 }

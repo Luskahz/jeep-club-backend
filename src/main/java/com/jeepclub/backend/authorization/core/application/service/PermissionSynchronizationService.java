@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.core.application.service;
 
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionDefinition;
+import com.jeepclub.backend.shared.authorization.PermissionDefinition;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.repository.PermissionRepository;
 import lombok.RequiredArgsConstructor;

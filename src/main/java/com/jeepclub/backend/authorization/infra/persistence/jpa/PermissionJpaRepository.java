@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.infra.persistence.jpa;
 
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
+import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.authorization.infra.persistence.entity.PermissionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 

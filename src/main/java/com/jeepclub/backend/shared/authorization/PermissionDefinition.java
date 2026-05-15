@@ -1,92 +1,110 @@
-package com.jeepclub.backend.authorization.core.domain.enums;
+package com.jeepclub.backend.shared.authorization;
 
 import java.util.Arrays;
 
 public enum PermissionDefinition {
 
     // AUTHENTICATION / USERS
-    AUTH_USER_READ(
+    AUTHENTICATION_USER_READ(
             PermissionCode.AUTHENTICATION_USER_READ,
             ModuleCode.AUTHENTICATION,
             "Permite consultar usuários"
     ),
 
-    AUTH_USER_CREATE(
+    AUTHENTICATION_USER_CREATE(
             PermissionCode.AUTHENTICATION_USER_CREATE,
             ModuleCode.AUTHENTICATION,
             "Permite criar usuários"
     ),
 
-    AUTH_USER_UPDATE(
+    AUTHENTICATION_USER_UPDATE(
             PermissionCode.AUTHENTICATION_USER_UPDATE,
             ModuleCode.AUTHENTICATION,
             "Permite atualizar usuários"
     ),
 
-    AUTH_USER_DISABLE(
+    AUTHENTICATION_USER_DISABLE(
             PermissionCode.AUTHENTICATION_USER_DISABLE,
             ModuleCode.AUTHENTICATION,
             "Permite desativar usuários"
     ),
 
-    AUTH_USER_ENABLE(
+    AUTHENTICATION_USER_ENABLE(
             PermissionCode.AUTHENTICATION_USER_ENABLE,
             ModuleCode.AUTHENTICATION,
             "Permite reativar usuários"
     ),
 
     // AUTHORIZATION / ROLES
-    AUTHZ_ROLE_READ(
+    AUTHORIZATION_ROLE_READ(
             PermissionCode.AUTHORIZATION_ROLE_READ,
             ModuleCode.AUTHORIZATION,
             "Permite consultar papéis de acesso"
     ),
 
-    AUTHZ_ROLE_CREATE(
+    AUTHORIZATION_ROLE_CREATE(
             PermissionCode.AUTHORIZATION_ROLE_CREATE,
             ModuleCode.AUTHORIZATION,
             "Permite criar papéis de acesso"
     ),
 
-    AUTHZ_ROLE_UPDATE(
+    AUTHORIZATION_ROLE_UPDATE(
             PermissionCode.AUTHORIZATION_ROLE_UPDATE,
             ModuleCode.AUTHORIZATION,
             "Permite atualizar papéis de acesso"
     ),
 
-    AUTHZ_ROLE_DELETE(
+    AUTHORIZATION_ROLE_DELETE(
             PermissionCode.AUTHORIZATION_ROLE_DELETE,
             ModuleCode.AUTHORIZATION,
             "Permite remover papéis de acesso"
     ),
 
+    AUTHORIZATION_ROLE_DISABLE(
+            PermissionCode.AUTHORIZATION_ROLE_DISABLE,
+            ModuleCode.AUTHORIZATION,
+            "Permite desativar papéis de acesso"
+    ),
+
+    AUTHORIZATION_ROLE_ENABLE(
+            PermissionCode.AUTHORIZATION_ROLE_ENABLE,
+            ModuleCode.AUTHORIZATION,
+            "Permite reativar papéis de acesso"
+    ),
+
     // AUTHORIZATION / PERMISSIONS
-    AUTHZ_PERMISSION_READ(
+    AUTHORIZATION_PERMISSION_READ(
             PermissionCode.AUTHORIZATION_PERMISSION_READ,
             ModuleCode.AUTHORIZATION,
             "Permite consultar permissões"
     ),
 
-    AUTHZ_PERMISSION_ASSIGN(
+    AUTHORIZATION_PERMISSION_ASSIGN(
             PermissionCode.AUTHORIZATION_PERMISSION_ASSIGN,
             ModuleCode.AUTHORIZATION,
             "Permite atribuir permissões a papéis"
     ),
 
-    AUTHZ_PERMISSION_REVOKE(
+    AUTHORIZATION_PERMISSION_REVOKE(
             PermissionCode.AUTHORIZATION_PERMISSION_REVOKE,
             ModuleCode.AUTHORIZATION,
             "Permite revogar permissões de papéis"
     ),
 
     // AUTHORIZATION / USER ROLES
-    AUTHZ_USER_ROLE_ASSIGN(
+    AUTHORIZATION_USER_ROLE_READ(
+            PermissionCode.AUTHORIZATION_USER_ROLE_READ,
+            ModuleCode.AUTHORIZATION,
+            "Permite consultar papéis vinculados a usuários"
+    ),
+
+    AUTHORIZATION_USER_ROLE_ASSIGN(
             PermissionCode.AUTHORIZATION_USER_ROLE_ASSIGN,
             ModuleCode.AUTHORIZATION,
             "Permite vincular papéis a usuários"
     ),
 
-    AUTHZ_USER_ROLE_REVOKE(
+    AUTHORIZATION_USER_ROLE_REVOKE(
             PermissionCode.AUTHORIZATION_USER_ROLE_REVOKE,
             ModuleCode.AUTHORIZATION,
             "Permite remover papéis de usuários"

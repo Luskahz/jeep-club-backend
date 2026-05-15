@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.core.repository;
 
-import com.jeepclub.backend.authorization.core.domain.enums.PermissionCode;
+import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 
 import java.util.List;
