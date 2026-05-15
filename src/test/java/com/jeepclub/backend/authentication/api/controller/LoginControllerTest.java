@@ -2,8 +2,8 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
-import com.jeepclub.backend.authentication.core.domain.exception.user.UserCpfNotFoundException;
-import com.jeepclub.backend.authentication.core.domain.exception.user.UserInvalidPasswordException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.DisplayName;

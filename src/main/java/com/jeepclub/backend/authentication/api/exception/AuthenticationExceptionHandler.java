@@ -1,5 +1,7 @@
 package com.jeepclub.backend.authentication.api.exception;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
 import com.jeepclub.backend.authentication.core.domain.exception.session.*;
 import com.jeepclub.backend.authentication.core.domain.exception.user.*;
 import org.springframework.http.HttpStatus;

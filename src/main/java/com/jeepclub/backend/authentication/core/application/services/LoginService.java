@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.domain.exception.user.UserCpfNotFoundException;
-import com.jeepclub.backend.authentication.core.domain.exception.user.UserInvalidPasswordException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
 import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;

@@ -1,5 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.TemQueVerISSO;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
@@ -30,13 +33,13 @@ public class MeService {
         Instant now = Instant.now();
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new SecurityException("Usuário não encontrado"));
+                .orElseThrow(() -> new TemQueVerISSO("User not found"));
 
         Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new SecurityException("Sessão não encontrada"));
+                .orElseThrow(() -> new SessionNotFoundException("Session not found."));
 
-        if (!Objects.equals(session.getUserId(), user.getId())) {
-            throw new SecurityException("Sessão não pertence a este usuário");
+        if (!session.getUserId().equals(user.getId())) {
+            throw new SessionUserMismatchException("Session does not belong to this user");
         }
 
         return new MeResult(
