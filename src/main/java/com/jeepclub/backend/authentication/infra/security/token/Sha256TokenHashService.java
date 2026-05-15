@@ -13,12 +13,16 @@ public class Sha256TokenHashService implements RefreshTokenHashService {
 
     @Override
     public String hash(String rawToken) {
+        if (rawToken == null || rawToken.isBlank()) {
+            throw new IllegalArgumentException("Refresh token is required.");
+        }
+
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(hashBytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 não disponível", e);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 não disponível", exception);
         }
     }
 }

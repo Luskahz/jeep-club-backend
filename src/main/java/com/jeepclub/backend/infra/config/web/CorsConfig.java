@@ -17,8 +17,8 @@ public class CorsConfig {
 
                 registry.addMapping("/**")
                         .allowedOrigins(
-                                "http://localhost:3000",
-                                "http://localhost:19006"
+                                "http://localhost:8080",
+                                "http://localhost:3000"
                         )
                         .allowedMethods(
                                 "GET",

@@ -1,0 +1,147 @@
+package com.jeepclub.backend.shared.authorization;
+
+import java.util.Arrays;
+
+public enum PermissionDefinition {
+
+    // AUTHENTICATION / USERS
+    AUTHENTICATION_USER_READ(
+            PermissionCode.AUTHENTICATION_USER_READ,
+            ModuleCode.AUTHENTICATION,
+            "Permite consultar usuários"
+    ),
+
+    AUTHENTICATION_USER_CREATE(
+            PermissionCode.AUTHENTICATION_USER_CREATE,
+            ModuleCode.AUTHENTICATION,
+            "Permite criar usuários"
+    ),
+
+    AUTHENTICATION_USER_UPDATE(
+            PermissionCode.AUTHENTICATION_USER_UPDATE,
+            ModuleCode.AUTHENTICATION,
+            "Permite atualizar usuários"
+    ),
+
+    AUTHENTICATION_USER_DISABLE(
+            PermissionCode.AUTHENTICATION_USER_DISABLE,
+            ModuleCode.AUTHENTICATION,
+            "Permite desativar usuários"
+    ),
+
+    AUTHENTICATION_USER_ENABLE(
+            PermissionCode.AUTHENTICATION_USER_ENABLE,
+            ModuleCode.AUTHENTICATION,
+            "Permite reativar usuários"
+    ),
+
+    // AUTHORIZATION / ROLES
+    AUTHORIZATION_ROLE_READ(
+            PermissionCode.AUTHORIZATION_ROLE_READ,
+            ModuleCode.AUTHORIZATION,
+            "Permite consultar papéis de acesso"
+    ),
+
+    AUTHORIZATION_ROLE_CREATE(
+            PermissionCode.AUTHORIZATION_ROLE_CREATE,
+            ModuleCode.AUTHORIZATION,
+            "Permite criar papéis de acesso"
+    ),
+
+    AUTHORIZATION_ROLE_UPDATE(
+            PermissionCode.AUTHORIZATION_ROLE_UPDATE,
+            ModuleCode.AUTHORIZATION,
+            "Permite atualizar papéis de acesso"
+    ),
+
+    AUTHORIZATION_ROLE_DELETE(
+            PermissionCode.AUTHORIZATION_ROLE_DELETE,
+            ModuleCode.AUTHORIZATION,
+            "Permite remover papéis de acesso"
+    ),
+
+    AUTHORIZATION_ROLE_DISABLE(
+            PermissionCode.AUTHORIZATION_ROLE_DISABLE,
+            ModuleCode.AUTHORIZATION,
+            "Permite desativar papéis de acesso"
+    ),
+
+    AUTHORIZATION_ROLE_ENABLE(
+            PermissionCode.AUTHORIZATION_ROLE_ENABLE,
+            ModuleCode.AUTHORIZATION,
+            "Permite reativar papéis de acesso"
+    ),
+
+    // AUTHORIZATION / PERMISSIONS
+    AUTHORIZATION_PERMISSION_READ(
+            PermissionCode.AUTHORIZATION_PERMISSION_READ,
+            ModuleCode.AUTHORIZATION,
+            "Permite consultar permissões"
+    ),
+
+    AUTHORIZATION_PERMISSION_ASSIGN(
+            PermissionCode.AUTHORIZATION_PERMISSION_ASSIGN,
+            ModuleCode.AUTHORIZATION,
+            "Permite atribuir permissões a papéis"
+    ),
+
+    AUTHORIZATION_PERMISSION_REVOKE(
+            PermissionCode.AUTHORIZATION_PERMISSION_REVOKE,
+            ModuleCode.AUTHORIZATION,
+            "Permite revogar permissões de papéis"
+    ),
+
+    // AUTHORIZATION / USER ROLES
+    AUTHORIZATION_USER_ROLE_READ(
+            PermissionCode.AUTHORIZATION_USER_ROLE_READ,
+            ModuleCode.AUTHORIZATION,
+            "Permite consultar papéis vinculados a usuários"
+    ),
+
+    AUTHORIZATION_USER_ROLE_ASSIGN(
+            PermissionCode.AUTHORIZATION_USER_ROLE_ASSIGN,
+            ModuleCode.AUTHORIZATION,
+            "Permite vincular papéis a usuários"
+    ),
+
+    AUTHORIZATION_USER_ROLE_REVOKE(
+            PermissionCode.AUTHORIZATION_USER_ROLE_REVOKE,
+            ModuleCode.AUTHORIZATION,
+            "Permite remover papéis de usuários"
+    );
+
+    private final PermissionCode code;
+    private final ModuleCode module;
+    private final String description;
+
+    PermissionDefinition(
+            PermissionCode code,
+            ModuleCode module,
+            String description
+    ) {
+        this.code = code;
+        this.module = module;
+        this.description = description;
+    }
+
+    public PermissionCode getCode() {
+        return code;
+    }
+
+    public ModuleCode getModule() {
+        return module;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public static PermissionDefinition from(PermissionCode code) {
+        return Arrays.stream(values())
+                .filter(definition -> definition.code == code)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "PermissionCode sem definição: " + code
+                ));
+    }
+}

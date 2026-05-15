@@ -12,5 +12,4 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
-    Optional<RefreshToken> findBySessionIdAndStatus(Long sessionId, RefreshTokenStatus status);
 }

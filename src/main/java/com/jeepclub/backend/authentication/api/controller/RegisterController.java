@@ -6,16 +6,18 @@ import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+@Tag(
+        name = "Autenticação",
+        description = "Endpoints relacionados à autenticação e gerenciamento de sessão."
+)
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
@@ -24,33 +26,35 @@ public class RegisterController {
     private final RegisterService registerService;
     private final LoginService loginService;
 
+    @Operation(
+            summary = "Registrar usuário",
+            description = "Cria uma nova conta de usuário e retorna os tokens de autenticação."
+    )
     @PostMapping("/register")
-    public ResponseEntity<?> register(
-            @RequestBody @Valid @NotNull RegisterRequestDTO request) {
-        try {
-            User newUser = registerService.registerUser(
-                    request.name(),
-                    request.birthData(),
-                    request.email(),
-                    request.cpf(),
-                    request.rg(),
-                    request.password(),
-                    request.phoneNumber()
-            );
+    public ResponseEntity<AuthTokenResponseDTO> register(
+            @RequestBody @Valid @NotNull RegisterRequestDTO request
+    ) {
+        User newUser = registerService.registerUser(
+                request.name(),
+                request.birthData(),
+                request.email(),
+                request.cpf(),
+                request.rg(),
+                request.password(),
+                request.phoneNumber()
+        );
 
-            AuthTokens tokens = loginService.login(
-                    newUser.getCpf(),
-                    request.password()
-            );
-            AuthTokenResponseDTO response = new AuthTokenResponseDTO(
-                    tokens.refreshToken(),
-                    tokens.accessToken(),
-                    tokens.expiresInSeconds()
-            );
-            return ResponseEntity.status(HttpStatus.OK).body(response);
+        AuthTokens tokens = loginService.login(
+                newUser.getCpf(),
+                request.password()
+        );
 
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        AuthTokenResponseDTO response = new AuthTokenResponseDTO(
+                tokens.refreshToken(),
+                tokens.accessToken(),
+                tokens.expiresInSeconds()
+        );
+
+        return ResponseEntity.status(201).body(response);
     }
 }
