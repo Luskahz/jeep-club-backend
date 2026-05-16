@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
 import com.jeepclub.backend.authentication.core.application.results.PasswordRecoveryAdminResult;
-import com.jeepclub.backend.authentication.core.domain.exception.CpfNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.*;
@@ -29,7 +29,7 @@ public class PasswordRecoveryService {
     @Transactional
     public void requestRecoveryViaEmail(String cpf) {
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(() -> new CpfNotFoundException("CPF não encontrado"));
+                .orElseThrow(UserCpfNotFoundException::new);
 
         user.assertCanRequestPasswordChange();
 

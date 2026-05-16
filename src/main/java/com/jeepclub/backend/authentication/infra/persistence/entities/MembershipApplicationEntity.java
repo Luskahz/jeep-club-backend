@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Entity
 @Table(
-        name = "membership_applications",
+        name = "authentication_membership_applications",
         indexes = {
                 @Index(
                         name = "idx_membership_applications_cpf_status",

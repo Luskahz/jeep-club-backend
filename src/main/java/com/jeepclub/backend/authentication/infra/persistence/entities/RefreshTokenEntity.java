@@ -13,7 +13,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Entity
 @Table(
-        name = "refresh_tokens",
+        name = "authentication_refresh_tokens",
         indexes = {
                 @Index(name = "idx_refresh_token_session", columnList = "session_id")
         }
