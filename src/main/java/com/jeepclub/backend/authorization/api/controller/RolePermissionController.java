@@ -3,6 +3,7 @@ package com.jeepclub.backend.authorization.api.controller;
 import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
 import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.application.service.RolePermissionService;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,6 +31,7 @@ public class RolePermissionController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_READ')")
+    @RequiredPermission("AUTHORIZATION_PERMISSION_READ")
     @Operation(
             summary = "Listar permissões de uma role",
             description = "Retorna todas as permissões vinculadas a uma role de autorização."
@@ -53,6 +55,7 @@ public class RolePermissionController {
 
     @PostMapping("/{permissionId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_ASSIGN')")
+    @RequiredPermission("AUTHORIZATION_PERMISSION_ASSIGN")
     @Operation(
             summary = "Atribuir permissão a uma role",
             description = "Cria o vínculo entre uma role e uma permissão."
@@ -83,6 +86,7 @@ public class RolePermissionController {
 
     @DeleteMapping("/{permissionId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_REVOKE')")
+    @RequiredPermission("AUTHORIZATION_PERMISSION_REVOKE")
     @Operation(
             summary = "Remover permissão de uma role",
             description = "Remove o vínculo entre uma role e uma permissão."

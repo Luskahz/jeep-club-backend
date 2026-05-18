@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.entities;
+package com.jeepclub.backend.authentication.infra.persistence.entity;
 
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
 import jakarta.persistence.*;
@@ -13,7 +13,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Entity
 @Table(
-        name = "refresh_tokens",
+        name = "authentication_refresh_tokens",
         indexes = {
                 @Index(name = "idx_refresh_token_session", columnList = "session_id")
         }

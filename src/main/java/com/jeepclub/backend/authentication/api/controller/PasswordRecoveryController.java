@@ -6,74 +6,77 @@ import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequ
 import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetDTO;
 import com.jeepclub.backend.authentication.core.application.results.PasswordRecoveryAdminResult;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-@Tag(
-        name = "Recuperação de Senha",
-        description = "Endpoints para o fluxo de recuperação de senhas (Usuários e Admin)"
-)
-@RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth/recovery")
+@RequiredArgsConstructor
+@Validated
+@Tag(
+        name = "Authentication - Password Recovery",
+        description = "Fluxo de recuperação e redefinição de senha."
+)
 public class PasswordRecoveryController {
 
     private final PasswordRecoveryService passwordRecoveryService;
 
-    @Operation(
-            summary = "Solicitar recuperação de senha via Email",
-            description = "Gera um token seguro e envia um e-mail com o link para recuperação de senha."
-    )
     @PostMapping("/request")
+    @Operation(
+            summary = "Solicitar recuperação de senha",
+            description = "Gera um token seguro e envia um e-mail com link para recuperação de senha, sem revelar se o CPF existe."
+    )
     public ResponseEntity<Void> requestRecoveryViaEmail(
             @RequestBody @Valid PasswordRecoveryRequestDTO request
     ) {
         passwordRecoveryService.requestRecoveryViaEmail(request.cpf());
-        // Sempre retorna 202 Accepted por segurança (não revelar se o CPF existe)
+
         return ResponseEntity.accepted().build();
     }
 
-    @Operation(
-            summary = "Criar nova senha a partir de Token",
-            description = "Recebe o token enviado por e-mail e a nova senha para efetivar a troca."
-    )
     @PostMapping("/reset")
+    @Operation(
+            summary = "Redefinir senha por token",
+            description = "Recebe o token de recuperação e a nova senha para efetivar a troca."
+    )
     public ResponseEntity<Void> resetPassword(
             @RequestBody @Valid PasswordResetDTO request
     ) {
-        passwordRecoveryService.resetPassword(request.token(), request.newPassword());
-        return ResponseEntity.ok().build();
+        passwordRecoveryService.resetPassword(
+                request.token(),
+                request.newPassword()
+        );
+
+        return ResponseEntity.noContent().build();
     }
 
-    @Operation(
-            summary = "Admin: Gerar senha provisória ou Link",
-            description = "Exclusivo para administradores: pode gerar uma senha provisória em texto claro ou um link para o usuário."
-    )
     @PostMapping("/admin-request")
+    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_UPDATE')")
+    @RequiredPermission("AUTHENTICATION_USER_UPDATE")
+    @Operation(
+            summary = "Gerar recuperação de senha por administrador",
+            description = "Permite que um administrador gere uma senha provisória ou token de recuperação para um usuário."
+    )
     public ResponseEntity<PasswordRecoveryAdminResponseDTO> requestRecoveryViaAdmin(
             @RequestBody @Valid PasswordRecoveryAdminRequestDTO request
     ) {
-        // Observação: Aqui deveria ter uma validação para garantir que quem chamou é ADMIN.
-        // O SecurityFilterChain e o método hasRole("ADMIN") geralmente cuidam disso,
-        // mas vale lembrar de checar as authorities se necessário.
-
         PasswordRecoveryAdminResult result = passwordRecoveryService.requestRecoveryViaAdmin(
                 request.targetUserId(),
                 request.generateTempPassword()
         );
 
-        PasswordRecoveryAdminResponseDTO response = new PasswordRecoveryAdminResponseDTO(
-                result.temporaryPassword(),
-                result.resetToken()
+        return ResponseEntity.ok(
+                new PasswordRecoveryAdminResponseDTO(
+                        result.temporaryPassword(),
+                        result.resetToken()
+                )
         );
-
-        return ResponseEntity.ok(response);
     }
 }

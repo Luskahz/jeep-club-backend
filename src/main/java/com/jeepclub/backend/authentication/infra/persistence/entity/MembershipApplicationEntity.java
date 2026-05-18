@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.entities;
+package com.jeepclub.backend.authentication.infra.persistence.entity;
 
 import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
 import jakarta.persistence.*;
@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Entity
 @Table(
-        name = "membership_applications",
+        name = "authentication_membership_applications",
         indexes = {
                 @Index(
                         name = "idx_membership_applications_cpf_status",

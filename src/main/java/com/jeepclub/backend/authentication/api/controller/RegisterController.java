@@ -9,32 +9,34 @@ import com.jeepclub.backend.authentication.core.domain.model.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(
-        name = "Autenticação",
-        description = "Endpoints relacionados à autenticação e gerenciamento de sessão."
-)
-@RequiredArgsConstructor
 @RestController
 @RequestMapping("/auth")
+@RequiredArgsConstructor
+@Validated
+@Tag(
+        name = "Authentication - Register",
+        description = "Registro de usuários e emissão inicial de tokens."
+)
 public class RegisterController {
 
     private final RegisterService registerService;
     private final LoginService loginService;
 
+    @PostMapping("/register")
     @Operation(
             summary = "Registrar usuário",
             description = "Cria uma nova conta de usuário e retorna os tokens de autenticação."
     )
-    @PostMapping("/register")
     public ResponseEntity<AuthTokenResponseDTO> register(
-            @RequestBody @Valid @NotNull RegisterRequestDTO request
+            @RequestBody @Valid RegisterRequestDTO request
     ) {
-        User newUser = registerService.registerUser(
+        User user = registerService.registerUser(
                 request.name(),
                 request.birthData(),
                 request.email(),
@@ -45,16 +47,15 @@ public class RegisterController {
         );
 
         AuthTokens tokens = loginService.login(
-                newUser.getCpf(),
+                user.getCpf(),
                 request.password()
         );
 
-        AuthTokenResponseDTO response = new AuthTokenResponseDTO(
-                tokens.refreshToken(),
-                tokens.accessToken(),
-                tokens.expiresInSeconds()
-        );
-
-        return ResponseEntity.status(201).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AuthTokenResponseDTO(
+                        tokens.refreshToken(),
+                        tokens.accessToken(),
+                        tokens.expiresInSeconds()
+                ));
     }
 }
