@@ -3,7 +3,7 @@ package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
 import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.authentication.core.repository.MembershipApplicationRepository;
-import com.jeepclub.backend.authentication.infra.persistence.entities.MembershipApplicationEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.MembershipApplicationEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.MembershipApplicationJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.MembershipApplicationMapper;
 import org.springframework.stereotype.Repository;

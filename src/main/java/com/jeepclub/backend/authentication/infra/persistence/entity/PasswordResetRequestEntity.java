@@ -8,7 +8,7 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "password_reset_requests")
+@Table(name = "authorization_password_reset_requests")
 @Getter
 @Setter
 public class PasswordResetRequestEntity {

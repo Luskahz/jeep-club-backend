@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.entities;
+package com.jeepclub.backend.authentication.infra.persistence.entity;
 
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import jakarta.persistence.*;
@@ -19,7 +19,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "users")
+@Table(name = "authentication_users")
 public class UserEntity {
 
     @Id

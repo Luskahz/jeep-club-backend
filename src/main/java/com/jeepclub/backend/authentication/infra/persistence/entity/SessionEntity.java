@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.entities;
+package com.jeepclub.backend.authentication.infra.persistence.entity;
 
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
 import jakarta.persistence.*;
@@ -12,7 +12,7 @@ import java.time.Instant;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "sessions")
+@Table(name = "authentication_sessions")
 public class SessionEntity {
 
     @Id

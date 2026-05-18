@@ -4,6 +4,7 @@ import com.jeepclub.backend.authorization.api.dto.PermissionResponseDTO;
 import com.jeepclub.backend.authorization.core.application.result.PermissionResult;
 import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.application.service.PermissionService;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -22,6 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Validated
 @PreAuthorize("hasAuthority('AUTHORIZATION_PERMISSION_READ')")
+@RequiredPermission("AUTHORIZATION_PERMISSION_READ")
 @Tag(
         name = "Authorization - Permissions",
         description = "Consulta de permissões disponíveis no módulo de autorização."

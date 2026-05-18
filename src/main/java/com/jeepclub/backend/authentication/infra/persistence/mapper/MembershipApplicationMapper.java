@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.mapper;
 
 import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
-import com.jeepclub.backend.authentication.infra.persistence.entities.MembershipApplicationEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.MembershipApplicationEntity;
 import org.springframework.stereotype.Component;
 
 @Component

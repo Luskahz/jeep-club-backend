@@ -2,7 +2,7 @@ package com.jeepclub.backend.authentication.infra.persistence.mapper;
 
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
-import com.jeepclub.backend.authentication.infra.persistence.entities.RefreshTokenEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.RefreshTokenEntity;
 
 public class RefreshTokenMapper {
 
