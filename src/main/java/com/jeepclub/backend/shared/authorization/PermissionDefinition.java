@@ -72,6 +72,20 @@ public enum PermissionDefinition {
             "Permite reativar papéis de acesso"
     ),
 
+    // AUTHENTICATION / PASSWORD RECOVERY
+
+    AUTHENTICATION_USER_PASSWORD_RESET_TOKEN_GENERATE(
+            PermissionCode.AUTHENTICATION_USER_PASSWORD_RESET_TOKEN_GENERATE,
+            ModuleCode.AUTHENTICATION,
+            "Permite gerar tokens de redefinição de senha para usuários"
+    ),
+
+    AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE(
+            PermissionCode.AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE,
+            ModuleCode.AUTHENTICATION,
+            "Permite gerar senhas temporárias para usuários"
+    ),
+
     // AUTHORIZATION / PERMISSIONS
     AUTHORIZATION_PERMISSION_READ(
             PermissionCode.AUTHORIZATION_PERMISSION_READ,
