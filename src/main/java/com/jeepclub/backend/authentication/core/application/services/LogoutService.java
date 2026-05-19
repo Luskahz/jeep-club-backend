@@ -6,7 +6,6 @@ import com.jeepclub.backend.authentication.core.application.results.LogoutResult
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
-import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

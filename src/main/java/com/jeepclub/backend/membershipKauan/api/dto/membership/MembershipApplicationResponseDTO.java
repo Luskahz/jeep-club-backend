@@ -1,6 +1,6 @@
-package com.jeepclub.backend.authentication.api.dto.membership;
+package com.jeepclub.backend.membershipKauan.api.dto.membership;
 
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membershipKauan.core.domain.model.MembershipApplication;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;

@@ -1,15 +1,17 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryAdminRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryAdminResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestDTO;
 import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetDTO;
-import com.jeepclub.backend.authentication.core.application.results.PasswordRecoveryAdminResult;
+import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetTokenAdminResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.recovery.TemporaryPasswordAdminResponseDTO;
+import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
+import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
 import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,7 +19,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth/recovery")
+@RequestMapping("/auth/password-recovery")
 @RequiredArgsConstructor
 @Validated
 @Tag(
@@ -57,26 +59,37 @@ public class PasswordRecoveryController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/admin-request")
-    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_UPDATE')")
-    @RequiredPermission("AUTHENTICATION_USER_UPDATE")
+    @PostMapping("/admin/users/{userId}/temporary-password")
+    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE')")
+    @RequiredPermission("AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE")
     @Operation(
-            summary = "Gerar recuperação de senha por administrador",
-            description = "Permite que um administrador gere uma senha provisória ou token de recuperação para um usuário."
+            summary = "Gerar senha temporária por administrador",
+            description = "Permite que um administrador gere uma senha temporária para um usuário."
     )
-    public ResponseEntity<PasswordRecoveryAdminResponseDTO> requestRecoveryViaAdmin(
-            @RequestBody @Valid PasswordRecoveryAdminRequestDTO request
+    public ResponseEntity<TemporaryPasswordAdminResponseDTO> generateTemporaryPasswordByAdmin(
+            @PathVariable @Positive Long userId
     ) {
-        PasswordRecoveryAdminResult result = passwordRecoveryService.requestRecoveryViaAdmin(
-                request.targetUserId(),
-                request.generateTempPassword()
-        );
+        TemporaryPasswordAdminResult result = passwordRecoveryService.generateTemporaryPasswordByAdmin(userId);
 
         return ResponseEntity.ok(
-                new PasswordRecoveryAdminResponseDTO(
-                        result.temporaryPassword(),
-                        result.resetToken()
-                )
+                TemporaryPasswordAdminResponseDTO.from(result)
+        );
+    }
+
+    @PostMapping("/admin/users/{userId}/reset-token")
+    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_PASSWORD_RESET_TOKEN_GENERATE')")
+    @RequiredPermission("AUTHENTICATION_USER_PASSWORD_RESET_TOKEN_GENERATE")
+    @Operation(
+            summary = "Gerar token de redefinição por administrador",
+            description = "Permite que um administrador gere um token de redefinição de senha para um usuário."
+    )
+    public ResponseEntity<PasswordResetTokenAdminResponseDTO> generateResetTokenByAdmin(
+            @PathVariable @Positive Long userId
+    ) {
+        PasswordResetTokenAdminResult result = passwordRecoveryService.generateResetTokenByAdmin(userId);
+
+        return ResponseEntity.ok(
+                PasswordResetTokenAdminResponseDTO.from(result)
         );
     }
 }

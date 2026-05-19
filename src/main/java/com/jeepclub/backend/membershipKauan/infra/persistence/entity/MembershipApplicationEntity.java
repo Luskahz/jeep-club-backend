@@ -1,6 +1,6 @@
-package com.jeepclub.backend.authentication.infra.persistence.entity;
+package com.jeepclub.backend.membershipKauan.infra.persistence.entity;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membershipKauan.core.domain.enums.MembershipApplicationStatus;
 import jakarta.persistence.*;
 
 import java.time.Instant;

@@ -1,7 +1,7 @@
-package com.jeepclub.backend.authentication.core.repository;
+package com.jeepclub.backend.membershipKauan.core.repository;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membershipKauan.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membershipKauan.core.domain.model.MembershipApplication;
 
 import java.util.Optional;
 

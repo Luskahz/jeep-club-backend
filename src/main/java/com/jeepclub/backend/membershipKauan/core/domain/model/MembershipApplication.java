@@ -1,6 +1,6 @@
-package com.jeepclub.backend.authentication.core.domain.model;
+package com.jeepclub.backend.membershipKauan.core.domain.model;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membershipKauan.core.domain.enums.MembershipApplicationStatus;
 
 import java.time.Instant;
 
