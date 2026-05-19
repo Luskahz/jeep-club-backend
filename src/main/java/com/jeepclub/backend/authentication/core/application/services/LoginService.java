@@ -39,7 +39,8 @@ public class LoginService {
     public AuthTokens login(String cpf, String senha) {
         Instant now = Instant.now();
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(UserCpfNotFoundException::new);
+                .orElseThrow(() -> new UserCpfNotFoundException("CPF not found."));
+
         if (!passwordHasher.matches(senha, user.getPasswordHash())) {
             user.registerFailedLogin();
             userRepository.save(user);

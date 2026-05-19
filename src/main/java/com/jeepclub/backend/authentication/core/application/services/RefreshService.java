@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RFInvalidException;
+import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RFNotFoundException;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
@@ -36,14 +37,14 @@ public class RefreshService {
         String tokenHash = tokenHashService.hash(rawRefreshToken);
 
         RefreshToken existingToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new RFInvalidException("Refresh token invalid."));
+                .orElseThrow(() -> new RFNotFoundException("Refresh token not found."));
 
         if (!existingToken.isValid(now)) {
             throw new RFInvalidException("Invalid refresh token for rotation rules");
         }
 
         User user = userRepository.findById(existingToken.getSession().getUserId())
-                .orElseThrow(() -> new SecurityException("Usuário não encontrado para este token"));
+                .orElseThrow(() -> new SecurityException("User not found with this token."));
 
         String newRawToken = tokenGenerator.generate();
         String newTokenHash = tokenHashService.hash(newRawToken);

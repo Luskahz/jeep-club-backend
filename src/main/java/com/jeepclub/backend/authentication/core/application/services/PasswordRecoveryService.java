@@ -1,6 +1,9 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenInvalidException;
+import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
@@ -35,7 +38,7 @@ public class PasswordRecoveryService {
         Instant now = Instant.now(clock);
 
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(() -> new UserNotFoundException("CPF não encontrado"));
+                .orElseThrow(() -> new UserCpfNotFoundException("User cpf not found."));
 
         user.assertCanRequestPasswordChange();
 
@@ -63,7 +66,7 @@ public class PasswordRecoveryService {
     @Transactional
     public TemporaryPasswordAdminResult generateTemporaryPasswordByAdmin(Long targetUserId) {
         User user = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new UserNotFoundException("Usuário alvo não encontrado"));
+                .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
 
         user.assertCanRequestPasswordChange();
 
@@ -82,7 +85,7 @@ public class PasswordRecoveryService {
     @Transactional
     public PasswordResetTokenAdminResult generateResetTokenByAdmin(Long targetUserId) {
         User user = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new UserNotFoundException("Usuário alvo não encontrado"));
+                .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
 
         user.assertCanRequestPasswordChange();
 
@@ -112,14 +115,14 @@ public class PasswordRecoveryService {
         String hashedToken = tokenHashService.hash(rawToken);
 
         PasswordResetRequest resetRequest = passwordResetRepository.findByTokenHash(hashedToken)
-                .orElseThrow(() -> new IllegalArgumentException("Token inválido ou expirado"));
+                .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
 
         if (!resetRequest.isPending(now)) {
-            throw new IllegalArgumentException("Token inválido ou expirado");
+            throw new TokenInvalidException("Token invalid or expired.");
         }
 
         User user = userRepository.findById(resetRequest.getUserId())
-                .orElseThrow(() -> new UserNotFoundException("Usuário não encontrado"));
+                .orElseThrow(() -> new UserIdNotFoundException("User not found with this id."));
 
         String newPasswordHash = passwordHasher.hash(newPassword);
 

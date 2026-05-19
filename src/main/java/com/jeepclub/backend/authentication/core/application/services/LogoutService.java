@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.session.TemQueVerISSO;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.application.results.LogoutResult;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
@@ -26,7 +26,7 @@ public class LogoutService {
                 .orElseThrow(() -> new SessionNotFoundException("Session not found."));
 
         userRepository.findById(session.getUserId())
-                .orElseThrow(() -> new TemQueVerISSO("User not found."));
+                .orElseThrow(() -> new UserIdNotFoundException("User not found."));
 
         session.logout(now);
         sessionRepository.save(session);
