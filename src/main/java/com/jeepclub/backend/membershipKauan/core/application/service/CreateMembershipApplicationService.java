@@ -1,8 +1,8 @@
-package com.jeepclub.backend.authentication.core.application.services;
+package com.jeepclub.backend.membershipKauan.core.application.service;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
-import com.jeepclub.backend.authentication.core.repository.MembershipApplicationRepository;
+import com.jeepclub.backend.membershipKauan.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membershipKauan.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membershipKauan.core.repository.MembershipApplicationRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

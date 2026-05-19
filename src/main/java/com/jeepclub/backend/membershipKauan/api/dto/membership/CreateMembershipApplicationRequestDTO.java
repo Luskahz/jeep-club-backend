@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto.membership;
+package com.jeepclub.backend.membershipKauan.api.dto.membership;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;

@@ -54,7 +54,7 @@ class LoginControllerTest {
     @Test
     @DisplayName("Falha: Senha incorreta retorna 401 Unauthorized")
     void shouldReturn401OnInvalidPassword() throws Exception {
-        when(loginService.login(anyString(), anyString())).thenThrow(new UserInvalidPasswordException());
+        when(loginService.login(anyString(), anyString())).thenThrow(nsnew UserInvalidPasswordException());
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

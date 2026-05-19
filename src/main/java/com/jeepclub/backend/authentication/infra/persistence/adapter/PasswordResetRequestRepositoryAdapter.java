@@ -3,7 +3,7 @@ package com.jeepclub.backend.authentication.infra.persistence.adapter;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
 import com.jeepclub.backend.authentication.core.repository.PasswordResetRequestRepository;
 import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordResetRequestEntity;
-import com.jeepclub.backend.authentication.infra.persistence.repository.JpaPasswordResetRequestRepository;
+import com.jeepclub.backend.membershipKauan.infra.persistence.repository.JpaPasswordResetRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

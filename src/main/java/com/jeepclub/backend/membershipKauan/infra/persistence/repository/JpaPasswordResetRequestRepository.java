@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.repository;
+package com.jeepclub.backend.membershipKauan.infra.persistence.repository;
 
 import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordResetRequestEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

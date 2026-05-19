@@ -1,9 +1,9 @@
-package com.jeepclub.backend.authentication.api.controller;
+package com.jeepclub.backend.membershipKauan.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.membership.CreateMembershipApplicationRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.membership.MembershipApplicationResponseDTO;
-import com.jeepclub.backend.authentication.core.application.services.CreateMembershipApplicationService;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membershipKauan.api.dto.membership.CreateMembershipApplicationRequestDTO;
+import com.jeepclub.backend.membershipKauan.api.dto.membership.MembershipApplicationResponseDTO;
+import com.jeepclub.backend.membershipKauan.core.application.service.CreateMembershipApplicationService;
+import com.jeepclub.backend.membershipKauan.core.domain.model.MembershipApplication;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

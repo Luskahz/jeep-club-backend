@@ -1,11 +1,11 @@
-package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
+package com.jeepclub.backend.membershipKauan.infra.persistence.repository.jpa;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
-import com.jeepclub.backend.authentication.core.repository.MembershipApplicationRepository;
-import com.jeepclub.backend.authentication.infra.persistence.entity.MembershipApplicationEntity;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.MembershipApplicationJpaRepository;
-import com.jeepclub.backend.authentication.infra.persistence.mapper.MembershipApplicationMapper;
+import com.jeepclub.backend.membershipKauan.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membershipKauan.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membershipKauan.core.repository.MembershipApplicationRepository;
+import com.jeepclub.backend.membershipKauan.infra.persistence.entity.MembershipApplicationEntity;
+import com.jeepclub.backend.membershipKauan.infra.persistence.jpa.MembershipApplicationJpaRepository;
+import com.jeepclub.backend.membershipKauan.infra.persistence.mapper.MembershipApplicationMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
