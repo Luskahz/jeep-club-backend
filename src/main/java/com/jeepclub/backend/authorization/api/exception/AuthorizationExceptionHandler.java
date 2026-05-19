@@ -5,7 +5,7 @@ import com.jeepclub.backend.authorization.core.application.exception.RoleAlready
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.RolePermissionAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.RolePermissionNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
