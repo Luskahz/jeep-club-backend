@@ -7,7 +7,7 @@ import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.port.AuthTimeProperties;
+import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
 import com.jeepclub.backend.authentication.core.port.JwtService;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
@@ -33,7 +33,7 @@ public class LoginService {
     private final RefreshTokenHashService tokenHashService;
     private final RefreshTokenGenerator tokenGenerator;
     private final JwtService jwtService;
-    private final AuthTimeProperties authTimeProperties;
+    private final ApplicationTimeProperties authTimeProperties;
 
     @Transactional
     public AuthTokens login(String cpf, String senha) {

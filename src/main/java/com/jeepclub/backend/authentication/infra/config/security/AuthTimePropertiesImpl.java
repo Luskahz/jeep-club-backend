@@ -1,9 +1,7 @@
 package com.jeepclub.backend.authentication.infra.config.security;
 
-import com.jeepclub.backend.authentication.core.port.AuthTimeProperties;
+import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
 import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -15,7 +13,7 @@ import java.time.Duration;
 @Validated
 @Setter
 @ConfigurationProperties(prefix = "security.auth")
-public class AuthTimePropertiesImpl implements AuthTimeProperties {
+public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
 
     @NotNull
     private Duration refreshTokenTtl;

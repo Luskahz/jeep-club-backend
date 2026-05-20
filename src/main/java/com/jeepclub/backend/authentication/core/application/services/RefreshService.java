@@ -5,7 +5,7 @@ import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.port.AuthTimeProperties;
+import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
 import com.jeepclub.backend.authentication.core.port.JwtService;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
@@ -27,7 +27,7 @@ public class RefreshService {
     private final RefreshTokenHashService tokenHashService;
     private final RefreshTokenGenerator tokenGenerator;
     private final JwtService jwtService;
-    private final AuthTimeProperties authTimeProperties;
+    private final ApplicationTimeProperties authTimeProperties;
 
     @Transactional
     public AuthTokens refresh(String rawRefreshToken) {

@@ -19,13 +19,15 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth/password-recovery")
+@RequestMapping("/authentication/password-recovery")
 @RequiredArgsConstructor
 @Validated
 @Tag(
         name = "Authentication - Password Recovery",
         description = "Fluxo de recuperação e redefinição de senha."
 )
+
+
 public class PasswordRecoveryController {
 
     private final PasswordRecoveryService passwordRecoveryService;
@@ -39,7 +41,6 @@ public class PasswordRecoveryController {
             @RequestBody @Valid PasswordRecoveryRequestDTO request
     ) {
         passwordRecoveryService.requestRecoveryViaEmail(request.cpf());
-
         return ResponseEntity.accepted().build();
     }
 

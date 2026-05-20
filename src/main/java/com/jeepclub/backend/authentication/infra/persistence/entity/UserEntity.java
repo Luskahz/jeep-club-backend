@@ -11,10 +11,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.Instant;
 import java.time.LocalDate;
 
-/**
- * Entidade de Banco de Dados.
- * Mapeamento ORM focado APENAS em como o Modelo se salva nas tabelas do SQL através do Hibernate.
- */
 @Getter
 @Setter
 @NoArgsConstructor

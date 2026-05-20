@@ -26,7 +26,7 @@ public class PasswordRecoveryService {
     private final RefreshTokenGenerator tokenGenerator;
     private final RefreshTokenHashService tokenHashService;
     private final PasswordHasher passwordHasher;
-    private final AuthTimeProperties authTimeProperties;
+    private final ApplicationTimeProperties authTimeProperties;
     private final ApplicationUrlProperties applicationUrlProperties;
     private final Clock clock;
 
@@ -34,30 +34,30 @@ public class PasswordRecoveryService {
     public void requestRecoveryViaEmail(String cpf) {
         Instant now = Instant.now(clock);
 
-        User user = userRepository.findByCpf(cpf)
-                .orElseThrow(() -> new UserNotFoundException("CPF não encontrado"));
+        userRepository.findByCpf(cpf)
+                .ifPresent(user -> {
+                    user.assertCanRequestPasswordChange();
 
-        user.assertCanRequestPasswordChange();
+                    String rawToken = tokenGenerator.generate();
+                    String hashedToken = tokenHashService.hash(rawToken);
 
-        String rawToken = tokenGenerator.generate();
-        String hashedToken = tokenHashService.hash(rawToken);
+                    Instant expiresAt = now.plus(authTimeProperties.passwordChangeRequestTtl());
 
-        Instant expiresAt = now.plus(authTimeProperties.passwordChangeRequestTtl());
+                    PasswordResetRequest resetRequest = PasswordResetRequest.create(
+                            user.getId(),
+                            hashedToken,
+                            now,
+                            expiresAt
+                    );
 
-        PasswordResetRequest resetRequest = PasswordResetRequest.create(
-                user.getId(),
-                hashedToken,
-                now,
-                expiresAt
-        );
+                    passwordResetRepository.save(resetRequest);
 
-        passwordResetRepository.save(resetRequest);
+                    String resetLink = applicationUrlProperties.baseUrl()
+                            + "/reset-password?token="
+                            + rawToken;
 
-        String resetLink = applicationUrlProperties.baseUrl()
-                + "/reset-password?token="
-                + rawToken;
-
-        notificationPort.sendPasswordResetLink(user.getEmail(), resetLink);
+                    notificationPort.sendPasswordResetLink(user.getEmail(), resetLink);
+                });
     }
 
     @Transactional
