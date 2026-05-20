@@ -1,0 +1,4 @@
+package com.jeepclub.backend.vehicles.api.controller;
+
+public class ListController {
+}
