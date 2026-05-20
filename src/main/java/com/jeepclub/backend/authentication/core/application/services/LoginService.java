@@ -45,6 +45,7 @@ public class LoginService {
             userRepository.save(user);
             throw new UserInvalidPasswordException(user.getId());
         }
+        user.assertCanAuthenticate();
 
         Session session = sessionRepository.findActiveByUserId(user.getId())
                 .filter(existing -> existing.isValid(now))

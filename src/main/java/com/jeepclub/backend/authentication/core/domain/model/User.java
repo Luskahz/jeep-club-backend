@@ -126,25 +126,7 @@ public class User {
         }
     }
 
-    public void changePassword(
-            String newHash,
-            Instant now
-    ) {
 
-        if (newHash == null || newHash.isBlank()) throw new UserNewHashRequiredException("newHash is required");
-
-        if (now == null) throw new UserNowInstantRequiredException("now is required");
-
-        this.passwordHash = newHash;
-        this.passwordChangedAt = now;
-        this.failedLoginAttempts = 0;
-    }
-
-    public void recordSuccessfulLogin(Instant now) {
-        this.lastLoginAt = now;
-        this.failedLoginAttempts = 0;
-        this.updatedAt = now;
-    }
 
     public boolean isBlockedForLogin() {
         return isLocked() || isDisabled();
@@ -173,16 +155,68 @@ public class User {
         this.status = UserStatus.ACTIVE;
     }
 
+
+    public void recordSuccessfulLogin(Instant now) {
+        this.lastLoginAt = now;
+        this.failedLoginAttempts = 0;
+        this.updatedAt = now;
+    }
+
     public User assertCanAuthenticate() {
-        if (isBlockedForLogin()) {
+        if (isDisabled()) {
             throw new UserBlockedForLoginException("User can not authenticate, user is disabled.");
         }
+
+        if (isLocked()) {
+            throw new UserBlockedForLoginException("User can not authenticate, user is locked.");
+        }
+
+        if (isChangePasswordRequired()) {
+            throw new UserPasswordChangeRequiredException("Password change is required before login.");
+        }
+
         return this;
     }
+
+    public void changePassword(String newHash, Instant now) {
+        if (newHash == null || newHash.isBlank()) {
+            throw new UserNewHashRequiredException("newHash is required");
+        }
+
+        if (now == null) {
+            throw new UserNowInstantRequiredException("now is required");
+        }
+
+        this.passwordHash = newHash;
+        this.passwordChangedAt = now;
+        this.failedLoginAttempts = 0;
+        this.status = UserStatus.ACTIVE;
+        this.updatedAt = now;
+    }
+
+    public void changeToTemporaryPassword(String temporaryPasswordHash, Instant now) {
+        if (temporaryPasswordHash == null || temporaryPasswordHash.isBlank()) {
+            throw new UserNewHashRequiredException("temporaryPasswordHash is required");
+        }
+
+        if (now == null) {
+            throw new UserNowInstantRequiredException("now is required");
+        }
+
+        this.passwordHash = temporaryPasswordHash;
+        this.passwordChangedAt = now;
+        this.failedLoginAttempts = 0;
+        this.status = UserStatus.CHANGE_PASSWORD_REQUIRED;
+        this.updatedAt = now;
+    }
+
 
     public void assertCanRequestPasswordChange() {
         if (status == UserStatus.DISABLED) {
             throw new UserCannotChangePasswordException("User cannot request password change, user is disabled.");
         }
+    }
+    public boolean isChangePasswordRequired() {
+        return status == UserStatus.CHANGE_PASSWORD_REQUIRED;
     }
 }
