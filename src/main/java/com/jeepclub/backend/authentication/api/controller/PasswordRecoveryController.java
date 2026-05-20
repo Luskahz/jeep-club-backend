@@ -1,9 +1,6 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetDTO;
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetTokenAdminResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.recovery.TemporaryPasswordAdminResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.recovery.*;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
@@ -93,4 +90,22 @@ public class PasswordRecoveryController {
                 PasswordResetTokenAdminResponseDTO.from(result)
         );
     }
+
+    @PostMapping("/temporary-password/change")
+    @Operation(
+            summary = "Trocar senha provisória",
+            description = "Valida CPF e senha provisória, troca pela nova senha e reativa o usuário para login normal."
+    )
+    public ResponseEntity<Void> changeTemporaryPassword(
+            @RequestBody @Valid TemporaryPasswordChangeDTO request
+    ) {
+        passwordRecoveryService.changeTemporaryPassword(
+                request.cpf(),
+                request.temporaryPassword(),
+                request.newPassword()
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
 }

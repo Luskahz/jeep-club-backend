@@ -132,6 +132,17 @@ public  class AuthenticationExceptionHandler {
         );
     }
 
+    @ExceptionHandler(UserPasswordChangeRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserPasswordChangeRequired(
+            UserPasswordChangeRequiredException exception
+    ) {
+        return buildErrorResponse(
+                "USER_PASSWORD_CHANGE_REQUIRED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
 
     // services
 
@@ -389,6 +400,7 @@ public  class AuthenticationExceptionHandler {
         );
     }
 
+
     private ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String code,
             String message,
@@ -401,6 +413,7 @@ public  class AuthenticationExceptionHandler {
                         status
                 ));
     }
+
 
 
 

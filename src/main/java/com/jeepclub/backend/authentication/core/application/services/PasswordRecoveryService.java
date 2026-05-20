@@ -3,6 +3,9 @@ package com.jeepclub.backend.authentication.core.application.services;
 import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidCredentialsException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
@@ -130,5 +133,33 @@ public class PasswordRecoveryService {
 
         userRepository.save(user);
         passwordResetRepository.save(resetRequest);
+    }
+
+    @Transactional
+    public void changeTemporaryPassword(
+            String cpf,
+            String temporaryPassword,
+            String newPassword
+    ) {
+        Instant now = Instant.now(clock);
+
+        User user = userRepository.findByCpf(cpf)
+                .orElseThrow(UserInvalidCredentialsException::new);
+
+        if (!passwordHasher.matches(temporaryPassword, user.getPasswordHash())) {
+            user.registerFailedLogin();
+            userRepository.save(user);
+            throw new UserInvalidPasswordException(user.getId());
+        }
+
+        if (!user.isChangePasswordRequired()) {
+            throw new UserPasswordChangeNotRequiredException();
+        }
+
+        String newPasswordHash = passwordHasher.hash(newPassword);
+
+        user.changePassword(newPasswordHash, now);
+
+        userRepository.save(user);
     }
 }
