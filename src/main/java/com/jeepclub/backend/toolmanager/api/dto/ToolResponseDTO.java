@@ -8,12 +8,19 @@ public class ToolResponseDTO {
     private String name;
     private String description;
     private ToolStatus status;
+    private Long userId; // <- NOVO CAMPO
 
     public ToolResponseDTO(Tool tool) {
         this.id = tool.getId();
         this.name = tool.getName();
         this.description = tool.getDescription();
         this.status = tool.getStatus();
+        this.userId = tool.getUserId();
     }
-    // Getters
+
+    public Long getId() { return id; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public ToolStatus getStatus() { return status; }
+    public Long getUserId() { return userId; }
 }

@@ -1,7 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.results.PasswordRecoveryAdminResult;
-import com.jeepclub.backend.authentication.core.domain.exception.CpfNotFoundException;
+// IMPORT CORRIGIDO PARA O CAMINHO E NOME CERTOS
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.*;
@@ -29,7 +30,8 @@ public class PasswordRecoveryService {
     @Transactional
     public void requestRecoveryViaEmail(String cpf) {
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(() -> new CpfNotFoundException("CPF não encontrado"));
+                // CLASSE DA EXCEÇÃO CORRIGIDA AQUI
+                .orElseThrow(UserCpfNotFoundException::new);
 
         user.assertCanRequestPasswordChange();
 
@@ -37,7 +39,7 @@ public class PasswordRecoveryService {
         String hashedToken = tokenHashService.hash(rawToken);
 
         Instant now = Instant.now();
-        Instant expiresAt = now.plus(authTimeProperties.passwordChangeRequestTtl());
+        Instant expiresAt = now.plus(authTimeProperties.refreshTokenTtl());
 
         PasswordResetRequest resetRequest = PasswordResetRequest.create(
                 user.getId(),
@@ -70,7 +72,7 @@ public class PasswordRecoveryService {
         } else {
             String rawToken = tokenGenerator.generate();
             String hashedToken = tokenHashService.hash(rawToken);
-            Instant expiresAt = now.plus(authTimeProperties.passwordChangeRequestTtl());
+            Instant expiresAt = now.plus(authTimeProperties.refreshTokenTtl());
 
             PasswordResetRequest resetRequest = PasswordResetRequest.create(
                     user.getId(),
@@ -86,12 +88,12 @@ public class PasswordRecoveryService {
     @Transactional
     public void resetPassword(String rawToken, String newPassword) {
         String hashedToken = tokenHashService.hash(rawToken);
-        
+
         PasswordResetRequest resetRequest = passwordResetRepository.findByTokenHash(hashedToken)
                 .orElseThrow(() -> new IllegalArgumentException("Token inválido ou expirado"));
 
         Instant now = Instant.now();
-        
+
         if (!resetRequest.isPending(now)) {
             throw new IllegalArgumentException("Token inválido ou expirado");
         }
@@ -101,9 +103,9 @@ public class PasswordRecoveryService {
 
         String newPasswordHash = passwordHasher.hash(newPassword);
         user.changePassword(newPasswordHash, now);
-        
+
         resetRequest.markAsUsed(now);
-        
+
         userRepository.save(user);
         passwordResetRepository.save(resetRequest);
     }

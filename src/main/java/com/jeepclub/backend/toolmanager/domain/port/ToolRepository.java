@@ -5,6 +5,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ToolRepository {
-    List<Tool> findAllAvailable();
-    Optional<Tool> findById(Long id);
+    List<Tool> findAllByUserId(Long userId);
+    Optional<Tool> findByIdAndUserId(Long toolId, Long userId);
 }

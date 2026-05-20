@@ -5,7 +5,6 @@ import com.jeepclub.backend.toolmanager.domain.port.ToolRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ToolQueryService {
@@ -16,12 +15,14 @@ public class ToolQueryService {
         this.toolRepository = toolRepository;
     }
 
-    public List<Tool> listAvailableTools() {
-        return toolRepository.findAllAvailable();
+    // Atualizado: Agora recebe o ID do usuário
+    public List<Tool> listUserTools(Long userId) {
+        return toolRepository.findAllByUserId(userId);
     }
 
-    public Tool getToolDetails(Long id) {
-        // O ideal é lançar uma ToolNotFoundException personalizada aqui se não achar (baseado na sua pasta exceptions)
-        return toolRepository.findById(id).orElseThrow(() -> new RuntimeException("Tool not found"));
+    // Atualizado: Agora confere o ID da ferramenta e se ela pertence ao usuário
+    public Tool getToolDetails(Long toolId, Long userId) {
+        return toolRepository.findByIdAndUserId(toolId, userId)
+                .orElseThrow(() -> new RuntimeException("Tool not found or does not belong to you"));
     }
 }

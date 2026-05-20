@@ -7,6 +7,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ToolMapper {
     public Tool toDomain(ToolEntity entity) {
-        return new Tool(entity.getId(), entity.getName(), entity.getDescription(), entity.getStatus());
+        return new Tool(
+                entity.getId(),
+                entity.getName(),
+                entity.getDescription(),
+                entity.getStatus(),
+                entity.getUserId() // <- PASSANDO O USER ID AQUI
+        );
     }
 }

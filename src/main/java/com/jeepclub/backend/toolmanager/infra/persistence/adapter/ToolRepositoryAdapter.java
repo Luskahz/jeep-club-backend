@@ -1,6 +1,5 @@
 package com.jeepclub.backend.toolmanager.infra.persistence.adapter;
 
-import com.jeepclub.backend.toolmanager.domain.enums.ToolStatus;
 import com.jeepclub.backend.toolmanager.domain.model.Tool;
 import com.jeepclub.backend.toolmanager.domain.port.ToolRepository;
 import com.jeepclub.backend.toolmanager.infra.persistence.jpa.ToolJpaRepository;
@@ -23,15 +22,16 @@ public class ToolRepositoryAdapter implements ToolRepository {
     }
 
     @Override
-    public List<Tool> findAllAvailable() {
-        return jpaRepository.findAllByStatus(ToolStatus.AVAILABLE)
+    public List<Tool> findAllByUserId(Long userId) {
+        return jpaRepository.findAllByUserId(userId)
                 .stream()
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<Tool> findById(Long id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+    public Optional<Tool> findByIdAndUserId(Long toolId, Long userId) {
+        return jpaRepository.findByIdAndUserId(toolId, userId)
+                .map(mapper::toDomain);
     }
 }
