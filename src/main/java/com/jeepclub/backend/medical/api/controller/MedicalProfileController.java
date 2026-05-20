@@ -1,15 +1,22 @@
 package com.jeepclub.backend.medical.api.controller;
 
-import com.jeepclub.backend.authentication.infra.security.UserPrincipal;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.medical.api.dto.MedicalProfileRequest;
 import com.jeepclub.backend.medical.api.dto.MedicalProfileResponse;
 import com.jeepclub.backend.medical.core.application.MedicalProfileService;
 import com.jeepclub.backend.medical.core.domain.MedicalProfileOwnerType;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/medical-profiles")
@@ -22,7 +29,7 @@ public class MedicalProfileController {
     public ResponseEntity<MedicalProfileResponse> getMyMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long userId = principal.getId();
+        Long userId = principal.getUserId();
 
         var profile = medicalProfileService.getByOwner(
                 MedicalProfileOwnerType.USER,
@@ -37,7 +44,7 @@ public class MedicalProfileController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody MedicalProfileRequest request
     ) {
-        Long userId = principal.getId();
+        Long userId = principal.getUserId();
 
         var profile = medicalProfileService.upsert(
                 MedicalProfileOwnerType.USER,
