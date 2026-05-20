@@ -5,5 +5,5 @@ import java.time.Duration;
 public interface ApplicationTimeProperties {
     Duration sessionTtl();
     Duration refreshTokenTtl();
-    Duration passwordChangeRequestTtl();
+    Duration passwordRecoveryRequestTtl();
 }

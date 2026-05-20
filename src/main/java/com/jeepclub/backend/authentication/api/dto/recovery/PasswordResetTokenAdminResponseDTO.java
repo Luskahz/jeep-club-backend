@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.recovery;
 
-import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
+import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Objects;
@@ -15,7 +15,7 @@ public record PasswordResetTokenAdminResponseDTO(
         )
         String resetToken
 ) {
-    public static PasswordResetTokenAdminResponseDTO from(PasswordResetTokenAdminResult result) {
+    public static PasswordResetTokenAdminResponseDTO from(PasswordResetLinkAdminResult result) {
         Objects.requireNonNull(result, "result cannot be null");
 
         return new PasswordResetTokenAdminResponseDTO(

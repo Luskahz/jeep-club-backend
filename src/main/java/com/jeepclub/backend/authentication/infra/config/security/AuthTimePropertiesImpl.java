@@ -34,7 +34,7 @@ public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
     }
 
     @Override
-    public Duration passwordChangeRequestTtl() {
+    public Duration passwordRecoveryRequestTtl() {
         return passwordChangeRequestTtl;
     }
 

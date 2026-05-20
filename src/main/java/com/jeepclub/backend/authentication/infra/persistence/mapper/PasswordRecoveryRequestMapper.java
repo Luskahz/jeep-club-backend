@@ -1,15 +1,15 @@
 package com.jeepclub.backend.authentication.infra.persistence.mapper;
 
-import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
-import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordResetRequestEntity;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
+import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordRecoveryRequestEntity;
 
-public final class PasswordResetRequestMapper {
+public final class PasswordRecoveryRequestMapper {
 
-    private PasswordResetRequestMapper() {
+    private PasswordRecoveryRequestMapper() {
     }
 
-    public static PasswordResetRequestEntity toEntity(PasswordResetRequest domain) {
-        PasswordResetRequestEntity entity = new PasswordResetRequestEntity();
+    public static PasswordRecoveryRequestEntity toEntity(PasswordRecoveryRequest domain) {
+        PasswordRecoveryRequestEntity entity = new PasswordRecoveryRequestEntity();
 
         if (domain.getId() != null) {
             entity.setId(domain.getId());
@@ -25,8 +25,8 @@ public final class PasswordResetRequestMapper {
         return entity;
     }
 
-    public static PasswordResetRequest toDomain(PasswordResetRequestEntity entity) {
-        return PasswordResetRequest.reconstitute(
+    public static PasswordRecoveryRequest toDomain(PasswordRecoveryRequestEntity entity) {
+        return PasswordRecoveryRequest.reconstitute(
                 entity.getId(),
                 entity.getUserId(),
                 entity.getTokenHash(),

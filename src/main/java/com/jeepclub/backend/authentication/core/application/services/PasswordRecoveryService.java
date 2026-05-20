@@ -6,12 +6,19 @@ import com.jeepclub.backend.authentication.core.application.exceptions.user.User
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
-import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
+import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
-import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
+import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.port.*;
-import com.jeepclub.backend.authentication.core.repository.PasswordResetRequestRepository;
+import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
+import com.jeepclub.backend.authentication.core.port.ApplicationUrlProperties;
+import com.jeepclub.backend.authentication.core.port.NotificationPort;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.port.RandomPasswordGenerator;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
+import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +32,7 @@ import java.time.Instant;
 public class PasswordRecoveryService {
 
     private final UserRepository userRepository;
-    private final PasswordResetRequestRepository passwordResetRepository;
+    private final PasswordRecoveryRequestRepository passwordRecoveryRequestRepository;
     private final NotificationPort notificationPort;
     private final RandomPasswordGenerator randomPasswordGenerator;
     private final RefreshTokenGenerator tokenGenerator;
@@ -36,107 +43,141 @@ public class PasswordRecoveryService {
     private final Clock clock;
 
     @Transactional
-    public void requestRecoveryViaEmail(String cpf) {
+    public PasswordRecoveryRequest createOrGetOpenRecoveryRequest(String cpf) {
         Instant now = Instant.now(clock);
 
-        userRepository.findByCpf(cpf)
-                .ifPresent(user -> {
-                    user.assertCanRequestPasswordChange();
+        User user = userRepository.findByCpf(cpf)
+                .orElseThrow(UserInvalidCredentialsException::new);
 
-                    String rawToken = tokenGenerator.generate();
-                    String hashedToken = tokenHashService.hash(rawToken);
+        user.assertCanRequestPasswordChange();
 
-                    Instant expiresAt = now.plus(authTimeProperties.passwordChangeRequestTtl());
-
-                    PasswordResetRequest resetRequest = PasswordResetRequest.create(
-                            user.getId(),
-                            hashedToken,
-                            now,
-                            expiresAt
-                    );
-
-                    passwordResetRepository.save(resetRequest);
-
-                    String resetLink = applicationUrlProperties.baseUrl()
-                            + "/reset-password?token="
-                            + rawToken;
-
-                    notificationPort.sendPasswordResetLink(user.getEmail(), resetLink);
-                });
+        return passwordRecoveryRequestRepository
+                .findOpenByUserId(user.getId(), now)
+                .orElseGet(() -> createOpenRecoveryRequest(user.getId(), now));
     }
 
     @Transactional
     public TemporaryPasswordAdminResult generateTemporaryPasswordByAdmin(Long targetUserId) {
+        Instant now = Instant.now(clock);
+
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
 
         user.assertCanRequestPasswordChange();
 
-        Instant now = Instant.now(clock);
+        PasswordRecoveryRequest recoveryRequest =
+                getOrCreateOpenRecoveryRequest(user.getId(), now);
+
+        recoveryRequest.defineAdminTemporaryPasswordMethod(now);
 
         String temporaryPassword = randomPasswordGenerator.generateSecurePassword();
         String temporaryPasswordHash = passwordHasher.hash(temporaryPassword);
 
-        user.changePassword(temporaryPasswordHash, now);
+        user.changeToTemporaryPassword(temporaryPasswordHash, now);
 
         userRepository.save(user);
+        passwordRecoveryRequestRepository.save(recoveryRequest);
 
-        return new TemporaryPasswordAdminResult(temporaryPassword);
+        return new TemporaryPasswordAdminResult(
+                temporaryPassword,
+                recoveryRequest
+        );
     }
 
     @Transactional
-    public PasswordResetTokenAdminResult generateResetTokenByAdmin(Long targetUserId) {
+    public PasswordResetLinkAdminResult generateResetLinkByAdmin(Long targetUserId) {
+        Instant now = Instant.now(clock);
+
         User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
 
         user.assertCanRequestPasswordChange();
 
-        Instant now = Instant.now(clock);
+        PasswordRecoveryRequest recoveryRequest =
+                getOrCreateOpenRecoveryRequest(user.getId(), now);
 
         String rawToken = tokenGenerator.generate();
         String hashedToken = tokenHashService.hash(rawToken);
 
-        Instant expiresAt = now.plus(authTimeProperties.passwordChangeRequestTtl());
-
-        PasswordResetRequest resetRequest = PasswordResetRequest.create(
-                user.getId(),
+        recoveryRequest.changeToAdminResetLinkMethod(
                 hashedToken,
-                now,
-                expiresAt
+                now
         );
 
-        passwordResetRepository.save(resetRequest);
+        passwordRecoveryRequestRepository.save(recoveryRequest);
 
-        return new PasswordResetTokenAdminResult(rawToken);
+        String resetLink = buildResetLink(rawToken);
+
+        return new PasswordResetLinkAdminResult(
+                rawToken,
+                resetLink,
+                recoveryRequest
+        );
     }
 
+    private PasswordRecoveryRequest getOrCreateOpenRecoveryRequest(
+            Long userId,
+            Instant now
+    ) {
+        return passwordRecoveryRequestRepository
+                .findOpenByUserId(userId, now)
+                .orElseGet(() -> createOpenRecoveryRequest(userId, now));
+    }
+
+    private PasswordRecoveryRequest createOpenRecoveryRequest(
+            Long userId,
+            Instant now
+    ) {
+        Instant expiresAt = now.plus(authTimeProperties.passwordRecoveryRequestTtl());
+
+        PasswordRecoveryRequest recoveryRequest =
+                PasswordRecoveryRequest.createOpenRequest(
+                        userId,
+                        now,
+                        expiresAt
+                );
+
+        return passwordRecoveryRequestRepository.save(recoveryRequest);
+    }
+
+
+
+
+
+
+
     @Transactional
-    public void resetPassword(String rawToken, String newPassword) {
+    public void resetPasswordByToken(String rawToken, String newPassword) {
         Instant now = Instant.now(clock);
 
         String hashedToken = tokenHashService.hash(rawToken);
 
-        PasswordResetRequest resetRequest = passwordResetRepository.findByTokenHash(hashedToken)
-                .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
+        PasswordRecoveryRequest recoveryRequest =
+                passwordRecoveryRequestRepository.findByTokenHash(hashedToken)
+                        .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
 
-        if (!resetRequest.isPending(now)) {
+        if (!recoveryRequest.isTokenBased()) {
             throw new TokenInvalidException("Token invalid or expired.");
         }
 
-        User user = userRepository.findById(resetRequest.getUserId())
+        if (!recoveryRequest.isOpen(now)) {
+            throw new TokenInvalidException("Token invalid or expired.");
+        }
+
+        User user = userRepository.findById(recoveryRequest.getUserId())
                 .orElseThrow(() -> new UserIdNotFoundException("User not found with this id."));
 
         String newPasswordHash = passwordHasher.hash(newPassword);
 
         user.changePassword(newPasswordHash, now);
-        resetRequest.markAsUsed(now);
+        recoveryRequest.resolve(now);
 
         userRepository.save(user);
-        passwordResetRepository.save(resetRequest);
+        passwordRecoveryRequestRepository.save(recoveryRequest);
     }
 
     @Transactional
-    public void changeTemporaryPassword(
+    public void resetPasswordByTemporaryPassword(
             String cpf,
             String temporaryPassword,
             String newPassword
@@ -146,9 +187,23 @@ public class PasswordRecoveryService {
         User user = userRepository.findByCpf(cpf)
                 .orElseThrow(UserInvalidCredentialsException::new);
 
+        PasswordRecoveryRequest recoveryRequest =
+                passwordRecoveryRequestRepository
+                        .findOpenByUserIdAndMethod(
+                                user.getId(),
+                                PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD,
+                                now
+                        )
+                        .orElseThrow(UserPasswordChangeNotRequiredException::new);
+
+        if (!recoveryRequest.isOpen(now)) {
+            throw new UserPasswordChangeNotRequiredException();
+        }
+
         if (!passwordHasher.matches(temporaryPassword, user.getPasswordHash())) {
             user.registerFailedLogin();
             userRepository.save(user);
+
             throw new UserInvalidPasswordException(user.getId());
         }
 
@@ -159,7 +214,57 @@ public class PasswordRecoveryService {
         String newPasswordHash = passwordHasher.hash(newPassword);
 
         user.changePassword(newPasswordHash, now);
+        recoveryRequest.resolve(now);
 
         userRepository.save(user);
+        passwordRecoveryRequestRepository.save(recoveryRequest);
+    }
+
+    private PasswordRecoveryRequest createEmailTokenRecoveryRequest(
+            User user,
+            Instant now
+    ) {
+        String rawToken = tokenGenerator.generate();
+        String hashedToken = tokenHashService.hash(rawToken);
+
+        Instant expiresAt = now.plus(authTimeProperties.passwordRecoveryRequestTtl());
+
+        PasswordRecoveryRequest recoveryRequest =
+                PasswordRecoveryRequest.createEmailTokenRequest(
+                        user.getId(),
+                        hashedToken,
+                        now,
+                        expiresAt
+                );
+
+        passwordRecoveryRequestRepository.save(recoveryRequest);
+
+        String resetLink = buildResetLink(rawToken);
+
+        notificationPort.sendPasswordResetLink(
+                user.getEmail(),
+                resetLink
+        );
+
+        return recoveryRequest;
+    }
+
+
+    private void cancelOpenRecoveryRequestIfExists(
+            Long userId,
+            Instant now
+    ) {
+        passwordRecoveryRequestRepository
+                .findOpenByUserId(userId, now)
+                .ifPresent(request -> {
+                    request.cancel(now);
+                    passwordRecoveryRequestRepository.save(request);
+                });
+    }
+
+    private String buildResetLink(String rawToken) {
+        return applicationUrlProperties.baseUrl()
+                + "/reset-password?token="
+                + rawToken;
     }
 }

@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
-import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
-import com.jeepclub.backend.authentication.core.repository.PasswordResetRequestRepository;
-import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordResetRequestEntity;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
+import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
+import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordRecoveryRequestEntity;
 import com.jeepclub.backend.membershipKauan.infra.persistence.repository.JpaPasswordResetRequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,13 +11,13 @@ import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
-public class PasswordResetRequestRepositoryAdapter implements PasswordResetRequestRepository {
+public class PasswordResetRequestRepositoryAdapter implements PasswordRecoveryRequestRepository {
 
     private final JpaPasswordResetRequestRepository jpaRepository;
 
     @Override
-    public PasswordResetRequest save(PasswordResetRequest request) {
-        PasswordResetRequestEntity entity = new PasswordResetRequestEntity();
+    public PasswordRecoveryRequest save(PasswordRecoveryRequest request) {
+        PasswordRecoveryRequestEntity entity = new PasswordRecoveryRequestEntity();
         if (request.getId() != null) {
             entity.setId(request.getId());
         }
@@ -28,9 +28,9 @@ public class PasswordResetRequestRepositoryAdapter implements PasswordResetReque
         entity.setUsedAt(request.getUsedAt());
         entity.setStatus(request.getStatus());
 
-        PasswordResetRequestEntity saved = jpaRepository.save(entity);
+        PasswordRecoveryRequestEntity saved = jpaRepository.save(entity);
 
-        return PasswordResetRequest.reconstitute(
+        return PasswordRecoveryRequest.reconstitute(
                 saved.getId(),
                 saved.getUserId(),
                 saved.getTokenHash(),
@@ -42,9 +42,9 @@ public class PasswordResetRequestRepositoryAdapter implements PasswordResetReque
     }
 
     @Override
-    public Optional<PasswordResetRequest> findByTokenHash(String tokenHash) {
+    public Optional<PasswordRecoveryRequest> findByTokenHash(String tokenHash) {
         return jpaRepository.findByTokenHash(tokenHash)
-                .map(entity -> PasswordResetRequest.reconstitute(
+                .map(entity -> PasswordRecoveryRequest.reconstitute(
                         entity.getId(),
                         entity.getUserId(),
                         entity.getTokenHash(),

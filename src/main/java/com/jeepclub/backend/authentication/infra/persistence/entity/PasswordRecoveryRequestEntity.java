@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.infra.persistence.entity;
 
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordResetStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,7 +11,7 @@ import java.time.Instant;
 @Table(name = "authorization_password_reset_requests")
 @Getter
 @Setter
-public class PasswordResetRequestEntity {
+public class PasswordRecoveryRequestEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,5 +34,5 @@ public class PasswordResetRequestEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PasswordResetStatus status;
+    private PasswordRecoveryRequestStatus status;
 }

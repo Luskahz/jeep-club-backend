@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.core.application.results.PasswordResetTokenAdminResult;
+import com.jeepclub.backend.authentication.api.controller.passwordRecovery.PasswordRecoveryController;
+import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
@@ -76,7 +77,7 @@ class PasswordRecoveryControllerTest {
     @Test
     @DisplayName("Sucesso: Admin gera token de redefinição e retorna 200")
     void shouldReturnOkWhenAdminGeneratesResetToken() throws Exception {
-        PasswordResetTokenAdminResult result = new PasswordResetTokenAdminResult("tokenAdmin123");
+        PasswordResetLinkAdminResult result = new PasswordResetLinkAdminResult("tokenAdmin123");
 
         when(passwordRecoveryService.generateResetTokenByAdmin(anyLong()))
                 .thenReturn(result);
