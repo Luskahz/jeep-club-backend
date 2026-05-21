@@ -1,6 +1,5 @@
-package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
+package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
-import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
@@ -15,7 +14,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class RefreshTokenRepositoryJpa implements RefreshTokenRepository {
+public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
 
     private final RefreshTokenJpaRepository jpa;
     private final SessionJpaRepository sessionJpa;

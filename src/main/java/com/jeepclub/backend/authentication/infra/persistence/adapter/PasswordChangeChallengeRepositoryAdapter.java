@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class PasswordChangeChallengeRepositoryJpa
+public class PasswordChangeChallengeRepositoryAdapter
         implements PasswordChangeChallengeRepository {
 
     private final PasswordChangeChallengeJpaRepository jpaRepository;

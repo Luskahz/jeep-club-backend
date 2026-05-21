@@ -3,37 +3,48 @@ package com.jeepclub.backend.authentication.infra.persistence.mapper;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordRecoveryRequestEntity;
 
+import java.util.Objects;
+
 public final class PasswordRecoveryRequestMapper {
 
     private PasswordRecoveryRequestMapper() {
     }
 
-    public static PasswordRecoveryRequestEntity toEntity(PasswordRecoveryRequest domain) {
-        PasswordRecoveryRequestEntity entity = new PasswordRecoveryRequestEntity();
+    public static PasswordRecoveryRequest toDomain(
+            PasswordRecoveryRequestEntity entity
+    ) {
+        Objects.requireNonNull(entity, "entity cannot be null");
 
-        if (domain.getId() != null) {
-            entity.setId(domain.getId());
-        }
-
-        entity.setUserId(domain.getUserId());
-        entity.setTokenHash(domain.getTokenHash());
-        entity.setCreatedAt(domain.getCreatedAt());
-        entity.setExpiresAt(domain.getExpiresAt());
-        entity.setUsedAt(domain.getUsedAt());
-        entity.setStatus(domain.getStatus());
-
-        return entity;
-    }
-
-    public static PasswordRecoveryRequest toDomain(PasswordRecoveryRequestEntity entity) {
         return PasswordRecoveryRequest.reconstitute(
                 entity.getId(),
                 entity.getUserId(),
                 entity.getTokenHash(),
                 entity.getExpiresAt(),
                 entity.getCreatedAt(),
-                entity.getUsedAt(),
-                entity.getStatus()
+                entity.getResolvedAt(),
+                entity.getCancelledAt(),
+                entity.getStatus(),
+                entity.getMethod()
         );
+    }
+
+    public static PasswordRecoveryRequestEntity toEntity(
+            PasswordRecoveryRequest request
+    ) {
+        Objects.requireNonNull(request, "request cannot be null");
+
+        PasswordRecoveryRequestEntity entity = new PasswordRecoveryRequestEntity();
+
+        entity.setId(request.getId());
+        entity.setUserId(request.getUserId());
+        entity.setTokenHash(request.getTokenHash());
+        entity.setCreatedAt(request.getCreatedAt());
+        entity.setExpiresAt(request.getExpiresAt());
+        entity.setResolvedAt(request.getResolvedAt());
+        entity.setCancelledAt(request.getCancelledAt());
+        entity.setStatus(request.getStatus());
+        entity.setMethod(request.getMethod());
+
+        return entity;
     }
 }
