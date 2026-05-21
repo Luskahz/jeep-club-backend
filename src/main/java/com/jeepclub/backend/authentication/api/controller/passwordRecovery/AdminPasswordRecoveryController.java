@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.controller.passwordRecovery;
 
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetTokenAdminResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetLinkAdminResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.recovery.TemporaryPasswordAdminResponseDTO;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
@@ -35,7 +35,7 @@ public class AdminPasswordRecoveryController {
     @RequiredPermission("AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE")
     @Operation(
             summary = "Gerar senha provisória",
-            description = "Cria ou atualiza uma solicitação de recuperação e gera uma senha provisória para o usuário."
+            description = "Define a solicitação de recuperação como senha provisória, gera uma senha temporária e marca o usuário para troca obrigatória no próximo login."
     )
     public ResponseEntity<TemporaryPasswordAdminResponseDTO> generateTemporaryPassword(
             @PathVariable @Positive Long userId
@@ -53,16 +53,16 @@ public class AdminPasswordRecoveryController {
     @RequiredPermission("AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE")
     @Operation(
             summary = "Gerar link administrativo de redefinição",
-            description = "Cria ou atualiza uma solicitação de recuperação e gera um token para que o administrador compartilhe o link com o usuário."
+            description = "Define a solicitação de recuperação como link administrativo, gera um token e retorna um link para o administrador compartilhar com o usuário."
     )
-    public ResponseEntity<PasswordResetTokenAdminResponseDTO> generateResetLink(
+    public ResponseEntity<PasswordResetLinkAdminResponseDTO> generateResetLink(
             @PathVariable @Positive Long userId
     ) {
         PasswordResetLinkAdminResult result =
                 passwordRecoveryService.generateResetLinkByAdmin(userId);
 
         return ResponseEntity.ok(
-                PasswordResetTokenAdminResponseDTO.from(result)
+                PasswordResetLinkAdminResponseDTO.from(result)
         );
     }
 }

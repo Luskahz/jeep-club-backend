@@ -21,7 +21,11 @@ public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
     @NotNull
     private Duration sessionTtl;
 
-    @NotNull private Duration passwordChangeRequestTtl;
+    @NotNull
+    private Duration passwordChangeRequestTtl;
+
+    @NotNull
+    private Duration passwordChangeChallengeTtl;
 
     @Override
     public Duration sessionTtl() {
@@ -37,5 +41,11 @@ public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
     public Duration passwordRecoveryRequestTtl() {
         return passwordChangeRequestTtl;
     }
+
+    @Override
+    public Duration passwordChangeChallengeTtl() {
+        return passwordChangeChallengeTtl;
+    }
+
 
 }

@@ -36,7 +36,7 @@ public class PasswordRecoveryRequest {
     ) {
         this.id = id;
         this.userId = validateUserId(userId);
-        this.tokenHash = tokenHash;
+        this.tokenHash = normalizeTokenHash(tokenHash);
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.expiresAt = Objects.requireNonNull(expiresAt, "expiresAt cannot be null");
         this.resolvedAt = resolvedAt;
@@ -44,10 +44,10 @@ public class PasswordRecoveryRequest {
         this.status = Objects.requireNonNull(status, "status cannot be null");
         this.method = Objects.requireNonNull(method, "method cannot be null");
 
-        validateExpiration(createdAt, expiresAt);
-        validateTokenRequirement(method, tokenHash);
-        validateResolvedState(status, resolvedAt);
-        validateCancelledState(status, cancelledAt);
+        validateExpiration(this.createdAt, this.expiresAt);
+        validateTokenRequirement(this.method, this.tokenHash);
+        validateResolvedState(this.status, this.resolvedAt);
+        validateCancelledState(this.status, this.cancelledAt);
     }
 
     public static PasswordRecoveryRequest createOpenRequest(
@@ -65,62 +65,6 @@ public class PasswordRecoveryRequest {
                 null,
                 PasswordRecoveryRequestStatus.OPEN,
                 PasswordRecoveryRequestMethod.UNDEFINED
-        );
-    }
-
-    public static PasswordRecoveryRequest createEmailTokenRequest(
-            Long userId,
-            String tokenHash,
-            Instant createdAt,
-            Instant expiresAt
-    ) {
-        return new PasswordRecoveryRequest(
-                null,
-                userId,
-                tokenHash,
-                createdAt,
-                expiresAt,
-                null,
-                null,
-                PasswordRecoveryRequestStatus.OPEN,
-                PasswordRecoveryRequestMethod.EMAIL_TOKEN
-        );
-    }
-
-    public static PasswordRecoveryRequest createAdminResetLinkRequest(
-            Long userId,
-            String tokenHash,
-            Instant createdAt,
-            Instant expiresAt
-    ) {
-        return new PasswordRecoveryRequest(
-                null,
-                userId,
-                tokenHash,
-                createdAt,
-                expiresAt,
-                null,
-                null,
-                PasswordRecoveryRequestStatus.OPEN,
-                PasswordRecoveryRequestMethod.ADMIN_RESET_LINK
-        );
-    }
-
-    public static PasswordRecoveryRequest createAdminTemporaryPasswordRequest(
-            Long userId,
-            Instant createdAt,
-            Instant expiresAt
-    ) {
-        return new PasswordRecoveryRequest(
-                null,
-                userId,
-                null,
-                createdAt,
-                expiresAt,
-                null,
-                null,
-                PasswordRecoveryRequestStatus.OPEN,
-                PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD
         );
     }
 
@@ -148,18 +92,18 @@ public class PasswordRecoveryRequest {
         );
     }
 
-    public void defineAdminTemporaryPasswordMethod(Instant now) {
+    public void changeToEmailTokenMethod(
+            String tokenHash,
+            Instant now
+    ) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (!isOpen(now)) {
-            throw new IllegalStateException("Password recovery request is not open or has expired.");
-        }
+        assertOpen(now);
 
-        if (this.method != PasswordRecoveryRequestMethod.UNDEFINED) {
-            throw new IllegalStateException("Password recovery method has already been defined.");
-        }
+        String normalizedTokenHash = validateRequiredTokenHash(tokenHash);
 
-        this.method = PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD;
+        this.method = PasswordRecoveryRequestMethod.EMAIL_TOKEN;
+        this.tokenHash = normalizedTokenHash;
     }
 
     public void changeToAdminResetLinkMethod(
@@ -168,54 +112,30 @@ public class PasswordRecoveryRequest {
     ) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (!isOpen(now)) {
-            throw new IllegalStateException("Password recovery request is not open or has expired.");
-        }
+        assertOpen(now);
 
-        if (tokenHash == null || tokenHash.isBlank()) {
-            throw new IllegalArgumentException("tokenHash cannot be null or blank.");
-        }
+        String normalizedTokenHash = validateRequiredTokenHash(tokenHash);
 
         this.method = PasswordRecoveryRequestMethod.ADMIN_RESET_LINK;
-        this.tokenHash = tokenHash;
+        this.tokenHash = normalizedTokenHash;
     }
 
-    public boolean isOpen(Instant now) {
+    public void changeToAdminTemporaryPasswordMethod(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        return status == PasswordRecoveryRequestStatus.OPEN
-                && !isExpired(now);
+        assertOpen(now);
+
+        this.method = PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD;
+        this.tokenHash = null;
     }
-
-    public boolean isExpired(Instant now) {
-        Objects.requireNonNull(now, "now cannot be null");
-
-        return now.isAfter(expiresAt);
-    }
-
-    public boolean isTokenBased() {
-        return method == PasswordRecoveryRequestMethod.EMAIL_TOKEN
-                || method == PasswordRecoveryRequestMethod.ADMIN_RESET_LINK;
-    }
-
-    public boolean isTemporaryPasswordBased() {
-        return method == PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD;
-    }
-
 
     public void resolve(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (!isOpen(now)) {
-            throw new IllegalStateException("Password recovery request is not open or has expired.");
-        }
+        assertOpen(now);
 
         this.status = PasswordRecoveryRequestStatus.RESOLVED;
         this.resolvedAt = now;
-    }
-
-    public boolean canBeCancelled() {
-        return status == PasswordRecoveryRequestStatus.OPEN;
     }
 
     public void cancel(Instant now) {
@@ -229,6 +149,42 @@ public class PasswordRecoveryRequest {
         this.cancelledAt = now;
     }
 
+    public boolean isOpen(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        return status == PasswordRecoveryRequestStatus.OPEN
+                && !isExpired(now);
+    }
+
+    public boolean isExpired(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        return !now.isBefore(expiresAt);
+    }
+
+    public boolean canBeCancelled() {
+        return status == PasswordRecoveryRequestStatus.OPEN;
+    }
+
+    public boolean isTokenBased() {
+        return method == PasswordRecoveryRequestMethod.EMAIL_TOKEN
+                || method == PasswordRecoveryRequestMethod.ADMIN_RESET_LINK;
+    }
+
+    public boolean isTemporaryPasswordBased() {
+        return method == PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD;
+    }
+
+    public boolean hasUndefinedMethod() {
+        return method == PasswordRecoveryRequestMethod.UNDEFINED;
+    }
+
+    private void assertOpen(Instant now) {
+        if (!isOpen(now)) {
+            throw new IllegalStateException("Password recovery request is not open or has expired.");
+        }
+    }
+
     private static Long validateUserId(Long userId) {
         Objects.requireNonNull(userId, "userId cannot be null");
 
@@ -237,6 +193,30 @@ public class PasswordRecoveryRequest {
         }
 
         return userId;
+    }
+
+    private static String normalizeTokenHash(String tokenHash) {
+        if (tokenHash == null) {
+            return null;
+        }
+
+        String normalized = tokenHash.trim();
+
+        if (normalized.isBlank()) {
+            return null;
+        }
+
+        return normalized;
+    }
+
+    private static String validateRequiredTokenHash(String tokenHash) {
+        String normalizedTokenHash = normalizeTokenHash(tokenHash);
+
+        if (normalizedTokenHash == null) {
+            throw new IllegalArgumentException("tokenHash cannot be null or blank.");
+        }
+
+        return normalizedTokenHash;
     }
 
     private static void validateExpiration(
@@ -255,12 +235,15 @@ public class PasswordRecoveryRequest {
         boolean tokenRequired = method == PasswordRecoveryRequestMethod.EMAIL_TOKEN
                 || method == PasswordRecoveryRequestMethod.ADMIN_RESET_LINK;
 
-        if (tokenRequired && (tokenHash == null || tokenHash.isBlank())) {
+        if (tokenRequired && tokenHash == null) {
             throw new IllegalArgumentException("tokenHash is required for token-based password recovery requests.");
         }
 
-        if (method == PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD && tokenHash != null) {
-            throw new IllegalArgumentException("temporary password recovery request cannot have tokenHash.");
+        boolean tokenForbidden = method == PasswordRecoveryRequestMethod.UNDEFINED
+                || method == PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD;
+
+        if (tokenForbidden && tokenHash != null) {
+            throw new IllegalArgumentException("tokenHash must be null for non-token password recovery requests.");
         }
     }
 

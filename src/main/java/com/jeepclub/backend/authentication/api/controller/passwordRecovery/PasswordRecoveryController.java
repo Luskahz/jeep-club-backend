@@ -40,6 +40,24 @@ public class PasswordRecoveryController {
         );
     }
 
+    @PostMapping("/email-token")
+    @Operation(
+            summary = "Enviar token de recuperação por e-mail",
+            description = "Define o método da solicitação como recuperação por e-mail, gera um token e envia o link de redefinição ao e-mail do usuário."
+    )
+    public ResponseEntity<PasswordRecoveryRequestResponseDTO> sendRecoveryEmailToken(
+            @RequestBody @Valid PasswordRecoveryRequestDTO request
+    ) {
+        PasswordRecoveryRequest recoveryRequest =
+                passwordRecoveryService.sendRecoveryEmailToken(request.cpf());
+
+        return ResponseEntity.ok(
+                PasswordRecoveryRequestResponseDTO.from(recoveryRequest)
+        );
+    }
+
+
+
     @PostMapping("/token/reset")
     @Operation(
             summary = "Redefinir senha por token",
@@ -50,23 +68,6 @@ public class PasswordRecoveryController {
     ) {
         passwordRecoveryService.resetPasswordByToken(
                 request.token(),
-                request.newPassword()
-        );
-
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/temporary-password/reset")
-    @Operation(
-            summary = "Redefinir senha usando senha provisória",
-            description = "Resolve uma solicitação de recuperação usando CPF e senha provisória gerada por administrador."
-    )
-    public ResponseEntity<Void> resetPasswordByTemporaryPassword(
-            @RequestBody @Valid TemporaryPasswordChangeDTO request
-    ) {
-        passwordRecoveryService.resetPasswordByTemporaryPassword(
-                request.cpf(),
-                request.temporaryPassword(),
                 request.newPassword()
         );
 

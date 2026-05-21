@@ -126,7 +126,17 @@ public class User {
         }
     }
 
+    public User assertCanAttemptLogin() {
+        if (isDisabled()) {
+            throw new UserBlockedForLoginException("User can not authenticate, user is disabled.");
+        }
 
+        if (isLocked()) {
+            throw new UserBlockedForLoginException("User can not authenticate, user is locked.");
+        }
+
+        return this;
+    }
 
     public boolean isBlockedForLogin() {
         return isLocked() || isDisabled();
@@ -163,13 +173,7 @@ public class User {
     }
 
     public User assertCanAuthenticate() {
-        if (isDisabled()) {
-            throw new UserBlockedForLoginException("User can not authenticate, user is disabled.");
-        }
-
-        if (isLocked()) {
-            throw new UserBlockedForLoginException("User can not authenticate, user is locked.");
-        }
+        assertCanAttemptLogin();
 
         if (isChangePasswordRequired()) {
             throw new UserPasswordChangeRequiredException("Password change is required before login.");
