@@ -130,6 +130,22 @@ public class LoginService {
 
         return tokens;
     }
+
+    @Transactional
+    public AuthTokens authenticateRegisteredUser(User user) {
+        Instant now = Instant.now(clock);
+
+        user.assertCanAuthenticate();
+
+        AuthTokens tokens = authenticateUser(user, now);
+
+        user.recordSuccessfulLogin(now);
+        userRepository.save(user);
+
+        return tokens;
+    }
+
+
     private PasswordChangeRequiredLoginResult createPasswordChangeRequiredResult(
             User user,
             Instant now
