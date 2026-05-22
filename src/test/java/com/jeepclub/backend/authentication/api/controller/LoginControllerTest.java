@@ -4,6 +4,7 @@ import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.DisplayName;
@@ -36,6 +37,9 @@ class LoginControllerTest {
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
 
+    @MockitoBean
+    private AccessTokenAuthenticationService accessTokenAuthenticationService;
+
     @Test
     @DisplayName("Sucesso: Login com credenciais válidas retorna 200 e tokens")
     void shouldReturnTokensOnSuccess() throws Exception {
@@ -54,7 +58,7 @@ class LoginControllerTest {
     @Test
     @DisplayName("Falha: Senha incorreta retorna 401 Unauthorized")
     void shouldReturn401OnInvalidPassword() throws Exception {
-        when(loginService.login(anyString(), anyString())).thenThrow(nsnew UserInvalidPasswordException());
+        when(loginService.login(anyString(), anyString())).thenThrow(new UserInvalidPasswordException(1L));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -67,13 +71,13 @@ class LoginControllerTest {
     @Test
     @DisplayName("Falha: Usuário inexistente retorna 404 Not Found")
     void shouldReturn404OnUserNotFound() throws Exception {
-        when(loginService.login(anyString(), anyString())).thenThrow(new UserCpfNotFoundException("CPF não encontrado"));
+        when(loginService.login(anyString(), anyString())).thenThrow(new UserCpfNotFoundException());
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"cpf\": \"52998224725\", \"senha\": \"senha123\"}"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.mensagem").value("CPF não encontrado"))
+                .andExpect(jsonPath("$.mensagem").value("Cpf not found"))
                 .andExpect(jsonPath("$.status").value(404));
     }
 

@@ -2,6 +2,7 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,9 @@ class LoginControllerRestDocsTest {
 
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
+
+    @MockitoBean
+    private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Test
     void shouldDocumentLoginSuccess() throws Exception {

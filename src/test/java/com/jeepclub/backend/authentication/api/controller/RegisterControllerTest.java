@@ -4,6 +4,7 @@ import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +42,9 @@ class RegisterControllerTest {
 
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
+
+    @MockitoBean
+    private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Test
     @DisplayName("Sucesso: Registro com dados válidos retorna 201 e tokens")
