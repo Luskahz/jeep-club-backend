@@ -13,7 +13,8 @@ public record UpdateDependentRequestDTO(
         @NotBlank(message = "Nome do dependente é obrigatório.")
         String name,
 
-        @Schema(description = "CPF do dependente (opcional).", example = "98765432109")
+        @Schema(description = "CPF do dependente.", example = "98765432109", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank(message = "CPF do dependente é obrigatório.")
         String cpf,
 
         @Schema(description = "Data de nascimento.", example = "2015-08-25")

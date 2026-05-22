@@ -61,22 +61,22 @@ class DependentTest {
     }
 
     @Test
-    @DisplayName("Sucesso: CPF é opcional")
-    void shouldAllowNullOrEmptyCpf() {
-        Dependent dependent = Dependent.create(
-                "Maria Silva",
-                null,
-                LocalDate.of(2018, 1, 1),
-                RelationshipType.CHILD,
-                "",
-                null,
-                true,
-                1L,
-                now
+    @DisplayName("Falha: CPF é obrigatório")
+    void shouldThrowExceptionWhenCpfIsNullOrEmpty() {
+        DependentException exception = assertThrows(DependentException.class, () ->
+                Dependent.create(
+                        "Maria Silva",
+                        null,
+                        LocalDate.of(2018, 1, 1),
+                        RelationshipType.CHILD,
+                        "",
+                        null,
+                        true,
+                        1L,
+                        now
+                )
         );
-
-        assertNull(dependent.getCpf());
-        assertNull(dependent.getPhoneNumber());
+        assertEquals("CPF é obrigatório.", exception.getMessage());
     }
 
     @Test

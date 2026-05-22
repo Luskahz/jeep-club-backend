@@ -152,7 +152,7 @@ public class Dependent {
 
     private String validateCpf(String rawCpf) {
         if (rawCpf == null || rawCpf.isBlank()) {
-            return null;
+            throw new DependentException("CPF é obrigatório.");
         }
         String cleanCpf = rawCpf.replaceAll("\\D", "");
         if (cleanCpf.length() != 11) {

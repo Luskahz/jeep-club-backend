@@ -121,6 +121,13 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- H2 Database para isolamento de testes de contexto -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

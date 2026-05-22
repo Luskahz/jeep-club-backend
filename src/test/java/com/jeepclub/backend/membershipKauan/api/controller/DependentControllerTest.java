@@ -124,6 +124,26 @@ class DependentControllerTest {
     }
 
     @Test
+    @DisplayName("Falha: Tentar criar dependente sem CPF deve retornar erro de validação")
+    void shouldReturnBadRequestWhenCpfIsMissing() throws Exception {
+        CreateDependentRequestDTO request = new CreateDependentRequestDTO(
+                "Pedro Silva",
+                null,
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11988887777",
+                null,
+                true
+        );
+
+        mockMvc.perform(post("/dependents")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     @DisplayName("Sucesso: Listar dependentes do Sócio autenticado")
     void shouldListMyDependentsSuccessfully() throws Exception {
         when(getDependentService.getBySocioId(eq(1L), eq(1L), eq(false)))
