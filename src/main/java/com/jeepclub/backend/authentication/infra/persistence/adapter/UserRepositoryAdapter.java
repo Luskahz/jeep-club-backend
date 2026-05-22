@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
+package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
@@ -18,7 +18,7 @@ import java.util.Optional;
  */
 @RequiredArgsConstructor
 @Repository
-public class UserRepositoryJpa implements UserRepository {
+public class UserRepositoryAdapter implements UserRepository {
 
     private final UserJpaRepository jpaRepository;
 
