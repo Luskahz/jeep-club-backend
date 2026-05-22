@@ -13,7 +13,7 @@ import java.time.Duration;
 @Validated
 @Setter
 @ConfigurationProperties(prefix = "security.auth")
-public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
+public class ApplicationTimePropertiesImpl implements ApplicationTimeProperties {
 
     @NotNull
     private Duration refreshTokenTtl;
@@ -22,7 +22,7 @@ public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
     private Duration sessionTtl;
 
     @NotNull
-    private Duration passwordChangeRequestTtl;
+    private Duration passwordRecoveryRequestTtl;
 
     @NotNull
     private Duration passwordChangeChallengeTtl;
@@ -39,7 +39,7 @@ public class AuthTimePropertiesImpl implements ApplicationTimeProperties {
 
     @Override
     public Duration passwordRecoveryRequestTtl() {
-        return passwordChangeRequestTtl;
+        return passwordRecoveryRequestTtl;
     }
 
     @Override
