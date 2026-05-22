@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.repositoryJpa;
+package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class SessionRepositoryJpa implements SessionRepository {
+public class SessionRepositoryAdapter implements SessionRepository {
 
     private final SessionJpaRepository jpaRepository;
 
