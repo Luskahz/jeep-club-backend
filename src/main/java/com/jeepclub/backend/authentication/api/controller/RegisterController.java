@@ -16,7 +16,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/authentication")
 @RequiredArgsConstructor
 @Validated
 @Tag(
@@ -46,10 +46,7 @@ public class RegisterController {
                 request.phoneNumber()
         );
 
-        AuthTokens tokens = loginService.login(
-                user.getCpf(),
-                request.password()
-        );
+        AuthTokens tokens = loginService.authenticateRegisteredUser(user);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new AuthTokenResponseDTO(

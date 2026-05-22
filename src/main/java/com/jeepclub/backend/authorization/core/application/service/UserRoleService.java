@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.core.application.service;
 
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
@@ -133,7 +133,7 @@ public class UserRoleService {
 
     private void ensureUserExists(Long userId) {
         if (!userIdentityProvider.existsById(userId)) {
-            throw new UserNotFoundException(userId);
+            throw new UserIdNotFoundException("User not found by cpf.");
         }
     }
 }

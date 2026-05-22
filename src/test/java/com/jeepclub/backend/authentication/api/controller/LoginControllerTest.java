@@ -1,9 +1,12 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
+import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
+import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.DisplayName;
@@ -14,6 +17,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
@@ -31,58 +36,121 @@ class LoginControllerTest {
     private LoginService loginService;
 
     @MockitoBean
-    private JwtTokenParser jwtTokenParser; // Necessário para contextos de segurança que podem interceptar
+    private JwtTokenParser jwtTokenParser;
 
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
 
-    @Test
-    @DisplayName("Sucesso: Login com credenciais válidas retorna 200 e tokens")
-    void shouldReturnTokensOnSuccess() throws Exception {
-        AuthTokens tokens = new AuthTokens("refresh-xyz", "access-xyz", 3600L);
-        when(loginService.login("52998224725", "senha123")).thenReturn(tokens);
+    @MockitoBean
+    private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
-        mockMvc.perform(post("/auth/login")
+    @Test
+    @DisplayName("Sucesso: login com credenciais definitivas retorna 200 e tokens")
+    void shouldReturnTokensOnSuccessfulLogin() throws Exception {
+        AuthTokens tokens = new AuthTokens(
+                "refresh-xyz",
+                "access-xyz",
+                3600L
+        );
+
+        when(loginService.login("52998224725", "senha123"))
+                .thenReturn(new AuthenticatedLoginResult(tokens));
+
+        String payload = """
+                {
+                    "cpf": "52998224725",
+                    "senha": "senha123"
+                }
+                """;
+
+        mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cpf\": \"52998224725\", \"senha\": \"senha123\"}"))
+                        .content(payload))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("AUTHENTICATED"))
                 .andExpect(jsonPath("$.accessToken").value("access-xyz"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-xyz"))
                 .andExpect(jsonPath("$.expiresInSeconds").value(3600));
     }
 
     @Test
-    @DisplayName("Falha: Senha incorreta retorna 401 Unauthorized")
-    void shouldReturn401OnInvalidPassword() throws Exception {
-        when(loginService.login(anyString(), anyString())).thenThrow(new UserInvalidPasswordException());
+    @DisplayName("Sucesso: login com senha provisória retorna desafio de troca de senha")
+    void shouldReturnPasswordChangeRequiredWhenTemporaryPasswordIsUsed() throws Exception {
+        Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
 
-        mockMvc.perform(post("/auth/login")
+        when(loginService.login("52998224725", "senhaProvisoria123"))
+                .thenReturn(new PasswordChangeRequiredLoginResult(
+                        "password-change-token-xyz",
+                        expiresAt
+                ));
+
+        String payload = """
+                {
+                    "cpf": "52998224725",
+                    "senha": "senhaProvisoria123"
+                }
+                """;
+
+        mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cpf\": \"52998224725\", \"senha\": \"senhaErrada\"}"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.mensagem").exists())
-                .andExpect(jsonPath("$.status").value(401));
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PASSWORD_CHANGE_REQUIRED"))
+                .andExpect(jsonPath("$.passwordChangeToken").value("password-change-token-xyz"))
+                .andExpect(jsonPath("$.passwordChangeTokenExpiresAt").value("2026-05-21T20:30:00Z"));
     }
 
     @Test
-    @DisplayName("Falha: Usuário inexistente retorna 404 Not Found")
-    void shouldReturn404OnUserNotFound() throws Exception {
-        when(loginService.login(anyString(), anyString())).thenThrow(new UserCpfNotFoundException("CPF não encontrado"));
+    @DisplayName("Falha: senha incorreta retorna 401 Unauthorized")
+    void shouldReturnUnauthorizedOnInvalidPassword() throws Exception {
+        when(loginService.login(anyString(), anyString()))
+                .thenThrow(new UserInvalidPasswordException(1L));
 
-        mockMvc.perform(post("/auth/login")
+        String payload = """
+                {
+                    "cpf": "52998224725",
+                    "senha": "senhaErrada"
+                }
+                """;
+
+        mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cpf\": \"52998224725\", \"senha\": \"senha123\"}"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.mensagem").value("CPF não encontrado"))
-                .andExpect(jsonPath("$.status").value(404));
+                        .content(payload))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("Falha: Dados inválidos (ex: sem CPF ou senha) retorna 400 Bad Request")
-    void shouldReturn400OnInvalidData() throws Exception {
-        mockMvc.perform(post("/auth/login")
+    @DisplayName("Falha: usuário inexistente retorna 404 Not Found")
+    void shouldReturnNotFoundOnUserNotFound() throws Exception {
+        when(loginService.login(anyString(), anyString()))
+                .thenThrow(new UserCpfNotFoundException("CPF não encontrado"));
+
+        String payload = """
+                {
+                    "cpf": "52998224725",
+                    "senha": "senha123"
+                }
+                """;
+
+        mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"cpf\": \"\", \"senha\": \"\"}")) // CPF vazio e senha vazia
+                        .content(payload))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Falha: dados inválidos retorna 400 Bad Request")
+    void shouldReturnBadRequestOnInvalidData() throws Exception {
+        String payload = """
+                {
+                    "cpf": "",
+                    "senha": ""
+                }
+                """;
+
+        mockMvc.perform(post("/authentication/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
                 .andExpect(status().isBadRequest());
     }
 }
