@@ -1,6 +1,6 @@
-package com.jeepclub.backend.toolmanager.infra.persistence.jpa;
+package com.jeepclub.backend.tools.infra.persistence.jpa;
 
-import com.jeepclub.backend.toolmanager.infra.persistence.entity.ToolEntity;
+import com.jeepclub.backend.tools.infra.persistence.entity.ToolEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;

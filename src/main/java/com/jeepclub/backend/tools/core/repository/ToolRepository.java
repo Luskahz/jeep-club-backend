@@ -1,6 +1,6 @@
-package com.jeepclub.backend.toolmanager.domain.port;
+package com.jeepclub.backend.tools.core.repository;
 
-import com.jeepclub.backend.toolmanager.domain.model.Tool;
+import com.jeepclub.backend.tools.core.domain.model.Tool;
 import java.util.List;
 import java.util.Optional;
 

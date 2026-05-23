@@ -1,4 +1,4 @@
-package com.jeepclub.backend.toolmanager.domain.enums;
+package com.jeepclub.backend.tools.core.domain.enums;
 
 public enum ToolStatus {
     AVAILABLE,

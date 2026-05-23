@@ -1,6 +1,6 @@
-package com.jeepclub.backend.toolmanager.domain.model;
+package com.jeepclub.backend.tools.core.domain.model;
 
-import com.jeepclub.backend.toolmanager.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 
 public class Tool {
     private Long id;

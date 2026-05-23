@@ -1,7 +1,7 @@
-package com.jeepclub.backend.toolmanager.api.dto;
+package com.jeepclub.backend.tools.api.dto;
 
-import com.jeepclub.backend.toolmanager.domain.enums.ToolStatus;
-import com.jeepclub.backend.toolmanager.domain.model.Tool;
+import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.domain.model.Tool;
 
 public class ToolResponseDTO {
     private Long id;

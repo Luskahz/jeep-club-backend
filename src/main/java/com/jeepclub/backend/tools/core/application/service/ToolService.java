@@ -1,17 +1,17 @@
-package com.jeepclub.backend.toolmanager.core.service;
+package com.jeepclub.backend.tools.core.application.service;
 
-import com.jeepclub.backend.toolmanager.domain.model.Tool;
-import com.jeepclub.backend.toolmanager.domain.port.ToolRepository;
+import com.jeepclub.backend.tools.core.domain.model.Tool;
+import com.jeepclub.backend.tools.core.repository.ToolRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
-public class ToolQueryService {
+public class ToolService {
 
     private final ToolRepository toolRepository;
 
-    public ToolQueryService(ToolRepository toolRepository) {
+    public ToolService(ToolRepository toolRepository) {
         this.toolRepository = toolRepository;
     }
 

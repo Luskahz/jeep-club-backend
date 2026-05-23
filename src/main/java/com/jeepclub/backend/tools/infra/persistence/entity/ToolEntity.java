@@ -1,6 +1,6 @@
-package com.jeepclub.backend.toolmanager.infra.persistence.entity;
+package com.jeepclub.backend.tools.infra.persistence.entity;
 
-import com.jeepclub.backend.toolmanager.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import jakarta.persistence.*;
 
 @Entity

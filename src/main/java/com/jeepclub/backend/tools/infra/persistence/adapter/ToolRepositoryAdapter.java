@@ -1,9 +1,9 @@
-package com.jeepclub.backend.toolmanager.infra.persistence.adapter;
+package com.jeepclub.backend.tools.infra.persistence.adapter;
 
-import com.jeepclub.backend.toolmanager.domain.model.Tool;
-import com.jeepclub.backend.toolmanager.domain.port.ToolRepository;
-import com.jeepclub.backend.toolmanager.infra.persistence.jpa.ToolJpaRepository;
-import com.jeepclub.backend.toolmanager.infra.persistence.mapper.ToolMapper;
+import com.jeepclub.backend.tools.core.domain.model.Tool;
+import com.jeepclub.backend.tools.core.repository.ToolRepository;
+import com.jeepclub.backend.tools.infra.persistence.jpa.ToolJpaRepository;
+import com.jeepclub.backend.tools.infra.persistence.mapper.ToolMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
