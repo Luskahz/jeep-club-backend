@@ -37,6 +37,7 @@ public class MeController {
     ) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
+
         MeResult result = meService.me(
                 principal.getUserId(),
                 principal.getSessionId(),
