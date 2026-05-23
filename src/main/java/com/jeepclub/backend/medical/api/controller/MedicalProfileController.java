@@ -21,6 +21,9 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/medical-profiles")
 @RequiredArgsConstructor
+
+// importante, separe as rotas administrativas das rotas publicas, se quiser pode ir criando um controller: AdminMedicalProfile para as futuras rotas administrativas
+
 public class MedicalProfileController {
 
     private final MedicalProfileService medicalProfileService;
@@ -39,6 +42,10 @@ public class MedicalProfileController {
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
     }
 
+
+    // acho que não temos estrutura suficiente pra ser necessario uma rota put no resumo me do seu modulo, é valido, porem caso o frontend
+    // queira realizar atualizações nos dados do resumo(a rota me é um resumo util pro frontend do modulo relacionado ao user)
+    // o frontend pode simplismente atualizar nas rotas especifica que não é a me, fica menos semantico.
     @PutMapping("/me")
     public ResponseEntity<MedicalProfileResponse> upsertMyMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal,
@@ -55,6 +62,13 @@ public class MedicalProfileController {
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
     }
 
+
+
+    // ambas as rotas abaixo estão ok, porem ainda precisam ser desenroladas
+    // entendi sua questão sobre ter que definir se oque está sendo buscado são os dados medicinais do user ou do dependente
+    // e sim, vc precisa dar o id do dependente no path, e no service vc vai validar se o dependente pertence a este usuario.
+    // pra isso vc vai usar o metodo de port e adapter vai falar com o daniel para vc criar um port no seu infra com uma função de "verificaçãoSeODependenteÉDesteUser"
+    // e o daniel vai implementar no infra dele um adapter que implementa sua porta, ai pra implementar sua porta ele vai usar os repository que ele tem no dependents
     @GetMapping("/dependents/{dependentId}")
     public ResponseEntity<MedicalProfileResponse> getDependentMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal,

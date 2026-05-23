@@ -77,6 +77,9 @@ public class MedicalProfileEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+
+    // isso não é interessante, recomendo que deixe que o model cuide disso. pois o Instant.now
+    // tem que nascer no service e ser passado a diante até a finalização da requisição.
     @PrePersist
     public void prePersist() {
         Instant now = Instant.now();

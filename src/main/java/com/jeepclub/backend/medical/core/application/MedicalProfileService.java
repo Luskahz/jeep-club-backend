@@ -12,6 +12,13 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
+// service ok, porem não deixe as exceptions pra depois, faça as exceptions personalizadas. crie o handler.
+// separe em exceptions em application.exceptions para exceptions que explodem no service. e domain.exceptions para exceptions que
+// explodem no model com a defesa da classe.
+
+
+// se sentir que está retornando muita coisa pro controller em um metodo só, crie results
+// eles ficam em application.results.arquivo.java ao lado de application.service.arquivo.java
 public class MedicalProfileService {
 
     private final MedicalProfileRepository medicalProfileRepository;
@@ -59,6 +66,9 @@ public class MedicalProfileService {
         return medicalProfileRepository.save(existing);
     }
 
+
+    // aqui cabe usar um construtor personalizado, estude sobre os construtores create e reconstitute, n cheguei na sua classe aqui
+    // mas sinto que ela pode estar fraca.
     private MedicalProfile createNew(
             MedicalProfileOwnerType ownerType,
             Long ownerId,

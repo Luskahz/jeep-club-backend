@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
+// da uma olhada no authentication, ou vemos em sala depois, mas esse carinha é um adapter, temos que alterar o nome dele depois, mas nada de errado aqui
 public class MedicalProfileRepositoryJpa implements MedicalProfileRepository {
 
     private final MedicalProfileJpaRepository medicalProfileJpaRepository;

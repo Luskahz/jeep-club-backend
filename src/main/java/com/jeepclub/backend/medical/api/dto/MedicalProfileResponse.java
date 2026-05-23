@@ -6,6 +6,11 @@ import com.jeepclub.backend.medical.core.domain.MedicalProfileOwnerType;
 
 import java.time.Instant;
 
+// cuidado com oque vc exporta numa dto aqui está ok, mas se precisar exportar futuramente uma lista de medicalProfiles isso fica mt grande.
+// como é uma rota que demanda id, sabemos que o frontend só vai conseguir consultar uma, mas quando for realizar uma rota de read adm atenção nisso;
+
+// pendente documentação swagger na sua dto, olha as dtos do modulo authorization. estão todas no padrão deixe seu claude se inspirar kkk
+
 public record MedicalProfileResponse(
         Long id,
         MedicalProfileOwnerType ownerType,

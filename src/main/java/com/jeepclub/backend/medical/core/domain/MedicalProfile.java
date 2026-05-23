@@ -1,7 +1,11 @@
 package com.jeepclub.backend.medical.core.domain;
 
+import lombok.Getter;
+
 import java.time.Instant;
 
+// fiz uma correção pois n me aguentei, use as tags lombok, @getters substitui todos aqueles getters no final do arquivo. tem @Setters tbm, mas eu n usaria sem pensar...estude sobre.
+@Getter
 public class MedicalProfile {
 
     private Long id;
@@ -40,6 +44,7 @@ public class MedicalProfile {
             Instant updatedAt
     ) {
         if (ownerType == null) {
+            // faça exceptions personalizadas para o modelll!! em core.domain.exceptions inclua-as no handler em api.exception
             throw new IllegalArgumentException("O tipo do proprietário do perfil médico é obrigatório.");
         }
 
@@ -65,6 +70,10 @@ public class MedicalProfile {
         this.updatedAt = updatedAt;
     }
 
+    // o padrão é construtor create e construtor reconstitute, quando vc atualiza um profile, vc n cria um novo, vc atualiza um que já existe.
+    // vc faz MedicalProfile.create(dados) e salva ele no banco com o save do repository, depois quando vc tem que alterar
+    // vc traz ele com o repository E USA O CONSTRUTOR RECONSTITUTE QUE RECONSTITUI A CLASSE Q JA EXISTE NO BANCO,
+    // altera no service usando métodos internos da classe, e salva novamente no banco com o save, o jpa cuida do resto, estude sobre isso.
     public void update(
             BloodType bloodType,
             String allergies,
@@ -90,68 +99,5 @@ public class MedicalProfile {
         this.emergencyContactRelationship = emergencyContactRelationship;
         this.observations = observations;
     }
-
-    public Long getId() {
-        return id;
-    }
-
-    public MedicalProfileOwnerType getOwnerType() {
-        return ownerType;
-    }
-
-    public Long getOwnerId() {
-        return ownerId;
-    }
-
-    public BloodType getBloodType() {
-        return bloodType;
-    }
-
-    public String getAllergies() {
-        return allergies;
-    }
-
-    public String getChronicConditions() {
-        return chronicConditions;
-    }
-
-    public String getContinuousMedications() {
-        return continuousMedications;
-    }
-
-    public String getHealthInsuranceProvider() {
-        return healthInsuranceProvider;
-    }
-
-    public String getHealthInsurancePlan() {
-        return healthInsurancePlan;
-    }
-
-    public String getHealthInsuranceNumber() {
-        return healthInsuranceNumber;
-    }
-
-    public String getEmergencyContactName() {
-        return emergencyContactName;
-    }
-
-    public String getEmergencyContactPhone() {
-        return emergencyContactPhone;
-    }
-
-    public String getEmergencyContactRelationship() {
-        return emergencyContactRelationship;
-    }
-
-    public String getObservations() {
-        return observations;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    // faltando muitos metodos auxiliares, conforme for criando as rotas vai entender.
 }

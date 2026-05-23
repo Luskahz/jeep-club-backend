@@ -3,6 +3,9 @@ package com.jeepclub.backend.medical.api.dto;
 import com.jeepclub.backend.medical.core.domain.BloodType;
 import jakarta.validation.constraints.Size;
 
+
+// pendente documentação swagger na sua dto, olha as dtos do modulo authorization. estão todas no padrão deixe seu claude se inspirar kkk
+
 public record MedicalProfileRequest(
 
         BloodType bloodType,
