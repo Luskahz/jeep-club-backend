@@ -37,11 +37,14 @@ public class SecurityConfig {
                                 "/authentication/register",
                                 "/authentication/refresh",
                                 "/membership-applications",
+                                "/authentication/login/password-change",
 
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs",
-                                "/v3/api-docs/**"
+                                "/v3/api-docs/**",
+
+                                "/error"
 
 
                         ).permitAll()
