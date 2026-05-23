@@ -38,9 +38,9 @@ public class ToolController {
     @GetMapping
     @Operation(summary = "Listar ferramentas do usuário", description = "Retorna todas as ferramentas pertencentes ao usuário logado.")
     public ResponseEntity<List<ToolResponseDTO>> getAvailableTools(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) { // Captura quem está fazendo a requisição
+            @AuthenticationPrincipal UserPrincipal userPrincipal) { // boa
 
-        // Agora passamos o ID do usuário para o service buscar APENAS as ferramentas dele
+        // necessario ajustar seu metodo pois estava usando uma dto como classe e não como record que é o correto.
         List<ToolResponseDTO> tools = toolQueryService.listUserTools(userPrincipal.getUserId())
                 .stream()
                 .map(ToolResponseDTO::new)
@@ -53,9 +53,9 @@ public class ToolController {
     @Operation(summary = "Buscar detalhes da ferramenta", description = "Retorna os dados de uma ferramenta específica do usuário.")
     public ResponseEntity<ToolResponseDTO> getToolById(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) { // Captura quem está fazendo a requisição
+            @AuthenticationPrincipal UserPrincipal userPrincipal) { // boa.
 
-        // Passamos o ID da ferramenta E o ID do usuário logado para garantir que a ferramenta pertence a ele
+        // necessario ajustar seu metodo pois estava usando uma dto como classe e não como record que é o correto.
         ToolResponseDTO tool = new ToolResponseDTO(toolQueryService.getToolDetails(id, userPrincipal.getUserId()));
 
         return ResponseEntity.ok(tool);
