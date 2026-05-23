@@ -5,7 +5,7 @@ import com.jeepclub.backend.authorization.core.application.exception.RoleAlready
 import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.RolePermissionAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.RolePermissionNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.UserNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
@@ -96,9 +96,9 @@ public class AuthorizationExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserNotFoundException.class)
+    @ExceptionHandler(UserIdNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleUserNotFound(
-            UserNotFoundException exception
+            UserIdNotFoundException exception
     ) {
         return buildErrorResponse(
                 "USER_NOT_FOUND",

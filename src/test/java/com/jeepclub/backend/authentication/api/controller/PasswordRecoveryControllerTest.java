@@ -1,11 +1,11 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryAdminRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetDTO;
-import com.jeepclub.backend.authentication.core.application.results.PasswordRecoveryAdminResult;
+import com.jeepclub.backend.authentication.api.controller.passwordRecovery.PasswordRecoveryController;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
+import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +17,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.mockito.ArgumentMatchers.*;
+import java.time.Instant;
+
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -25,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PasswordRecoveryController.class)
-@AutoConfigureMockMvc(addFilters = false) // Desabilita os filtros de segurança para testar apenas o Controller
+@AutoConfigureMockMvc(addFilters = false)
 class PasswordRecoveryControllerTest {
 
     @Autowired
@@ -37,8 +39,6 @@ class PasswordRecoveryControllerTest {
     @MockitoBean
     private JwtTokenParser jwtTokenParser;
 
-
-
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
 
@@ -46,9 +46,20 @@ class PasswordRecoveryControllerTest {
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Test
-    @DisplayName("Sucesso: Recuperação via Email (sempre retorna 202)")
-    void shouldReturnAcceptedForEmailRecovery() throws Exception {
-        doNothing().when(passwordRecoveryService).requestRecoveryViaEmail(anyString());
+    @DisplayName("Sucesso: cria ou consulta solicitação aberta de recuperação")
+    void shouldCreateOrGetOpenRecoveryRequest() throws Exception {
+        Instant createdAt = Instant.parse("2026-05-21T18:00:00Z");
+        Instant expiresAt = Instant.parse("2026-05-28T18:00:00Z");
+
+        PasswordRecoveryRequest recoveryRequest =
+                PasswordRecoveryRequest.createOpenRequest(
+                        1L,
+                        createdAt,
+                        expiresAt
+                );
+
+        when(passwordRecoveryService.createOrGetOpenRecoveryRequest(anyString()))
+                .thenReturn(recoveryRequest);
 
         String payload = """
                 {
@@ -56,47 +67,74 @@ class PasswordRecoveryControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/auth/recovery/request")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
-                .andExpect(status().isAccepted());
-    }
-
-    @Test
-    @DisplayName("Sucesso: Recuperação via Admin retorna 200 e resultado")
-    void shouldReturnOkAndResultForAdminRecovery() throws Exception {
-        PasswordRecoveryAdminResult mockResult = new PasswordRecoveryAdminResult("senhaTemp123!", null);
-        when(passwordRecoveryService.requestRecoveryViaAdmin(anyLong(), anyBoolean())).thenReturn(mockResult);
-
-        String payload = """
-                {
-                    "targetUserId": 1,
-                    "generateTempPassword": true
-                }
-                """;
-
-        mockMvc.perform(post("/auth/recovery/admin-request")
+        mockMvc.perform(post("/authentication/password-recovery/requests")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.temporaryPassword").value("senhaTemp123!"));
+                .andExpect(jsonPath("$.status").value(PasswordRecoveryRequestStatus.OPEN.name()))
+                .andExpect(jsonPath("$.method").value(PasswordRecoveryRequestMethod.UNDEFINED.name()))
+                .andExpect(jsonPath("$.createdAt").value("2026-05-21T18:00:00Z"))
+                .andExpect(jsonPath("$.expiresAt").value("2026-05-28T18:00:00Z"))
+                .andExpect(jsonPath("$.resolvedAt").doesNotExist())
+                .andExpect(jsonPath("$.cancelledAt").doesNotExist());
     }
 
     @Test
-    @DisplayName("Sucesso: Efetivar troca de senha retorna 200")
-    void shouldReturnOkOnPasswordReset() throws Exception {
-        doNothing().when(passwordRecoveryService).resetPassword(anyString(), anyString());
+    @DisplayName("Sucesso: envia token de recuperação por e-mail")
+    void shouldSendRecoveryEmailToken() throws Exception {
+        Instant createdAt = Instant.parse("2026-05-21T18:00:00Z");
+        Instant expiresAt = Instant.parse("2026-05-28T18:00:00Z");
+
+        PasswordRecoveryRequest recoveryRequest =
+                PasswordRecoveryRequest.createOpenRequest(
+                        1L,
+                        createdAt,
+                        expiresAt
+                );
+
+        recoveryRequest.changeToEmailTokenMethod(
+                "hashed-token-example",
+                createdAt
+        );
+
+        when(passwordRecoveryService.sendRecoveryEmailToken(anyString()))
+                .thenReturn(recoveryRequest);
+
+        String payload = """
+                {
+                    "cpf": "52998224725"
+                }
+                """;
+
+        mockMvc.perform(post("/authentication/password-recovery/requests/email-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(PasswordRecoveryRequestStatus.OPEN.name()))
+                .andExpect(jsonPath("$.method").value(PasswordRecoveryRequestMethod.EMAIL_TOKEN.name()))
+                .andExpect(jsonPath("$.createdAt").value("2026-05-21T18:00:00Z"))
+                .andExpect(jsonPath("$.expiresAt").value("2026-05-28T18:00:00Z"))
+                .andExpect(jsonPath("$.resolvedAt").doesNotExist())
+                .andExpect(jsonPath("$.cancelledAt").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("Sucesso: redefine senha por token e retorna 204")
+    void shouldReturnNoContentWhenResetPasswordByToken() throws Exception {
+        doNothing()
+                .when(passwordRecoveryService)
+                .resetPasswordByToken(anyString(), anyString());
 
         String payload = """
                 {
                     "token": "tokenMagico",
-                    "newPassword": "novaSenhaSuperForte"
+                    "newPassword": "NovaSenhaSuperForte@123"
                 }
                 """;
 
-        mockMvc.perform(post("/auth/recovery/reset")
+        mockMvc.perform(post("/authentication/password-recovery/requests/token/reset")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 }

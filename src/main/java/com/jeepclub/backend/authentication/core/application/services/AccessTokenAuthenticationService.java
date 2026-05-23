@@ -1,9 +1,10 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
-import com.jeepclub.backend.authentication.core.application.exceptions.session.TemQueVerISSO;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
@@ -31,11 +32,11 @@ public class AccessTokenAuthenticationService {
         }
 
         if (!session.isValid(now)) {
-            throw new IllegalArgumentException("Session invalid.");
+            throw new SessionInvalidException("Session invalid.");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new TemQueVerISSO("User not found."));
+                .orElseThrow(() -> new UserIdNotFoundException("User not found with this cpf."));
 
         if (!user.isActive()) {
             throw new UserDisabledException("User inactive.");

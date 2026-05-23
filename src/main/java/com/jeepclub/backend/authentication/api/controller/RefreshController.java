@@ -7,38 +7,41 @@ import com.jeepclub.backend.authentication.core.application.services.RefreshServ
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-@Tag(
-        name = "Autenticação",
-        description = "Endpoints relacionados à autenticação e gerenciamento de sessão."
-)
-@RequiredArgsConstructor
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/authentication")
+@RequiredArgsConstructor
+@Validated
+@Tag(
+        name = "Authentication - Refresh",
+        description = "Renovação de tokens de autenticação."
+)
 public class RefreshController {
 
     private final RefreshService refreshService;
 
+    @PostMapping("/refresh")
     @Operation(
-            summary = "Renovar tokens de autenticação",
+            summary = "Renovar tokens",
             description = "Gera um novo access token e um novo refresh token a partir de um refresh token válido."
     )
-    @PostMapping("/refresh")
     public ResponseEntity<AuthTokenResponseDTO> refresh(
-            @RequestBody @Valid @NotNull RefreshRequestDTO request
+            @RequestBody @Valid RefreshRequestDTO request
     ) {
-        AuthTokens tokens = refreshService.refresh(request.refreshToken());
-
-        AuthTokenResponseDTO response = new AuthTokenResponseDTO(
-                tokens.refreshToken(),
-                tokens.accessToken(),
-                tokens.expiresInSeconds()
+        AuthTokens tokens = refreshService.refresh(
+                request.refreshToken()
         );
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new AuthTokenResponseDTO(
+                        tokens.refreshToken(),
+                        tokens.accessToken(),
+                        tokens.expiresInSeconds()
+                )
+        );
     }
 }

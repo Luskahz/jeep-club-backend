@@ -4,36 +4,33 @@ import com.jeepclub.backend.authentication.core.application.services.LogoutServi
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
-@Tag(
-        name = "Autenticação",
-        description = "Endpoints relacionados à autenticação e gerenciamento de sessão."
-)
-@RequiredArgsConstructor
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/authentication")
+@RequiredArgsConstructor
+@Validated
+@Tag(
+        name = "Authentication - Logout",
+        description = "Encerramento de sessão autenticada."
+)
 public class LogoutController {
 
     private final LogoutService logoutService;
 
-    @Operation(
-            summary = "Encerrar sessão do usuário autenticado",
-            description = "Encerra as sessões ativas do usuário autenticado com base no token de acesso informado."
-    )
     @PostMapping("/logout")
+    @Operation(
+            summary = "Encerrar sessão",
+            description = "Encerra a sessão do usuário autenticado com base no token de acesso informado."
+    )
     public ResponseEntity<Void> logout(
-            @NotNull Authentication auth
+            Authentication authentication
     ) {
-        if (!(auth.getPrincipal() instanceof UserPrincipal principal)) {
-            throw new IllegalArgumentException("Autenticação inválida");
-        }
+        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
         logoutService.logout(principal.getUserId());
 

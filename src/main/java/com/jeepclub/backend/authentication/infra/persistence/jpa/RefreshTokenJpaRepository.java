@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.jpa;
 
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
-import com.jeepclub.backend.authentication.infra.persistence.entities.RefreshTokenEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.RefreshTokenEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
