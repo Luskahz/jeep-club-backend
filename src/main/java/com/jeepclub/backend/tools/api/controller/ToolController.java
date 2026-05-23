@@ -17,19 +17,24 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
-// este contro
 @RequestMapping("/tools")
-@RequiredArgsConstructor // Adicionado pelo Luskahz: cria o construtor automaticamente
-@Tag(name = "Tool Manager - Public", description = "Consulta de ferramentas e equipamentos do usuário.")
+@RequiredArgsConstructor
+@Tag(name = "Tools", description = "Gerenciamento de ferramentas e equipamentos do usuário.")
 public class ToolController {
 
     // pendente as seguintes rotas:
     // - Usuário criar uma ferramenta
     // - Usuário editar uma ferramenta DELE (o user n pode ter acesso a ferramentas alheias)
     // - usuario deve conseguir realizar o SelfDelete de uma ferramenta dele
+    // - a rota get em /tools hoje retorna todos os campos de uma tool. isso é pesado faça o DTO diferente para retornar apenas alguns campos principais da ferramenta e aplique logica de paginação com pageble do spring
+    // - a rota get tools/{id} retorna uma ferramenta especifica ai sim ela pode retornar todos os campos de uma ferramenta.
+    // - verifique se hoje os nomes das rotas estão semanticos padrão restAPI
+
+    //ESTE CONTROLLER DEVE COMPOR APENAS ROTAS QUE SÓ PRECISAM DA AUTHENTICAÇÃO DO USUARIO, NÃO CRIE ROTAS QUE REQUEREM PERMISSIONS AQUI.
 
     private final ToolService toolQueryService;
 
+    //Retirei as permissions que voce colocou nas rotas pois não faz sentido o user precisar de uma permissão (Role) para conseguir ver as ferramentas dele, ele já logou, já colocou a senha, não é necessario mais permissões;
     @GetMapping
     @Operation(summary = "Listar ferramentas do usuário", description = "Retorna todas as ferramentas pertencentes ao usuário logado.")
     public ResponseEntity<List<ToolResponseDTO>> getAvailableTools(
