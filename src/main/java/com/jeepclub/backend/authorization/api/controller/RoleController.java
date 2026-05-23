@@ -6,6 +6,7 @@ import com.jeepclub.backend.authorization.api.dto.role.UpdateRoleRequestDTO;
 import com.jeepclub.backend.authorization.core.application.result.RoleResult;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.application.service.RoleService;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,6 +35,7 @@ public class RoleController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_CREATE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_CREATE")
     @Operation(
             summary = "Criar role",
             description = "Cria uma nova role de autorização."
@@ -52,6 +54,7 @@ public class RoleController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_READ')")
+    @RequiredPermission("AUTHORIZATION_ROLE_READ")
     @Operation(
             summary = "Listar roles",
             description = "Retorna todas as roles de autorização cadastradas."
@@ -66,6 +69,7 @@ public class RoleController {
 
     @GetMapping("/{roleId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_READ')")
+    @RequiredPermission("AUTHORIZATION_ROLE_READ")
     @Operation(
             summary = "Buscar role por ID",
             description = "Retorna os dados de uma role a partir do seu identificador."
@@ -89,6 +93,7 @@ public class RoleController {
 
     @PutMapping("/{roleId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_UPDATE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_UPDATE")
     @Operation(
             summary = "Atualizar role",
             description = "Atualiza nome e descrição de uma role de autorização."
@@ -118,6 +123,7 @@ public class RoleController {
 
     @PatchMapping("/{roleId}/deactivate")
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_DISABLE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_DISABLE")
     @Operation(
             summary = "Desativar role",
             description = "Marca uma role ativa como inativa."
@@ -141,6 +147,7 @@ public class RoleController {
 
     @PatchMapping("/{roleId}/activate")
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_ENABLE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_ENABLE")
     @Operation(
             summary = "Ativar role",
             description = "Marca uma role inativa como ativa."
@@ -164,6 +171,7 @@ public class RoleController {
 
     @DeleteMapping("/{roleId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_DELETE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_DELETE")
     @Operation(
             summary = "Excluir role",
             description = "Realiza exclusão lógica de uma role de autorização."

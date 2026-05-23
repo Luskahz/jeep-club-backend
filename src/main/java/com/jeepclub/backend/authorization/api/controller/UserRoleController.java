@@ -4,6 +4,7 @@ import com.jeepclub.backend.authorization.api.dto.ReplaceUserRolesRequestDTO;
 import com.jeepclub.backend.authorization.api.dto.RoleResponseDTO;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.application.service.UserRoleService;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +33,7 @@ public class UserRoleController {
 
     @GetMapping("/{userId}/roles")
     @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_READ')")
+    @RequiredPermission("AUTHORIZATION_USER_ROLE_READ")
     @Operation(
             summary = "Listar roles de um usuário",
             description = "Retorna todas as roles vinculadas a um usuário."
@@ -55,6 +57,10 @@ public class UserRoleController {
 
     @PutMapping("/{userId}/roles")
     @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_ASSIGN') and hasAuthority('AUTHORIZATION_USER_ROLE_REVOKE')")
+    @RequiredPermission({
+            "AUTHORIZATION_USER_ROLE_ASSIGN",
+            "AUTHORIZATION_USER_ROLE_REVOKE"
+    })
     @Operation(
             summary = "Substituir roles de um usuário",
             description = "Substitui completamente o conjunto de roles vinculadas ao usuário. Uma lista vazia remove todas as roles."
@@ -81,6 +87,7 @@ public class UserRoleController {
 
     @PostMapping("/{userId}/roles/{roleId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_ASSIGN')")
+    @RequiredPermission("AUTHORIZATION_USER_ROLE_ASSIGN")
     @Operation(
             summary = "Atribuir role a um usuário",
             description = "Cria o vínculo entre um usuário e uma role ativa."
@@ -111,6 +118,7 @@ public class UserRoleController {
 
     @DeleteMapping("/{userId}/roles/{roleId}")
     @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_REVOKE')")
+    @RequiredPermission("AUTHORIZATION_USER_ROLE_REVOKE")
     @Operation(
             summary = "Remover role de um usuário",
             description = "Remove o vínculo entre um usuário e uma role."

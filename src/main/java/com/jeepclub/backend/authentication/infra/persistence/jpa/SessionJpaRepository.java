@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.jpa;
 
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
-import com.jeepclub.backend.authentication.infra.persistence.entities.SessionEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.SessionEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
