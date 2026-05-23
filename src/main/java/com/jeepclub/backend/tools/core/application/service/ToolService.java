@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+// n tá legal,refazer esse service, pros controllers anteriores está encaminhado, porem tem que ter regra de negocio aqui, exceptions, quando tiver fazendo
+// os services pra responder as novas rotas que vai criar vai entender;
 public class ToolService {
 
     private final ToolRepository toolRepository;

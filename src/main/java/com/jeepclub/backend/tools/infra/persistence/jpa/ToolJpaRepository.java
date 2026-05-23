@@ -4,7 +4,7 @@ import com.jeepclub.backend.tools.infra.persistence.entity.ToolEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
-
+// boa, o importante aqui é entender pq o extends JpaRepository<SuaEntidade, tipoDoId> é importante pro jpa
 public interface ToolJpaRepository extends JpaRepository<ToolEntity, Long> {
     // Apague o findAllByStatus antigo e coloque estes dois:
     List<ToolEntity> findAllByUserId(Long userId);
