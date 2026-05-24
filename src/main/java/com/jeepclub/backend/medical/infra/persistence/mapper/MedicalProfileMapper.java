@@ -12,7 +12,7 @@ public class MedicalProfileMapper {
             return null;
         }
 
-        return new MedicalProfile(
+        return MedicalProfile.reconstitute(
                 entity.getId(),
                 entity.getOwnerType(),
                 entity.getOwnerId(),

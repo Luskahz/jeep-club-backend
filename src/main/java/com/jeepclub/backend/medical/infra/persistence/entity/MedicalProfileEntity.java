@@ -2,7 +2,16 @@ package com.jeepclub.backend.medical.infra.persistence.entity;
 
 import com.jeepclub.backend.medical.core.domain.BloodType;
 import com.jeepclub.backend.medical.core.domain.MedicalProfileOwnerType;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -35,7 +44,7 @@ public class MedicalProfileEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "blood_type", nullable = false, length = 30)
-    private BloodType bloodType = BloodType.UNKNOWN;
+    private BloodType bloodType;
 
     @Lob
     @Column(name = "allergies", columnDefinition = "TEXT")
@@ -76,27 +85,4 @@ public class MedicalProfileEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
-
-
-    // isso não é interessante, recomendo que deixe que o model cuide disso. pois o Instant.now
-    // tem que nascer no service e ser passado a diante até a finalização da requisição.
-    @PrePersist
-    public void prePersist() {
-        Instant now = Instant.now();
-        this.createdAt = now;
-        this.updatedAt = now;
-
-        if (this.bloodType == null) {
-            this.bloodType = BloodType.UNKNOWN;
-        }
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        this.updatedAt = Instant.now();
-
-        if (this.bloodType == null) {
-            this.bloodType = BloodType.UNKNOWN;
-        }
-    }
 }
