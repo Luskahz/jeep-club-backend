@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.core.domain.model;
 
+import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,8 +12,8 @@ import java.time.Instant;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Vehicle {
     private Long id;
-    private String nickname;
-    private String photo;
+    private String nickname;            // Nome que o membro da para o proprio veiculo
+    private String photo;               // Foto unica
     private String plate;               // Placa do veículo
     private String renavam;             // Código RENAVAM (específico para o Brasil)
     private String brand;               // Marca (ex: Toyota, Ford)
@@ -21,9 +22,11 @@ public class Vehicle {
     private int modelYear;              // Ano do modelo
     private String color;               // Cor predominante
     private int seatingCapacity;        // Capacidade de passageiros (ex: 5, 7, 8)
-    private String fuelType;            // Tipo de combustível (Gasolina, Flex, Diesel, Elétrico)
-    private double engineDisplacement;
-    private VehicleStatus status;  // Cilindrada/Motor (ex: 2.0, 3.0)
+    private FuelType fuelType;          // Tipo de combustível (Gasolina, Flex, Diesel, Elétrico)
+    private double engineDisplacement;  // Cilindrada/Motor (ex: 2.0, 3.0)
+    private VehicleStatus status;
+    private Boolean towing;
+
     private Long ownerId;
 
     private Instant createdAt;
@@ -42,8 +45,9 @@ public class Vehicle {
             int modelYear,
             String color,
             int seatingCapacity,
-            String fuelType,
+            FuelType fuelType,
             double engineDisplacement,
+            Boolean towing,
             Long ownerId
     ) {
         this.nickname = nickname;
@@ -58,6 +62,7 @@ public class Vehicle {
         this.seatingCapacity = seatingCapacity;
         this.fuelType = fuelType;
         this.engineDisplacement = engineDisplacement;
+        this.towing = towing;
         this.ownerId = ownerId;
 
 
