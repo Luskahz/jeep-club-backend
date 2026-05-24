@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfInvalidException;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
@@ -29,7 +30,7 @@ public class RegisterService {
         Instant now = Instant.now();
 
         if (userRepository.existsByCpf(cpf)) {
-            throw new IllegalArgumentException("O CPF informado já está em uso.");
+            throw new UserCpfInvalidException("The CPF number provided is already in use.");
         }
 
         String passwordHash = passwordHasher.hash(passwordRaw);

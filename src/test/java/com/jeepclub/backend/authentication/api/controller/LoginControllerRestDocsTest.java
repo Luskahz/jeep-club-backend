@@ -1,6 +1,9 @@
 package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
@@ -13,6 +16,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
@@ -43,7 +48,7 @@ class LoginControllerRestDocsTest {
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Test
-    void shouldDocumentLoginSuccess() throws Exception {
+    void shouldDocumentLoginAuthenticated() throws Exception {
         AuthTokens tokens = new AuthTokens(
                 "refresh-token-example",
                 "access-token-example",
@@ -51,9 +56,9 @@ class LoginControllerRestDocsTest {
         );
 
         when(loginService.login("52998224725", "senha123"))
-                .thenReturn(tokens);
+                .thenReturn(new AuthenticatedLoginResult(tokens));
 
-        mockMvc.perform(post("/auth/login")
+        mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -62,15 +67,48 @@ class LoginControllerRestDocsTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andDo(document("auth-login-success",
+                .andDo(document("authentication-login-authenticated",
                         requestFields(
                                 fieldWithPath("cpf").description("CPF válido do usuário utilizado para autenticação"),
                                 fieldWithPath("senha").description("Senha do usuário")
                         ),
                         responseFields(
+                                fieldWithPath("status").description("Status do fluxo de login. Neste caso, AUTHENTICATED"),
                                 fieldWithPath("refreshToken").description("Token utilizado para renovar a autenticação"),
                                 fieldWithPath("accessToken").description("Token JWT utilizado para acessar recursos protegidos"),
                                 fieldWithPath("expiresInSeconds").description("Tempo de expiração do access token em segundos")
+                        )
+                ));
+    }
+
+    @Test
+    void shouldDocumentLoginPasswordChangeRequired() throws Exception {
+        Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
+
+        when(loginService.login("52998224725", "senhaProvisoria123"))
+                .thenReturn(new PasswordChangeRequiredLoginResult(
+                        "password-change-token-example",
+                        expiresAt
+                ));
+
+        mockMvc.perform(post("/authentication/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "cpf": "52998224725",
+                                  "senha": "senhaProvisoria123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andDo(document("authentication-login-password-change-required",
+                        requestFields(
+                                fieldWithPath("cpf").description("CPF válido do usuário utilizado para autenticação"),
+                                fieldWithPath("senha").description("Senha provisória do usuário")
+                        ),
+                        responseFields(
+                                fieldWithPath("status").description("Status do fluxo de login. Neste caso, PASSWORD_CHANGE_REQUIRED"),
+                                fieldWithPath("passwordChangeToken").description("Token temporário usado para concluir a troca obrigatória de senha"),
+                                fieldWithPath("passwordChangeTokenExpiresAt").description("Data e hora de expiração do token temporário de troca de senha")
                         )
                 ));
     }

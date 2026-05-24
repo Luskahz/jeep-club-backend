@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
@@ -16,10 +17,12 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -38,7 +41,7 @@ class RegisterControllerTest {
     private LoginService loginService;
 
     @MockitoBean
-    private JwtTokenParser jwtTokenParser; // Necessário para contextos de segurança que podem interceptar
+    private JwtTokenParser jwtTokenParser;
 
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
@@ -47,15 +50,36 @@ class RegisterControllerTest {
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Test
-    @DisplayName("Sucesso: Registro com dados válidos retorna 201 e tokens")
+    @DisplayName("Sucesso: registro com dados válidos retorna 201 e tokens")
     void shouldReturnTokensOnSuccessfulRegistration() throws Exception {
-        User mockedUser = User.create("Teste", LocalDate.of(1990, 1, 1), "teste@email.com", "52998224725", "1234567", "hash", "11999999999", java.time.Instant.now());
-        AuthTokens tokens = new AuthTokens("refresh-reg", "access-reg", 3600L);
+        User mockedUser = User.create(
+                "Teste",
+                LocalDate.of(1990, 1, 1),
+                "teste@email.com",
+                "52998224725",
+                "1234567",
+                "hash",
+                "11999999999",
+                Instant.parse("2026-05-21T18:00:00Z")
+        );
 
-        when(registerService.registerUser(anyString(), any(LocalDate.class), anyString(), anyString(), anyString(), anyString(), anyString()))
-                .thenReturn(mockedUser);
-        
-        when(loginService.login("52998224725", "senha123"))
+        AuthTokens tokens = new AuthTokens(
+                "refresh-reg",
+                "access-reg",
+                3600L
+        );
+
+        when(registerService.registerUser(
+                anyString(),
+                any(LocalDate.class),
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString(),
+                anyString()
+        )).thenReturn(mockedUser);
+
+        when(loginService.authenticateRegisteredUser(eq(mockedUser)))
                 .thenReturn(tokens);
 
         String payload = """
@@ -70,7 +94,7 @@ class RegisterControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/authentication/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isCreated())
@@ -80,8 +104,8 @@ class RegisterControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: Dados inválidos retorna 400 Bad Request")
-    void shouldReturn400OnInvalidData() throws Exception {
+    @DisplayName("Falha: dados inválidos retorna 400 Bad Request")
+    void shouldReturnBadRequestOnInvalidData() throws Exception {
         String invalidPayload = """
                 {
                   "name": "",
@@ -90,7 +114,7 @@ class RegisterControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/auth/register")
+        mockMvc.perform(post("/authentication/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidPayload))
                 .andExpect(status().isBadRequest());

@@ -2,8 +2,9 @@ package com.jeepclub.backend.authentication.core.port;
 
 import java.time.Duration;
 
-public interface AuthTimeProperties {
+public interface ApplicationTimeProperties {
     Duration sessionTtl();
     Duration refreshTokenTtl();
-    Duration passwordChangeRequestTtl();
+    Duration passwordRecoveryRequestTtl();
+    Duration passwordChangeChallengeTtl();
 }

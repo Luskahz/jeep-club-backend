@@ -74,16 +74,16 @@ public enum PermissionDefinition {
 
     // AUTHENTICATION / PASSWORD RECOVERY
 
-    AUTHENTICATION_USER_PASSWORD_RESET_TOKEN_GENERATE(
-            PermissionCode.AUTHENTICATION_USER_PASSWORD_RESET_TOKEN_GENERATE,
+    AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE(
+            PermissionCode.AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE,
             ModuleCode.AUTHENTICATION,
-            "Permite gerar tokens de redefinição de senha para usuários"
+            "Permite gerar links administrativos de redefinição de senha para usuários"
     ),
 
     AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE(
             PermissionCode.AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE,
             ModuleCode.AUTHENTICATION,
-            "Permite gerar senhas temporárias para usuários"
+            "Permite gerar senhas provisórias para usuários"
     ),
 
     // AUTHORIZATION / PERMISSIONS
