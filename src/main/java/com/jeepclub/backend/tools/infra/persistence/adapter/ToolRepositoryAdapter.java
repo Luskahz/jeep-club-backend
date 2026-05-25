@@ -5,32 +5,49 @@ import com.jeepclub.backend.tools.core.repository.ToolRepository;
 import com.jeepclub.backend.tools.infra.persistence.jpa.ToolJpaRepository;
 import com.jeepclub.backend.tools.infra.persistence.mapper.ToolMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
-// aqui ficou ok, mas vai aumentar conforme estiver desenvolvendo as rotas.
 public class ToolRepositoryAdapter implements ToolRepository {
 
     private final ToolJpaRepository jpaRepository;
     private final ToolMapper mapper;
 
+    @Override
+    public Page<Tool> findByUserId(Long userId, Pageable pageable) {
+        // O jpaRepository devolve um Page de Entidade (ToolEntity). O .map converte para o Domínio (Tool).
+        return jpaRepository.findByUserId(userId, pageable)
+                .map(mapper::toDomain);
+    }
 
     @Override
-    public List<Tool> findAllByUserId(Long userId) {
-        return jpaRepository.findAllByUserId(userId)
-                .stream()
-                .map(mapper::toDomain)
-                .collect(Collectors.toList());
+    public Optional<Tool> findById(Long id) {
+        return jpaRepository.findById(id)
+                .map(mapper::toDomain);
     }
 
     @Override
     public Optional<Tool> findByIdAndUserId(Long toolId, Long userId) {
         return jpaRepository.findByIdAndUserId(toolId, userId)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public Tool save(Tool tool) {
+        // Converte do Domínio para Entidade do banco, salva, e converte de volta.
+        var entity = mapper.toEntity(tool);
+        var savedEntity = jpaRepository.save(entity);
+        return mapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public void delete(Tool tool) {
+        var entity = mapper.toEntity(tool);
+        jpaRepository.delete(entity);
     }
 }

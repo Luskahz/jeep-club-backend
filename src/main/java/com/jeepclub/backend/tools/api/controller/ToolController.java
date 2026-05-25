@@ -1,20 +1,21 @@
 package com.jeepclub.backend.tools.api.controller;
 
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.tools.api.dto.ToolCreateRequestDTO;
 import com.jeepclub.backend.tools.api.dto.ToolResponseDTO;
+import com.jeepclub.backend.tools.api.dto.ToolSummaryResponseDTO;
+import com.jeepclub.backend.tools.api.dto.ToolUpdateRequestDTO;
 import com.jeepclub.backend.tools.core.application.service.ToolService;
-// Importe a classe que representa o seu usuário logado (pela sua estrutura, deve ser essa abaixo ou JwtAuthenticatedUser)
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/tools")
@@ -22,42 +23,64 @@ import java.util.stream.Collectors;
 @Tag(name = "Tools", description = "Gerenciamento de ferramentas e equipamentos do usuário.")
 public class ToolController {
 
-    // pendente as seguintes rotas:
-    // - Usuário criar uma ferramenta
-    // - Usuário editar uma ferramenta DELE (o user n pode ter acesso a ferramentas alheias)
-    // - usuario deve conseguir realizar o SelfDelete de uma ferramenta dele
-    // - a rota get em /tools hoje retorna todos os campos de uma tool. isso é pesado faça o DTO diferente para retornar apenas alguns campos principais da ferramenta e aplique logica de paginação com pageble do spring
-    // - a rota get tools/{id} retorna uma ferramenta especifica ai sim ela pode retornar todos os campos de uma ferramenta.
-    // - verifique se hoje os nomes das rotas estão semanticos padrão restAPI
+    private final ToolService toolService;
 
-    //ESTE CONTROLLER DEVE COMPOR APENAS ROTAS QUE SÓ PRECISAM DA AUTHENTICAÇÃO DO USUARIO, NÃO CRIE ROTAS QUE REQUEREM PERMISSIONS AQUI.
-
-    private final ToolService toolQueryService;
-
-    //Retirei as permissions que voce colocou nas rotas pois não faz sentido o user precisar de uma permissão (Role) para conseguir ver as ferramentas dele, ele já logou, já colocou a senha, não é necessario mais permissões;
+    // 1. Rota GET /tools - Agora com Paginação e DTO Resumido
     @GetMapping
-    @Operation(summary = "Listar ferramentas do usuário", description = "Retorna todas as ferramentas pertencentes ao usuário logado.")
-    public ResponseEntity<List<ToolResponseDTO>> getAvailableTools(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) { // boa
+    @Operation(summary = "Listar ferramentas do usuário", description = "Retorna uma lista paginada e resumida das ferramentas pertencentes ao usuário logado.")
+    public ResponseEntity<Page<ToolSummaryResponseDTO>> getAvailableTools(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            Pageable pageable) {
 
-        // necessario ajustar seu metodo pois estava usando uma dto como classe e não como record que é o correto.
-        List<ToolResponseDTO> tools = toolQueryService.listUserTools(userPrincipal.getUserId())
-                .stream()
-                .map(ToolResponseDTO::new)
-                .collect(Collectors.toList());
+        // O service agora deve retornar um Page em vez de List
+        Page<ToolSummaryResponseDTO> tools = toolService.listUserTools(userPrincipal.getUserId(), pageable)
+                .map(ToolSummaryResponseDTO::new);
 
         return ResponseEntity.ok(tools);
     }
 
+    // 2. Rota GET /tools/{id} - Mantida retornando todos os dados
     @GetMapping("/{id}")
-    @Operation(summary = "Buscar detalhes da ferramenta", description = "Retorna os dados de uma ferramenta específica do usuário.")
+    @Operation(summary = "Buscar detalhes da ferramenta", description = "Retorna os dados completos de uma ferramenta específica do usuário.")
     public ResponseEntity<ToolResponseDTO> getToolById(
             @PathVariable Long id,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) { // boa.
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        // necessario ajustar seu metodo pois estava usando uma dto como classe e não como record que é o correto.
-        ToolResponseDTO tool = new ToolResponseDTO(toolQueryService.getToolDetails(id, userPrincipal.getUserId()));
-
+        ToolResponseDTO tool = new ToolResponseDTO(toolService.getToolDetails(id, userPrincipal.getUserId()));
         return ResponseEntity.ok(tool);
+    }
+
+    // 3. Rota POST /tools - Nova rota para Criar ferramenta
+    @PostMapping
+    @Operation(summary = "Criar uma ferramenta", description = "Cadastra uma nova ferramenta no inventário do usuário logado.")
+    public ResponseEntity<ToolResponseDTO> createTool(
+            @RequestBody ToolCreateRequestDTO request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        ToolResponseDTO createdTool = new ToolResponseDTO(toolService.createTool(request, userPrincipal.getUserId()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdTool);
+    }
+
+    // 4. Rota PUT /tools/{id} - Nova rota para Editar ferramenta
+    @PutMapping("/{id}")
+    @Operation(summary = "Atualizar uma ferramenta", description = "Atualiza os dados de uma ferramenta existente do usuário logado.")
+    public ResponseEntity<ToolResponseDTO> updateTool(
+            @PathVariable Long id,
+            @RequestBody ToolUpdateRequestDTO request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        ToolResponseDTO updatedTool = new ToolResponseDTO(toolService.updateTool(id, request, userPrincipal.getUserId()));
+        return ResponseEntity.ok(updatedTool);
+    }
+
+    // 5. Rota DELETE /tools/{id} - Nova rota para SelfDelete
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Deletar uma ferramenta", description = "Remove permanentemente uma ferramenta do usuário logado.")
+    public ResponseEntity<Void> deleteTool(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        toolService.deleteTool(id, userPrincipal.getUserId());
+        return ResponseEntity.noContent().build(); // Retorna 204 No Content
     }
 }

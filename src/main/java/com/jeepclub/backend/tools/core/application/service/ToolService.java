@@ -1,30 +1,69 @@
 package com.jeepclub.backend.tools.core.application.service;
 
+import com.jeepclub.backend.tools.api.dto.ToolCreateRequestDTO;
+import com.jeepclub.backend.tools.api.dto.ToolUpdateRequestDTO;
+import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
-import org.springframework.stereotype.Service;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
-// n tá legal,refazer esse service, pros controllers anteriores está encaminhado, porem tem que ter regra de negocio aqui, exceptions, quando tiver fazendo
-// os services pra responder as novas rotas que vai criar vai entender;
 public class ToolService {
 
     private final ToolRepository toolRepository;
 
+    // CONSTRUTOR MANUAL ADICIONADO AQUI:
     public ToolService(ToolRepository toolRepository) {
         this.toolRepository = toolRepository;
     }
 
-    // Atualizado: Agora recebe o ID do usuário
-    public List<Tool> listUserTools(Long userId) {
-        return toolRepository.findAllByUserId(userId);
+    public Page<Tool> listUserTools(Long userId, Pageable pageable) {
+        return toolRepository.findByUserId(userId, pageable);
     }
 
-    // Atualizado: Agora confere o ID da ferramenta e se ela pertence ao usuário
     public Tool getToolDetails(Long toolId, Long userId) {
-        return toolRepository.findByIdAndUserId(toolId, userId)
-                .orElseThrow(() -> new RuntimeException("Tool not found or does not belong to you"));
+        Tool tool = toolRepository.findById(toolId)
+                // Usando a exceção de Aplicação corretamente!
+                .orElseThrow(() -> new ToolNotFoundException("Ferramenta não encontrada no banco de dados."));
+
+        // Usando a exceção de Domínio (dentro da entidade)
+        tool.assertBelongsTo(userId);
+
+        return tool;
+    }
+
+    @Transactional
+    public Tool createTool(ToolCreateRequestDTO request, Long userId) {
+        Tool tool = Tool.create(
+                request.name(),
+                request.description(),
+                request.status(),
+                userId
+        );
+
+        return toolRepository.save(tool);
+    }
+
+    @Transactional
+    public Tool updateTool(Long id, ToolUpdateRequestDTO request, Long userId) {
+        Tool tool = getToolDetails(id, userId);
+
+        tool.updateDetails(request.name(), request.description());
+
+        if (request.status() != null) {
+            tool.changeStatus(request.status());
+        }
+
+        return toolRepository.save(tool);
+    }
+
+    @Transactional
+    public void deleteTool(Long id, Long userId) {
+        Tool tool = getToolDetails(id, userId);
+        toolRepository.delete(tool);
     }
 }

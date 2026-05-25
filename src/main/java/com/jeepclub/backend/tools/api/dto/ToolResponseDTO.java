@@ -2,15 +2,34 @@ package com.jeepclub.backend.tools.api.dto;
 
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-
-// o padrão pra uma dto não é usar um arquivo de class, e sim um arquivo de record.
-// necessario aplicar documentação swagger na sua dto, ler as dtos da pasta api do modulo authorization
-// para ver o padrão da documentação swagger que estamos usando
+@Schema(description = "Objeto de resposta com os dados completos de uma ferramenta.")
 public record ToolResponseDTO(
+
+        @Schema(description = "Identificador único da ferramenta no sistema.", example = "1")
         Long id,
+
+        @Schema(description = "Nome da ferramenta ou equipamento.", example = "Macaco Hidráulico 2 Toneladas")
         String name,
+
+        @Schema(description = "Descrição detalhada da ferramenta.", example = "Macaco tipo jacaré, cor vermelha, ideal para troca de pneus.")
         String description,
+
+        @Schema(description = "Status atual de disponibilidade da ferramenta.", example = "AVAILABLE")
         ToolStatus status,
+
+        @Schema(description = "Identificador único do usuário dono da ferramenta.", example = "42")
         Long userId
-) {}
+
+) {
+    public ToolResponseDTO(Tool tool) {
+        this(
+                tool.getId(),
+                tool.getName(),
+                tool.getDescription(),
+                tool.getStatus(),
+                tool.getUserId()
+        );
+    }
+}
