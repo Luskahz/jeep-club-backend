@@ -1,46 +1,51 @@
 package com.jeepclub.backend.membership.core.application.service;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
-import com.jeepclub.backend.authentication.core.repository.MembershipApplicationRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.membership.core.application.exception.MembershipApplicationAlreadyProcessedException;
 import com.jeepclub.backend.membership.core.application.exception.MembershipApplicationNotFoundException;
+import com.jeepclub.backend.membership.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.membership.core.domain.model.MemberActivationToken;
+import com.jeepclub.backend.membership.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.membership.core.port.MemberActivationMailSender;
+import com.jeepclub.backend.membership.core.port.MembershipTimeProperties;
 import com.jeepclub.backend.membership.core.repository.MemberActivationTokenRepository;
+import com.jeepclub.backend.membership.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
+import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ApproveMembershipApplicationService {
 
-    private static final Duration ACTIVATION_TOKEN_TTL = Duration.ofHours(72);
-
     private final MembershipApplicationRepository membershipApplicationRepository;
     private final MemberActivationTokenRepository memberActivationTokenRepository;
     private final UserRepository userRepository;
+    private final PasswordHasher passwordHasher;
     private final RefreshTokenGenerator tokenGenerator;
     private final RefreshTokenHashService tokenHashService;
     private final MemberActivationMailSender mailSender;
+    private final MembershipTimeProperties membershipTimeProperties;
+    private final Clock clock;
 
     @Transactional
     public void approve(Long applicationId) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         MembershipApplication application = membershipApplicationRepository
                 .findById(applicationId)
                 .orElseThrow(() -> new MembershipApplicationNotFoundException(applicationId));
 
-        if (application.getStatus() != MembershipApplicationStatus.PENDING_ACTIVATION) {
+        if (application.getStatus() != MembershipApplicationStatus.PENDING) {
             throw new MembershipApplicationAlreadyProcessedException(
                     applicationId,
                     application.getStatus().name()
@@ -48,16 +53,30 @@ public class ApproveMembershipApplicationService {
         }
 
         // Cria o usuário com status PENDING_FIRST_ACCESS
-        User newUser = User.createPendingMember(
+        String temporaryPassword = UUID.randomUUID().toString();
+        String passwordHash = passwordHasher.hash(temporaryPassword);
+
+        User newUser = User.reconstitute(
+                null,
                 application.getName(),
-                application.getCpf(),
+                null,
                 application.getEmail(),
+                application.getCpf(),
+                null,
+                passwordHash,
                 application.getPhoneNumber(),
-                now
+                null,
+                UserStatus.PENDING_FIRST_ACCESS,
+                null,
+                now,
+                null,
+                null,
+                null,
+                0
         );
         userRepository.save(newUser);
 
-        // Invalida tokens anteriores (segurança) e cria novo token
+        // Invalida tokens anteriores e cria novo
         memberActivationTokenRepository.invalidateAllByApplicationId(applicationId);
 
         String rawToken = tokenGenerator.generate();
@@ -66,7 +85,7 @@ public class ApproveMembershipApplicationService {
         MemberActivationToken activationToken = MemberActivationToken.create(
                 applicationId,
                 tokenHash,
-                ACTIVATION_TOKEN_TTL,
+                membershipTimeProperties.activationTokenTtl(),
                 now
         );
         memberActivationTokenRepository.save(activationToken);
@@ -75,7 +94,6 @@ public class ApproveMembershipApplicationService {
         application.markAsInviteSent(now);
         membershipApplicationRepository.save(application);
 
-        // Envia e-mail com o token raw
         mailSender.sendActivationLink(application.getEmail(), application.getName(), rawToken);
     }
 }

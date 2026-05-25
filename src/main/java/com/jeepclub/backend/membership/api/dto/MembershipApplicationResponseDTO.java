@@ -1,7 +1,7 @@
 package com.jeepclub.backend.membership.api.dto;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membership.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membership.core.domain.model.MembershipApplication;
 
 import java.time.Instant;
 
@@ -14,7 +14,7 @@ public record MembershipApplicationResponseDTO(
         String message,
         MembershipApplicationStatus status,
         String rejectionReason,
-        Instant createdAt,
+        Instant requestedAt,
         Instant updatedAt
 ) {
     public static MembershipApplicationResponseDTO fromDomain(MembershipApplication application) {
@@ -27,7 +27,7 @@ public record MembershipApplicationResponseDTO(
                 application.getMessage(),
                 application.getStatus(),
                 application.getRejectionReason(),
-                application.getCreatedAt(),
+                application.getRequestedAt(),
                 application.getUpdatedAt()
         );
     }

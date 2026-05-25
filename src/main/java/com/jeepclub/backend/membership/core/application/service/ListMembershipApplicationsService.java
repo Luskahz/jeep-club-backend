@@ -1,13 +1,14 @@
 package com.jeepclub.backend.membership.core.application.service;
 
-import com.jeepclub.backend.authentication.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.authentication.core.domain.model.MembershipApplication;
-import com.jeepclub.backend.authentication.core.repository.MembershipApplicationRepository;
+import com.jeepclub.backend.membership.core.domain.enums.MembershipApplicationStatus;
+import com.jeepclub.backend.membership.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.membership.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,11 @@ public class ListMembershipApplicationsService {
 
     @Transactional(readOnly = true)
     public List<MembershipApplication> listByStatus(MembershipApplicationStatus status) {
-        return membershipApplicationRepository.findByStatus(status);
+        return membershipApplicationRepository.findAllByStatus(status);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<MembershipApplication> findById(Long id) {
+        return membershipApplicationRepository.findById(id);
     }
 }

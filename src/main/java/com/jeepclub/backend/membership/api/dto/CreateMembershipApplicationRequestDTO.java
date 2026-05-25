@@ -30,5 +30,4 @@ public record CreateMembershipApplicationRequestDTO(
         @NotBlank(message = "Mensagem é obrigatória.")
         @Size(max = 2000, message = "Mensagem deve ter no máximo 2000 caracteres.")
         String message
-) {
-}
+) {}

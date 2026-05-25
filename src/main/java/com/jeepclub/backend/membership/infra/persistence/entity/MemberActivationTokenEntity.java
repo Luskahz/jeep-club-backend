@@ -11,13 +11,7 @@ import java.time.Instant;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(
-        name = "membership_activation_tokens",
-        indexes = {
-                @Index(name = "idx_activation_tokens_application_id", columnList = "application_id"),
-                @Index(name = "idx_activation_tokens_token_hash", columnList = "token_hash", unique = true)
-        }
-)
+@Table(name = "membership_activation_tokens")
 public class MemberActivationTokenEntity {
 
     @Id
@@ -27,7 +21,7 @@ public class MemberActivationTokenEntity {
     @Column(name = "application_id", nullable = false)
     private Long applicationId;
 
-    @Column(name = "token_hash", nullable = false, unique = true, length = 64)
+    @Column(name = "token_hash", nullable = false, unique = true)
     private String tokenHash;
 
     @Column(name = "expires_at", nullable = false)
