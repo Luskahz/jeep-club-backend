@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import org.hibernate.validator.constraints.br.CPF;
 
 public record CreateMembershipApplicationRequestDTO(
 
@@ -16,6 +17,7 @@ public record CreateMembershipApplicationRequestDTO(
                 regexp = "^(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})$",
                 message = "CPF deve estar no formato 00000000000 ou 000.000.000-00."
         )
+        @CPF
         String cpf,
 
         @NotBlank(message = "E-mail é obrigatório.")

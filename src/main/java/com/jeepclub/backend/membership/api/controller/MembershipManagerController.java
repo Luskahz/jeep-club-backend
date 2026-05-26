@@ -27,6 +27,11 @@ public class MembershipManagerController {
     private final ResendActivationTokenService resendService;
     private final ListMembershipApplicationsService listService;
 
+
+
+    // faça o ajuste das permissions use o padrão: 'Nome_modulo'+'_'+'nome_classe+'_'+'Acao_realizada'
+    // exemplo: MEMBERSHIP_MEMBERSHIP_APPLICATION_READ
+    // Replique esta ideia de permission para todos os @PreAuthorize depois me informe quais permissions vc criou.
     @GetMapping
     @PreAuthorize("hasAuthority('MEMBERSHIP_APPLICATION_READ')")
     @Operation(summary = "Listar solicitações", description = "Lista todas ou filtra por status.")
@@ -42,6 +47,8 @@ public class MembershipManagerController {
 
         return ResponseEntity.ok(response);
     }
+
+    // para as requests que podem retornar muitas requisições use o @pageable para não traavr o frontend
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('MEMBERSHIP_APPLICATION_READ')")

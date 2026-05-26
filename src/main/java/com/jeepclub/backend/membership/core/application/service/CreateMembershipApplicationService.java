@@ -21,14 +21,16 @@ public class CreateMembershipApplicationService {
 
     @Transactional
     public MembershipApplicationResponseDTO create(CreateMembershipApplicationRequestDTO request) {
-
+        Instant now = Instant.now(clock);
+        // passa essa validação pro controller.
         String normalizedCpf = request.cpf().replaceAll("[^0-9]", "");
 
+
+        //seria mais interessante, se a request já existe retornar a propria request ao invez de gerar um erro
+        // se fizer essa mudança mude o nome do service de create pra um nome mais semântico.
         if (membershipApplicationRepository.existsByCpf(normalizedCpf)) {
             throw new MembershipApplicationAlreadyExistsException(normalizedCpf);
         }
-
-        Instant now = Instant.now(clock);
 
         MembershipApplication application = MembershipApplication.create(
                 request.name(),
