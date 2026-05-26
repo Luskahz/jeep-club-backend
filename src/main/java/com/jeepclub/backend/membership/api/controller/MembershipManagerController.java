@@ -35,6 +35,7 @@ public class MembershipManagerController {
     @GetMapping
     @PreAuthorize("hasAuthority('MEMBERSHIP_APPLICATION_READ')")
     @Operation(summary = "Listar solicitações", description = "Lista todas ou filtra por status.")
+    // essa dto vc traz menos dados comparado a do get por id
     public ResponseEntity<List<MembershipApplicationResponseDTO>> list(
             @RequestParam(required = false) MembershipApplicationStatus status
     ) {
@@ -53,6 +54,7 @@ public class MembershipManagerController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('MEMBERSHIP_APPLICATION_READ')")
     @Operation(summary = "Buscar solicitação por ID")
+    // essa dto é interessante manter como todos os campos
     public ResponseEntity<MembershipApplicationResponseDTO> getById(@PathVariable Long id) {
         return listService.findById(id)
                 .map(MembershipApplicationResponseDTO::fromDomain)
@@ -77,9 +79,13 @@ public class MembershipManagerController {
     ) {
         String reason = request != null ? request.reason() : null;
         rejectService.reject(id, reason);
+        // padronizar todos os retornos com HttpStatus no status do response entity e body quando necessario.
         return ResponseEntity.noContent().build();
     }
 
+
+    // corrigir para ao invez de mandar o link no email novamente, gerar um link copiavel para envio por fora
+    // ou gerar uma nova rota com esta ideia de link para whatsapp
     @PostMapping("/{id}/resend-invite")
     @PreAuthorize("hasAuthority('MEMBERSHIP_APPLICATION_APPROVE')")
     @Operation(summary = "Reenviar convite de ativação")

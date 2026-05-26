@@ -12,6 +12,9 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
+
+//escolher entre  persistence.adapter e repositoryJpa ambos são a mesma coisa, eu recomendo que vc padronize tudo em persistence.adapter
+// o adapter do membershipApplication que vai virar MembershipRequest e o adapter do MemberActivationTokenMapper.
 public class MemberActivationTokenRepositoryJpa implements MemberActivationTokenRepository {
 
     private final MemberActivationTokenJpaRepository jpaRepository;

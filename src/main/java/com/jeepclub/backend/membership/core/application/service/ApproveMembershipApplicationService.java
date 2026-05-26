@@ -56,6 +56,10 @@ public class ApproveMembershipApplicationService {
         String temporaryPassword = UUID.randomUUID().toString();
         String passwordHash = passwordHasher.hash(temporaryPassword);
 
+        //necessario criar um port no modulo membership que tenha um metodo para criar um usuário com status "PENDING_FIRST_ACCESS"
+        //E a implementação deste port deveser feita no infra do modulo authentication com um adapter. esse adapter deve ficar na
+        // pasta authentication.infra.adapter e o port aqui no membership em membership.core.port
+
         User newUser = User.reconstitute(
                 null,
                 application.getName(),
@@ -81,6 +85,10 @@ public class ApproveMembershipApplicationService {
 
         String rawToken = tokenGenerator.generate();
         String tokenHash = tokenHashService.hash(rawToken);
+
+        // aqui vc tá criando um tokenHash pra fazer um challend em algum lugar, porem não está usando este token pra validação
+        // garanta que haja uma rota nos controllers que receba este token raw do usuario para quando ele clicar no link do email o sistema valide
+        // que é ele antes de criar o novo usuario.
 
         MemberActivationToken activationToken = MemberActivationToken.create(
                 applicationId,

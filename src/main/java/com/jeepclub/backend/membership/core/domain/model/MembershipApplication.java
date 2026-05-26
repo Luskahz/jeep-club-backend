@@ -73,8 +73,11 @@ public class MembershipApplication {
         this.updatedAt = now;
     }
 
-    public void markAsRejected(Instant now) {
+    public void markAsRejected(Instant now, String rejectionReason) {
         this.status = MembershipApplicationStatus.REJECTED;
+        if(rejectionReason != null){
+            this.rejectionReason = rejectionReason;
+        }
         this.updatedAt = now;
     }
 }

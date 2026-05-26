@@ -36,7 +36,7 @@ public class RejectMembershipApplicationService {
             );
         }
 
-        application.markAsRejected(now);
+        application.markAsRejected(now, reason);
         membershipApplicationRepository.save(application);
 
         if (reason != null && !reason.isBlank()) {

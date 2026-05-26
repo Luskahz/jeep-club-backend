@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
+// essa implementação de mandar mensagem pro email do cara funciona?
+// validar e fazer funcionar.
 public class DummyMemberActivationMailSender implements MemberActivationMailSender {
 
     @Override
