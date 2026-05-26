@@ -9,6 +9,8 @@ import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
 import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
 import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -91,13 +93,19 @@ public class ChargeAssignmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChargeAssignmentResult> findByChargeDefinitionId(Long chargeDefinitionId) {
+    public Page<ChargeAssignmentResult> findByChargeDefinitionId(
+            Long chargeDefinitionId,
+            Pageable pageable
+    ) {
+        Objects.requireNonNull(pageable, "pageable cannot be null");
+
         ensureChargeDefinitionExists(chargeDefinitionId);
 
-        return chargeAssignmentRepository.findByChargeDefinitionId(chargeDefinitionId)
-                .stream()
-                .map(ChargeAssignmentResult::from)
-                .toList();
+        return chargeAssignmentRepository.findByChargeDefinitionId(
+                        chargeDefinitionId,
+                        pageable
+                )
+                .map(ChargeAssignmentResult::from);
     }
 
     @Transactional

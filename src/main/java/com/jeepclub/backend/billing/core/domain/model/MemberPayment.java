@@ -20,6 +20,7 @@ public class MemberPayment {
     private PaymentMethod paymentMethod;
     private MemberPaymentStatus status;
     private Instant paidAt;
+    private String receiptStorageKey;
     private String receiptUrl;
     private Instant confirmedAt;
     private Long confirmedByUserId;
@@ -38,6 +39,7 @@ public class MemberPayment {
             PaymentMethod paymentMethod,
             MemberPaymentStatus status,
             Instant paidAt,
+            String receiptStorageKey,
             String receiptUrl,
             Instant confirmedAt,
             Long confirmedByUserId,
@@ -55,7 +57,8 @@ public class MemberPayment {
         this.paymentMethod = Objects.requireNonNull(paymentMethod, "paymentMethod cannot be null");
         this.status = Objects.requireNonNull(status, "status cannot be null");
         this.paidAt = Objects.requireNonNull(paidAt, "paidAt cannot be null");
-        this.receiptUrl = normalizeNullableText(receiptUrl);
+        this.receiptStorageKey = validateRequiredText(receiptStorageKey, "receiptStorageKey");
+        this.receiptUrl = validateRequiredText(receiptUrl, "receiptUrl");
         this.confirmedAt = confirmedAt;
         this.confirmedByUserId = confirmedByUserId;
         this.rejectedAt = rejectedAt;
@@ -69,11 +72,12 @@ public class MemberPayment {
         validateStatusConsistency();
     }
 
-    public static MemberPayment submitForConfirmation(
+    public static MemberPayment submitForValidation(
             Long memberChargeId,
             BigDecimal amount,
             PaymentMethod paymentMethod,
             Instant paidAt,
+            String receiptStorageKey,
             String receiptUrl,
             String notes,
             Instant now
@@ -85,8 +89,9 @@ public class MemberPayment {
                 memberChargeId,
                 amount,
                 paymentMethod,
-                MemberPaymentStatus.PENDING_CONFIRMATION,
+                MemberPaymentStatus.PENDING_VALIDATION,
                 paidAt,
+                receiptStorageKey,
                 receiptUrl,
                 null,
                 null,
@@ -107,6 +112,7 @@ public class MemberPayment {
             PaymentMethod paymentMethod,
             MemberPaymentStatus status,
             Instant paidAt,
+            String receiptStorageKey,
             String receiptUrl,
             Instant confirmedAt,
             Long confirmedByUserId,
@@ -125,6 +131,7 @@ public class MemberPayment {
                 paymentMethod,
                 status,
                 paidAt,
+                receiptStorageKey,
                 receiptUrl,
                 confirmedAt,
                 confirmedByUserId,
@@ -142,8 +149,8 @@ public class MemberPayment {
         validateId(confirmedByUserId, "confirmedByUserId");
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (status != MemberPaymentStatus.PENDING_CONFIRMATION) {
-            throw new IllegalStateException("Only pending payments can be confirmed.");
+        if (status != MemberPaymentStatus.PENDING_VALIDATION) {
+            throw new IllegalStateException("Only pending validation payments can be confirmed.");
         }
 
         this.status = MemberPaymentStatus.CONFIRMED;
@@ -156,15 +163,11 @@ public class MemberPayment {
         validateId(rejectedByUserId, "rejectedByUserId");
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (status != MemberPaymentStatus.PENDING_CONFIRMATION) {
-            throw new IllegalStateException("Only pending payments can be rejected.");
+        if (status != MemberPaymentStatus.PENDING_VALIDATION) {
+            throw new IllegalStateException("Only pending validation payments can be rejected.");
         }
 
-        String normalizedReason = normalizeNullableText(rejectionReason);
-
-        if (normalizedReason == null) {
-            throw new IllegalArgumentException("rejectionReason cannot be blank.");
-        }
+        String normalizedReason = validateRequiredText(rejectionReason, "rejectionReason");
 
         this.status = MemberPaymentStatus.REJECTED;
         this.rejectedAt = now;
@@ -177,7 +180,7 @@ public class MemberPayment {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == MemberPaymentStatus.CONFIRMED) {
-            throw new IllegalStateException("Confirmed payment cannot be canceled directly.");
+            throw new IllegalStateException("Confirmed payment cannot be canceled.");
         }
 
         if (status == MemberPaymentStatus.CANCELED) {
@@ -189,8 +192,8 @@ public class MemberPayment {
         this.updatedAt = now;
     }
 
-    public boolean isPendingConfirmation() {
-        return status == MemberPaymentStatus.PENDING_CONFIRMATION;
+    public boolean isPendingValidation() {
+        return status == MemberPaymentStatus.PENDING_VALIDATION;
     }
 
     public boolean isConfirmed() {
@@ -277,6 +280,14 @@ public class MemberPayment {
         }
 
         return amount;
+    }
+
+    private static String validateRequiredText(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " cannot be blank.");
+        }
+
+        return value.trim();
     }
 
     private static String normalizeNullableText(String value) {

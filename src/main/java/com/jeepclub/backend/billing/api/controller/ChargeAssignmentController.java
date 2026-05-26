@@ -7,13 +7,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -41,6 +43,7 @@ public class ChargeAssignmentController {
                 .created(URI.create("/billing/charge-definitions/" + chargeDefinitionId + "/assignments/" + result.id()))
                 .body(ChargeAssignmentResponse.from(result));
     }
+
 
     @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/users/{userId}")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_CREATE')")
@@ -86,14 +89,18 @@ public class ChargeAssignmentController {
     @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_READ')")
     @Operation(
             summary = "Listar atribuições de uma definição de cobrança",
-            description = "Lista as regras de atribuição vinculadas a uma definição de cobrança."
+            description = "Lista as regras de atribuição vinculadas a uma definição de cobrança de forma paginada."
     )
-    public ResponseEntity<List<ChargeAssignmentResponse>> findByChargeDefinitionId(
-            @PathVariable @Positive(message = "ID da definição de cobrança deve ser maior que zero.") Long chargeDefinitionId
+    public ResponseEntity<Page<ChargeAssignmentResponse>> findByChargeDefinitionId(
+            @PathVariable @Positive(message = "ID da definição de cobrança deve ser maior que zero.") Long chargeDefinitionId,
+            @ParameterObject Pageable pageable
     ) {
-        List<ChargeAssignmentResult> results = chargeAssignmentService.findByChargeDefinitionId(chargeDefinitionId);
+        Page<ChargeAssignmentResult> results = chargeAssignmentService.findByChargeDefinitionId(
+                chargeDefinitionId,
+                pageable
+        );
 
-        return ResponseEntity.ok(ChargeAssignmentResponse.from(results));
+        return ResponseEntity.ok(results.map(ChargeAssignmentResponse::from));
     }
 
     @PatchMapping("/billing/charge-assignments/{assignmentId}/activate")

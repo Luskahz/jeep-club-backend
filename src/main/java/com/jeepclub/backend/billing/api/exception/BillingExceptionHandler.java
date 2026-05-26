@@ -4,6 +4,12 @@ import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.
 import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeAccessDeniedException;
+import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.memberPayment.InvalidPaymentAmountException;
+import com.jeepclub.backend.billing.core.application.exception.memberPayment.InvalidPaymentReceiptException;
+import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentAccessDeniedException;
+import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -56,6 +62,70 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 "CHARGE_ASSIGNMENT_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+    @ExceptionHandler(MemberChargeNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberChargeNotFound(
+            MemberChargeNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_CHARGE_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(MemberChargeAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberChargeAccessDenied(
+            MemberChargeAccessDeniedException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_CHARGE_ACCESS_DENIED",
+                exception.getMessage(),
+                HttpStatus.FORBIDDEN
+        );
+    }
+    @ExceptionHandler(MemberPaymentNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberPaymentNotFound(
+            MemberPaymentNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_PAYMENT_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(MemberPaymentAccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberPaymentAccessDenied(
+            MemberPaymentAccessDeniedException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_PAYMENT_ACCESS_DENIED",
+                exception.getMessage(),
+                HttpStatus.FORBIDDEN
+        );
+    }
+
+    @ExceptionHandler(InvalidPaymentAmountException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidPaymentAmount(
+            InvalidPaymentAmountException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_PAYMENT_AMOUNT",
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(InvalidPaymentReceiptException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidPaymentReceipt(
+            InvalidPaymentReceiptException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_PAYMENT_RECEIPT",
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST
         );
     }
 }

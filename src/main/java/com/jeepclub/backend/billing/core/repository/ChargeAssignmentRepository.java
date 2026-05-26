@@ -2,8 +2,9 @@ package com.jeepclub.backend.billing.core.repository;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
 import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface ChargeAssignmentRepository {
@@ -12,7 +13,10 @@ public interface ChargeAssignmentRepository {
 
     Optional<ChargeAssignment> findById(Long id);
 
-    List<ChargeAssignment> findByChargeDefinitionId(Long chargeDefinitionId);
+    Page<ChargeAssignment> findByChargeDefinitionId(
+            Long chargeDefinitionId,
+            Pageable pageable
+    );
 
     boolean existsByChargeDefinitionIdAndAssignmentTypeAndTargetId(
             Long chargeDefinitionId,

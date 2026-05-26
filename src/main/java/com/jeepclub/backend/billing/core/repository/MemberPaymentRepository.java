@@ -2,8 +2,9 @@ package com.jeepclub.backend.billing.core.repository;
 
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.util.List;
 import java.util.Optional;
 
 public interface MemberPaymentRepository {
@@ -12,7 +13,15 @@ public interface MemberPaymentRepository {
 
     Optional<MemberPayment> findById(Long id);
 
-    List<MemberPayment> findByMemberChargeId(Long memberChargeId);
+    Page<MemberPayment> findAll(Pageable pageable);
 
-    List<MemberPayment> findByStatus(MemberPaymentStatus status);
+    Page<MemberPayment> findByStatus(
+            MemberPaymentStatus status,
+            Pageable pageable
+    );
+
+    Page<MemberPayment> findByMemberChargeId(
+            Long memberChargeId,
+            Pageable pageable
+    );
 }
