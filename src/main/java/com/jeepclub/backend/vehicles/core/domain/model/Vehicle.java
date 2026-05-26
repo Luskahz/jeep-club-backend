@@ -70,4 +70,48 @@ public class Vehicle {
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
+
+    public static Vehicle reconstitute(
+            Long id,
+            String nickname,
+            String photo,
+            String plate,
+            String renavam,
+            String brand,
+            String model,
+            int manufacturingYear,
+            int modelYear,
+            String color,
+            int seatingCapacity,
+            FuelType fuelType,
+            double engineDisplacement,
+            VehicleStatus status,
+            Boolean towing,
+            Long ownerId,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant disabledAt
+    ) {
+        Vehicle vehicle = new Vehicle();
+        vehicle.id = id;
+        vehicle.nickname = nickname;
+        vehicle.photo = photo;
+        vehicle.plate = plate;
+        vehicle.renavam = renavam;
+        vehicle.brand = brand;
+        vehicle.model = model;
+        vehicle.manufacturingYear = manufacturingYear;
+        vehicle.modelYear = modelYear;
+        vehicle.color = color;
+        vehicle.seatingCapacity = seatingCapacity;
+        vehicle.fuelType = fuelType;
+        vehicle.engineDisplacement = engineDisplacement;
+        vehicle.status = status;
+        vehicle.towing = towing;
+        vehicle.ownerId = ownerId;
+        vehicle.createdAt = createdAt;
+        vehicle.updatedAt = updatedAt;
+        vehicle.disabledAt = disabledAt;
+        return vehicle;
+    }
 }
