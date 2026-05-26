@@ -3,13 +3,14 @@ package com.jeepclub.backend.authentication.api.exception;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.*;
 import com.jeepclub.backend.authentication.core.domain.exception.user.*;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
-public class AuthenticationUserExceptionHandler extends AuthenticationExceptionHandler {
+public class AuthenticationUserExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(UserCpfNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleUserCpfNotFound(UserCpfNotFoundException exception) {

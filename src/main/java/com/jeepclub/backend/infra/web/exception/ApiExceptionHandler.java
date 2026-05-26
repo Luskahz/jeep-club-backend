@@ -1,12 +1,11 @@
-package com.jeepclub.backend.authentication.api.exception;
+package com.jeepclub.backend.infra.web.exception;
 
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-public abstract class AuthenticationExceptionHandler {
+public abstract class ApiExceptionHandler {
 
-    protected ResponseEntity<ApiErrorResponse> buildErrorResponse(
+    protected final ResponseEntity<ApiErrorResponse> buildErrorResponse(
             String code,
             String message,
             HttpStatus status

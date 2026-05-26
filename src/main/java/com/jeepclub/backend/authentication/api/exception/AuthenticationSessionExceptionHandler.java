@@ -5,13 +5,14 @@ import com.jeepclub.backend.authentication.core.application.exceptions.session.S
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
 import com.jeepclub.backend.authentication.core.domain.exception.session.*;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
-public class AuthenticationSessionExceptionHandler extends AuthenticationExceptionHandler {
+public class AuthenticationSessionExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(SessionInvalidActiveStateException.class)
     public ResponseEntity<ApiErrorResponse> handleSessionInvalidActiveState(SessionInvalidActiveStateException exception) {

@@ -1,5 +1,6 @@
 package com.jeepclub.backend.billing.core.repository;
 
+import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
 import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
 
 import java.util.List;
@@ -15,7 +16,7 @@ public interface ChargeAssignmentRepository {
 
     boolean existsByChargeDefinitionIdAndAssignmentTypeAndTargetId(
             Long chargeDefinitionId,
-            String assignmentType,
+            ChargeAssignmentType assignmentType,
             Long targetId
     );
 }
