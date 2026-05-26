@@ -117,8 +117,7 @@ public record IncludeRequestDTO(
                 allowableValues = {"GASOLINE", "ETHANOL", "FLEX", "DIESEL", "ELECTRIC", "HYBRID"},
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
-        @NotBlank(message = "O tipo de combustível é obrigatório.")
-        @Size(max = 30, message = "O tipo de combustível deve ter no máximo 30 caracteres.")
+        @NotNull(message = "O tipo de combustível é obrigatório.")
         FuelType fuelType,
 
         @Schema(
