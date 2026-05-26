@@ -92,11 +92,7 @@ public class ChargeCycleController {
         return ResponseEntity.ok(ChargeCycleResponse.from(result));
     }
 
-    // necessario definir com o matheuspackage com.jeepclub.backend.billing.api.controller;
-
-public class MemberChargeController {
-}
-
+    // necessario definir com o matheus
     @PatchMapping("/billing/charge-cycles/{cycleId}/cancel")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_CYCLE_CANCEL')")
     @Operation(
