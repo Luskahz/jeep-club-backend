@@ -9,7 +9,7 @@ import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.
 import com.jeepclub.backend.billing.core.application.result.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.result.GenerateChargeCycleResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
-import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.ChargeCycle;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;

@@ -1,7 +1,6 @@
 package com.jeepclub.backend.billing.core.repository;
 
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
-import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -18,9 +17,20 @@ public interface ChargeAssignmentRepository {
             Pageable pageable
     );
 
-    boolean existsByChargeDefinitionIdAndAssignmentTypeAndTargetId(
+    boolean existsAllMembersAssignmentByChargeDefinitionId(Long chargeDefinitionId);
+
+    boolean existsUserAssignmentByChargeDefinitionIdAndUserId(
             Long chargeDefinitionId,
-            ChargeAssignmentType assignmentType,
-            Long targetId
+            Long userId
+    );
+
+    boolean existsRoleAssignmentByChargeDefinitionIdAndRoleId(
+            Long chargeDefinitionId,
+            Long roleId
+    );
+
+    boolean existsEventParticipantsAssignmentByChargeDefinitionIdAndEventId(
+            Long chargeDefinitionId,
+            Long eventId
     );
 }

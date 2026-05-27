@@ -44,7 +44,6 @@ public class ChargeAssignmentController {
                 .body(ChargeAssignmentResponse.from(result));
     }
 
-
     @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/users/{userId}")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_CREATE')")
     @Operation(
@@ -78,6 +77,26 @@ public class ChargeAssignmentController {
         ChargeAssignmentResult result = chargeAssignmentService.assignToRole(
                 chargeDefinitionId,
                 roleId
+        );
+
+        return ResponseEntity
+                .created(URI.create("/billing/charge-definitions/" + chargeDefinitionId + "/assignments/" + result.id()))
+                .body(ChargeAssignmentResponse.from(result));
+    }
+
+    @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/events/{eventId}/participants")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_CREATE')")
+    @Operation(
+            summary = "Atribuir cobrança aos participantes de um evento",
+            description = "Cria uma regra para aplicar a definição de cobrança aos participantes confirmados de um evento."
+    )
+    public ResponseEntity<ChargeAssignmentResponse> assignToEventParticipants(
+            @PathVariable @Positive(message = "ID da definição de cobrança deve ser maior que zero.") Long chargeDefinitionId,
+            @PathVariable @Positive(message = "ID do evento deve ser maior que zero.") Long eventId
+    ) {
+        ChargeAssignmentResult result = chargeAssignmentService.assignToEventParticipants(
+                chargeDefinitionId,
+                eventId
         );
 
         return ResponseEntity

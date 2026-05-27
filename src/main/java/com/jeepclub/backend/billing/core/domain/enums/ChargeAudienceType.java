@@ -1,7 +1,8 @@
 package com.jeepclub.backend.billing.core.domain.enums;
 
-public enum ChargeAssignmentType {
+public enum ChargeAudienceType {
     ALL_MEMBERS,
     USER,
-    ROLE
+    ROLE,
+    EVENT_PARTICIPANTS
 }

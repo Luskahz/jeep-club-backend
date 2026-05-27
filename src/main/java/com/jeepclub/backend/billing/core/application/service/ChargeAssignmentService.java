@@ -4,8 +4,12 @@ import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.
 import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
-import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.AllMembersChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.EventParticipantsChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.RoleChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.UserChargeAssignment;
+import com.jeepclub.backend.billing.core.port.BillingEventPort;
 import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
 import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -25,18 +28,15 @@ public class ChargeAssignmentService {
 
     private final ChargeAssignmentRepository chargeAssignmentRepository;
     private final ChargeDefinitionRepository chargeDefinitionRepository;
+    private final BillingEventPort billingEventPort;
     private final Clock clock;
 
     @Transactional
     public ChargeAssignmentResult assignToAllMembers(Long chargeDefinitionId) {
         ensureChargeDefinitionExists(chargeDefinitionId);
-        ensureAssignmentDoesNotExist(
-                chargeDefinitionId,
-                ChargeAssignmentType.ALL_MEMBERS,
-                null
-        );
+        ensureAllMembersAssignmentDoesNotExist(chargeDefinitionId);
 
-        ChargeAssignment chargeAssignment = ChargeAssignment.assignToAllMembers(
+        ChargeAssignment chargeAssignment = AllMembersChargeAssignment.create(
                 chargeDefinitionId,
                 Instant.now(clock)
         );
@@ -52,13 +52,9 @@ public class ChargeAssignmentService {
             Long userId
     ) {
         ensureChargeDefinitionExists(chargeDefinitionId);
-        ensureAssignmentDoesNotExist(
-                chargeDefinitionId,
-                ChargeAssignmentType.USER,
-                userId
-        );
+        ensureUserAssignmentDoesNotExist(chargeDefinitionId, userId);
 
-        ChargeAssignment chargeAssignment = ChargeAssignment.assignToUser(
+        ChargeAssignment chargeAssignment = UserChargeAssignment.create(
                 chargeDefinitionId,
                 userId,
                 Instant.now(clock)
@@ -75,15 +71,31 @@ public class ChargeAssignmentService {
             Long roleId
     ) {
         ensureChargeDefinitionExists(chargeDefinitionId);
-        ensureAssignmentDoesNotExist(
-                chargeDefinitionId,
-                ChargeAssignmentType.ROLE,
-                roleId
-        );
+        ensureRoleAssignmentDoesNotExist(chargeDefinitionId, roleId);
 
-        ChargeAssignment chargeAssignment = ChargeAssignment.assignToRole(
+        ChargeAssignment chargeAssignment = RoleChargeAssignment.create(
                 chargeDefinitionId,
                 roleId,
+                Instant.now(clock)
+        );
+
+        ChargeAssignment savedChargeAssignment = chargeAssignmentRepository.save(chargeAssignment);
+
+        return ChargeAssignmentResult.from(savedChargeAssignment);
+    }
+
+    @Transactional
+    public ChargeAssignmentResult assignToEventParticipants(
+            Long chargeDefinitionId,
+            Long eventId
+    ) {
+        ensureChargeDefinitionExists(chargeDefinitionId);
+        ensureEventExists(eventId);
+        ensureEventParticipantsAssignmentDoesNotExist(chargeDefinitionId, eventId);
+
+        ChargeAssignment chargeAssignment = EventParticipantsChargeAssignment.create(
+                chargeDefinitionId,
+                eventId,
                 Instant.now(clock)
         );
 
@@ -133,20 +145,68 @@ public class ChargeAssignmentService {
     private void ensureChargeDefinitionExists(Long chargeDefinitionId) {
         Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
 
-        if (!chargeDefinitionRepository.findById(chargeDefinitionId).isPresent()) {
+        if (chargeDefinitionRepository.findById(chargeDefinitionId).isEmpty()) {
             throw new ChargeDefinitionNotFoundException("Charge definition not found.");
         }
     }
 
-    private void ensureAssignmentDoesNotExist(
+    private void ensureEventExists(Long eventId) {
+        Objects.requireNonNull(eventId, "eventId cannot be null");
+
+        if (!billingEventPort.existsEventById(eventId)) {
+            throw new IllegalArgumentException("Event not found.");
+        }
+    }
+
+    private void ensureAllMembersAssignmentDoesNotExist(Long chargeDefinitionId) {
+        if (chargeAssignmentRepository.existsAllMembersAssignmentByChargeDefinitionId(chargeDefinitionId)) {
+            throw new ChargeAssignmentAlreadyExistsException(
+                    "Charge assignment already exists."
+            );
+        }
+    }
+
+    private void ensureUserAssignmentDoesNotExist(
             Long chargeDefinitionId,
-            ChargeAssignmentType assignmentType,
-            Long targetId
+            Long userId
     ) {
-        if (chargeAssignmentRepository.existsByChargeDefinitionIdAndAssignmentTypeAndTargetId(
+        Objects.requireNonNull(userId, "userId cannot be null");
+
+        if (chargeAssignmentRepository.existsUserAssignmentByChargeDefinitionIdAndUserId(
                 chargeDefinitionId,
-                assignmentType,
-                targetId
+                userId
+        )) {
+            throw new ChargeAssignmentAlreadyExistsException(
+                    "Charge assignment already exists."
+            );
+        }
+    }
+
+    private void ensureRoleAssignmentDoesNotExist(
+            Long chargeDefinitionId,
+            Long roleId
+    ) {
+        Objects.requireNonNull(roleId, "roleId cannot be null");
+
+        if (chargeAssignmentRepository.existsRoleAssignmentByChargeDefinitionIdAndRoleId(
+                chargeDefinitionId,
+                roleId
+        )) {
+            throw new ChargeAssignmentAlreadyExistsException(
+                    "Charge assignment already exists."
+            );
+        }
+    }
+
+    private void ensureEventParticipantsAssignmentDoesNotExist(
+            Long chargeDefinitionId,
+            Long eventId
+    ) {
+        Objects.requireNonNull(eventId, "eventId cannot be null");
+
+        if (chargeAssignmentRepository.existsEventParticipantsAssignmentByChargeDefinitionIdAndEventId(
+                chargeDefinitionId,
+                eventId
         )) {
             throw new ChargeAssignmentAlreadyExistsException(
                     "Charge assignment already exists."

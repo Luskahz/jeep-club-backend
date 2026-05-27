@@ -1,7 +1,11 @@
 package com.jeepclub.backend.billing.core.application.result;
 
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
-import com.jeepclub.backend.billing.core.domain.model.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.AllMembersChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.EventParticipantsChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.RoleChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.UserChargeAssignment;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -9,8 +13,10 @@ import java.util.Objects;
 public record ChargeAssignmentResult(
         Long id,
         Long chargeDefinitionId,
-        ChargeAssignmentType assignmentType,
-        Long targetId,
+        ChargeAudienceType audienceType,
+        Long userId,
+        Long roleId,
+        Long eventId,
         boolean active,
         Instant createdAt,
         Instant updatedAt
@@ -19,14 +25,64 @@ public record ChargeAssignmentResult(
     public static ChargeAssignmentResult from(ChargeAssignment chargeAssignment) {
         Objects.requireNonNull(chargeAssignment, "chargeAssignment cannot be null");
 
-        return new ChargeAssignmentResult(
-                chargeAssignment.getId(),
-                chargeAssignment.getChargeDefinitionId(),
-                chargeAssignment.getAssignmentType(),
-                chargeAssignment.getTargetId(),
-                chargeAssignment.isActive(),
-                chargeAssignment.getCreatedAt(),
-                chargeAssignment.getUpdatedAt()
+        if (chargeAssignment instanceof AllMembersChargeAssignment assignment) {
+            return new ChargeAssignmentResult(
+                    assignment.getId(),
+                    assignment.getChargeDefinitionId(),
+                    assignment.audienceType(),
+                    null,
+                    null,
+                    null,
+                    assignment.isActive(),
+                    assignment.getCreatedAt(),
+                    assignment.getUpdatedAt()
+            );
+        }
+
+        if (chargeAssignment instanceof UserChargeAssignment assignment) {
+            return new ChargeAssignmentResult(
+                    assignment.getId(),
+                    assignment.getChargeDefinitionId(),
+                    assignment.audienceType(),
+                    assignment.getUserId(),
+                    null,
+                    null,
+                    assignment.isActive(),
+                    assignment.getCreatedAt(),
+                    assignment.getUpdatedAt()
+            );
+        }
+
+        if (chargeAssignment instanceof RoleChargeAssignment assignment) {
+            return new ChargeAssignmentResult(
+                    assignment.getId(),
+                    assignment.getChargeDefinitionId(),
+                    assignment.audienceType(),
+                    null,
+                    assignment.getRoleId(),
+                    null,
+                    assignment.isActive(),
+                    assignment.getCreatedAt(),
+                    assignment.getUpdatedAt()
+            );
+        }
+
+        if (chargeAssignment instanceof EventParticipantsChargeAssignment assignment) {
+            return new ChargeAssignmentResult(
+                    assignment.getId(),
+                    assignment.getChargeDefinitionId(),
+                    assignment.audienceType(),
+                    null,
+                    null,
+                    assignment.getEventId(),
+                    assignment.isActive(),
+                    assignment.getCreatedAt(),
+                    assignment.getUpdatedAt()
+            );
+        }
+
+        throw new IllegalArgumentException(
+                "Unsupported charge assignment type: " + chargeAssignment.getClass().getName()
         );
     }
 }
