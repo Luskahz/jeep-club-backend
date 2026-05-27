@@ -3,6 +3,9 @@ package com.jeepclub.backend.billing.core.domain.model;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -98,7 +101,7 @@ public class ChargeDefinition {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == ChargeDefinitionStatus.ARCHIVED) {
-            throw new IllegalStateException("Archived charge definition cannot be deactivated.");
+            throw new ArchivedChargeDefinitionCannotBeDeactivatedException();
         }
 
         this.status = ChargeDefinitionStatus.INACTIVE;
@@ -109,7 +112,7 @@ public class ChargeDefinition {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == ChargeDefinitionStatus.ARCHIVED) {
-            throw new IllegalStateException("Archived charge definition cannot be activated.");
+            throw new ArchivedChargeDefinitionCannotBeActivatedException();
         }
 
         this.status = ChargeDefinitionStatus.ACTIVE;
@@ -118,9 +121,11 @@ public class ChargeDefinition {
 
     public void archive(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
+
         if (status == ChargeDefinitionStatus.ARCHIVED) {
             throw new ChargeDefinitionAlreadyArchivedException();
         }
+
         this.status = ChargeDefinitionStatus.ARCHIVED;
         this.updatedAt = now;
     }

@@ -10,6 +10,9 @@ import com.jeepclub.backend.billing.core.application.exception.memberPayment.Inv
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.InvalidPaymentReceiptException;
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -126,6 +129,39 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 "INVALID_PAYMENT_RECEIPT",
                 exception.getMessage(),
                 HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(ArchivedChargeDefinitionCannotBeActivatedException.class)
+    public ResponseEntity<ApiErrorResponse> handleArchivedChargeDefinitionCannotBeActivated(
+            ArchivedChargeDefinitionCannotBeActivatedException exception
+    ) {
+        return buildErrorResponse(
+                "ARCHIVED_CHARGE_DEFINITION_CANNOT_BE_ACTIVATED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ArchivedChargeDefinitionCannotBeDeactivatedException.class)
+    public ResponseEntity<ApiErrorResponse> handleArchivedChargeDefinitionCannotBeDeactivated(
+            ArchivedChargeDefinitionCannotBeDeactivatedException exception
+    ) {
+        return buildErrorResponse(
+                "ARCHIVED_CHARGE_DEFINITION_CANNOT_BE_DEACTIVATED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeDefinitionAlreadyArchivedException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeDefinitionAlreadyArchived(
+            ChargeDefinitionAlreadyArchivedException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_DEFINITION_ALREADY_ARCHIVED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }
