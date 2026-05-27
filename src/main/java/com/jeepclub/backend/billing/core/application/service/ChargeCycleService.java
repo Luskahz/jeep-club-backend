@@ -8,12 +8,12 @@ import com.jeepclub.backend.billing.core.application.exception.chargeCycle.Inact
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.result.GenerateChargeCycleResult;
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.*;
 import com.jeepclub.backend.billing.core.domain.model.ChargeCycle;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.port.BillingAuthorizationPort;
+import com.jeepclub.backend.billing.core.port.BillingEventPort;
 import com.jeepclub.backend.billing.core.port.BillingMembershipPort;
 import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
 import com.jeepclub.backend.billing.core.repository.ChargeCycleRepository;
@@ -43,6 +43,7 @@ public class ChargeCycleService {
     private final MemberChargeRepository memberChargeRepository;
     private final BillingMembershipPort billingMembershipPort;
     private final BillingAuthorizationPort billingAuthorizationPort;
+    private final BillingEventPort billingEventPort;
     private final Clock clock;
 
     @Transactional
@@ -169,19 +170,46 @@ public class ChargeCycleService {
         Set<Long> targetUserIds = new LinkedHashSet<>();
 
         for (ChargeAssignment assignment : assignments) {
-            if (assignment.getAssignmentType() == ChargeAssignmentType.ALL_MEMBERS) {
+            if (assignment instanceof AllMembersChargeAssignment) {
                 targetUserIds.addAll(billingMembershipPort.findActiveMemberUserIds());
+                continue;
             }
 
-            if (assignment.getAssignmentType() == ChargeAssignmentType.USER) {
-                if (billingMembershipPort.existsActiveMemberByUserId(assignment.getTargetId())) {
-                    targetUserIds.add(assignment.getTargetId());
+            if (assignment instanceof UserChargeAssignment userAssignment) {
+                Long userId = userAssignment.getUserId();
+
+                if (billingMembershipPort.existsActiveMemberByUserId(userId)) {
+                    targetUserIds.add(userId);
                 }
+
+                continue;
             }
 
-            if (assignment.getAssignmentType() == ChargeAssignmentType.ROLE) {
-                targetUserIds.addAll(billingAuthorizationPort.findUserIdsByRoleId(assignment.getTargetId()));
+            if (assignment instanceof RoleChargeAssignment roleAssignment) {
+                List<Long> userIdsByRole = billingAuthorizationPort.findUserIdsByRoleId(
+                        roleAssignment.getRoleId()
+                );
+
+                userIdsByRole.stream()
+                        .filter(billingMembershipPort::existsActiveMemberByUserId)
+                        .forEach(targetUserIds::add);
+
+                continue;
             }
+
+            if (assignment instanceof EventParticipantsChargeAssignment eventAssignment) {
+                targetUserIds.addAll(
+                        billingEventPort.findConfirmedParticipantUserIdsByEventId(
+                                eventAssignment.getEventId()
+                        )
+                );
+
+                continue;
+            }
+
+            throw new IllegalArgumentException(
+                    "Unsupported charge assignment type: " + assignment.getClass().getName()
+            );
         }
 
         return targetUserIds;

@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.core.repository;
 
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 

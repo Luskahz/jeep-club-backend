@@ -1,11 +1,11 @@
 package com.jeepclub.backend.billing.core.application.result;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.AllMembersChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.EventParticipantsChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.RoleChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.UserChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.EventParticipantsChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.RoleChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.UserChargeAssignment;
 
 import java.time.Instant;
 import java.util.Objects;

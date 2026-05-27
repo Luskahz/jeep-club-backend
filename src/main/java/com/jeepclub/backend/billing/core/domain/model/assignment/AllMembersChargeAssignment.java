@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.core.domain.model.chargeAssignment;
+package com.jeepclub.backend.billing.core.domain.model.assignment;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
 

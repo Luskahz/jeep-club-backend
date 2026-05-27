@@ -4,11 +4,11 @@ import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.
 import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.AllMembersChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.ChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.EventParticipantsChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.RoleChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.chargeAssignment.UserChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.EventParticipantsChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.RoleChargeAssignment;
+import com.jeepclub.backend.billing.core.domain.model.assignment.UserChargeAssignment;
 import com.jeepclub.backend.billing.core.port.BillingEventPort;
 import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
 import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;

@@ -1,7 +1,7 @@
 package com.jeepclub.backend.billing.api.dto;
 
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAssignmentType;
+import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -17,11 +17,17 @@ public record ChargeAssignmentResponse(
         @Schema(description = "Identificador da definição de cobrança.", example = "10")
         Long chargeDefinitionId,
 
-        @Schema(description = "Tipo de atribuição da cobrança.", example = "ALL_MEMBERS")
-        ChargeAssignmentType assignmentType,
+        @Schema(description = "Tipo de público-alvo da cobrança.", example = "EVENT_PARTICIPANTS")
+        ChargeAudienceType audienceType,
 
-        @Schema(description = "Identificador do alvo da atribuição, quando aplicável.", example = "5", nullable = true)
-        Long targetId,
+        @Schema(description = "Identificador do usuário, quando o público-alvo for USER.", example = "5", nullable = true)
+        Long userId,
+
+        @Schema(description = "Identificador da role, quando o público-alvo for ROLE.", example = "2", nullable = true)
+        Long roleId,
+
+        @Schema(description = "Identificador do evento, quando o público-alvo for EVENT_PARTICIPANTS.", example = "15", nullable = true)
+        Long eventId,
 
         @Schema(description = "Indica se a atribuição está ativa.", example = "true")
         boolean active,
@@ -39,8 +45,10 @@ public record ChargeAssignmentResponse(
         return new ChargeAssignmentResponse(
                 result.id(),
                 result.chargeDefinitionId(),
-                result.assignmentType(),
-                result.targetId(),
+                result.audienceType(),
+                result.userId(),
+                result.roleId(),
+                result.eventId(),
                 result.active(),
                 result.createdAt(),
                 result.updatedAt()
