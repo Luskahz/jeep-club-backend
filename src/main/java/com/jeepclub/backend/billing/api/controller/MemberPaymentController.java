@@ -1,13 +1,13 @@
 package com.jeepclub.backend.billing.api.controller;
 
-import com.jeepclub.backend.billing.api.dto.MemberPaymentResponse;
-import com.jeepclub.backend.billing.api.dto.MemberPaymentSummaryResponse;
-import com.jeepclub.backend.billing.api.dto.RejectMemberPaymentRequest;
-import com.jeepclub.backend.billing.api.dto.SubmitMemberPaymentRequest;
+import com.jeepclub.backend.billing.api.dto.payment.MemberPaymentResponse;
+import com.jeepclub.backend.billing.api.dto.payment.MemberPaymentSummaryResponse;
+import com.jeepclub.backend.billing.api.dto.payment.RejectMemberPaymentRequest;
+import com.jeepclub.backend.billing.api.dto.payment.SubmitMemberPaymentRequest;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.application.service.MemberPaymentService;
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
-import com.jeepclub.backend.billing.core.port.PaymentReceiptFile;
+import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

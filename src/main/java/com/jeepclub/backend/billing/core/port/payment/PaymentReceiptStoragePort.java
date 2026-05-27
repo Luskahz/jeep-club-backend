@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.core.port;
+package com.jeepclub.backend.billing.core.port.payment;
 
 public interface PaymentReceiptStoragePort {
 

@@ -6,8 +6,8 @@ import com.jeepclub.backend.billing.core.application.exception.chargeCycle.Charg
 import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleWithoutAssignmentsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeCycle.InactiveChargeDefinitionException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
-import com.jeepclub.backend.billing.core.application.result.ChargeCycleResult;
-import com.jeepclub.backend.billing.core.application.result.GenerateChargeCycleResult;
+import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
+import com.jeepclub.backend.billing.core.application.result.cycle.GenerateChargeCycleResult;
 import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.EventParticipantsChargeAssignment;

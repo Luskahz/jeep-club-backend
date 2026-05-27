@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.api.dto;
+package com.jeepclub.backend.billing.api.dto.definition;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import io.swagger.v3.oas.annotations.media.Schema;

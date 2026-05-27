@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.api.dto;
+package com.jeepclub.backend.billing.api.dto.payment;
 
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;

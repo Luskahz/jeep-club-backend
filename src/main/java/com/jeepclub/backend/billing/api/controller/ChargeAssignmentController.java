@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.api.controller;
 
-import com.jeepclub.backend.billing.api.dto.ChargeAssignmentResponse;
+import com.jeepclub.backend.billing.api.dto.assignmnent.ChargeAssignmentResponse;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
 import com.jeepclub.backend.billing.core.application.service.ChargeAssignmentService;
 import io.swagger.v3.oas.annotations.Operation;

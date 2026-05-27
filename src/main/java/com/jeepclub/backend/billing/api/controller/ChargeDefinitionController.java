@@ -1,8 +1,8 @@
 package com.jeepclub.backend.billing.api.controller;
 
-import com.jeepclub.backend.billing.api.dto.ChargeDefinitionRequest;
-import com.jeepclub.backend.billing.api.dto.ChargeDefinitionResponse;
-import com.jeepclub.backend.billing.api.dto.ChargeDefinitionSummaryResponse;
+import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionRequest;
+import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionResponse;
+import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionSummaryResponse;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.application.service.ChargeDefinitionService;
 import io.swagger.v3.oas.annotations.Operation;

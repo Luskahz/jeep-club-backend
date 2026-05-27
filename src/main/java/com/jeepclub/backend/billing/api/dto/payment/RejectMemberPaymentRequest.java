@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.api.dto;
+package com.jeepclub.backend.billing.api.dto.payment;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;

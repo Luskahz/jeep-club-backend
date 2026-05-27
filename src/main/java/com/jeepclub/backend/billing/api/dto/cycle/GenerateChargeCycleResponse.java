@@ -1,6 +1,6 @@
-package com.jeepclub.backend.billing.api.dto;
+package com.jeepclub.backend.billing.api.dto.cycle;
 
-import com.jeepclub.backend.billing.core.application.result.GenerateChargeCycleResult;
+import com.jeepclub.backend.billing.core.application.result.cycle.GenerateChargeCycleResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Objects;

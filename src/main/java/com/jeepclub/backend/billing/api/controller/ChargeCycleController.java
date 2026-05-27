@@ -1,11 +1,11 @@
 package com.jeepclub.backend.billing.api.controller;
 
-import com.jeepclub.backend.billing.api.dto.ChargeCycleResponse;
-import com.jeepclub.backend.billing.api.dto.ChargeCycleSummaryResponse;
-import com.jeepclub.backend.billing.api.dto.GenerateChargeCycleRequest;
-import com.jeepclub.backend.billing.api.dto.GenerateChargeCycleResponse;
-import com.jeepclub.backend.billing.core.application.result.ChargeCycleResult;
-import com.jeepclub.backend.billing.core.application.result.GenerateChargeCycleResult;
+import com.jeepclub.backend.billing.api.dto.cycle.ChargeCycleResponse;
+import com.jeepclub.backend.billing.api.dto.cycle.ChargeCycleSummaryResponse;
+import com.jeepclub.backend.billing.api.dto.cycle.GenerateChargeCycleRequest;
+import com.jeepclub.backend.billing.api.dto.cycle.GenerateChargeCycleResponse;
+import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
+import com.jeepclub.backend.billing.core.application.result.cycle.GenerateChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.service.ChargeCycleService;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;

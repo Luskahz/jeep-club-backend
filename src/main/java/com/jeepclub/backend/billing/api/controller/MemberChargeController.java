@@ -1,8 +1,8 @@
 package com.jeepclub.backend.billing.api.controller;
 
-import com.jeepclub.backend.billing.api.dto.MemberChargeResponse;
-import com.jeepclub.backend.billing.api.dto.MemberChargeSummaryResponse;
-import com.jeepclub.backend.billing.api.dto.UpdateMemberChargeFinalAmountRequest;
+import com.jeepclub.backend.billing.api.dto.charge.MemberChargeResponse;
+import com.jeepclub.backend.billing.api.dto.charge.MemberChargeSummaryResponse;
+import com.jeepclub.backend.billing.api.dto.charge.UpdateMemberChargeFinalAmountRequest;
 import com.jeepclub.backend.billing.core.application.result.MemberChargeResult;
 import com.jeepclub.backend.billing.core.application.service.MemberChargeService;
 import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
