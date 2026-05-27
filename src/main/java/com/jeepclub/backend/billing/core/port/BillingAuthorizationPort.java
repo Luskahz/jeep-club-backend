@@ -5,4 +5,5 @@ import java.util.List;
 public interface BillingAuthorizationPort {
 
     List<Long> findUserIdsByRoleId(Long roleId);
+    boolean existsActiveRoleById(Long roleId);
 }

@@ -1,6 +1,8 @@
 package com.jeepclub.backend.billing.core.domain.model.assignment;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
+import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
+import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,9 +39,7 @@ public abstract class ChargeAssignment {
     public void activate(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (active) {
-            throw new IllegalStateException("Charge assignment is already active.");
-        }
+        if (active) throw new ChargeAssignmentAlreadyActiveException();
 
         this.active = true;
         this.updatedAt = now;
@@ -48,9 +48,7 @@ public abstract class ChargeAssignment {
     public void deactivate(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (!active) {
-            throw new IllegalStateException("Charge assignment is already inactive.");
-        }
+        if (!active) throw new ChargeAssignmentAlreadyInactiveException();
 
         this.active = false;
         this.updatedAt = now;

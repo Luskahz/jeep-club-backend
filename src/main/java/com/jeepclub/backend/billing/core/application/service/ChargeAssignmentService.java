@@ -1,15 +1,18 @@
 package com.jeepclub.backend.billing.core.application.service;
 
-import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentAlreadyExistsException;
-import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentAlreadyExistsException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
+import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.EventParticipantsChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.RoleChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.UserChargeAssignment;
+import com.jeepclub.backend.billing.core.port.BillingAuthorizationPort;
 import com.jeepclub.backend.billing.core.port.BillingEventPort;
+import com.jeepclub.backend.billing.core.port.BillingMembershipPort;
 import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
 import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +32,13 @@ public class ChargeAssignmentService {
     private final ChargeAssignmentRepository chargeAssignmentRepository;
     private final ChargeDefinitionRepository chargeDefinitionRepository;
     private final BillingEventPort billingEventPort;
+    private final BillingMembershipPort billingMembershipPort;
+    private final BillingAuthorizationPort billingAuthorizationPort;
     private final Clock clock;
 
     @Transactional
     public ChargeAssignmentResult assignToAllMembers(Long chargeDefinitionId) {
-        ensureChargeDefinitionExists(chargeDefinitionId);
+        findActiveChargeDefinitionOrThrow(chargeDefinitionId);
         ensureAllMembersAssignmentDoesNotExist(chargeDefinitionId);
 
         ChargeAssignment chargeAssignment = AllMembersChargeAssignment.create(
@@ -51,7 +56,8 @@ public class ChargeAssignmentService {
             Long chargeDefinitionId,
             Long userId
     ) {
-        ensureChargeDefinitionExists(chargeDefinitionId);
+        findActiveChargeDefinitionOrThrow(chargeDefinitionId);
+        ensureActiveMemberExists(userId);
         ensureUserAssignmentDoesNotExist(chargeDefinitionId, userId);
 
         ChargeAssignment chargeAssignment = UserChargeAssignment.create(
@@ -70,7 +76,8 @@ public class ChargeAssignmentService {
             Long chargeDefinitionId,
             Long roleId
     ) {
-        ensureChargeDefinitionExists(chargeDefinitionId);
+        findActiveChargeDefinitionOrThrow(chargeDefinitionId);
+        ensureActiveRoleExists(roleId);
         ensureRoleAssignmentDoesNotExist(chargeDefinitionId, roleId);
 
         ChargeAssignment chargeAssignment = RoleChargeAssignment.create(
@@ -89,7 +96,7 @@ public class ChargeAssignmentService {
             Long chargeDefinitionId,
             Long eventId
     ) {
-        ensureChargeDefinitionExists(chargeDefinitionId);
+        findActiveChargeDefinitionOrThrow(chargeDefinitionId);
         ensureEventExists(eventId);
         ensureEventParticipantsAssignmentDoesNotExist(chargeDefinitionId, eventId);
 
@@ -111,7 +118,7 @@ public class ChargeAssignmentService {
     ) {
         Objects.requireNonNull(pageable, "pageable cannot be null");
 
-        ensureChargeDefinitionExists(chargeDefinitionId);
+        findActiveChargeDefinitionOrThrow(chargeDefinitionId);
 
         return chargeAssignmentRepository.findByChargeDefinitionId(
                         chargeDefinitionId,
@@ -142,12 +149,21 @@ public class ChargeAssignmentService {
         return ChargeAssignmentResult.from(savedChargeAssignment);
     }
 
-    private void ensureChargeDefinitionExists(Long chargeDefinitionId) {
+    private ChargeDefinition findActiveChargeDefinitionOrThrow(Long chargeDefinitionId) {
         Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
 
-        if (chargeDefinitionRepository.findById(chargeDefinitionId).isEmpty()) {
-            throw new ChargeDefinitionNotFoundException("Charge definition not found.");
+        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findById(chargeDefinitionId)
+                .orElseThrow(() -> new ChargeDefinitionNotFoundException(
+                        "Charge definition not found."
+                ));
+
+        if (!chargeDefinition.isActive()) {
+            throw new ChargeDefinitionCannotReceiveAssignmentsException(
+                    "Only active charge definitions can receive assignments."
+            );
         }
+
+        return chargeDefinition;
     }
 
     private void ensureEventExists(Long eventId) {
@@ -213,6 +229,10 @@ public class ChargeAssignmentService {
             );
         }
     }
+    @Transactional(readOnly = true)
+    public ChargeAssignmentResult findById(Long id) {
+        return ChargeAssignmentResult.from(findChargeAssignmentOrThrow(id));
+    }
 
     private ChargeAssignment findChargeAssignmentOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
@@ -221,5 +241,23 @@ public class ChargeAssignmentService {
                 .orElseThrow(() -> new ChargeAssignmentNotFoundException(
                         "Charge assignment not found."
                 ));
+    }
+    private void ensureActiveMemberExists(Long userId) {
+        Objects.requireNonNull(userId, "userId cannot be null");
+
+        if (!billingMembershipPort.existsActiveMemberByUserId(userId)) {
+            throw new BillingTargetNotFoundException(
+                    "Active member not found for user."
+            );
+        }
+    }
+    private void ensureActiveRoleExists(Long roleId) {
+        Objects.requireNonNull(roleId, "roleId cannot be null");
+
+        if (!billingAuthorizationPort.existsActiveRoleById(roleId)) {
+            throw new BillingTargetNotFoundException(
+                    "Active role not found."
+            );
+        }
     }
 }

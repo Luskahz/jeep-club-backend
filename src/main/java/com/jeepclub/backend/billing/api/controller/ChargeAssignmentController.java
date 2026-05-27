@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.api.controller;
 
-import com.jeepclub.backend.billing.api.dto.assignmnent.ChargeAssignmentResponse;
+import com.jeepclub.backend.billing.api.dto.assignment.ChargeAssignmentResponse;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
 import com.jeepclub.backend.billing.core.application.service.ChargeAssignmentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -120,6 +120,19 @@ public class ChargeAssignmentController {
         );
 
         return ResponseEntity.ok(results.map(ChargeAssignmentResponse::from));
+    }
+    @GetMapping("/billing/charge-assignments/{assignmentId}")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_READ')")
+    @Operation(
+            summary = "Buscar atribuição de cobrança por ID",
+            description = "Consulta os dados de uma regra de atribuição de cobrança específica."
+    )
+    public ResponseEntity<ChargeAssignmentResponse> findById(
+            @PathVariable @Positive(message = "ID da atribuição deve ser maior que zero.") Long assignmentId
+    ) {
+        ChargeAssignmentResult result = chargeAssignmentService.findById(assignmentId);
+
+        return ResponseEntity.ok(ChargeAssignmentResponse.from(result));
     }
 
     @PatchMapping("/billing/charge-assignments/{assignmentId}/activate")

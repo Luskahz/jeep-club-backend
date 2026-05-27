@@ -1,7 +1,8 @@
 package com.jeepclub.backend.billing.api.exception;
 
-import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentAlreadyExistsException;
-import com.jeepclub.backend.billing.core.application.exception.chargeAssignment.ChargeAssignmentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.BillingAssignmentTargetNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentAlreadyExistsException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeAccessDeniedException;
@@ -174,6 +175,16 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 "ARCHIVED_CHARGE_DEFINITION_CANNOT_BE_UPDATED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
+        );
+    }
+    @ExceptionHandler(BillingAssignmentTargetNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleBillingAssignmentTargetNotFound(
+            BillingAssignmentTargetNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "BILLING_ASSIGNMENT_TARGET_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
         );
     }
 }

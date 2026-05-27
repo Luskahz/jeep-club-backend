@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.api.dto.assignmnent;
+package com.jeepclub.backend.billing.api.dto.assignment;
 
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;

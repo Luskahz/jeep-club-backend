@@ -3,6 +3,7 @@ package com.jeepclub.backend.billing.api.controller;
 import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionRequest;
 import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionResponse;
 import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionSummaryResponse;
+import com.jeepclub.backend.billing.api.dto.definition.ChargeDefinitionUpdateRequest;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.application.service.ChargeDefinitionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -62,7 +63,7 @@ public class ChargeDefinitionController {
     )
     public ResponseEntity<ChargeDefinitionResponse> update(
             @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id,
-            @Valid @RequestBody ChargeDefinitionRequest request
+            @Valid @RequestBody ChargeDefinitionUpdateRequest request
     ) {
         ChargeDefinitionResult result = chargeDefinitionService.update(
                 id,
