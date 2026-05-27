@@ -47,11 +47,12 @@ public record ChargeDefinitionRequest(
         )
         ChargeRecurrenceType recurrenceType,
 
+        @NotNull(message = "Obrigatoriedade da cobrança é obrigatória.")
         @Schema(
                 description = "Define se a cobrança é obrigatória para o público-alvo.",
                 example = "true",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
-        boolean required
+        Boolean required
 ) {
 }

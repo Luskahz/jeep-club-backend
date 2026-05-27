@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -117,7 +118,9 @@ public class ChargeDefinition {
 
     public void archive(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
-
+        if (status == ChargeDefinitionStatus.ARCHIVED) {
+            throw new ChargeDefinitionAlreadyArchivedException();
+        }
         this.status = ChargeDefinitionStatus.ARCHIVED;
         this.updatedAt = now;
     }

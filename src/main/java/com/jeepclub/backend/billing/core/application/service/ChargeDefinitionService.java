@@ -33,6 +33,7 @@ public class ChargeDefinitionService {
             boolean required
     ) {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
+        String normalizedName = name.trim().toLowerCase();
 
         if (chargeDefinitionRepository.existsByName(name)) {
             throw new ChargeDefinitionAlreadyExistsException(
