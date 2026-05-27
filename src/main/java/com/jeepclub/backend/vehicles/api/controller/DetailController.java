@@ -2,6 +2,7 @@ package com.jeepclub.backend.vehicles.api.controller;
 
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.detail.DetailResponseDTO;
+import com.jeepclub.backend.vehicles.core.application.services.DetailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,8 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class DetailController {
 
+    private final DetailService detailService;
+
     @GetMapping("/{vehicleId}")
     @Operation(
             summary = "Detalhar 1 veículo de um membro",
@@ -33,10 +36,8 @@ public class DetailController {
             Authentication authentication
     ) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        Long userId = principal.getUserId();
+        Long memberId = principal.getUserId();
 
-
-
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(detailService.execute(vehicleId, memberId));
     }
 }
