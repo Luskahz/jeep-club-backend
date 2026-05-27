@@ -12,6 +12,8 @@ public record ToolUpdateRequestDTO(
         @Schema(description = "Nova descrição da ferramenta (opcional).", example = "Chave de roda em aço carbono, pintada de preto.")
         String description,
 
+        // novamente esse status não é interessante, demanda que o frontend conheça os status das ferramentas, crie rotas
+        // no frontend que alteram os status
         @Schema(description = "Novo status da ferramenta (opcional).", example = "IN_USE")
         ToolStatus status
 ) {}

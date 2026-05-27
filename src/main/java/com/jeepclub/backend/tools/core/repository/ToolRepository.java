@@ -18,5 +18,6 @@ public interface ToolRepository {
 
     // Métodos essenciais que o Service usa para o CRUD
     Tool save(Tool tool);
+
     void delete(Tool tool);
 }

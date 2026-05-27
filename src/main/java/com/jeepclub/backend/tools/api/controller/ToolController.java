@@ -22,6 +22,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/tools")
 @RequiredArgsConstructor
 @Tag(name = "Tools", description = "Gerenciamento de ferramentas e equipamentos do usuário.")
+
+// crie uma rota para alteração do status da ferramenta, o frontend não deve ser obrigado a estudar os status internos do backend
+// e sim saber quais rotas alteram os status.
+
 public class ToolController {
 
     private final ToolService toolService;
@@ -75,6 +79,12 @@ public class ToolController {
     }
 
     // 5. Rota DELETE /tools/{id} - Nova rota para SelfDelete
+
+    // essa rota que vc fez não é selfDelete, ela é um delete cru, uma rota set delete deve definir o status da
+    // ferramenta para DELETED a ferramenta deve ter um campo deletedAt e as buscas não devem ter mais esta ferramenta,
+    // por mais que ela ainda esteja no banco.
+    // sera necessario criar filtros no service para busca para trazer apenas ferramentas que estão ativas, avalie os status que criou
+    // coloquei comentarios nos enums também, validar todos os arquivos.
     @DeleteMapping("/{id}")
     @Operation(summary = "Deletar uma ferramenta", description = "Remove permanentemente uma ferramenta do usuário logado.")
     public ResponseEntity<Void> deleteTool(

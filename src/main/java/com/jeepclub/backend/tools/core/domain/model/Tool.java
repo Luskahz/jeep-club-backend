@@ -20,6 +20,10 @@ public class Tool {
     private ToolStatus status;
     private Long userId;
 
+    //tá faltando campos de tempo aqui, createdAt, updatedAt, deletedAt
+
+    // faça metodos de alterações do status, aqui que o status deve ser alterado, o service tem que chamar funções de alteração do status que existem só aqui.
+
     // Construtor privado: Ninguém fora da classe dá um "new Tool()" diretamente
     private Tool(String name, String description, ToolStatus status, Long userId) {
         this.name = name;
