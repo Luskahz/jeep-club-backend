@@ -1,7 +1,9 @@
 package com.jeepclub.backend.billing.core.application.service;
 
+import com.jeepclub.backend.billing.core.application.exception.assignment.BillingAssignmentTargetNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotReceiveAssignmentsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
@@ -118,7 +120,7 @@ public class ChargeAssignmentService {
     ) {
         Objects.requireNonNull(pageable, "pageable cannot be null");
 
-        findActiveChargeDefinitionOrThrow(chargeDefinitionId);
+        ensureChargeDefinitionExists(chargeDefinitionId);
 
         return chargeAssignmentRepository.findByChargeDefinitionId(
                         chargeDefinitionId,
@@ -149,6 +151,11 @@ public class ChargeAssignmentService {
         return ChargeAssignmentResult.from(savedChargeAssignment);
     }
 
+    @Transactional(readOnly = true)
+    public ChargeAssignmentResult findById(Long id) {
+        return ChargeAssignmentResult.from(findChargeAssignmentOrThrow(id));
+    }
+
     private ChargeDefinition findActiveChargeDefinitionOrThrow(Long chargeDefinitionId) {
         Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
 
@@ -170,7 +177,9 @@ public class ChargeAssignmentService {
         Objects.requireNonNull(eventId, "eventId cannot be null");
 
         if (!billingEventPort.existsEventById(eventId)) {
-            throw new IllegalArgumentException("Event not found.");
+            throw new BillingAssignmentTargetNotFoundException(
+                    "Event not found."
+            );
         }
     }
 
@@ -229,10 +238,6 @@ public class ChargeAssignmentService {
             );
         }
     }
-    @Transactional(readOnly = true)
-    public ChargeAssignmentResult findById(Long id) {
-        return ChargeAssignmentResult.from(findChargeAssignmentOrThrow(id));
-    }
 
     private ChargeAssignment findChargeAssignmentOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
@@ -246,7 +251,7 @@ public class ChargeAssignmentService {
         Objects.requireNonNull(userId, "userId cannot be null");
 
         if (!billingMembershipPort.existsActiveMemberByUserId(userId)) {
-            throw new BillingTargetNotFoundException(
+            throw new BillingAssignmentTargetNotFoundException(
                     "Active member not found for user."
             );
         }
@@ -255,9 +260,18 @@ public class ChargeAssignmentService {
         Objects.requireNonNull(roleId, "roleId cannot be null");
 
         if (!billingAuthorizationPort.existsActiveRoleById(roleId)) {
-            throw new BillingTargetNotFoundException(
+            throw new BillingAssignmentTargetNotFoundException(
                     "Active role not found."
             );
         }
+    }
+
+    private void ensureChargeDefinitionExists(Long chargeDefinitionId) {
+        Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
+
+        chargeDefinitionRepository.findById(chargeDefinitionId)
+                .orElseThrow(() -> new ChargeDefinitionNotFoundException(
+                        "Charge definition not found."
+                ));
     }
 }

@@ -3,6 +3,7 @@ package com.jeepclub.backend.billing.api.exception;
 import com.jeepclub.backend.billing.core.application.exception.assignment.BillingAssignmentTargetNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotReceiveAssignmentsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeAccessDeniedException;
@@ -11,6 +12,8 @@ import com.jeepclub.backend.billing.core.application.exception.memberPayment.Inv
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.InvalidPaymentReceiptException;
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
+import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
@@ -185,6 +188,39 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 "BILLING_ASSIGNMENT_TARGET_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(ChargeDefinitionCannotReceiveAssignmentsException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeDefinitionCannotReceiveAssignments(
+            ChargeDefinitionCannotReceiveAssignmentsException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_DEFINITION_CANNOT_RECEIVE_ASSIGNMENTS",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeAssignmentAlreadyActiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeAssignmentAlreadyActive(
+            ChargeAssignmentAlreadyActiveException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_ASSIGNMENT_ALREADY_ACTIVE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeAssignmentAlreadyInactiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeAssignmentAlreadyInactive(
+            ChargeAssignmentAlreadyInactiveException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_ASSIGNMENT_ALREADY_INACTIVE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }
