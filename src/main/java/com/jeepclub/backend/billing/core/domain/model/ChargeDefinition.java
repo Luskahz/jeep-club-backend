@@ -22,7 +22,7 @@ public class ChargeDefinition {
     private String description;
     private BigDecimal defaultAmount;
     private ChargeRecurrenceType recurrenceType;
-    private boolean required;
+    private Boolean required;
     private ChargeDefinitionStatus status;
     private Instant createdAt;
     private Instant updatedAt;
@@ -33,7 +33,7 @@ public class ChargeDefinition {
             String description,
             BigDecimal defaultAmount,
             ChargeRecurrenceType recurrenceType,
-            boolean required,
+            Boolean required,
             ChargeDefinitionStatus status,
             Instant createdAt,
             Instant updatedAt
@@ -54,7 +54,7 @@ public class ChargeDefinition {
             String description,
             BigDecimal defaultAmount,
             ChargeRecurrenceType recurrenceType,
-            boolean required,
+            Boolean required,
             Instant now
     ) {
         Objects.requireNonNull(now, "now cannot be null");
@@ -78,7 +78,7 @@ public class ChargeDefinition {
             String description,
             BigDecimal defaultAmount,
             ChargeRecurrenceType recurrenceType,
-            boolean required,
+            Boolean required,
             ChargeDefinitionStatus status,
             Instant createdAt,
             Instant updatedAt
