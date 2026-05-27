@@ -31,7 +31,7 @@ public class ChargeDefinitionService {
             String description,
             BigDecimal defaultAmount,
             ChargeRecurrenceType recurrenceType,
-            boolean required
+            Boolean required
     ) {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
         String normalizedName = normalizeName(name);
