@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.api.exceptions;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
@@ -27,6 +28,15 @@ public class VehicleExceptionHandler extends BuilderExceptionHandler {
                 "VEHICLE_RENAVAM_ALREADY_EXISTS",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(VehicleIdNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleVehicleIdNotFoundException(VehicleIdNotFoundException exception) {
+        return buildErrorResponse(
+                "VEHICLE_ID_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
         );
     }
 }
