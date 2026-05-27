@@ -6,6 +6,7 @@ import com.jeepclub.backend.billing.core.application.exception.assignment.Charge
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotReceiveAssignmentsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
+import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
@@ -133,6 +134,8 @@ public class ChargeAssignmentService {
     public ChargeAssignmentResult activate(Long id) {
         ChargeAssignment chargeAssignment = findChargeAssignmentOrThrow(id);
 
+        findActiveChargeDefinitionOrThrow(chargeAssignment.getChargeDefinitionId());
+
         chargeAssignment.activate(Instant.now(clock));
 
         ChargeAssignment savedChargeAssignment = chargeAssignmentRepository.save(chargeAssignment);
@@ -143,6 +146,8 @@ public class ChargeAssignmentService {
     @Transactional
     public ChargeAssignmentResult deactivate(Long id) {
         ChargeAssignment chargeAssignment = findChargeAssignmentOrThrow(id);
+
+        ensureChargeDefinitionIsNotArchived(chargeAssignment.getChargeDefinitionId());
 
         chargeAssignment.deactivate(Instant.now(clock));
 
@@ -247,6 +252,7 @@ public class ChargeAssignmentService {
                         "Charge assignment not found."
                 ));
     }
+
     private void ensureActiveMemberExists(Long userId) {
         Objects.requireNonNull(userId, "userId cannot be null");
 
@@ -256,6 +262,7 @@ public class ChargeAssignmentService {
             );
         }
     }
+
     private void ensureActiveRoleExists(Long roleId) {
         Objects.requireNonNull(roleId, "roleId cannot be null");
 
@@ -273,5 +280,20 @@ public class ChargeAssignmentService {
                 .orElseThrow(() -> new ChargeDefinitionNotFoundException(
                         "Charge definition not found."
                 ));
+    }
+
+    private void ensureChargeDefinitionIsNotArchived(Long chargeDefinitionId) {
+        Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
+
+        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findById(chargeDefinitionId)
+                .orElseThrow(() -> new ChargeDefinitionNotFoundException(
+                        "Charge definition not found."
+                ));
+
+        if (chargeDefinition.getStatus() == ChargeDefinitionStatus.ARCHIVED) {
+            throw new ChargeDefinitionCannotReceiveAssignmentsException(
+                    "Archived charge definitions cannot have assignments changed."
+            );
+        }
     }
 }
