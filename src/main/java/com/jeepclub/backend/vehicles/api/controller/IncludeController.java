@@ -3,8 +3,7 @@ package com.jeepclub.backend.vehicles.api.controller;
 
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.include.IncludeRequestDTO;
-import com.jeepclub.backend.vehicles.api.dto.include.IncludeResponseDTO;
-import com.jeepclub.backend.vehicles.core.application.IncludeService;
+import com.jeepclub.backend.vehicles.core.application.services.IncludeService;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

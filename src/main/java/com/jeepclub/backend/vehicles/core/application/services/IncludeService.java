@@ -1,4 +1,4 @@
-package com.jeepclub.backend.vehicles.core.application;
+package com.jeepclub.backend.vehicles.core.application.services;
 
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
