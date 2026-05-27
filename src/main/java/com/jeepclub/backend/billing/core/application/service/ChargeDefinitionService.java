@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Objects;
 
 @Service
@@ -33,7 +34,7 @@ public class ChargeDefinitionService {
             boolean required
     ) {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
-        String normalizedName = name.trim().toLowerCase();
+        String normalizedName = normalizeName(name);
 
         if (chargeDefinitionRepository.existsByName(normalizedName)) {
             throw new ChargeDefinitionAlreadyExistsException(
@@ -112,5 +113,13 @@ public class ChargeDefinitionService {
                 .orElseThrow(() -> new ChargeDefinitionNotFoundException(
                         "Charge definition not found."
                 ));
+    }
+
+    private static String normalizeName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Charge definition name cannot be blank.");
+        }
+
+        return name.trim().toLowerCase(Locale.ROOT);
     }
 }
