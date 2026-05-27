@@ -3,7 +3,7 @@ package com.jeepclub.backend.billing.core.application.service;
 import com.jeepclub.backend.billing.core.application.exception.assignment.BillingAssignmentTargetNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
-import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotReceiveAssignmentsException;
+import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotChangeAssignmentsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
@@ -170,7 +170,7 @@ public class ChargeAssignmentService {
                 ));
 
         if (!chargeDefinition.isActive()) {
-            throw new ChargeDefinitionCannotReceiveAssignmentsException(
+            throw new ChargeDefinitionCannotChangeAssignmentsException(
                     "Only active charge definitions can receive assignments."
             );
         }
@@ -291,7 +291,7 @@ public class ChargeAssignmentService {
                 ));
 
         if (chargeDefinition.getStatus() == ChargeDefinitionStatus.ARCHIVED) {
-            throw new ChargeDefinitionCannotReceiveAssignmentsException(
+            throw new ChargeDefinitionCannotChangeAssignmentsException(
                     "Archived charge definitions cannot have assignments changed."
             );
         }
