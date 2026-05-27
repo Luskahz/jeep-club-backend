@@ -14,7 +14,7 @@ public record ChargeDefinitionResult(
         String description,
         BigDecimal defaultAmount,
         ChargeRecurrenceType recurrenceType,
-        boolean required,
+        Boolean required,
         ChargeDefinitionStatus status,
         Instant createdAt,
         Instant updatedAt
@@ -29,7 +29,7 @@ public record ChargeDefinitionResult(
                 chargeDefinition.getDescription(),
                 chargeDefinition.getDefaultAmount(),
                 chargeDefinition.getRecurrenceType(),
-                chargeDefinition.isRequired(),
+                chargeDefinition.getRequired(),
                 chargeDefinition.getStatus(),
                 chargeDefinition.getCreatedAt(),
                 chargeDefinition.getUpdatedAt()

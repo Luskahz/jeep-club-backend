@@ -29,7 +29,7 @@ public record ChargeDefinitionResponse(
         ChargeRecurrenceType recurrenceType,
 
         @Schema(description = "Indica se a cobrança é obrigatória.", example = "true")
-        boolean required,
+        Boolean required,
 
         @Schema(description = "Status da definição de cobrança.", example = "ACTIVE")
         ChargeDefinitionStatus status,

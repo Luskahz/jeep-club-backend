@@ -46,7 +46,7 @@ public class ChargeDefinitionController {
                 request.description(),
                 request.defaultAmount(),
                 request.recurrenceType(),
-                Boolean.TRUE.equals(request.required())
+                request.required()
         );
 
         return ResponseEntity
