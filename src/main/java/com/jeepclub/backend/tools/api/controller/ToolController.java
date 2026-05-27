@@ -10,6 +10,7 @@ import com.jeepclub.backend.tools.core.application.service.ToolService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject; // <-- IMPORT MÁGICO ADICIONADO AQUI
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -30,7 +31,7 @@ public class ToolController {
     @Operation(summary = "Listar ferramentas do usuário", description = "Retorna uma lista paginada e resumida das ferramentas pertencentes ao usuário logado.")
     public ResponseEntity<Page<ToolSummaryResponseDTO>> getAvailableTools(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            Pageable pageable) {
+            @ParameterObject Pageable pageable) { // <-- ANOTAÇÃO APLICADA AQUI
 
         // O service agora deve retornar um Page em vez de List
         Page<ToolSummaryResponseDTO> tools = toolService.listUserTools(userPrincipal.getUserId(), pageable)

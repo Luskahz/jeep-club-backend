@@ -29,8 +29,8 @@ public class SessionRepositoryAdapter implements SessionRepository {
 
     @Override
     public Optional<Session> findActiveByUserId(Long userId) {
-        return jpaRepository.findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
+        // ATUALIZADO: Chamando o método novo que blinda a aplicação contra sessões duplicadas
+        return jpaRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(userId, SessionStatus.ACTIVE)
                 .map(SessionMapper::toDomain);
     }
-
 }
