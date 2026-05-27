@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
@@ -94,6 +95,28 @@ public class ChargeDefinition {
                 createdAt,
                 updatedAt
         );
+    }
+
+    public void update(
+            String name,
+            String description,
+            BigDecimal defaultAmount,
+            ChargeRecurrenceType recurrenceType,
+            Boolean required,
+            Instant now
+    ) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (status == ChargeDefinitionStatus.ARCHIVED) {
+            throw new ArchivedChargeDefinitionCannotBeUpdatedException();
+        }
+
+        this.name = validateName(name);
+        this.description = description;
+        this.defaultAmount = validateAmount(defaultAmount);
+        this.recurrenceType = Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
+        this.required = Objects.requireNonNull(required, "required cannot be null");
+        this.updatedAt = now;
     }
 
     public void deactivate(Instant now) {

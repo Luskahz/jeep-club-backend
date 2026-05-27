@@ -54,6 +54,28 @@ public class ChargeDefinitionController {
                 .body(ChargeDefinitionResponse.from(result));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_UPDATE')")
+    @Operation(
+            summary = "Atualizar definição de cobrança",
+            description = "Atualiza os dados principais de uma definição de cobrança. A alteração afeta apenas usos futuros da definição."
+    )
+    public ResponseEntity<ChargeDefinitionResponse> update(
+            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id,
+            @Valid @RequestBody ChargeDefinitionRequest request
+    ) {
+        ChargeDefinitionResult result = chargeDefinitionService.update(
+                id,
+                request.name(),
+                request.description(),
+                request.defaultAmount(),
+                request.recurrenceType(),
+                request.required()
+        );
+
+        return ResponseEntity.ok(ChargeDefinitionResponse.from(result));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_READ')")
     @Operation(

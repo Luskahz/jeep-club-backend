@@ -12,6 +12,7 @@ import com.jeepclub.backend.billing.core.application.exception.memberPayment.Mem
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
+import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
@@ -160,6 +161,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "CHARGE_DEFINITION_ALREADY_ARCHIVED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ArchivedChargeDefinitionCannotBeUpdatedException.class)
+    public ResponseEntity<ApiErrorResponse> handleArchivedChargeDefinitionCannotBeUpdated(
+            ArchivedChargeDefinitionCannotBeUpdatedException exception
+    ) {
+        return buildErrorResponse(
+                "ARCHIVED_CHARGE_DEFINITION_CANNOT_BE_UPDATED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );

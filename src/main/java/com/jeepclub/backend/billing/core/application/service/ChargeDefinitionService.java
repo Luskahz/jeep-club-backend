@@ -106,6 +106,41 @@ public class ChargeDefinitionService {
         return ChargeDefinitionResult.from(savedChargeDefinition);
     }
 
+    @Transactional
+    public ChargeDefinitionResult update(
+            Long id,
+            String name,
+            String description,
+            BigDecimal defaultAmount,
+            ChargeRecurrenceType recurrenceType,
+            Boolean required
+    ) {
+        Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
+
+        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
+
+        String normalizedName = normalizeName(name);
+
+        if (chargeDefinitionRepository.existsByNameAndIdNot(normalizedName, id)) {
+            throw new ChargeDefinitionAlreadyExistsException(
+                    "Charge definition name already exists."
+            );
+        }
+
+        chargeDefinition.update(
+                normalizedName,
+                description,
+                defaultAmount,
+                recurrenceType,
+                required,
+                Instant.now(clock)
+        );
+
+        ChargeDefinition savedChargeDefinition = chargeDefinitionRepository.save(chargeDefinition);
+
+        return ChargeDefinitionResult.from(savedChargeDefinition);
+    }
+
     private ChargeDefinition findChargeDefinitionOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
 
