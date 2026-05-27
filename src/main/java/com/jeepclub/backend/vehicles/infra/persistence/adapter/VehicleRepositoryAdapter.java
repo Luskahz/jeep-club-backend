@@ -9,6 +9,8 @@ import com.jeepclub.backend.vehicles.infra.persistence.mapper.VehicleMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @RequiredArgsConstructor
 @Repository
 public class VehicleRepositoryAdapter implements VehicleRepository {
@@ -23,6 +25,12 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     }
 
     @Override
+    public boolean existsById(Long id) {
+        return jpaRepository.existsById(id);
+    }
+
+
+    @Override
     public boolean existsByPlate(String plate) {
         return jpaRepository.existsByPlate(plate);
     }
@@ -30,5 +38,11 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     @Override
     public boolean existsByRenavam(String renavam) {
         return jpaRepository.existsByRenavam(renavam);
+    }
+
+    @Override
+    public Optional<Vehicle> findByIdAndOwnerId(Long vehicleId, Long memberId) {
+        return jpaRepository.findByIdAndOwnerId(vehicleId, memberId)
+                .map(VehicleMapper::toDomain);
     }
 }
