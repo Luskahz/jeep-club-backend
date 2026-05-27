@@ -35,7 +35,7 @@ public class ChargeDefinitionService {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
         String normalizedName = name.trim().toLowerCase();
 
-        if (chargeDefinitionRepository.existsByName(name)) {
+        if (chargeDefinitionRepository.existsByName(normalizedName)) {
             throw new ChargeDefinitionAlreadyExistsException(
                     "Charge definition name already exists."
             );
@@ -44,7 +44,7 @@ public class ChargeDefinitionService {
         Instant now = Instant.now(clock);
 
         ChargeDefinition chargeDefinition = ChargeDefinition.create(
-                name,
+                normalizedName,
                 description,
                 defaultAmount,
                 recurrenceType,
