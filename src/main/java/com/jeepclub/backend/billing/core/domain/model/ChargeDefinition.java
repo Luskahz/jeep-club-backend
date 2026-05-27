@@ -43,7 +43,7 @@ public class ChargeDefinition {
         this.description = description;
         this.defaultAmount = validateAmount(defaultAmount);
         this.recurrenceType = Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
-        this.required = required;
+        this.required = Objects.requireNonNull(required, "required cannot be null");
         this.status = Objects.requireNonNull(status, "status cannot be null");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
