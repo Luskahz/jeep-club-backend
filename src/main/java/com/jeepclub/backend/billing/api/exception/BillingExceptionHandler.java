@@ -4,6 +4,10 @@ import com.jeepclub.backend.billing.core.application.exception.assignment.Billin
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotChangeAssignmentsException;
+import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleAlreadyExistsException;
+import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleWithoutAssignmentsException;
+import com.jeepclub.backend.billing.core.application.exception.chargeCycle.InactiveChargeDefinitionException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeAccessDeniedException;
@@ -219,6 +223,50 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "CHARGE_ASSIGNMENT_ALREADY_INACTIVE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleAlreadyExists(
+            ChargeCycleAlreadyExistsException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_ALREADY_EXISTS",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleNotFound(
+            ChargeCycleNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleWithoutAssignmentsException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleWithoutAssignments(
+            ChargeCycleWithoutAssignmentsException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_WITHOUT_ASSIGNMENTS",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InactiveChargeDefinitionException.class)
+    public ResponseEntity<ApiErrorResponse> handleInactiveChargeDefinition(
+            InactiveChargeDefinitionException exception
+    ) {
+        return buildErrorResponse(
+                "INACTIVE_CHARGE_DEFINITION",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );
