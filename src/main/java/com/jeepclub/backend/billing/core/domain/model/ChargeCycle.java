@@ -75,7 +75,7 @@ public class ChargeCycle {
         this.generatedByUserId = generatedByUserId;
         this.generatedAt = generatedAt;
         this.canceledAt = canceledAt;
-        this.canceledByUserId = Objects.requireNonNull(canceledByUserId, "canceledByUserId cannot be null");
+        this.canceledByUserId = canceledByUserId;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
 
@@ -185,8 +185,16 @@ public class ChargeCycle {
             throw new IllegalArgumentException("canceledAt must be null when charge cycle is generated.");
         }
 
+        if (status == ChargeCycleStatus.GENERATED && canceledByUserId != null) {
+            throw new IllegalArgumentException("canceledByUserId must be null when charge cycle is generated.");
+        }
+
         if (status == ChargeCycleStatus.CANCELED && canceledAt == null) {
             throw new IllegalArgumentException("canceledAt is required when charge cycle is canceled.");
+        }
+
+        if (status == ChargeCycleStatus.CANCELED) {
+            validateId(canceledByUserId, "canceledByUserId");
         }
     }
 
