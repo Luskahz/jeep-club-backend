@@ -241,6 +241,7 @@ public class ChargeCycleService {
                         "Charge cycle not found."
                 ));
     }
+
     private static String normalizeCode(String code) {
         if (code == null || code.isBlank()) {
             throw new IllegalArgumentException("code cannot be blank.");
