@@ -1,10 +1,12 @@
 package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
+import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -15,6 +17,11 @@ public class ChargeCycle {
 
     private Long id;
     private Long chargeDefinitionId;
+    private String chargeDefinitionNameSnapshot;
+    private String chargeDefinitionDescriptionSnapshot;
+    private BigDecimal chargeDefinitionDefaultAmountSnapshot;
+    private ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot;
+    private Boolean chargeDefinitionRequiredSnapshot;
     private String code;
     private LocalDate dueDate;
     private ChargeCycleStatus status;
@@ -34,7 +41,12 @@ public class ChargeCycle {
             Instant generatedAt,
             Instant canceledAt,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            String chargeDefinitionNameSnapshot,
+            String chargeDefinitionDescriptionSnapshot,
+            BigDecimal chargeDefinitionDefaultAmountSnapshot,
+            ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
+            Boolean chargeDefinitionRequiredSnapshot
     ) {
         this.id = id;
         this.chargeDefinitionId = validateId(chargeDefinitionId, "chargeDefinitionId");
@@ -46,22 +58,45 @@ public class ChargeCycle {
         this.canceledAt = canceledAt;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
+        this.chargeDefinitionNameSnapshot = validateSnapshotText(
+                chargeDefinitionNameSnapshot,
+                "chargeDefinitionNameSnapshot"
+        );
+        this.chargeDefinitionDescriptionSnapshot = normalizeNullableText(chargeDefinitionDescriptionSnapshot);
+        this.chargeDefinitionDefaultAmountSnapshot = validateAmount(
+                chargeDefinitionDefaultAmountSnapshot,
+                "chargeDefinitionDefaultAmountSnapshot"
+        );
+        this.chargeDefinitionRecurrenceTypeSnapshot = Objects.requireNonNull(
+                chargeDefinitionRecurrenceTypeSnapshot,
+                "chargeDefinitionRecurrenceTypeSnapshot cannot be null"
+        );
+        this.chargeDefinitionRequiredSnapshot = Objects.requireNonNull(
+                chargeDefinitionRequiredSnapshot,
+                "chargeDefinitionRequiredSnapshot cannot be null"
+        );
 
         validateStatusConsistency();
     }
 
     public static ChargeCycle generate(
-            Long chargeDefinitionId,
+            ChargeDefinition chargeDefinition,
             String code,
             LocalDate dueDate,
             Long generatedByUserId,
             Instant now
     ) {
+        Objects.requireNonNull(chargeDefinition, "chargeDefinition cannot be null");
         Objects.requireNonNull(now, "now cannot be null");
 
         return new ChargeCycle(
                 null,
-                chargeDefinitionId,
+                chargeDefinition.getId(),
+                chargeDefinition.getName(),
+                chargeDefinition.getDescription(),
+                chargeDefinition.getDefaultAmount(),
+                chargeDefinition.getRecurrenceType(),
+                chargeDefinition.getRequired(),
                 code,
                 dueDate,
                 ChargeCycleStatus.GENERATED,
@@ -76,6 +111,11 @@ public class ChargeCycle {
     public static ChargeCycle reconstitute(
             Long id,
             Long chargeDefinitionId,
+            String chargeDefinitionNameSnapshot,
+            String chargeDefinitionDescriptionSnapshot,
+            BigDecimal chargeDefinitionDefaultAmountSnapshot,
+            ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
+            Boolean chargeDefinitionRequiredSnapshot,
             String code,
             LocalDate dueDate,
             ChargeCycleStatus status,
@@ -88,6 +128,11 @@ public class ChargeCycle {
         return new ChargeCycle(
                 id,
                 chargeDefinitionId,
+                chargeDefinitionNameSnapshot,
+                chargeDefinitionDescriptionSnapshot,
+                chargeDefinitionDefaultAmountSnapshot,
+                chargeDefinitionRecurrenceTypeSnapshot,
+                chargeDefinitionRequiredSnapshot,
                 code,
                 dueDate,
                 status,
@@ -153,5 +198,31 @@ public class ChargeCycle {
         }
 
         return code.trim();
+    }
+
+    private static BigDecimal validateAmount(BigDecimal amount, String fieldName) {
+        Objects.requireNonNull(amount, fieldName + " cannot be null");
+
+        if (amount.signum() <= 0) {
+            throw new IllegalArgumentException(fieldName + " must be greater than zero.");
+        }
+
+        return amount;
+    }
+
+    private static String validateSnapshotText(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " cannot be blank.");
+        }
+
+        return value.trim();
+    }
+
+    private static String normalizeNullableText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
     }
 }

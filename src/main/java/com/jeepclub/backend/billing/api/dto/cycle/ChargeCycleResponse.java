@@ -2,8 +2,10 @@ package com.jeepclub.backend.billing.api.dto.cycle;
 
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
+import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
@@ -16,6 +18,21 @@ public record ChargeCycleResponse(
 
         @Schema(description = "Identificador da definição de cobrança.", example = "10")
         Long chargeDefinitionId,
+
+        @Schema(description = "Nome da definição de cobrança no momento em que o ciclo foi gerado.", example = "Anuidade Pesca 2026")
+        String chargeDefinitionNameSnapshot,
+
+        @Schema(description = "Descrição da definição de cobrança no momento em que o ciclo foi gerado.", example = "Cobrança anual para membros participantes da pesca.", nullable = true)
+        String chargeDefinitionDescriptionSnapshot,
+
+        @Schema(description = "Valor padrão da definição de cobrança no momento em que o ciclo foi gerado.", example = "250.00")
+        BigDecimal chargeDefinitionDefaultAmountSnapshot,
+
+        @Schema(description = "Tipo de recorrência da definição de cobrança no momento em que o ciclo foi gerado.", example = "YEARLY")
+        ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
+
+        @Schema(description = "Obrigatoriedade da definição de cobrança no momento em que o ciclo foi gerado.", example = "true")
+        Boolean chargeDefinitionRequiredSnapshot,
 
         @Schema(description = "Código do ciclo.", example = "2026")
         String code,
@@ -44,10 +61,14 @@ public record ChargeCycleResponse(
 
     public static ChargeCycleResponse from(ChargeCycleResult result) {
         Objects.requireNonNull(result, "result cannot be null");
-
         return new ChargeCycleResponse(
                 result.id(),
                 result.chargeDefinitionId(),
+                result.chargeDefinitionNameSnapshot(),
+                result.chargeDefinitionDescriptionSnapshot(),
+                result.chargeDefinitionDefaultAmountSnapshot(),
+                result.chargeDefinitionRecurrenceTypeSnapshot(),
+                result.chargeDefinitionRequiredSnapshot(),
                 result.code(),
                 result.dueDate(),
                 result.status(),

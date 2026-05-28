@@ -82,7 +82,7 @@ public class ChargeCycleService {
         Instant now = Instant.now(clock);
 
         ChargeCycle chargeCycle = ChargeCycle.generate(
-                chargeDefinitionId,
+                chargeDefinition,
                 code,
                 dueDate,
                 generatedByUserId,

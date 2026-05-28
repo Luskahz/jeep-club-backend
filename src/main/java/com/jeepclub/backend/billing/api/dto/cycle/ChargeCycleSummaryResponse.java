@@ -17,6 +17,9 @@ public record ChargeCycleSummaryResponse(
         @Schema(description = "Identificador da definição de cobrança.", example = "10")
         Long chargeDefinitionId,
 
+        @Schema(description = "Nome da definição de cobrança no momento em que o ciclo foi gerado.", example = "Anuidade Pesca 2026")
+        String chargeDefinitionNameSnapshot,
+
         @Schema(description = "Código do ciclo.", example = "2026")
         String code,
 
@@ -36,6 +39,7 @@ public record ChargeCycleSummaryResponse(
         return new ChargeCycleSummaryResponse(
                 result.id(),
                 result.chargeDefinitionId(),
+                result.chargeDefinitionNameSnapshot(),
                 result.code(),
                 result.dueDate(),
                 result.status(),
