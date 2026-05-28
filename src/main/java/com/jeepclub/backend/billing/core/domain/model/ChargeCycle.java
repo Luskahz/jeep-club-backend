@@ -46,6 +46,7 @@ public class ChargeCycle {
             Long generatedByUserId,
             Instant generatedAt,
             Instant canceledAt,
+            Long canceledByUserId,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -74,6 +75,7 @@ public class ChargeCycle {
         this.generatedByUserId = generatedByUserId;
         this.generatedAt = generatedAt;
         this.canceledAt = canceledAt;
+        this.canceledByUserId = Objects.requireNonNull(canceledByUserId, "canceledByUserId cannot be null");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
 
@@ -104,6 +106,7 @@ public class ChargeCycle {
                 generatedByUserId,
                 now,
                 null,
+                null,
                 now,
                 null
         );
@@ -123,6 +126,7 @@ public class ChargeCycle {
             Long generatedByUserId,
             Instant generatedAt,
             Instant canceledAt,
+            Long canceledByUserId,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -140,6 +144,7 @@ public class ChargeCycle {
                 generatedByUserId,
                 generatedAt,
                 canceledAt,
+                canceledByUserId,
                 createdAt,
                 updatedAt
         );
