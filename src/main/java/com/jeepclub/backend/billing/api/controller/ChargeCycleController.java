@@ -18,7 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,15 +44,13 @@ public class ChargeCycleController {
     public ResponseEntity<GenerateChargeCycleResponse> generate(
             @PathVariable @Positive(message = "ID da definição de cobrança deve ser maior que zero.") Long chargeDefinitionId,
             @Valid @RequestBody GenerateChargeCycleRequest request,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Long generatedByUserId = extractUserId(authentication);
-
         GenerateChargeCycleResult result = chargeCycleService.generate(
                 chargeDefinitionId,
                 request.code(),
                 request.dueDate(),
-                generatedByUserId
+                principal.getUserId()
         );
 
         return ResponseEntity
@@ -107,11 +105,4 @@ public class ChargeCycleController {
         return ResponseEntity.ok(ChargeCycleResponse.from(result));
     }
 
-    private Long extractUserId(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
-            throw new IllegalArgumentException("Authenticated user principal is required.");
-        }
-
-        return principal.getUserId();
-    }
 }
