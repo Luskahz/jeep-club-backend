@@ -52,6 +52,9 @@ public record ChargeCycleResponse(
         @Schema(description = "Data e hora em que o ciclo foi cancelado.", nullable = true)
         Instant canceledAt,
 
+        @Schema(description = "Usuário que cancelou o ciclo.", example = "1", nullable = true)
+        Long canceledByUserId,
+
         @Schema(description = "Data de criação do registro.")
         Instant createdAt,
 
@@ -75,6 +78,7 @@ public record ChargeCycleResponse(
                 result.generatedByUserId(),
                 result.generatedAt(),
                 result.canceledAt(),
+                result.canceledByUserId(),
                 result.createdAt(),
                 result.updatedAt()
         );

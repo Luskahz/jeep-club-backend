@@ -23,6 +23,7 @@ public record ChargeCycleResult(
         Long generatedByUserId,
         Instant generatedAt,
         Instant canceledAt,
+        Long canceledByUserId,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -43,6 +44,7 @@ public record ChargeCycleResult(
                 chargeCycle.getGeneratedByUserId(),
                 chargeCycle.getGeneratedAt(),
                 chargeCycle.getCanceledAt(),
+                chargeCycle.getCanceledByUserId(),
                 chargeCycle.getCreatedAt(),
                 chargeCycle.getUpdatedAt()
         );

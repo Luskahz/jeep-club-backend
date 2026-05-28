@@ -135,9 +135,9 @@ public class ChargeCycleService {
         ChargeCycle chargeCycle = findChargeCycleOrThrow(id);
         Instant now = Instant.now(clock);
 
-        cancelOpenMemberCharges(id, now);
-
         chargeCycle.cancel(canceledByUserId, now);
+
+        cancelOpenMemberCharges(id, now);
 
         ChargeCycle savedChargeCycle = chargeCycleRepository.save(chargeCycle);
 
