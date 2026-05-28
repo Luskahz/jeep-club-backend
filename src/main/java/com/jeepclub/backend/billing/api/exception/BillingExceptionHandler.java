@@ -192,11 +192,11 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     }
 
     @ExceptionHandler(ChargeDefinitionCannotChangeAssignmentsException.class)
-    public ResponseEntity<ApiErrorResponse> handleChargeDefinitionCannotReceiveAssignments(
+    public ResponseEntity<ApiErrorResponse> handleChargeDefinitionCannotChangeAssignments(
             ChargeDefinitionCannotChangeAssignmentsException exception
     ) {
         return buildErrorResponse(
-                "CHARGE_DEFINITION_CANNOT_RECEIVE_ASSIGNMENTS",
+                "CHARGE_DEFINITION_CANNOT_CHANGE_ASSIGNMENTS",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );
