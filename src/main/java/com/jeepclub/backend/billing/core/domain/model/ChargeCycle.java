@@ -28,6 +28,7 @@ public class ChargeCycle {
     private Long generatedByUserId;
     private Instant generatedAt;
     private Instant canceledAt;
+    private Long canceledByUserId;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -144,7 +145,8 @@ public class ChargeCycle {
         );
     }
 
-    public void cancel(Instant now) {
+    public void cancel(Long canceledByUserId, Instant now) {
+        validateId(canceledByUserId, "canceledByUserId");
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == ChargeCycleStatus.CANCELED) {
@@ -153,6 +155,7 @@ public class ChargeCycle {
 
         this.status = ChargeCycleStatus.CANCELED;
         this.canceledAt = now;
+        this.canceledByUserId = canceledByUserId;
         this.updatedAt = now;
     }
 

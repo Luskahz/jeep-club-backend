@@ -90,17 +90,20 @@ public class ChargeCycleController {
         return ResponseEntity.ok(ChargeCycleResponse.from(result));
     }
 
-    // necessario definir com o matheus
     @PatchMapping("/billing/charge-cycles/{cycleId}/cancel")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_CYCLE_CANCEL')")
     @Operation(
             summary = "Cancelar ciclo de cobrança",
-            description = "Cancela um ciclo de cobrança. As regras de impacto sobre débitos gerados devem ser tratadas pelo serviço."
+            description = "Cancela um ciclo de cobrança, cancela cobranças abertas vinculadas e prepara cobranças pagas para elegibilidade de reembolso."
     )
     public ResponseEntity<ChargeCycleResponse> cancel(
-            @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId
+            @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        ChargeCycleResult result = chargeCycleService.cancel(cycleId);
+        ChargeCycleResult result = chargeCycleService.cancel(
+                cycleId,
+                principal.getUserId()
+        );
 
         return ResponseEntity.ok(ChargeCycleResponse.from(result));
     }
