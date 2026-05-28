@@ -34,6 +34,11 @@ public class ChargeCycle {
     private ChargeCycle(
             Long id,
             Long chargeDefinitionId,
+            String chargeDefinitionNameSnapshot,
+            String chargeDefinitionDescriptionSnapshot,
+            BigDecimal chargeDefinitionDefaultAmountSnapshot,
+            ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
+            Boolean chargeDefinitionRequiredSnapshot,
             String code,
             LocalDate dueDate,
             ChargeCycleStatus status,
@@ -41,23 +46,10 @@ public class ChargeCycle {
             Instant generatedAt,
             Instant canceledAt,
             Instant createdAt,
-            Instant updatedAt,
-            String chargeDefinitionNameSnapshot,
-            String chargeDefinitionDescriptionSnapshot,
-            BigDecimal chargeDefinitionDefaultAmountSnapshot,
-            ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
-            Boolean chargeDefinitionRequiredSnapshot
+            Instant updatedAt
     ) {
         this.id = id;
         this.chargeDefinitionId = validateId(chargeDefinitionId, "chargeDefinitionId");
-        this.code = validateCode(code);
-        this.dueDate = Objects.requireNonNull(dueDate, "dueDate cannot be null");
-        this.status = Objects.requireNonNull(status, "status cannot be null");
-        this.generatedByUserId = generatedByUserId;
-        this.generatedAt = generatedAt;
-        this.canceledAt = canceledAt;
-        this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
-        this.updatedAt = updatedAt;
         this.chargeDefinitionNameSnapshot = validateSnapshotText(
                 chargeDefinitionNameSnapshot,
                 "chargeDefinitionNameSnapshot"
@@ -75,6 +67,14 @@ public class ChargeCycle {
                 chargeDefinitionRequiredSnapshot,
                 "chargeDefinitionRequiredSnapshot cannot be null"
         );
+        this.code = validateCode(code);
+        this.dueDate = Objects.requireNonNull(dueDate, "dueDate cannot be null");
+        this.status = Objects.requireNonNull(status, "status cannot be null");
+        this.generatedByUserId = generatedByUserId;
+        this.generatedAt = generatedAt;
+        this.canceledAt = canceledAt;
+        this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
+        this.updatedAt = updatedAt;
 
         validateStatusConsistency();
     }
