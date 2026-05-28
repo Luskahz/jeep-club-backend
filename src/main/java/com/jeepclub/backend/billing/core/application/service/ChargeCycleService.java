@@ -65,12 +65,13 @@ public class ChargeCycleService {
             );
         }
 
-        if (chargeCycleRepository.existsByChargeDefinitionIdAndCode(chargeDefinitionId, code)) {
+        String normalizedCode = normalizeCode(code);
+
+        if (chargeCycleRepository.existsByChargeDefinitionIdAndCode(chargeDefinitionId, normalizedCode)) {
             throw new ChargeCycleAlreadyExistsException(
                     "Charge cycle already exists for this charge definition."
             );
         }
-
         Set<Long> targetUserIds = resolveTargetUserIds(chargeDefinitionId);
 
         if (targetUserIds.isEmpty()) {
@@ -83,7 +84,7 @@ public class ChargeCycleService {
 
         ChargeCycle chargeCycle = ChargeCycle.generate(
                 chargeDefinition,
-                code,
+                normalizedCode,
                 dueDate,
                 generatedByUserId,
                 now
@@ -239,5 +240,12 @@ public class ChargeCycleService {
                 .orElseThrow(() -> new ChargeCycleNotFoundException(
                         "Charge cycle not found."
                 ));
+    }
+    private static String normalizeCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new IllegalArgumentException("code cannot be blank.");
+        }
+
+        return code.trim();
     }
 }
