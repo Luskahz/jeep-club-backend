@@ -3,6 +3,9 @@ package com.jeepclub.backend.billing.core.domain.model;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeArchivedException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeCanceledException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeFinishedException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,6 +33,10 @@ public class ChargeCycle {
     private Instant generatedAt;
     private Instant canceledAt;
     private Long canceledByUserId;
+    private Instant finishedAt;
+    private Long finishedByUserId;
+    private Instant archivedAt;
+    private Long archivedByUserId;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -48,6 +55,10 @@ public class ChargeCycle {
             Instant generatedAt,
             Instant canceledAt,
             Long canceledByUserId,
+            Instant finishedAt,
+            Long finishedByUserId,
+            Instant archivedAt,
+            Long archivedByUserId,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -77,6 +88,10 @@ public class ChargeCycle {
         this.generatedAt = generatedAt;
         this.canceledAt = canceledAt;
         this.canceledByUserId = canceledByUserId;
+        this.finishedAt = finishedAt;
+        this.finishedByUserId = finishedByUserId;
+        this.archivedAt = archivedAt;
+        this.archivedByUserId = archivedByUserId;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
 
@@ -108,6 +123,10 @@ public class ChargeCycle {
                 now,
                 null,
                 null,
+                null,
+                null,
+                null,
+                null,
                 now,
                 null
         );
@@ -128,6 +147,10 @@ public class ChargeCycle {
             Instant generatedAt,
             Instant canceledAt,
             Long canceledByUserId,
+            Instant finishedAt,
+            Long finishedByUserId,
+            Instant archivedAt,
+            Long archivedByUserId,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -146,6 +169,10 @@ public class ChargeCycle {
                 generatedAt,
                 canceledAt,
                 canceledByUserId,
+                finishedAt,
+                finishedByUserId,
+                archivedAt,
+                archivedByUserId,
                 createdAt,
                 updatedAt
         );
@@ -159,9 +186,47 @@ public class ChargeCycle {
             throw new ChargeCycleAlreadyCanceledException();
         }
 
+        if (status != ChargeCycleStatus.GENERATED) {
+            throw new ChargeCycleCannotBeCanceledException(
+                    "Only generated charge cycles can be canceled."
+            );
+        }
+
         this.status = ChargeCycleStatus.CANCELED;
         this.canceledAt = now;
         this.canceledByUserId = canceledByUserId;
+        this.updatedAt = now;
+    }
+
+    public void finish(Long finishedByUserId, Instant now) {
+        validateId(finishedByUserId, "finishedByUserId");
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (status != ChargeCycleStatus.GENERATED) {
+            throw new ChargeCycleCannotBeFinishedException(
+                    "Only generated charge cycles can be finished."
+            );
+        }
+
+        this.status = ChargeCycleStatus.FINISHED;
+        this.finishedAt = now;
+        this.finishedByUserId = finishedByUserId;
+        this.updatedAt = now;
+    }
+
+    public void archive(Long archivedByUserId, Instant now) {
+        validateId(archivedByUserId, "archivedByUserId");
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (status != ChargeCycleStatus.FINISHED && status != ChargeCycleStatus.CANCELED) {
+            throw new ChargeCycleCannotBeArchivedException(
+                    "Only finished or canceled charge cycles can be archived."
+            );
+        }
+
+        this.status = ChargeCycleStatus.ARCHIVED;
+        this.archivedAt = now;
+        this.archivedByUserId = archivedByUserId;
         this.updatedAt = now;
     }
 
@@ -173,6 +238,14 @@ public class ChargeCycle {
         return status == ChargeCycleStatus.CANCELED;
     }
 
+    public boolean isFinished() {
+        return status == ChargeCycleStatus.FINISHED;
+    }
+
+    public boolean isArchived() {
+        return status == ChargeCycleStatus.ARCHIVED;
+    }
+
     private void validateStatusConsistency() {
         if (generatedAt == null) {
             throw new IllegalArgumentException("generatedAt is required.");
@@ -182,20 +255,114 @@ public class ChargeCycle {
             validateId(generatedByUserId, "generatedByUserId");
         }
 
-        if (status == ChargeCycleStatus.GENERATED && canceledAt != null) {
-            throw new IllegalArgumentException("canceledAt must be null when charge cycle is generated.");
-        }
+        validateOptionalId(canceledByUserId, "canceledByUserId");
+        validateOptionalId(finishedByUserId, "finishedByUserId");
+        validateOptionalId(archivedByUserId, "archivedByUserId");
 
-        if (status == ChargeCycleStatus.GENERATED && canceledByUserId != null) {
-            throw new IllegalArgumentException("canceledByUserId must be null when charge cycle is generated.");
-        }
-
-        if (status == ChargeCycleStatus.CANCELED && canceledAt == null) {
-            throw new IllegalArgumentException("canceledAt is required when charge cycle is canceled.");
+        if (status == ChargeCycleStatus.GENERATED) {
+            ensureNoCancellationData();
+            ensureNoFinishData();
+            ensureNoArchiveData();
         }
 
         if (status == ChargeCycleStatus.CANCELED) {
-            validateId(canceledByUserId, "canceledByUserId");
+            requireCancellationData();
+            ensureNoFinishData();
+            ensureNoArchiveData();
+        }
+
+        if (status == ChargeCycleStatus.FINISHED) {
+            requireFinishData();
+            ensureNoCancellationData();
+            ensureNoArchiveData();
+        }
+
+        if (status == ChargeCycleStatus.ARCHIVED) {
+            requireArchiveData();
+            ensureArchivedSourceIsValid();
+        }
+    }
+
+    private void requireCancellationData() {
+        if (canceledAt == null) {
+            throw new IllegalArgumentException("canceledAt is required when charge cycle is canceled.");
+        }
+
+        validateId(canceledByUserId, "canceledByUserId");
+    }
+
+    private void requireFinishData() {
+        if (finishedAt == null) {
+            throw new IllegalArgumentException("finishedAt is required when charge cycle is finished.");
+        }
+
+        validateId(finishedByUserId, "finishedByUserId");
+    }
+
+    private void requireArchiveData() {
+        if (archivedAt == null) {
+            throw new IllegalArgumentException("archivedAt is required when charge cycle is archived.");
+        }
+
+        validateId(archivedByUserId, "archivedByUserId");
+    }
+
+    private void ensureArchivedSourceIsValid() {
+        boolean archivedCanceledCycle = hasCancellationData() && !hasFinishData();
+        boolean archivedFinishedCycle = hasFinishData() && !hasCancellationData();
+
+        if (!archivedCanceledCycle && !archivedFinishedCycle) {
+            throw new IllegalArgumentException(
+                    "Archived charge cycle must preserve either cancellation data or finish data."
+            );
+        }
+    }
+
+    private void ensureNoCancellationData() {
+        if (canceledAt != null) {
+            throw new IllegalArgumentException("canceledAt must be null in current charge cycle status.");
+        }
+
+        if (canceledByUserId != null) {
+            throw new IllegalArgumentException("canceledByUserId must be null in current charge cycle status.");
+        }
+    }
+
+    private void ensureNoFinishData() {
+        if (finishedAt != null) {
+            throw new IllegalArgumentException("finishedAt must be null in current charge cycle status.");
+        }
+
+        if (finishedByUserId != null) {
+            throw new IllegalArgumentException("finishedByUserId must be null in current charge cycle status.");
+        }
+    }
+
+    private void ensureNoArchiveData() {
+        if (archivedAt != null) {
+            throw new IllegalArgumentException("archivedAt must be null in current charge cycle status.");
+        }
+
+        if (archivedByUserId != null) {
+            throw new IllegalArgumentException("archivedByUserId must be null in current charge cycle status.");
+        }
+    }
+
+    private boolean hasCancellationData() {
+        return canceledAt != null && canceledByUserId != null;
+    }
+
+    private boolean hasFinishData() {
+        return finishedAt != null && finishedByUserId != null;
+    }
+
+    private static void validateOptionalId(Long id, String fieldName) {
+        if (id == null) {
+            return;
+        }
+
+        if (id <= 0) {
+            throw new IllegalArgumentException(fieldName + " must be greater than zero.");
         }
     }
 

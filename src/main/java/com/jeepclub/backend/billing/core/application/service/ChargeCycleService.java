@@ -1,6 +1,5 @@
 package com.jeepclub.backend.billing.core.application.service;
 
-
 import com.jeepclub.backend.billing.core.application.exception.cycle.ChargeCycleAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.cycle.ChargeCycleNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.cycle.ChargeCycleWithoutAssignmentsException;
@@ -148,6 +147,44 @@ public class ChargeCycleService {
                 canceledByUserId,
                 now
         );
+
+        return ChargeCycleResult.from(savedChargeCycle);
+    }
+
+    @Transactional
+    public ChargeCycleResult finish(
+            Long id,
+            Long finishedByUserId
+    ) {
+        Objects.requireNonNull(finishedByUserId, "finishedByUserId cannot be null");
+
+        ChargeCycle chargeCycle = findChargeCycleOrThrow(id);
+
+        chargeCycle.finish(
+                finishedByUserId,
+                Instant.now(clock)
+        );
+
+        ChargeCycle savedChargeCycle = chargeCycleRepository.save(chargeCycle);
+
+        return ChargeCycleResult.from(savedChargeCycle);
+    }
+
+    @Transactional
+    public ChargeCycleResult archive(
+            Long id,
+            Long archivedByUserId
+    ) {
+        Objects.requireNonNull(archivedByUserId, "archivedByUserId cannot be null");
+
+        ChargeCycle chargeCycle = findChargeCycleOrThrow(id);
+
+        chargeCycle.archive(
+                archivedByUserId,
+                Instant.now(clock)
+        );
+
+        ChargeCycle savedChargeCycle = chargeCycleRepository.save(chargeCycle);
 
         return ChargeCycleResult.from(savedChargeCycle);
     }

@@ -24,12 +24,17 @@ public record ChargeCycleResult(
         Instant generatedAt,
         Instant canceledAt,
         Long canceledByUserId,
+        Instant finishedAt,
+        Long finishedByUserId,
+        Instant archivedAt,
+        Long archivedByUserId,
         Instant createdAt,
         Instant updatedAt
 ) {
 
     public static ChargeCycleResult from(ChargeCycle chargeCycle) {
         Objects.requireNonNull(chargeCycle, "chargeCycle cannot be null");
+
         return new ChargeCycleResult(
                 chargeCycle.getId(),
                 chargeCycle.getChargeDefinitionId(),
@@ -45,9 +50,12 @@ public record ChargeCycleResult(
                 chargeCycle.getGeneratedAt(),
                 chargeCycle.getCanceledAt(),
                 chargeCycle.getCanceledByUserId(),
+                chargeCycle.getFinishedAt(),
+                chargeCycle.getFinishedByUserId(),
+                chargeCycle.getArchivedAt(),
+                chargeCycle.getArchivedByUserId(),
                 chargeCycle.getCreatedAt(),
                 chargeCycle.getUpdatedAt()
         );
-
     }
 }
