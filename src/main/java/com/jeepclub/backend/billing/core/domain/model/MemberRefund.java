@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus;
 import com.jeepclub.backend.billing.core.domain.enums.refund.RefundReason;
+import com.jeepclub.backend.billing.core.domain.exception.refund.InvalidMemberRefundStateException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -249,11 +250,11 @@ public class MemberRefund {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberRefundStatus.ELIGIBLE) {
-            throw new IllegalStateException("Only eligible refunds can be requested.");
+            throw new InvalidMemberRefundStateException("Only eligible refunds can be requested.");
         }
 
         if (isEligibilityExpiredAt(now)) {
-            throw new IllegalStateException("Expired refund eligibility cannot be requested.");
+            throw new InvalidMemberRefundStateException("Expired refund eligibility cannot be requested.");
         }
 
         this.status = MemberRefundStatus.REQUESTED;
@@ -270,11 +271,11 @@ public class MemberRefund {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberRefundStatus.ELIGIBLE && status != MemberRefundStatus.REQUESTED) {
-            throw new IllegalStateException("Only eligible or requested refunds can be approved.");
+            throw new InvalidMemberRefundStateException("Only eligible or requested refunds can be approved.");
         }
 
         if (status == MemberRefundStatus.ELIGIBLE && isEligibilityExpiredAt(now)) {
-            throw new IllegalStateException("Expired refund eligibility cannot be approved.");
+            throw new InvalidMemberRefundStateException("Expired refund eligibility cannot be approved.");
         }
 
         this.status = MemberRefundStatus.APPROVED;
@@ -292,7 +293,7 @@ public class MemberRefund {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberRefundStatus.REQUESTED) {
-            throw new IllegalStateException("Only requested refunds can be rejected.");
+            throw new InvalidMemberRefundStateException("Only requested refunds can be rejected.");
         }
 
         String normalizedReason = validateRequiredText(rejectionReason, "rejectionReason");
@@ -312,7 +313,7 @@ public class MemberRefund {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberRefundStatus.APPROVED) {
-            throw new IllegalStateException("Only approved refunds can be marked as refunded.");
+            throw new InvalidMemberRefundStateException("Only approved refunds can be marked as refunded.");
         }
 
         this.status = MemberRefundStatus.REFUNDED;
@@ -325,11 +326,11 @@ public class MemberRefund {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberRefundStatus.ELIGIBLE) {
-            throw new IllegalStateException("Only eligible refunds can expire.");
+            throw new InvalidMemberRefundStateException("Only eligible refunds can expire.");
         }
 
         if (!isEligibilityExpiredAt(now)) {
-            throw new IllegalStateException("Refund eligibility has not expired yet.");
+            throw new InvalidMemberRefundStateException("Refund eligibility has not expired yet.");
         }
 
         this.status = MemberRefundStatus.EXPIRED;
@@ -344,7 +345,7 @@ public class MemberRefund {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (!isActive()) {
-            throw new IllegalStateException("Only active refunds can be canceled.");
+            throw new InvalidMemberRefundStateException("Only active refunds can be canceled.");
         }
 
         this.status = MemberRefundStatus.CANCELED;
