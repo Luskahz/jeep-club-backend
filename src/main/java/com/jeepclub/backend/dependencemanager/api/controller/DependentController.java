@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -49,9 +50,9 @@ public class DependentController {
     )
     public ResponseEntity<DependentResponseDTO> create(
             @RequestBody @Valid CreateDependentRequestDTO request,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+
         
         Dependent dependent = createDependentService.create(
                 request.name(),
@@ -74,9 +75,8 @@ public class DependentController {
             description = "Retorna a lista de dependentes cadastrados pelo Sócio autenticado."
     )
     public ResponseEntity<List<DependentResponseDTO>> getMyDependents(
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         List<Dependent> list = getDependentService.getBySocioId(principal.getUserId(), principal.getUserId(), false);
         return ResponseEntity.ok(DependentResponseDTO.from(list));
     }
@@ -103,9 +103,8 @@ public class DependentController {
     public ResponseEntity<DependentResponseDTO> update(
             @PathVariable Long id,
             @RequestBody @Valid UpdateDependentRequestDTO request,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         
         Dependent dependent = updateDependentService.update(
                 id,
@@ -130,9 +129,8 @@ public class DependentController {
     )
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         deleteDependentService.delete(id, principal.getUserId(), false);
         return ResponseEntity.noContent().build();
     }
@@ -141,7 +139,9 @@ public class DependentController {
     // ENDPOINTS DO DIRETOR (ADMINISTRADOR)
     // ==========================================
 
+    // separa esses endpoints administrativos em um controller DependentsAdminController.
     @GetMapping("/socios/{socioId}/dependents")
+    // o padrão de tags permission é: 'nome_modulo'+'_'+'nome_classe'+'_'+'acao_realizada' ex: DEPENDENTS_DEPENDENT_READ
     @PreAuthorize("hasAuthority('AUTHENTICATION_USER_READ')")
     @RequiredPermission("AUTHENTICATION_USER_READ")
     @Operation(
@@ -149,8 +149,11 @@ public class DependentController {
             description = "Permite a um Diretor listar os dependentes de qualquer Sócio informando seu ID."
     )
     public ResponseEntity<List<DependentResponseDTO>> getDependentsBySocioId(
+            // sempre interessante que a DTO de listagem seja uma dto Sumary, ou seja, com dados resumidos, visto que mais pra frente
+            // vc fornece um endpoint de consulta por id, que lá vão ter todos os atributos visiveis do dependente.
             @Parameter(description = "ID do Sócio titular", required = true)
             @PathVariable Long socioId
+            // se o socio tiver 100 dependentes, o back vai servir tudo pro frontend? precisamos aplicar logica de @Pagable
     ) {
         List<Dependent> list = getDependentService.getBySocioId(socioId, null, true);
         return ResponseEntity.ok(DependentResponseDTO.from(list));

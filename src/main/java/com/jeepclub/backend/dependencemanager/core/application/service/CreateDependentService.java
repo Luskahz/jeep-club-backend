@@ -16,6 +16,7 @@ import java.time.LocalDate;
 public class CreateDependentService {
 
     private final DependentRepository dependentRepository;
+    // errado, vc n pode importar nada do authentication aqui, precisa resolver de outra forma, usando um port adapter.
     private final UserRepository userRepository;
 
     public CreateDependentService(
@@ -44,10 +45,15 @@ public class CreateDependentService {
 
         // 2. Normalizar e validar unicidade de CPF se fornecido
         String cleanCpf = null;
+        // essa validação é mesmo necessaria aqui? acho que consegue validar isso lá no DTO quando o cpf chega no backend
+        // digo a validação de not null e not blank
         if (cpf != null && !cpf.isBlank()) {
             cleanCpf = cpf.replaceAll("\\D", "");
             
             // Validar se CPF existe na tabela de Sócios
+            // vc n deveria ter chamado o user repository aqui, ele não pode ser importado entre modulos
+            // faça um port lá em dependents.core.port e um adapter lá no infra do authentication para implementar oque seu port precisa
+            // pesquise sobre como fazer
             if (userRepository.existsByCpf(cleanCpf)) {
                 throw new DependentException("Já existe um sócio cadastrado com este CPF.");
             }

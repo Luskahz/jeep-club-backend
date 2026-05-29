@@ -16,12 +16,15 @@ public class Dependent {
     private LocalDate birthDate;
     private RelationshipType relationshipType;
     private String phoneNumber;
+    // não, o medical profile vc n precisa se preocurar, tirar daqui essa logica, o kauan está fazendo.
     private MedicalProfile medicalProfile;
     private boolean consentAccepted;
     private Instant consentAcceptedAt;
     private Long socioId;
     private Instant createdAt;
     private Instant updatedAt;
+    // implementar logica de selfDelete criar campos status com ennum para active e deleted, criar deletedAt e implementar no fluxo
+    // deleted deve ser implementado via entoint.
 
     private Dependent(
             Long id,
