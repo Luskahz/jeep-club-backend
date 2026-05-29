@@ -16,6 +16,7 @@ import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPa
 import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentReceiptException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.refund.InvalidRefundPaymentException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
@@ -305,6 +306,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 "MEMBER_REFUND_ACCESS_DENIED",
                 exception.getMessage(),
                 HttpStatus.FORBIDDEN
+        );
+    }
+
+    @ExceptionHandler(InvalidRefundPaymentException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidRefundPayment(
+            InvalidRefundPaymentException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_REFUND_PAYMENT",
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST
         );
     }
 }

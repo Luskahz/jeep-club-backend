@@ -32,6 +32,25 @@ public class MemberRefundController {
 
     private final MemberRefundService memberRefundService;
 
+    @PostMapping("/billing/member-payments/{paymentId}/refund-request")
+    @Operation(
+            summary = "Solicitar reembolso de um pagamento",
+            description = "Permite que o usuário autenticado solicite reembolso de um pagamento próprio confirmado ou pendente de validação."
+    )
+    public ResponseEntity<MemberRefundResponse> requestByMemberPaymentId(
+            @PathVariable @Positive(message = "ID do pagamento deve ser maior que zero.") Long paymentId,
+            Authentication authentication
+    ) {
+        Long authenticatedUserId = extractUserId(authentication);
+
+        MemberRefundResult result = memberRefundService.requestByMemberPaymentId(
+                authenticatedUserId,
+                paymentId
+        );
+
+        return ResponseEntity.ok(MemberRefundResponse.from(result));
+    }
+
     @GetMapping("/billing/member-refunds")
     @PreAuthorize("hasAuthority('BILLING_REFUND_READ')")
     @Operation(
