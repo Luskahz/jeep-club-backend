@@ -1,5 +1,6 @@
 package com.jeepclub.backend.billing.core.application.service;
 
+import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
@@ -139,6 +140,11 @@ public class MemberRefundService {
 
         MemberRefund memberRefund = findMemberRefundOrThrow(refundId);
 
+        ensureRefundBelongsToUser(
+                memberRefund,
+                requestedByUserId
+        );
+
         memberRefund.request(
                 requestedByUserId,
                 Instant.now(clock)
@@ -245,5 +251,19 @@ public class MemberRefundService {
                 .orElseThrow(() -> new MemberRefundNotFoundException(
                         "Member refund not found."
                 ));
+    }
+
+    private static void ensureRefundBelongsToUser(
+            MemberRefund memberRefund,
+            Long userId
+    ) {
+        Objects.requireNonNull(memberRefund, "memberRefund cannot be null");
+        Objects.requireNonNull(userId, "userId cannot be null");
+
+        if (!memberRefund.getUserId().equals(userId)) {
+            throw new MemberRefundAccessDeniedException(
+                    "Member refund does not belong to authenticated user."
+            );
+        }
     }
 }
