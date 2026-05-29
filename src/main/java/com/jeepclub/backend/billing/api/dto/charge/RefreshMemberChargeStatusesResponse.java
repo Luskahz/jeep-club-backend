@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.api.dto.charge;
 
-import com.jeepclub.backend.billing.core.application.result.RefreshMemberChargeStatusesResult;
+import com.jeepclub.backend.billing.core.application.result.charge.RefreshMemberChargeStatusesResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.Objects;

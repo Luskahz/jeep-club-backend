@@ -1,9 +1,9 @@
 package com.jeepclub.backend.billing.api.dto.cycle;
 
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
-import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
+import com.jeepclub.backend.billing.core.domain.enums.cycle.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
-import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
+import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;

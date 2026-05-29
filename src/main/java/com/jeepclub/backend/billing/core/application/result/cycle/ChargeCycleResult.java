@@ -1,8 +1,8 @@
 package com.jeepclub.backend.billing.core.application.result.cycle;
 
-import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
+import com.jeepclub.backend.billing.core.domain.enums.cycle.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
-import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
+import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.model.ChargeCycle;
 
 import java.math.BigDecimal;

@@ -1,7 +1,7 @@
 package com.jeepclub.backend.billing.core.domain.model;
 
-import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
-import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
+import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
+import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.exception.charge.InvalidMemberChargeStateException;
 import lombok.AccessLevel;
 import lombok.Getter;

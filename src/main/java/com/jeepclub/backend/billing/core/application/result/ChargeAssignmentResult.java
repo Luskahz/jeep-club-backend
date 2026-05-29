@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.core.application.result;
 
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
+import com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType;
 import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.EventParticipantsChargeAssignment;

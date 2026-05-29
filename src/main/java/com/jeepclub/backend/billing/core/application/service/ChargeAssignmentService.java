@@ -6,7 +6,7 @@ import com.jeepclub.backend.billing.core.application.exception.assignment.Charge
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeDefinitionCannotChangeAssignmentsException;
 import com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
-import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
+import com.jeepclub.backend.billing.core.domain.enums.definition.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;

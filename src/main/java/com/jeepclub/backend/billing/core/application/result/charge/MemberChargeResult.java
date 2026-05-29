@@ -1,7 +1,7 @@
-package com.jeepclub.backend.billing.core.application.result;
+package com.jeepclub.backend.billing.core.application.result.charge;
 
-import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
-import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
+import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
+import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 
 import java.math.BigDecimal;

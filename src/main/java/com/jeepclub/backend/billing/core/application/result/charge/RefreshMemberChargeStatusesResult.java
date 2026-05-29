@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.core.application.result;
+package com.jeepclub.backend.billing.core.application.result.charge;
 
 public record RefreshMemberChargeStatusesResult(
         int processedCharges,

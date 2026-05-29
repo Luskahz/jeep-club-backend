@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.core.domain.model.assignment;
 
-import com.jeepclub.backend.billing.core.domain.enums.ChargeAudienceType;
+import com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
 import lombok.AccessLevel;

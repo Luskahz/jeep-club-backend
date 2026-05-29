@@ -8,7 +8,7 @@ import com.jeepclub.backend.billing.core.application.exception.refund.MemberPaym
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
-import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
+import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;

@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.core.domain.enums;
+package com.jeepclub.backend.billing.core.domain.enums.definition;
 
 public enum ChargeDefinitionStatus {
     ACTIVE,

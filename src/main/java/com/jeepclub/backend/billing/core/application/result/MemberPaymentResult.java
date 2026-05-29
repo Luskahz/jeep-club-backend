@@ -1,7 +1,7 @@
 package com.jeepclub.backend.billing.core.application.result;
 
-import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
-import com.jeepclub.backend.billing.core.domain.enums.PaymentMethod;
+import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
+import com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
 
 import java.math.BigDecimal;

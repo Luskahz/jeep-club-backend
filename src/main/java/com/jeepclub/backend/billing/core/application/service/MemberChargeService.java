@@ -2,9 +2,9 @@ package com.jeepclub.backend.billing.core.application.service;
 
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
-import com.jeepclub.backend.billing.core.application.result.MemberChargeResult;
-import com.jeepclub.backend.billing.core.application.result.RefreshMemberChargeStatusesResult;
-import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
+import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
+import com.jeepclub.backend.billing.core.application.result.charge.RefreshMemberChargeStatusesResult;
+import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.repository.MemberChargeRepository;
 import lombok.RequiredArgsConstructor;

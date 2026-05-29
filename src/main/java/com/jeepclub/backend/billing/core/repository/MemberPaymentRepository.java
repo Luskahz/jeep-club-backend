@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.core.repository;
 
-import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
+import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

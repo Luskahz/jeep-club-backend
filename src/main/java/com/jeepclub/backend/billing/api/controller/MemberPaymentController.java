@@ -6,7 +6,7 @@ import com.jeepclub.backend.billing.api.dto.payment.RejectMemberPaymentRequest;
 import com.jeepclub.backend.billing.api.dto.payment.SubmitMemberPaymentRequest;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.application.service.MemberPaymentService;
-import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
+import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;

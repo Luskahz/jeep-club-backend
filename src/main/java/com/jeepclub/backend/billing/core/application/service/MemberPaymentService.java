@@ -5,8 +5,8 @@ import com.jeepclub.backend.billing.core.application.exception.charge.MemberChar
 import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentAmountException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
-import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
-import com.jeepclub.backend.billing.core.domain.enums.PaymentMethod;
+import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
+import com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod;
 import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
