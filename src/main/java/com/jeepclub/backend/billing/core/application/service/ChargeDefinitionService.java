@@ -4,6 +4,7 @@ import com.jeepclub.backend.billing.core.application.exception.definition.Charge
 import com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
 import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
@@ -34,9 +35,13 @@ public class ChargeDefinitionService {
             String description,
             BigDecimal defaultAmount,
             ChargeRecurrenceType recurrenceType,
-            Boolean required
+            Boolean required,
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays
     ) {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
+        Objects.requireNonNull(paymentAcceptancePolicy, "paymentAcceptancePolicy cannot be null");
+
         String normalizedName = normalizeName(name);
 
         if (chargeDefinitionRepository.existsByName(normalizedName)) {
@@ -53,6 +58,8 @@ public class ChargeDefinitionService {
                 defaultAmount,
                 recurrenceType,
                 required,
+                paymentAcceptancePolicy,
+                latePaymentGraceDays,
                 now
         );
 
@@ -123,9 +130,12 @@ public class ChargeDefinitionService {
             String description,
             BigDecimal defaultAmount,
             ChargeRecurrenceType recurrenceType,
-            Boolean required
+            Boolean required,
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays
     ) {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
+        Objects.requireNonNull(paymentAcceptancePolicy, "paymentAcceptancePolicy cannot be null");
 
         ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
 
@@ -143,6 +153,8 @@ public class ChargeDefinitionService {
                 defaultAmount,
                 recurrenceType,
                 required,
+                paymentAcceptancePolicy,
+                latePaymentGraceDays,
                 Instant.now(clock)
         );
 

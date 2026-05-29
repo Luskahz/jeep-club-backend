@@ -1,10 +1,12 @@
 package com.jeepclub.backend.billing.api.dto.definition;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
@@ -53,6 +55,27 @@ public record ChargeDefinitionUpdateRequest(
                 example = "true",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
-        Boolean required
+        Boolean required,
+
+        @NotNull(message = "Política de aceitação de pagamento é obrigatória.")
+        @Schema(
+                description = "Define até quando cobranças geradas por esta definição aceitam pagamento.",
+                example = "AFTER_DUE_DATE",
+                allowableValues = {
+                        "UNTIL_DUE_DATE",
+                        "AFTER_DUE_DATE",
+                        "UNTIL_DAYS_AFTER_DUE_DATE"
+                },
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        PaymentAcceptancePolicy paymentAcceptancePolicy,
+
+        @Positive(message = "Dias de tolerância para pagamento atrasado deve ser maior que zero.")
+        @Schema(
+                description = "Quantidade de dias após o vencimento em que o pagamento ainda será aceito. Obrigatório somente para UNTIL_DAYS_AFTER_DUE_DATE.",
+                example = "15",
+                nullable = true
+        )
+        Integer latePaymentGraceDays
 ) {
 }

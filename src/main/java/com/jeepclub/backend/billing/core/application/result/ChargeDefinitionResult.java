@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.application.result;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 
 import java.math.BigDecimal;
@@ -15,6 +16,8 @@ public record ChargeDefinitionResult(
         BigDecimal defaultAmount,
         ChargeRecurrenceType recurrenceType,
         Boolean required,
+        PaymentAcceptancePolicy paymentAcceptancePolicy,
+        Integer latePaymentGraceDays,
         ChargeDefinitionStatus status,
         Instant createdAt,
         Instant updatedAt
@@ -30,6 +33,8 @@ public record ChargeDefinitionResult(
                 chargeDefinition.getDefaultAmount(),
                 chargeDefinition.getRecurrenceType(),
                 chargeDefinition.getRequired(),
+                chargeDefinition.getPaymentAcceptancePolicy(),
+                chargeDefinition.getLatePaymentGraceDays(),
                 chargeDefinition.getStatus(),
                 chargeDefinition.getCreatedAt(),
                 chargeDefinition.getUpdatedAt()

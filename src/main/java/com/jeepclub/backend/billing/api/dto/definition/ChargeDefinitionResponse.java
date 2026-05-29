@@ -3,6 +3,7 @@ package com.jeepclub.backend.billing.api.dto.definition;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeDefinitionStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -31,6 +32,12 @@ public record ChargeDefinitionResponse(
         @Schema(description = "Indica se a cobrança é obrigatória.", example = "true")
         Boolean required,
 
+        @Schema(description = "Política de aceitação de pagamento.", example = "AFTER_DUE_DATE")
+        PaymentAcceptancePolicy paymentAcceptancePolicy,
+
+        @Schema(description = "Dias de tolerância para pagamento após vencimento.", example = "15", nullable = true)
+        Integer latePaymentGraceDays,
+
         @Schema(description = "Status da definição de cobrança.", example = "ACTIVE")
         ChargeDefinitionStatus status,
 
@@ -51,6 +58,8 @@ public record ChargeDefinitionResponse(
                 result.defaultAmount(),
                 result.recurrenceType(),
                 result.required(),
+                result.paymentAcceptancePolicy(),
+                result.latePaymentGraceDays(),
                 result.status(),
                 result.createdAt(),
                 result.updatedAt()

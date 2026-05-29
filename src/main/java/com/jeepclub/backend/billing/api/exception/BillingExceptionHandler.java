@@ -30,6 +30,7 @@ import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedCha
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
+import com.jeepclub.backend.billing.core.domain.exception.refund.InvalidMemberRefundStateException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -363,6 +364,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "MEMBER_PAYMENT_ALREADY_REFUNDED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InvalidMemberRefundStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidMemberRefundState(
+            InvalidMemberRefundStateException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_MEMBER_REFUND_STATE",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );

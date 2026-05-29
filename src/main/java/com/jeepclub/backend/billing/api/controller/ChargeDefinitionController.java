@@ -11,13 +11,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 
 import java.net.URI;
 
@@ -47,7 +47,9 @@ public class ChargeDefinitionController {
                 request.description(),
                 request.defaultAmount(),
                 request.recurrenceType(),
-                request.required()
+                request.required(),
+                request.paymentAcceptancePolicy(),
+                request.latePaymentGraceDays()
         );
 
         return ResponseEntity
@@ -71,7 +73,9 @@ public class ChargeDefinitionController {
                 request.description(),
                 request.defaultAmount(),
                 request.recurrenceType(),
-                request.required()
+                request.required(),
+                request.paymentAcceptancePolicy(),
+                request.latePaymentGraceDays()
         );
 
         return ResponseEntity.ok(ChargeDefinitionResponse.from(result));
