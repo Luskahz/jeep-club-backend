@@ -5,9 +5,10 @@ import com.jeepclub.backend.billing.core.application.exception.definition.Charge
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
+import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
+import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
 import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +24,7 @@ import java.util.Objects;
 public class ChargeDefinitionService {
 
     private final ChargeDefinitionRepository chargeDefinitionRepository;
+    private final ChargeAssignmentRepository chargeAssignmentRepository;
     private final Clock clock;
 
     @Transactional
@@ -59,7 +61,7 @@ public class ChargeDefinitionService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ChargeDefinitionResult> findAll(Pageable pageable) {
+    public org.springframework.data.domain.Page<ChargeDefinitionResult> findAll(Pageable pageable) {
         Objects.requireNonNull(pageable, "pageable cannot be null");
 
         return chargeDefinitionRepository.findAll(pageable)
@@ -99,7 +101,14 @@ public class ChargeDefinitionService {
     public ChargeDefinitionResult archive(Long id) {
         ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
 
-        chargeDefinition.archive(Instant.now(clock));
+        Instant now = Instant.now(clock);
+
+        chargeDefinition.archive(now);
+
+        deactivateActiveAssignments(
+                chargeDefinition.getId(),
+                now
+        );
 
         ChargeDefinition savedChargeDefinition = chargeDefinitionRepository.save(chargeDefinition);
 
@@ -139,6 +148,22 @@ public class ChargeDefinitionService {
         ChargeDefinition savedChargeDefinition = chargeDefinitionRepository.save(chargeDefinition);
 
         return ChargeDefinitionResult.from(savedChargeDefinition);
+    }
+
+    private void deactivateActiveAssignments(
+            Long chargeDefinitionId,
+            Instant now
+    ) {
+        chargeAssignmentRepository.findByChargeDefinitionId(
+                        chargeDefinitionId,
+                        Pageable.unpaged()
+                )
+                .stream()
+                .filter(ChargeAssignment::isActive)
+                .forEach(chargeAssignment -> {
+                    chargeAssignment.deactivate(now);
+                    chargeAssignmentRepository.save(chargeAssignment);
+                });
     }
 
     private ChargeDefinition findChargeDefinitionOrThrow(Long id) {
