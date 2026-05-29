@@ -2,8 +2,10 @@ package com.jeepclub.backend.billing.api.controller;
 
 import com.jeepclub.backend.billing.api.dto.charge.MemberChargeResponse;
 import com.jeepclub.backend.billing.api.dto.charge.MemberChargeSummaryResponse;
+import com.jeepclub.backend.billing.api.dto.charge.RefreshMemberChargeStatusesResponse;
 import com.jeepclub.backend.billing.api.dto.charge.UpdateMemberChargeFinalAmountRequest;
 import com.jeepclub.backend.billing.core.application.result.MemberChargeResult;
+import com.jeepclub.backend.billing.core.application.result.RefreshMemberChargeStatusesResult;
 import com.jeepclub.backend.billing.core.application.service.MemberChargeService;
 import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
@@ -150,6 +152,18 @@ public class MemberChargeController {
         MemberChargeResult result = memberChargeService.expire(memberChargeId);
 
         return ResponseEntity.ok(MemberChargeResponse.from(result));
+    }
+
+    @PatchMapping("/billing/member-charges/refresh-statuses")
+    @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
+    @Operation(
+            summary = "Atualizar status das cobranças abertas",
+            description = "Processa cobranças pendentes e vencidas, marcando como OVERDUE ou EXPIRED conforme a política de aceitação de pagamento."
+    )
+    public ResponseEntity<RefreshMemberChargeStatusesResponse> refreshOpenChargeStatuses() {
+        RefreshMemberChargeStatusesResult result = memberChargeService.refreshOpenChargeStatuses();
+
+        return ResponseEntity.ok(RefreshMemberChargeStatusesResponse.from(result));
     }
 
     @PatchMapping("/billing/member-charges/{memberChargeId}/cancel")

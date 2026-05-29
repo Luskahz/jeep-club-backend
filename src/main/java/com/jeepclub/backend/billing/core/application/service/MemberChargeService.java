@@ -3,6 +3,7 @@ package com.jeepclub.backend.billing.core.application.service;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberChargeResult;
+import com.jeepclub.backend.billing.core.application.result.RefreshMemberChargeStatusesResult;
 import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.repository.MemberChargeRepository;
@@ -16,6 +17,8 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -145,6 +148,43 @@ public class MemberChargeService {
     }
 
     @Transactional
+    public RefreshMemberChargeStatusesResult refreshOpenChargeStatuses() {
+        LocalDate today = LocalDate.now(clock);
+        Instant now = Instant.now(clock);
+
+        List<MemberCharge> openCharges = findOpenChargesForStatusRefresh();
+
+        int markedOverdueCharges = 0;
+        int expiredCharges = 0;
+        int unchangedCharges = 0;
+
+        for (MemberCharge memberCharge : openCharges) {
+            if (memberCharge.shouldExpireAt(today)) {
+                memberCharge.expire(today, now);
+                memberChargeRepository.save(memberCharge);
+                expiredCharges++;
+                continue;
+            }
+
+            if (memberCharge.shouldBecomeOverdueAt(today)) {
+                memberCharge.markAsOverdue(today, now);
+                memberChargeRepository.save(memberCharge);
+                markedOverdueCharges++;
+                continue;
+            }
+
+            unchangedCharges++;
+        }
+
+        return new RefreshMemberChargeStatusesResult(
+                openCharges.size(),
+                markedOverdueCharges,
+                expiredCharges,
+                unchangedCharges
+        );
+    }
+
+    @Transactional
     public MemberChargeResult cancel(Long id) {
         MemberCharge memberCharge = findMemberChargeOrThrow(id);
 
@@ -153,6 +193,24 @@ public class MemberChargeService {
         MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
 
         return MemberChargeResult.from(savedMemberCharge);
+    }
+
+    private List<MemberCharge> findOpenChargesForStatusRefresh() {
+        List<MemberCharge> openCharges = new ArrayList<>();
+
+        openCharges.addAll(memberChargeRepository.findByStatus(
+                        MemberChargeStatus.PENDING,
+                        Pageable.unpaged()
+                )
+                .getContent());
+
+        openCharges.addAll(memberChargeRepository.findByStatus(
+                        MemberChargeStatus.OVERDUE,
+                        Pageable.unpaged()
+                )
+                .getContent());
+
+        return openCharges;
     }
 
     private MemberCharge findMemberChargeOrThrow(Long id) {
