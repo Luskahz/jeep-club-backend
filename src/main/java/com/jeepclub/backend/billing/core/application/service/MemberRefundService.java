@@ -1,5 +1,9 @@
 package com.jeepclub.backend.billing.core.application.service;
 
+import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
+import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.refund.InvalidRefundPaymentException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
@@ -84,6 +88,37 @@ public class MemberRefundService {
         }
 
         return createdRefunds;
+    }
+
+    @Transactional
+    public MemberRefundResult requestByMemberPaymentId(
+            Long authenticatedUserId,
+            Long memberPaymentId
+    ) {
+        Objects.requireNonNull(authenticatedUserId, "authenticatedUserId cannot be null");
+        Objects.requireNonNull(memberPaymentId, "memberPaymentId cannot be null");
+
+        MemberPayment memberPayment = findMemberPaymentOrThrow(memberPaymentId);
+
+        ensurePaymentCanBeRefunded(memberPayment);
+
+        MemberCharge memberCharge = findMemberChargeOrThrow(memberPayment.getMemberChargeId());
+
+        ensureChargeBelongsToUser(
+                memberCharge,
+                authenticatedUserId
+        );
+
+        return memberRefundRepository.findActiveByMemberPaymentId(memberPayment.getId())
+                .map(existingRefund -> requestExistingRefundIfEligible(
+                        existingRefund,
+                        authenticatedUserId
+                ))
+                .orElseGet(() -> createMemberRequestedRefund(
+                        memberCharge,
+                        memberPayment,
+                        authenticatedUserId
+                ));
     }
 
     @Transactional(readOnly = true)
@@ -244,6 +279,49 @@ public class MemberRefundService {
         return MemberRefundResult.from(savedMemberRefund);
     }
 
+    private MemberRefundResult requestExistingRefundIfEligible(
+            MemberRefund memberRefund,
+            Long requestedByUserId
+    ) {
+        ensureRefundBelongsToUser(
+                memberRefund,
+                requestedByUserId
+        );
+
+        if (!memberRefund.isEligible()) {
+            return MemberRefundResult.from(memberRefund);
+        }
+
+        memberRefund.request(
+                requestedByUserId,
+                Instant.now(clock)
+        );
+
+        MemberRefund savedMemberRefund = memberRefundRepository.save(memberRefund);
+
+        return MemberRefundResult.from(savedMemberRefund);
+    }
+
+    private MemberRefundResult createMemberRequestedRefund(
+            MemberCharge memberCharge,
+            MemberPayment memberPayment,
+            Long requestedByUserId
+    ) {
+        MemberRefund memberRefund = MemberRefund.createMemberRequest(
+                memberCharge.getId(),
+                memberPayment.getId(),
+                memberCharge.getChargeCycleId(),
+                memberCharge.getUserId(),
+                memberPayment.getAmount(),
+                requestedByUserId,
+                Instant.now(clock)
+        );
+
+        MemberRefund savedMemberRefund = memberRefundRepository.save(memberRefund);
+
+        return MemberRefundResult.from(savedMemberRefund);
+    }
+
     private MemberRefund findMemberRefundOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
 
@@ -251,6 +329,48 @@ public class MemberRefundService {
                 .orElseThrow(() -> new MemberRefundNotFoundException(
                         "Member refund not found."
                 ));
+    }
+
+    private MemberPayment findMemberPaymentOrThrow(Long id) {
+        Objects.requireNonNull(id, "id cannot be null");
+
+        return memberPaymentRepository.findById(id)
+                .orElseThrow(() -> new MemberPaymentNotFoundException(
+                        "Member payment not found."
+                ));
+    }
+
+    private MemberCharge findMemberChargeOrThrow(Long id) {
+        Objects.requireNonNull(id, "id cannot be null");
+
+        return memberChargeRepository.findById(id)
+                .orElseThrow(() -> new MemberChargeNotFoundException(
+                        "Member charge not found."
+                ));
+    }
+
+    private static void ensurePaymentCanBeRefunded(MemberPayment memberPayment) {
+        Objects.requireNonNull(memberPayment, "memberPayment cannot be null");
+
+        if (!memberPayment.isConfirmed() && !memberPayment.isPendingValidation()) {
+            throw new InvalidRefundPaymentException(
+                    "Only confirmed or pending validation payments can be refunded."
+            );
+        }
+    }
+
+    private static void ensureChargeBelongsToUser(
+            MemberCharge memberCharge,
+            Long userId
+    ) {
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+        Objects.requireNonNull(userId, "userId cannot be null");
+
+        if (!memberCharge.getUserId().equals(userId)) {
+            throw new MemberChargeAccessDeniedException(
+                    "Member charge does not belong to authenticated user."
+            );
+        }
     }
 
     private static void ensureRefundBelongsToUser(
