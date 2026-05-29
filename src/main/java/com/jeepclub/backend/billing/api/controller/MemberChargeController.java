@@ -52,7 +52,6 @@ public class MemberChargeController {
         return ResponseEntity.ok(results.map(MemberChargeSummaryResponse::from));
     }
 
-
     @GetMapping("/billing/member-charges/{memberChargeId}")
     @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_READ')")
     @Operation(
@@ -121,6 +120,34 @@ public class MemberChargeController {
                 memberChargeId,
                 request.finalAmount()
         );
+
+        return ResponseEntity.ok(MemberChargeResponse.from(result));
+    }
+
+    @PatchMapping("/billing/member-charges/{memberChargeId}/mark-overdue")
+    @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
+    @Operation(
+            summary = "Marcar cobrança como vencida",
+            description = "Marca uma cobrança pendente como vencida quando ela passou da data de vencimento e ainda aceita pagamento."
+    )
+    public ResponseEntity<MemberChargeResponse> markAsOverdue(
+            @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId
+    ) {
+        MemberChargeResult result = memberChargeService.markAsOverdue(memberChargeId);
+
+        return ResponseEntity.ok(MemberChargeResponse.from(result));
+    }
+
+    @PatchMapping("/billing/member-charges/{memberChargeId}/expire")
+    @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
+    @Operation(
+            summary = "Expirar cobrança",
+            description = "Expira uma cobrança aberta quando a janela de pagamento permitida já terminou."
+    )
+    public ResponseEntity<MemberChargeResponse> expire(
+            @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId
+    ) {
+        MemberChargeResult result = memberChargeService.expire(memberChargeId);
 
         return ResponseEntity.ok(MemberChargeResponse.from(result));
     }

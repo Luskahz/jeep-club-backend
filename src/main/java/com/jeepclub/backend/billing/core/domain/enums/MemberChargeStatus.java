@@ -4,5 +4,6 @@ public enum MemberChargeStatus {
     PENDING,
     PAID,
     OVERDUE,
+    EXPIRED,
     CANCELED
 }

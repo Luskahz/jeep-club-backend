@@ -221,6 +221,8 @@ public class ChargeCycleService {
                     chargeCycle.getId(),
                     chargeDefinition.getDefaultAmount(),
                     chargeCycle.getDueDate(),
+                    chargeCycle.getChargeDefinitionPaymentAcceptancePolicySnapshot(),
+                    chargeCycle.getChargeDefinitionLatePaymentGraceDaysSnapshot(),
                     now
             );
 

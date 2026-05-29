@@ -22,6 +22,7 @@ import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefu
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
+import com.jeepclub.backend.billing.core.domain.exception.charge.InvalidMemberChargeStateException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeArchivedException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeCanceledException;
@@ -375,6 +376,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "INVALID_MEMBER_REFUND_STATE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InvalidMemberChargeStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidMemberChargeState(
+            InvalidMemberChargeStateException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_MEMBER_CHARGE_STATE",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );

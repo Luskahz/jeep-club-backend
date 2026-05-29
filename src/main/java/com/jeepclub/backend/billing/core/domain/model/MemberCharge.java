@@ -1,6 +1,8 @@
 package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.MemberChargeStatus;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
+import com.jeepclub.backend.billing.core.domain.exception.charge.InvalidMemberChargeStateException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,11 +23,15 @@ public class MemberCharge {
     private BigDecimal originalAmount;
     private BigDecimal finalAmount;
     private LocalDate dueDate;
+    private PaymentAcceptancePolicy paymentAcceptancePolicy;
+    private Integer latePaymentGraceDays;
+    private LocalDate paymentAllowedUntil;
     private MemberChargeStatus status;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant paidAt;
     private Instant canceledAt;
+    private Instant expiredAt;
 
     private MemberCharge(
             Long id,
@@ -35,11 +41,15 @@ public class MemberCharge {
             BigDecimal originalAmount,
             BigDecimal finalAmount,
             LocalDate dueDate,
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays,
+            LocalDate paymentAllowedUntil,
             MemberChargeStatus status,
             Instant createdAt,
             Instant updatedAt,
             Instant paidAt,
-            Instant canceledAt
+            Instant canceledAt,
+            Instant expiredAt
     ) {
         this.id = id;
         this.userId = validateId(userId, "userId");
@@ -48,14 +58,32 @@ public class MemberCharge {
         this.originalAmount = validateAmount(originalAmount, "originalAmount");
         this.finalAmount = validateAmount(finalAmount, "finalAmount");
         this.dueDate = Objects.requireNonNull(dueDate, "dueDate cannot be null");
+        this.paymentAcceptancePolicy = Objects.requireNonNull(
+                paymentAcceptancePolicy,
+                "paymentAcceptancePolicy cannot be null"
+        );
+        this.latePaymentGraceDays = latePaymentGraceDays;
+        this.paymentAllowedUntil = paymentAllowedUntil;
         this.status = Objects.requireNonNull(status, "status cannot be null");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
         this.paidAt = paidAt;
         this.canceledAt = canceledAt;
+        this.expiredAt = expiredAt;
 
         validateAmountConsistency(this.originalAmount, this.finalAmount);
-        validateStatusConsistency(this.status, this.paidAt, this.canceledAt);
+        validatePaymentAcceptancePolicyConsistency(
+                this.paymentAcceptancePolicy,
+                this.latePaymentGraceDays,
+                this.dueDate,
+                this.paymentAllowedUntil
+        );
+        validateStatusConsistency(
+                this.status,
+                this.paidAt,
+                this.canceledAt,
+                this.expiredAt
+        );
     }
 
     public static MemberCharge create(
@@ -64,9 +92,17 @@ public class MemberCharge {
             Long chargeCycleId,
             BigDecimal amount,
             LocalDate dueDate,
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays,
             Instant now
     ) {
         Objects.requireNonNull(now, "now cannot be null");
+
+        LocalDate paymentAllowedUntil = calculatePaymentAllowedUntil(
+                dueDate,
+                paymentAcceptancePolicy,
+                latePaymentGraceDays
+        );
 
         return new MemberCharge(
                 null,
@@ -76,8 +112,12 @@ public class MemberCharge {
                 amount,
                 amount,
                 dueDate,
+                paymentAcceptancePolicy,
+                latePaymentGraceDays,
+                paymentAllowedUntil,
                 MemberChargeStatus.PENDING,
                 now,
+                null,
                 null,
                 null,
                 null
@@ -92,11 +132,15 @@ public class MemberCharge {
             BigDecimal originalAmount,
             BigDecimal finalAmount,
             LocalDate dueDate,
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays,
+            LocalDate paymentAllowedUntil,
             MemberChargeStatus status,
             Instant createdAt,
             Instant updatedAt,
             Instant paidAt,
-            Instant canceledAt
+            Instant canceledAt,
+            Instant expiredAt
     ) {
         return new MemberCharge(
                 id,
@@ -106,11 +150,15 @@ public class MemberCharge {
                 originalAmount,
                 finalAmount,
                 dueDate,
+                paymentAcceptancePolicy,
+                latePaymentGraceDays,
+                paymentAllowedUntil,
                 status,
                 createdAt,
                 updatedAt,
                 paidAt,
-                canceledAt
+                canceledAt,
+                expiredAt
         );
     }
 
@@ -119,11 +167,15 @@ public class MemberCharge {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == MemberChargeStatus.PAID) {
-            throw new IllegalStateException("Member charge is already paid.");
+            throw new InvalidMemberChargeStateException("Member charge is already paid.");
         }
 
         if (status == MemberChargeStatus.CANCELED) {
-            throw new IllegalStateException("Canceled member charge cannot be paid.");
+            throw new InvalidMemberChargeStateException("Canceled member charge cannot be paid.");
+        }
+
+        if (status == MemberChargeStatus.EXPIRED) {
+            throw new InvalidMemberChargeStateException("Expired member charge cannot be paid.");
         }
 
         this.status = MemberChargeStatus.PAID;
@@ -131,18 +183,50 @@ public class MemberCharge {
         this.updatedAt = now;
     }
 
-    public void markAsOverdue(Instant now) {
+    public void markAsOverdue(
+            LocalDate today,
+            Instant now
+    ) {
+        Objects.requireNonNull(today, "today cannot be null");
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (status == MemberChargeStatus.PAID) {
-            throw new IllegalStateException("Paid member charge cannot be marked as overdue.");
+        if (status == MemberChargeStatus.OVERDUE) {
+            throw new InvalidMemberChargeStateException("Member charge is already overdue.");
         }
 
-        if (status == MemberChargeStatus.CANCELED) {
-            throw new IllegalStateException("Canceled member charge cannot be marked as overdue.");
+        if (status != MemberChargeStatus.PENDING) {
+            throw new InvalidMemberChargeStateException("Only pending member charges can be marked as overdue.");
+        }
+
+        if (!shouldBecomeOverdueAt(today)) {
+            throw new InvalidMemberChargeStateException("Member charge cannot be marked as overdue at the current date.");
         }
 
         this.status = MemberChargeStatus.OVERDUE;
+        this.updatedAt = now;
+    }
+
+    public void expire(
+            LocalDate today,
+            Instant now
+    ) {
+        Objects.requireNonNull(today, "today cannot be null");
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (status == MemberChargeStatus.EXPIRED) {
+            throw new InvalidMemberChargeStateException("Member charge is already expired.");
+        }
+
+        if (!isOpen()) {
+            throw new InvalidMemberChargeStateException("Only open member charges can expire.");
+        }
+
+        if (!shouldExpireAt(today)) {
+            throw new InvalidMemberChargeStateException("Member charge payment window has not expired yet.");
+        }
+
+        this.status = MemberChargeStatus.EXPIRED;
+        this.expiredAt = now;
         this.updatedAt = now;
     }
 
@@ -150,11 +234,15 @@ public class MemberCharge {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == MemberChargeStatus.PAID) {
-            throw new IllegalStateException("Paid member charge cannot be canceled.");
+            throw new InvalidMemberChargeStateException("Paid member charge cannot be canceled.");
         }
 
         if (status == MemberChargeStatus.CANCELED) {
-            throw new IllegalStateException("Member charge is already canceled.");
+            throw new InvalidMemberChargeStateException("Member charge is already canceled.");
+        }
+
+        if (status == MemberChargeStatus.EXPIRED) {
+            throw new InvalidMemberChargeStateException("Expired member charge cannot be canceled.");
         }
 
         this.status = MemberChargeStatus.CANCELED;
@@ -166,7 +254,7 @@ public class MemberCharge {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberChargeStatus.PENDING && status != MemberChargeStatus.OVERDUE) {
-            throw new IllegalStateException("Only pending or overdue member charges can have final amount updated.");
+            throw new InvalidMemberChargeStateException("Only pending or overdue member charges can have final amount updated.");
         }
 
         BigDecimal validatedFinalAmount = validateAmount(finalAmount, "finalAmount");
@@ -189,6 +277,10 @@ public class MemberCharge {
         return status == MemberChargeStatus.OVERDUE;
     }
 
+    public boolean isExpired() {
+        return status == MemberChargeStatus.EXPIRED;
+    }
+
     public boolean isCanceled() {
         return status == MemberChargeStatus.CANCELED;
     }
@@ -201,6 +293,87 @@ public class MemberCharge {
         Objects.requireNonNull(today, "today cannot be null");
 
         return isOpen() && today.isAfter(dueDate);
+    }
+
+    public boolean acceptsPaymentOn(LocalDate paymentDate) {
+        Objects.requireNonNull(paymentDate, "paymentDate cannot be null");
+
+        if (!isOpen()) {
+            return false;
+        }
+
+        if (paymentAllowedUntil == null) {
+            return true;
+        }
+
+        return !paymentDate.isAfter(paymentAllowedUntil);
+    }
+
+    public boolean shouldBecomeOverdueAt(LocalDate today) {
+        Objects.requireNonNull(today, "today cannot be null");
+
+        return isPending()
+                && today.isAfter(dueDate)
+                && acceptsPaymentOn(today);
+    }
+
+    public boolean shouldExpireAt(LocalDate today) {
+        Objects.requireNonNull(today, "today cannot be null");
+
+        return isOpen()
+                && paymentAllowedUntil != null
+                && today.isAfter(paymentAllowedUntil);
+    }
+
+    private static LocalDate calculatePaymentAllowedUntil(
+            LocalDate dueDate,
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays
+    ) {
+        Objects.requireNonNull(dueDate, "dueDate cannot be null");
+        Objects.requireNonNull(paymentAcceptancePolicy, "paymentAcceptancePolicy cannot be null");
+
+        return switch (paymentAcceptancePolicy) {
+            case UNTIL_DUE_DATE -> dueDate;
+            case AFTER_DUE_DATE -> null;
+            case UNTIL_DAYS_AFTER_DUE_DATE -> {
+                if (latePaymentGraceDays == null) {
+                    throw new IllegalArgumentException(
+                            "latePaymentGraceDays is required when paymentAcceptancePolicy is UNTIL_DAYS_AFTER_DUE_DATE."
+                    );
+                }
+
+                if (latePaymentGraceDays <= 0) {
+                    throw new IllegalArgumentException("latePaymentGraceDays must be greater than zero.");
+                }
+
+                yield dueDate.plusDays(latePaymentGraceDays);
+            }
+        };
+    }
+
+    private static void validatePaymentAcceptancePolicyConsistency(
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays,
+            LocalDate dueDate,
+            LocalDate paymentAllowedUntil
+    ) {
+        LocalDate expectedPaymentAllowedUntil = calculatePaymentAllowedUntil(
+                dueDate,
+                paymentAcceptancePolicy,
+                latePaymentGraceDays
+        );
+
+        if (!Objects.equals(expectedPaymentAllowedUntil, paymentAllowedUntil)) {
+            throw new IllegalArgumentException("paymentAllowedUntil is inconsistent with payment acceptance policy.");
+        }
+
+        if (paymentAcceptancePolicy != PaymentAcceptancePolicy.UNTIL_DAYS_AFTER_DUE_DATE
+                && latePaymentGraceDays != null) {
+            throw new IllegalArgumentException(
+                    "latePaymentGraceDays must be null when paymentAcceptancePolicy does not use a grace period."
+            );
+        }
     }
 
     private static Long validateId(Long id, String fieldName) {
@@ -235,7 +408,8 @@ public class MemberCharge {
     private static void validateStatusConsistency(
             MemberChargeStatus status,
             Instant paidAt,
-            Instant canceledAt
+            Instant canceledAt,
+            Instant expiredAt
     ) {
         if (status == MemberChargeStatus.PAID && paidAt == null) {
             throw new IllegalArgumentException("paidAt is required when member charge is paid.");
@@ -251,6 +425,14 @@ public class MemberCharge {
 
         if (status != MemberChargeStatus.CANCELED && canceledAt != null) {
             throw new IllegalArgumentException("canceledAt must be null when member charge is not canceled.");
+        }
+
+        if (status == MemberChargeStatus.EXPIRED && expiredAt == null) {
+            throw new IllegalArgumentException("expiredAt is required when member charge is expired.");
+        }
+
+        if (status != MemberChargeStatus.EXPIRED && expiredAt != null) {
+            throw new IllegalArgumentException("expiredAt must be null when member charge is not expired.");
         }
     }
 }

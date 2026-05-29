@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Objects;
 
 @Service
@@ -107,6 +108,34 @@ public class MemberChargeService {
 
         memberCharge.updateFinalAmount(
                 finalAmount,
+                Instant.now(clock)
+        );
+
+        MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
+
+        return MemberChargeResult.from(savedMemberCharge);
+    }
+
+    @Transactional
+    public MemberChargeResult markAsOverdue(Long id) {
+        MemberCharge memberCharge = findMemberChargeOrThrow(id);
+
+        memberCharge.markAsOverdue(
+                LocalDate.now(clock),
+                Instant.now(clock)
+        );
+
+        MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
+
+        return MemberChargeResult.from(savedMemberCharge);
+    }
+
+    @Transactional
+    public MemberChargeResult expire(Long id) {
+        MemberCharge memberCharge = findMemberChargeOrThrow(id);
+
+        memberCharge.expire(
+                LocalDate.now(clock),
                 Instant.now(clock)
         );
 
