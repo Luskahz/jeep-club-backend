@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.enums.PaymentMethod;
+import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -150,7 +151,9 @@ public class MemberPayment {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberPaymentStatus.PENDING_VALIDATION) {
-            throw new IllegalStateException("Only pending validation payments can be confirmed.");
+            throw new InvalidMemberPaymentStateException(
+                    "Only pending validation payments can be confirmed."
+            );
         }
 
         this.status = MemberPaymentStatus.CONFIRMED;
@@ -159,12 +162,18 @@ public class MemberPayment {
         this.updatedAt = now;
     }
 
-    public void reject(Long rejectedByUserId, String rejectionReason, Instant now) {
+    public void reject(
+            Long rejectedByUserId,
+            String rejectionReason,
+            Instant now
+    ) {
         validateId(rejectedByUserId, "rejectedByUserId");
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status != MemberPaymentStatus.PENDING_VALIDATION) {
-            throw new IllegalStateException("Only pending validation payments can be rejected.");
+            throw new InvalidMemberPaymentStateException(
+                    "Only pending validation payments can be rejected."
+            );
         }
 
         String normalizedReason = validateRequiredText(rejectionReason, "rejectionReason");
@@ -180,11 +189,11 @@ public class MemberPayment {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == MemberPaymentStatus.CONFIRMED) {
-            throw new IllegalStateException("Confirmed payment cannot be canceled.");
+            throw new InvalidMemberPaymentStateException("Confirmed payment cannot be canceled.");
         }
 
         if (status == MemberPaymentStatus.CANCELED) {
-            throw new IllegalStateException("Payment is already canceled.");
+            throw new InvalidMemberPaymentStateException("Payment is already canceled.");
         }
 
         this.status = MemberPaymentStatus.CANCELED;

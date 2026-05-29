@@ -7,6 +7,7 @@ import com.jeepclub.backend.billing.core.application.exception.payment.MemberPay
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.enums.PaymentMethod;
+import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
 import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Objects;
 
 @Service
@@ -47,6 +49,9 @@ public class MemberPaymentService {
         Objects.requireNonNull(authenticatedUserId, "authenticatedUserId cannot be null");
         Objects.requireNonNull(receiptFile, "receiptFile cannot be null");
 
+        LocalDate today = LocalDate.now(clock);
+        Instant now = Instant.now(clock);
+
         MemberCharge memberCharge = findMemberChargeOrThrow(memberChargeId);
 
         if (!memberCharge.getUserId().equals(authenticatedUserId)) {
@@ -55,9 +60,16 @@ public class MemberPaymentService {
             );
         }
 
-        if (!memberCharge.isOpen()) {
-            throw new IllegalStateException("Only open member charges can receive payment submissions.");
-        }
+        refreshChargeStatusIfNeeded(
+                memberCharge,
+                today,
+                now
+        );
+
+        ensureChargeCanReceivePayment(
+                memberCharge,
+                today
+        );
 
         if (amount.compareTo(memberCharge.getFinalAmount()) != 0) {
             throw new InvalidPaymentAmountException(
@@ -66,8 +78,6 @@ public class MemberPaymentService {
         }
 
         StoredPaymentReceipt storedReceipt = paymentReceiptStoragePort.store(receiptFile);
-
-        Instant now = Instant.now(clock);
 
         MemberPayment memberPayment = MemberPayment.submitForValidation(
                 memberCharge.getId(),
@@ -113,14 +123,19 @@ public class MemberPaymentService {
     ) {
         Objects.requireNonNull(confirmedByUserId, "confirmedByUserId cannot be null");
 
+        LocalDate today = LocalDate.now(clock);
+        Instant now = Instant.now(clock);
+
         MemberPayment memberPayment = findMemberPaymentOrThrow(paymentId);
         MemberCharge memberCharge = findMemberChargeOrThrow(memberPayment.getMemberChargeId());
 
-        if (!memberCharge.isOpen()) {
-            throw new IllegalStateException("Only open member charges can be paid.");
-        }
+        refreshChargeStatusIfNeeded(
+                memberCharge,
+                today,
+                now
+        );
 
-        Instant now = Instant.now(clock);
+        ensureChargeCanBeMarkedAsPaid(memberCharge);
 
         memberPayment.confirm(confirmedByUserId, now);
         memberCharge.markAsPaid(memberPayment.getPaidAt(), now);
@@ -150,6 +165,57 @@ public class MemberPaymentService {
         MemberPayment savedMemberPayment = memberPaymentRepository.save(memberPayment);
 
         return MemberPaymentResult.from(savedMemberPayment);
+    }
+
+    private void refreshChargeStatusIfNeeded(
+            MemberCharge memberCharge,
+            LocalDate today,
+            Instant now
+    ) {
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+        Objects.requireNonNull(today, "today cannot be null");
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (memberCharge.shouldExpireAt(today)) {
+            memberCharge.expire(today, now);
+            memberChargeRepository.save(memberCharge);
+            return;
+        }
+
+        if (memberCharge.shouldBecomeOverdueAt(today)) {
+            memberCharge.markAsOverdue(today, now);
+            memberChargeRepository.save(memberCharge);
+        }
+    }
+
+    private static void ensureChargeCanReceivePayment(
+            MemberCharge memberCharge,
+            LocalDate paymentSubmissionDate
+    ) {
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+        Objects.requireNonNull(paymentSubmissionDate, "paymentSubmissionDate cannot be null");
+
+        if (!memberCharge.isOpen()) {
+            throw new InvalidMemberPaymentStateException(
+                    "Only open member charges can receive payment submissions."
+            );
+        }
+
+        if (!memberCharge.acceptsPaymentOn(paymentSubmissionDate)) {
+            throw new InvalidMemberPaymentStateException(
+                    "Member charge does not accept payment submissions at the current date."
+            );
+        }
+    }
+
+    private static void ensureChargeCanBeMarkedAsPaid(MemberCharge memberCharge) {
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+
+        if (!memberCharge.isOpen()) {
+            throw new InvalidMemberPaymentStateException(
+                    "Only open member charges can be paid."
+            );
+        }
     }
 
     private MemberPayment findMemberPaymentOrThrow(Long id) {

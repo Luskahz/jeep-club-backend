@@ -31,6 +31,7 @@ import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedCha
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionAlreadyArchivedException;
+import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException;
 import com.jeepclub.backend.billing.core.domain.exception.refund.InvalidMemberRefundStateException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
@@ -387,6 +388,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "INVALID_MEMBER_CHARGE_STATE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InvalidMemberPaymentStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidMemberPaymentState(
+            InvalidMemberPaymentStateException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_MEMBER_PAYMENT_STATE",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );
