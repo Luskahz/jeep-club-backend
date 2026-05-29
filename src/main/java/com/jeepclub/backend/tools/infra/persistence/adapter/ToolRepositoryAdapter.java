@@ -1,5 +1,6 @@
 package com.jeepclub.backend.tools.infra.persistence.adapter;
 
+import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
 import com.jeepclub.backend.tools.infra.persistence.jpa.ToolJpaRepository;
@@ -20,8 +21,8 @@ public class ToolRepositoryAdapter implements ToolRepository {
 
     @Override
     public Page<Tool> findByUserId(Long userId, Pageable pageable) {
-        // O jpaRepository devolve um Page de Entidade (ToolEntity). O .map converte para o Domínio (Tool).
-        return jpaRepository.findByUserId(userId, pageable)
+        // Chamando o método NOVO com "AndStatusNot"
+        return jpaRepository.findByUserIdAndStatusNot(userId, ToolStatus.DELETED, pageable)
                 .map(mapper::toDomain);
     }
 

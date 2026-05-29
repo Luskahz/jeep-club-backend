@@ -6,7 +6,7 @@ package com.jeepclub.backend.tools.core.domain.enums;
 // esses status não estão semanticos, mude os nomes para nomes mais faceis, recomendação para manter o padrão do projeto:
 // Active, Inactive, Deleted, mantenha demais status apenas se tiver regra de negocio para os mesmos
 public enum ToolStatus {
-    AVAILABLE,
-    UNAVAILABLE,
-    MAINTENANCE
+    ACTIVE,    // Ferramenta pronta e disponível
+    INACTIVE,  // Ferramenta em manutenção/inativa
+    DELETED    // Ferramenta excluída (Soft Delete)
 }

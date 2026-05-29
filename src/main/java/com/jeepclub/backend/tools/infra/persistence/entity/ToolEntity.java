@@ -3,15 +3,16 @@ package com.jeepclub.backend.tools.infra.persistence.entity;
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "toolmanager_tools")
+@Table(name = "tools") // Ajuste o nome da tabela se for diferente no seu banco
 @Getter
 @Setter
-@NoArgsConstructor
 public class ToolEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -19,7 +20,7 @@ public class ToolEntity {
     @Column(nullable = false)
     private String name;
 
-    @Column(length = 1000)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -27,5 +28,16 @@ public class ToolEntity {
     private ToolStatus status;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId; // <- NOVA COLUNA
-   }
+    private Long userId;
+
+    // --- Campos de Auditoria (Datas) ---
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+}
