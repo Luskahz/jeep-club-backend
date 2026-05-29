@@ -8,20 +8,21 @@ import com.jeepclub.backend.billing.core.application.exception.cycle.InactiveCha
 import com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.result.cycle.GenerateChargeCycleResult;
-import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
-import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
+import com.jeepclub.backend.billing.core.domain.model.ChargeCycle;
+import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
+import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.ChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.EventParticipantsChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.RoleChargeAssignment;
 import com.jeepclub.backend.billing.core.domain.model.assignment.UserChargeAssignment;
-import com.jeepclub.backend.billing.core.domain.model.ChargeCycle;
-import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
-import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.port.BillingAuthorizationPort;
 import com.jeepclub.backend.billing.core.port.BillingEventPort;
 import com.jeepclub.backend.billing.core.port.BillingMembershipPort;
-import com.jeepclub.backend.billing.core.repository.*;
+import com.jeepclub.backend.billing.core.repository.ChargeAssignmentRepository;
+import com.jeepclub.backend.billing.core.repository.ChargeCycleRepository;
+import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;
+import com.jeepclub.backend.billing.core.repository.MemberChargeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,11 +45,11 @@ public class ChargeCycleService {
     private final ChargeDefinitionRepository chargeDefinitionRepository;
     private final ChargeAssignmentRepository chargeAssignmentRepository;
     private final MemberChargeRepository memberChargeRepository;
+    private final MemberRefundService memberRefundService;
     private final BillingMembershipPort billingMembershipPort;
     private final BillingAuthorizationPort billingAuthorizationPort;
     private final BillingEventPort billingEventPort;
     private final Clock clock;
-    private final MemberPaymentRepository memberPaymentRepository;
 
     @Transactional
     public GenerateChargeCycleResult generate(
@@ -72,6 +73,7 @@ public class ChargeCycleService {
                     "Charge cycle already exists for this charge definition."
             );
         }
+
         Set<Long> targetUserIds = resolveTargetUserIds(chargeDefinitionId);
 
         if (targetUserIds.isEmpty()) {
@@ -141,6 +143,12 @@ public class ChargeCycleService {
 
         ChargeCycle savedChargeCycle = chargeCycleRepository.save(chargeCycle);
 
+        memberRefundService.createEligibilityForCanceledCycle(
+                savedChargeCycle.getId(),
+                canceledByUserId,
+                now
+        );
+
         return ChargeCycleResult.from(savedChargeCycle);
     }
 
@@ -151,30 +159,11 @@ public class ChargeCycleService {
         List<MemberCharge> openMemberCharges = memberChargeRepository.findOpenByChargeCycleId(chargeCycleId);
 
         for (MemberCharge memberCharge : openMemberCharges) {
-            cancelPendingPaymentsForOpenCharge(memberCharge.getId(), now);
-
             memberCharge.cancel(now);
 
             memberChargeRepository.save(memberCharge);
         }
     }
-
-    private void cancelPendingPaymentsForOpenCharge(
-            Long memberChargeId,
-            Instant now
-    ) {
-        List<MemberPayment> pendingPayments = memberPaymentRepository.findByMemberChargeIdAndStatus(
-                memberChargeId,
-                MemberPaymentStatus.PENDING_VALIDATION
-        );
-
-        for (MemberPayment memberPayment : pendingPayments) {
-            memberPayment.cancel(now);
-            memberPaymentRepository.save(memberPayment);
-        }
-    }
-
-
 
     private int createMemberCharges(
             ChargeDefinition chargeDefinition,
@@ -289,5 +278,4 @@ public class ChargeCycleService {
 
         return code.trim();
     }
-
 }

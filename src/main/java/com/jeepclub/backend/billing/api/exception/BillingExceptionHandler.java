@@ -16,6 +16,7 @@ import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPa
 import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentReceiptException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
@@ -283,4 +284,16 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 HttpStatus.CONFLICT
         );
     }
+
+    @ExceptionHandler(MemberRefundNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberRefundNotFound(
+            MemberRefundNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_REFUND_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
 }
+
