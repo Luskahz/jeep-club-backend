@@ -30,7 +30,16 @@ public record ChargeCycleSummaryResponse(
         ChargeCycleStatus status,
 
         @Schema(description = "Data em que o ciclo foi gerado.")
-        Instant generatedAt
+        Instant generatedAt,
+
+        @Schema(description = "Data em que o ciclo foi cancelado.", nullable = true)
+        Instant canceledAt,
+
+        @Schema(description = "Data em que o ciclo foi finalizado.", nullable = true)
+        Instant finishedAt,
+
+        @Schema(description = "Data em que o ciclo foi arquivado.", nullable = true)
+        Instant archivedAt
 ) {
 
     public static ChargeCycleSummaryResponse from(ChargeCycleResult result) {
@@ -43,7 +52,10 @@ public record ChargeCycleSummaryResponse(
                 result.code(),
                 result.dueDate(),
                 result.status(),
-                result.generatedAt()
+                result.generatedAt(),
+                result.canceledAt(),
+                result.finishedAt(),
+                result.archivedAt()
         );
     }
 }

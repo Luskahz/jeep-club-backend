@@ -22,6 +22,9 @@ import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefu
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeArchivedException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeCanceledException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeFinishedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
@@ -317,6 +320,39 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
                 "INVALID_REFUND_PAYMENT",
                 exception.getMessage(),
                 HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleCannotBeCanceledException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleCannotBeCanceled(
+            ChargeCycleCannotBeCanceledException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_CANNOT_BE_CANCELED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleCannotBeFinishedException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleCannotBeFinished(
+            ChargeCycleCannotBeFinishedException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_CANNOT_BE_FINISHED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleCannotBeArchivedException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleCannotBeArchived(
+            ChargeCycleCannotBeArchivedException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_CANNOT_BE_ARCHIVED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }

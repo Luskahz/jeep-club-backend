@@ -55,6 +55,18 @@ public record ChargeCycleResponse(
         @Schema(description = "Usuário que cancelou o ciclo.", example = "1", nullable = true)
         Long canceledByUserId,
 
+        @Schema(description = "Data e hora em que o ciclo foi finalizado.", nullable = true)
+        Instant finishedAt,
+
+        @Schema(description = "Usuário que finalizou o ciclo.", example = "1", nullable = true)
+        Long finishedByUserId,
+
+        @Schema(description = "Data e hora em que o ciclo foi arquivado.", nullable = true)
+        Instant archivedAt,
+
+        @Schema(description = "Usuário que arquivou o ciclo.", example = "1", nullable = true)
+        Long archivedByUserId,
+
         @Schema(description = "Data de criação do registro.")
         Instant createdAt,
 
@@ -64,6 +76,7 @@ public record ChargeCycleResponse(
 
     public static ChargeCycleResponse from(ChargeCycleResult result) {
         Objects.requireNonNull(result, "result cannot be null");
+
         return new ChargeCycleResponse(
                 result.id(),
                 result.chargeDefinitionId(),
@@ -79,6 +92,10 @@ public record ChargeCycleResponse(
                 result.generatedAt(),
                 result.canceledAt(),
                 result.canceledByUserId(),
+                result.finishedAt(),
+                result.finishedByUserId(),
+                result.archivedAt(),
+                result.archivedByUserId(),
                 result.createdAt(),
                 result.updatedAt()
         );

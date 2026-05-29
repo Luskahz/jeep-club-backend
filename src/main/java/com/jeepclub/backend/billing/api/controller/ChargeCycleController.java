@@ -29,7 +29,7 @@ import java.net.URI;
 @Validated
 @Tag(
         name = "Billing - Charge Cycles",
-        description = "Endpoints administrativos para geração e consulta de ciclos de cobrança."
+        description = "Endpoints administrativos para geração, consulta e encerramento de ciclos de cobrança."
 )
 public class ChargeCycleController {
 
@@ -94,7 +94,7 @@ public class ChargeCycleController {
     @PreAuthorize("hasAuthority('BILLING_CHARGE_CYCLE_CANCEL')")
     @Operation(
             summary = "Cancelar ciclo de cobrança",
-            description = "Cancela um ciclo de cobrança, cancela cobranças abertas vinculadas e prepara cobranças pagas para elegibilidade de reembolso."
+            description = "Cancela um ciclo de cobrança gerado, cancela cobranças abertas vinculadas e prepara pagamentos elegíveis para reembolso."
     )
     public ResponseEntity<ChargeCycleResponse> cancel(
             @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId,
@@ -108,4 +108,39 @@ public class ChargeCycleController {
         return ResponseEntity.ok(ChargeCycleResponse.from(result));
     }
 
+    @PatchMapping("/billing/charge-cycles/{cycleId}/finish")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_CYCLE_FINISH')")
+    @Operation(
+            summary = "Finalizar ciclo de cobrança",
+            description = "Finaliza um ciclo de cobrança gerado sem cancelar cobranças, sem cancelar pagamentos e sem gerar reembolsos."
+    )
+    public ResponseEntity<ChargeCycleResponse> finish(
+            @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        ChargeCycleResult result = chargeCycleService.finish(
+                cycleId,
+                principal.getUserId()
+        );
+
+        return ResponseEntity.ok(ChargeCycleResponse.from(result));
+    }
+
+    @PatchMapping("/billing/charge-cycles/{cycleId}/archive")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_CYCLE_ARCHIVE')")
+    @Operation(
+            summary = "Arquivar ciclo de cobrança",
+            description = "Arquiva um ciclo finalizado ou cancelado para organização histórica, sem efeito financeiro."
+    )
+    public ResponseEntity<ChargeCycleResponse> archive(
+            @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        ChargeCycleResult result = chargeCycleService.archive(
+                cycleId,
+                principal.getUserId()
+        );
+
+        return ResponseEntity.ok(ChargeCycleResponse.from(result));
+    }
 }
