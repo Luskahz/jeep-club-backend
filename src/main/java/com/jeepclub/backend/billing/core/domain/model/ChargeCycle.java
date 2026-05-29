@@ -79,12 +79,7 @@ public class ChargeCycle {
                 "chargeDefinitionDefaultAmountSnapshot"
         );
         this.chargeDefinitionRecurrenceTypeSnapshot = Objects.requireNonNull(
-                chargeDefinitionRecurrenceDefinitionDescriptionSnapshot);
-        this.chargeDefinitionDefaultAmountSnapshot = validateAmount(
-                chargeDefinitionDefaultAmountSnapshot,
-                "chargeDefinitionDefaultAmountSnapshot"
-        );
-        this.chargeDefinitionRecTypeSnapshot,
+                chargeDefinitionRecurrenceTypeSnapshot,
                 "chargeDefinitionRecurrenceTypeSnapshot cannot be null"
         );
         this.chargeDefinitionRequiredSnapshot = Objects.requireNonNull(
