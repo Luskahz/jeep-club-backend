@@ -18,6 +18,7 @@ import com.jeepclub.backend.billing.core.application.exception.memberPayment.Mem
 import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeActivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeDeactivatedException;
 import com.jeepclub.backend.billing.core.domain.exception.definition.ArchivedChargeDefinitionCannotBeUpdatedException;
@@ -267,6 +268,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "INACTIVE_CHARGE_DEFINITION",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(ChargeCycleAlreadyCanceledException.class)
+    public ResponseEntity<ApiErrorResponse> handleChargeCycleAlreadyCanceled(
+            ChargeCycleAlreadyCanceledException exception
+    ) {
+        return buildErrorResponse(
+                "CHARGE_CYCLE_ALREADY_CANCELED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );

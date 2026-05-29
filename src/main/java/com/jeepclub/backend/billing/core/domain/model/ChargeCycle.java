@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -155,7 +156,7 @@ public class ChargeCycle {
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == ChargeCycleStatus.CANCELED) {
-            throw new IllegalStateException("Charge cycle is already canceled.");
+            throw new ChargeCycleAlreadyCanceledException();
         }
 
         this.status = ChargeCycleStatus.CANCELED;
