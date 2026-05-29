@@ -1,9 +1,9 @@
 package com.jeepclub.backend.billing.core.application.service;
 
-import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeAccessDeniedException;
-import com.jeepclub.backend.billing.core.application.exception.memberCharge.MemberChargeNotFoundException;
-import com.jeepclub.backend.billing.core.application.exception.memberPayment.InvalidPaymentAmountException;
-import com.jeepclub.backend.billing.core.application.exception.memberPayment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
+import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentAmountException;
+import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.enums.PaymentMethod;

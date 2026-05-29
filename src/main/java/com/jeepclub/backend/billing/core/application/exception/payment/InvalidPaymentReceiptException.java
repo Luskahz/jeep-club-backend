@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.core.application.exception.memberPayment;
+package com.jeepclub.backend.billing.core.application.exception.payment;
 
 public class InvalidPaymentReceiptException extends RuntimeException {
     public InvalidPaymentReceiptException(String message) {

@@ -1,7 +1,7 @@
 package com.jeepclub.backend.billing.core.application.service;
 
-import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionAlreadyExistsException;
-import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionAlreadyExistsException;
+import com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;

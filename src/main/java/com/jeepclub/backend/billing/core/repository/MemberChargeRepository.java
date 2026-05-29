@@ -37,6 +37,8 @@ public interface MemberChargeRepository {
             Pageable pageable
     );
 
+    List<MemberCharge> findByChargeCycleId(Long chargeCycleId);
+
     List<MemberCharge> findOpenByChargeCycleId(Long chargeCycleId);
 
     boolean existsByUserIdAndChargeCycleId(

@@ -1,11 +1,11 @@
 package com.jeepclub.backend.billing.core.application.service;
 
 
-import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleAlreadyExistsException;
-import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleNotFoundException;
-import com.jeepclub.backend.billing.core.application.exception.chargeCycle.ChargeCycleWithoutAssignmentsException;
-import com.jeepclub.backend.billing.core.application.exception.chargeCycle.InactiveChargeDefinitionException;
-import com.jeepclub.backend.billing.core.application.exception.chargeDefinition.ChargeDefinitionNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.cycle.ChargeCycleAlreadyExistsException;
+import com.jeepclub.backend.billing.core.application.exception.cycle.ChargeCycleNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.cycle.ChargeCycleWithoutAssignmentsException;
+import com.jeepclub.backend.billing.core.application.exception.cycle.InactiveChargeDefinitionException;
+import com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.result.cycle.GenerateChargeCycleResult;
 import com.jeepclub.backend.billing.core.domain.enums.MemberPaymentStatus;

@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.core.application.exception.chargeDefinition;
+package com.jeepclub.backend.billing.core.application.exception.definition;
 
 public class ChargeDefinitionAlreadyExistsException extends RuntimeException {
     public ChargeDefinitionAlreadyExistsException(String message) {
