@@ -33,4 +33,6 @@ public interface MemberRefundRepository {
     Optional<MemberRefund> findActiveByMemberPaymentId(Long memberPaymentId);
 
     boolean existsActiveByMemberPaymentId(Long memberPaymentId);
+
+    boolean existsRefundedByMemberPaymentId(Long memberPaymentId);
 }

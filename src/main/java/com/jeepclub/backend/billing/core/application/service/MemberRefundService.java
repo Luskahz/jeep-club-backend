@@ -4,6 +4,7 @@ import com.jeepclub.backend.billing.core.application.exception.charge.MemberChar
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.refund.InvalidRefundPaymentException;
+import com.jeepclub.backend.billing.core.application.exception.refund.MemberPaymentAlreadyRefundedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
@@ -70,6 +71,10 @@ public class MemberRefundService {
                     continue;
                 }
 
+                if (memberRefundRepository.existsRefundedByMemberPaymentId(memberPayment.getId())) {
+                    continue;
+                }
+
                 MemberRefund memberRefund = MemberRefund.createEligibilityForCanceledCycle(
                         memberCharge.getId(),
                         memberPayment.getId(),
@@ -108,6 +113,8 @@ public class MemberRefundService {
                 memberCharge,
                 authenticatedUserId
         );
+
+        ensurePaymentWasNotAlreadyRefunded(memberPayment.getId());
 
         return memberRefundRepository.findActiveByMemberPaymentId(memberPayment.getId())
                 .map(existingRefund -> requestExistingRefundIfEligible(
@@ -347,6 +354,16 @@ public class MemberRefundService {
                 .orElseThrow(() -> new MemberChargeNotFoundException(
                         "Member charge not found."
                 ));
+    }
+
+    private void ensurePaymentWasNotAlreadyRefunded(Long memberPaymentId) {
+        Objects.requireNonNull(memberPaymentId, "memberPaymentId cannot be null");
+
+        if (memberRefundRepository.existsRefundedByMemberPaymentId(memberPaymentId)) {
+            throw new MemberPaymentAlreadyRefundedException(
+                    "Payment has already been refunded."
+            );
+        }
     }
 
     private static void ensurePaymentCanBeRefunded(MemberPayment memberPayment) {

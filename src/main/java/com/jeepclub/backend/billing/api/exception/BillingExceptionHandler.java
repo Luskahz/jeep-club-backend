@@ -17,6 +17,7 @@ import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPa
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.refund.InvalidRefundPaymentException;
+import com.jeepclub.backend.billing.core.application.exception.refund.MemberPaymentAlreadyRefundedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
@@ -351,6 +352,17 @@ public class BillingExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "CHARGE_CYCLE_CANNOT_BE_ARCHIVED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MemberPaymentAlreadyRefundedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberPaymentAlreadyRefunded(
+            MemberPaymentAlreadyRefundedException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_PAYMENT_ALREADY_REFUNDED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );
