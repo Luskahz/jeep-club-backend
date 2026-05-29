@@ -17,7 +17,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -152,7 +151,7 @@ public class MemberChargeService {
         LocalDate today = LocalDate.now(clock);
         Instant now = Instant.now(clock);
 
-        List<MemberCharge> openCharges = findOpenChargesForStatusRefresh();
+        List<MemberCharge> openCharges = memberChargeRepository.findOpenForStatusRefresh();
 
         int markedOverdueCharges = 0;
         int expiredCharges = 0;
@@ -193,24 +192,6 @@ public class MemberChargeService {
         MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
 
         return MemberChargeResult.from(savedMemberCharge);
-    }
-
-    private List<MemberCharge> findOpenChargesForStatusRefresh() {
-        List<MemberCharge> openCharges = new ArrayList<>();
-
-        openCharges.addAll(memberChargeRepository.findByStatus(
-                        MemberChargeStatus.PENDING,
-                        Pageable.unpaged()
-                )
-                .getContent());
-
-        openCharges.addAll(memberChargeRepository.findByStatus(
-                        MemberChargeStatus.OVERDUE,
-                        Pageable.unpaged()
-                )
-                .getContent());
-
-        return openCharges;
     }
 
     private MemberCharge findMemberChargeOrThrow(Long id) {
