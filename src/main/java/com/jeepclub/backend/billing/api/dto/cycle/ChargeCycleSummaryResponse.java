@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.api.dto.cycle;
 
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -25,6 +26,12 @@ public record ChargeCycleSummaryResponse(
 
         @Schema(description = "Data de vencimento das cobranças do ciclo.", example = "2026-02-10")
         LocalDate dueDate,
+
+        @Schema(description = "Política de aceitação de pagamento no momento em que o ciclo foi gerado.", example = "AFTER_DUE_DATE")
+        PaymentAcceptancePolicy chargeDefinitionPaymentAcceptancePolicySnapshot,
+
+        @Schema(description = "Dias de tolerância para pagamento após vencimento no momento em que o ciclo foi gerado.", example = "15", nullable = true)
+        Integer chargeDefinitionLatePaymentGraceDaysSnapshot,
 
         @Schema(description = "Status do ciclo.", example = "GENERATED")
         ChargeCycleStatus status,
@@ -51,6 +58,8 @@ public record ChargeCycleSummaryResponse(
                 result.chargeDefinitionNameSnapshot(),
                 result.code(),
                 result.dueDate(),
+                result.chargeDefinitionPaymentAcceptancePolicySnapshot(),
+                result.chargeDefinitionLatePaymentGraceDaysSnapshot(),
                 result.status(),
                 result.generatedAt(),
                 result.canceledAt(),

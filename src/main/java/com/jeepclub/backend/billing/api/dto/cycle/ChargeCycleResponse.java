@@ -3,6 +3,7 @@ package com.jeepclub.backend.billing.api.dto.cycle;
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.math.BigDecimal;
@@ -33,6 +34,12 @@ public record ChargeCycleResponse(
 
         @Schema(description = "Obrigatoriedade da definição de cobrança no momento em que o ciclo foi gerado.", example = "true")
         Boolean chargeDefinitionRequiredSnapshot,
+
+        @Schema(description = "Política de aceitação de pagamento da definição no momento em que o ciclo foi gerado.", example = "AFTER_DUE_DATE")
+        PaymentAcceptancePolicy chargeDefinitionPaymentAcceptancePolicySnapshot,
+
+        @Schema(description = "Dias de tolerância para pagamento após vencimento no momento em que o ciclo foi gerado.", example = "15", nullable = true)
+        Integer chargeDefinitionLatePaymentGraceDaysSnapshot,
 
         @Schema(description = "Código do ciclo.", example = "2026")
         String code,
@@ -85,6 +92,8 @@ public record ChargeCycleResponse(
                 result.chargeDefinitionDefaultAmountSnapshot(),
                 result.chargeDefinitionRecurrenceTypeSnapshot(),
                 result.chargeDefinitionRequiredSnapshot(),
+                result.chargeDefinitionPaymentAcceptancePolicySnapshot(),
+                result.chargeDefinitionLatePaymentGraceDaysSnapshot(),
                 result.code(),
                 result.dueDate(),
                 result.status(),

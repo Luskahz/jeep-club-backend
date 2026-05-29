@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.application.result.cycle;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.model.ChargeCycle;
 
 import java.math.BigDecimal;
@@ -17,6 +18,8 @@ public record ChargeCycleResult(
         BigDecimal chargeDefinitionDefaultAmountSnapshot,
         ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
         Boolean chargeDefinitionRequiredSnapshot,
+        PaymentAcceptancePolicy chargeDefinitionPaymentAcceptancePolicySnapshot,
+        Integer chargeDefinitionLatePaymentGraceDaysSnapshot,
         String code,
         LocalDate dueDate,
         ChargeCycleStatus status,
@@ -43,6 +46,8 @@ public record ChargeCycleResult(
                 chargeCycle.getChargeDefinitionDefaultAmountSnapshot(),
                 chargeCycle.getChargeDefinitionRecurrenceTypeSnapshot(),
                 chargeCycle.getChargeDefinitionRequiredSnapshot(),
+                chargeCycle.getChargeDefinitionPaymentAcceptancePolicySnapshot(),
+                chargeCycle.getChargeDefinitionLatePaymentGraceDaysSnapshot(),
                 chargeCycle.getCode(),
                 chargeCycle.getDueDate(),
                 chargeCycle.getStatus(),

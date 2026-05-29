@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.core.domain.model;
 
 import com.jeepclub.backend.billing.core.domain.enums.ChargeCycleStatus;
 import com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType;
+import com.jeepclub.backend.billing.core.domain.enums.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlreadyCanceledException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeArchivedException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeCanceledException;
@@ -26,6 +27,8 @@ public class ChargeCycle {
     private BigDecimal chargeDefinitionDefaultAmountSnapshot;
     private ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot;
     private Boolean chargeDefinitionRequiredSnapshot;
+    private PaymentAcceptancePolicy chargeDefinitionPaymentAcceptancePolicySnapshot;
+    private Integer chargeDefinitionLatePaymentGraceDaysSnapshot;
     private String code;
     private LocalDate dueDate;
     private ChargeCycleStatus status;
@@ -48,6 +51,8 @@ public class ChargeCycle {
             BigDecimal chargeDefinitionDefaultAmountSnapshot,
             ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
             Boolean chargeDefinitionRequiredSnapshot,
+            PaymentAcceptancePolicy chargeDefinitionPaymentAcceptancePolicySnapshot,
+            Integer chargeDefinitionLatePaymentGraceDaysSnapshot,
             String code,
             LocalDate dueDate,
             ChargeCycleStatus status,
@@ -74,13 +79,23 @@ public class ChargeCycle {
                 "chargeDefinitionDefaultAmountSnapshot"
         );
         this.chargeDefinitionRecurrenceTypeSnapshot = Objects.requireNonNull(
-                chargeDefinitionRecurrenceTypeSnapshot,
+                chargeDefinitionRecurrenceDefinitionDescriptionSnapshot);
+        this.chargeDefinitionDefaultAmountSnapshot = validateAmount(
+                chargeDefinitionDefaultAmountSnapshot,
+                "chargeDefinitionDefaultAmountSnapshot"
+        );
+        this.chargeDefinitionRecTypeSnapshot,
                 "chargeDefinitionRecurrenceTypeSnapshot cannot be null"
         );
         this.chargeDefinitionRequiredSnapshot = Objects.requireNonNull(
                 chargeDefinitionRequiredSnapshot,
                 "chargeDefinitionRequiredSnapshot cannot be null"
         );
+        this.chargeDefinitionPaymentAcceptancePolicySnapshot = Objects.requireNonNull(
+                chargeDefinitionPaymentAcceptancePolicySnapshot,
+                "chargeDefinitionPaymentAcceptancePolicySnapshot cannot be null"
+        );
+        this.chargeDefinitionLatePaymentGraceDaysSnapshot = chargeDefinitionLatePaymentGraceDaysSnapshot;
         this.code = validateCode(code);
         this.dueDate = Objects.requireNonNull(dueDate, "dueDate cannot be null");
         this.status = Objects.requireNonNull(status, "status cannot be null");
@@ -94,6 +109,11 @@ public class ChargeCycle {
         this.archivedByUserId = archivedByUserId;
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
+
+        validatePaymentAcceptancePolicyConsistency(
+                this.chargeDefinitionPaymentAcceptancePolicySnapshot,
+                this.chargeDefinitionLatePaymentGraceDaysSnapshot
+        );
 
         validateStatusConsistency();
     }
@@ -116,6 +136,8 @@ public class ChargeCycle {
                 chargeDefinition.getDefaultAmount(),
                 chargeDefinition.getRecurrenceType(),
                 chargeDefinition.getRequired(),
+                chargeDefinition.getPaymentAcceptancePolicy(),
+                chargeDefinition.getLatePaymentGraceDays(),
                 code,
                 dueDate,
                 ChargeCycleStatus.GENERATED,
@@ -140,6 +162,8 @@ public class ChargeCycle {
             BigDecimal chargeDefinitionDefaultAmountSnapshot,
             ChargeRecurrenceType chargeDefinitionRecurrenceTypeSnapshot,
             Boolean chargeDefinitionRequiredSnapshot,
+            PaymentAcceptancePolicy chargeDefinitionPaymentAcceptancePolicySnapshot,
+            Integer chargeDefinitionLatePaymentGraceDaysSnapshot,
             String code,
             LocalDate dueDate,
             ChargeCycleStatus status,
@@ -162,6 +186,8 @@ public class ChargeCycle {
                 chargeDefinitionDefaultAmountSnapshot,
                 chargeDefinitionRecurrenceTypeSnapshot,
                 chargeDefinitionRequiredSnapshot,
+                chargeDefinitionPaymentAcceptancePolicySnapshot,
+                chargeDefinitionLatePaymentGraceDaysSnapshot,
                 code,
                 dueDate,
                 status,
@@ -354,6 +380,33 @@ public class ChargeCycle {
 
     private boolean hasFinishData() {
         return finishedAt != null && finishedByUserId != null;
+    }
+
+    private static void validatePaymentAcceptancePolicyConsistency(
+            PaymentAcceptancePolicy paymentAcceptancePolicy,
+            Integer latePaymentGraceDays
+    ) {
+        Objects.requireNonNull(paymentAcceptancePolicy, "paymentAcceptancePolicy cannot be null");
+
+        if (paymentAcceptancePolicy == PaymentAcceptancePolicy.UNTIL_DAYS_AFTER_DUE_DATE) {
+            if (latePaymentGraceDays == null) {
+                throw new IllegalArgumentException(
+                        "latePaymentGraceDays is required when paymentAcceptancePolicy is UNTIL_DAYS_AFTER_DUE_DATE."
+                );
+            }
+
+            if (latePaymentGraceDays <= 0) {
+                throw new IllegalArgumentException("latePaymentGraceDays must be greater than zero.");
+            }
+
+            return;
+        }
+
+        if (latePaymentGraceDays != null) {
+            throw new IllegalArgumentException(
+                    "latePaymentGraceDays must be null when paymentAcceptancePolicy does not use a grace period."
+            );
+        }
     }
 
     private static void validateOptionalId(Long id, String fieldName) {
