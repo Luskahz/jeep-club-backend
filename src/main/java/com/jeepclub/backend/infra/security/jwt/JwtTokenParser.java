@@ -16,7 +16,6 @@ public class JwtTokenParser {
 
     private static final String TOKEN_TYPE_CLAIM = "typ";
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
-    // CORRIGIDO AQUI: De "SID" para "sid"
     private static final String SESSION_ID_CLAIM = "sid";
 
     private final JwtProperties jwtProperties;

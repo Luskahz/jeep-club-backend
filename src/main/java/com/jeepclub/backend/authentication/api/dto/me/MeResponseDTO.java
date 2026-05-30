@@ -1,9 +1,11 @@
 package com.jeepclub.backend.authentication.api.dto.me;
 
+import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.List;
+import java.util.Objects;
 
 @Schema(description = "Dados da sessão autenticada do usuário.")
 public record MeResponseDTO(
@@ -48,4 +50,26 @@ public record MeResponseDTO(
         )
         List<String> authorities
 ) {
+
+    public MeResponseDTO {
+        authorities = List.copyOf(
+                Objects.requireNonNull(authorities, "authorities cannot be null")
+        );
+    }
+
+    public static MeResponseDTO from(
+            MeResult result,
+            List<String> authorities
+    ) {
+        Objects.requireNonNull(result, "result cannot be null");
+        Objects.requireNonNull(authorities, "authorities cannot be null");
+
+        return new MeResponseDTO(
+                result.userId(),
+                result.sessionId(),
+                result.sessionActive(),
+                result.expiresInSeconds(),
+                authorities
+        );
+    }
 }
