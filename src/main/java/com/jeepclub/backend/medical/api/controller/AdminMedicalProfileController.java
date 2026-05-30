@@ -24,19 +24,20 @@ import java.util.List;
 @RestController
 @RequestMapping("/admin/medical-profiles")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+
 @Tag(name = "Admin Medical Profiles", description = "Rotas administrativas de perfil médico.")
 public class AdminMedicalProfileController {
 
     private final MedicalProfileService medicalProfileService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Lista perfis médicos de forma resumida para uso administrativo.")
     public ResponseEntity<List<MedicalProfileSummaryResponse>> listMedicalProfiles(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        var profiles = medicalProfileService
+        List<MedicalProfileSummaryResponse> profiles = medicalProfileService
                 .listMedicalProfiles(page, size)
                 .stream()
                 .map(MedicalProfileSummaryResponse::fromDomain)
@@ -46,6 +47,7 @@ public class AdminMedicalProfileController {
     }
 
     @GetMapping("/{profileId}")
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Busca um perfil médico pelo ID do próprio perfil médico.")
     public ResponseEntity<MedicalProfileResponse> getByProfileId(
             @PathVariable Long profileId
@@ -55,6 +57,7 @@ public class AdminMedicalProfileController {
     }
 
     @GetMapping("/users/{userId}")
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Busca o perfil médico de um usuário específico.")
     public ResponseEntity<MedicalProfileResponse> getUserMedicalProfile(
             @PathVariable Long userId
@@ -68,6 +71,7 @@ public class AdminMedicalProfileController {
     }
 
     @PutMapping("/users/{userId}")
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_UPDATE')")
     @Operation(summary = "Cria ou atualiza o perfil médico de um usuário específico.")
     public ResponseEntity<MedicalProfileResponse> upsertUserMedicalProfile(
             @PathVariable Long userId,
@@ -83,6 +87,7 @@ public class AdminMedicalProfileController {
     }
 
     @GetMapping("/dependents/{dependentId}")
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Busca o perfil médico de um dependente específico.")
     public ResponseEntity<MedicalProfileResponse> getDependentMedicalProfile(
             @PathVariable Long dependentId
@@ -96,6 +101,7 @@ public class AdminMedicalProfileController {
     }
 
     @PutMapping("/dependents/{dependentId}")
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_UPDATE')")
     @Operation(summary = "Cria ou atualiza o perfil médico de um dependente específico.")
     public ResponseEntity<MedicalProfileResponse> upsertDependentMedicalProfile(
             @PathVariable Long dependentId,
