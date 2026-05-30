@@ -1,6 +1,7 @@
 package com.jeepclub.backend.billing.api.exception;
 
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
+import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeCannotUpdateFinalAmountException;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.charge.InvalidMemberChargeStateException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
@@ -32,6 +33,17 @@ public class BillingMemberChargeExceptionHandler extends ApiExceptionHandler {
                 "MEMBER_CHARGE_ACCESS_DENIED",
                 exception.getMessage(),
                 HttpStatus.FORBIDDEN
+        );
+    }
+
+    @ExceptionHandler(MemberChargeCannotUpdateFinalAmountException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberChargeCannotUpdateFinalAmount(
+            MemberChargeCannotUpdateFinalAmountException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_CHARGE_CANNOT_UPDATE_FINAL_AMOUNT",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 

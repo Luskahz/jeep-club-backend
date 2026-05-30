@@ -1,12 +1,15 @@
 package com.jeepclub.backend.billing.core.application.service;
 
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
+import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeCannotUpdateFinalAmountException;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
 import com.jeepclub.backend.billing.core.application.result.charge.RefreshMemberChargeStatusesResult;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
+import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.repository.MemberChargeRepository;
+import com.jeepclub.backend.billing.core.repository.MemberPaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +28,7 @@ import java.util.Objects;
 public class MemberChargeService {
 
     private final MemberChargeRepository memberChargeRepository;
+    private final MemberPaymentRepository memberPaymentRepository;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -107,6 +111,8 @@ public class MemberChargeService {
             BigDecimal finalAmount
     ) {
         MemberCharge memberCharge = findMemberChargeOrThrow(id);
+
+        ensureMemberChargeHasNoPendingValidationPayments(memberCharge.getId());
 
         memberCharge.updateFinalAmount(
                 finalAmount,
@@ -192,6 +198,19 @@ public class MemberChargeService {
         MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
 
         return MemberChargeResult.from(savedMemberCharge);
+    }
+
+    private void ensureMemberChargeHasNoPendingValidationPayments(Long memberChargeId) {
+        Objects.requireNonNull(memberChargeId, "memberChargeId cannot be null");
+
+        if (memberPaymentRepository.existsByMemberChargeIdAndStatus(
+                memberChargeId,
+                MemberPaymentStatus.PENDING_VALIDATION
+        )) {
+            throw new MemberChargeCannotUpdateFinalAmountException(
+                    "Member charge final amount cannot be updated while there are pending validation payments."
+            );
+        }
     }
 
     private MemberCharge findMemberChargeOrThrow(Long id) {

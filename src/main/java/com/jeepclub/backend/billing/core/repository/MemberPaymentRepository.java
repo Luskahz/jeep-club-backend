@@ -36,4 +36,9 @@ public interface MemberPaymentRepository {
             Long memberChargeId,
             Collection<MemberPaymentStatus> statuses
     );
+
+    boolean existsByMemberChargeIdAndStatus(
+            Long memberChargeId,
+            MemberPaymentStatus status
+    );
 }

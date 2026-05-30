@@ -71,11 +71,10 @@ public class MemberPaymentService {
                 today
         );
 
-        if (amount.compareTo(memberCharge.getFinalAmount()) != 0) {
-            throw new InvalidPaymentAmountException(
-                    "Payment amount must be equal to member charge final amount."
-            );
-        }
+        ensurePaymentAmountMatchesCharge(
+                amount,
+                memberCharge
+        );
 
         StoredPaymentReceipt storedReceipt = paymentReceiptStoragePort.store(receiptFile);
 
@@ -136,6 +135,11 @@ public class MemberPaymentService {
         );
 
         ensureChargeCanBeMarkedAsPaid(memberCharge);
+
+        ensurePaymentAmountStillMatchesCharge(
+                memberPayment,
+                memberCharge
+        );
 
         memberPayment.confirm(confirmedByUserId, now);
         memberCharge.markAsPaid(memberPayment.getPaidAt(), now);
@@ -214,6 +218,34 @@ public class MemberPaymentService {
         if (!memberCharge.isOpen()) {
             throw new InvalidMemberPaymentStateException(
                     "Only open member charges can be paid."
+            );
+        }
+    }
+
+    private static void ensurePaymentAmountMatchesCharge(
+            BigDecimal amount,
+            MemberCharge memberCharge
+    ) {
+        Objects.requireNonNull(amount, "amount cannot be null");
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+
+        if (amount.compareTo(memberCharge.getFinalAmount()) != 0) {
+            throw new InvalidPaymentAmountException(
+                    "Payment amount must be equal to member charge final amount."
+            );
+        }
+    }
+
+    private static void ensurePaymentAmountStillMatchesCharge(
+            MemberPayment memberPayment,
+            MemberCharge memberCharge
+    ) {
+        Objects.requireNonNull(memberPayment, "memberPayment cannot be null");
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+
+        if (memberPayment.getAmount().compareTo(memberCharge.getFinalAmount()) != 0) {
+            throw new InvalidMemberPaymentStateException(
+                    "Payment amount no longer matches member charge final amount."
             );
         }
     }
