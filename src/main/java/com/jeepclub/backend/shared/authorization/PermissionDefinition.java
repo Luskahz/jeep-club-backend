@@ -122,6 +122,18 @@ public enum PermissionDefinition {
             PermissionCode.AUTHORIZATION_USER_ROLE_REVOKE,
             ModuleCode.AUTHORIZATION,
             "Permite remover papéis de usuários"
+    ),
+
+    HEALTH_MEDICAL_PROFILE_UPDATE(
+            PermissionCode.HEALTH_MEDICAL_PROFILE_UPDATE,
+            ModuleCode.HEALTH,
+            "Permite atualizar o perfil médico"
+    ),
+
+    HEALTH_MEDICAL_PROFILE_READ(
+            PermissionCode.HEALTH_MEDICAL_PROFILE_READ,
+            ModuleCode.HEALTH,
+            "Permite consultar o perfil médico"
     );
 
     private final PermissionCode code;
