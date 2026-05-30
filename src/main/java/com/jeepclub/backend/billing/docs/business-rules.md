@@ -518,7 +518,7 @@ A infraestrutura deve implementar esses contratos com lock real no banco de dado
 Exemplo esperado em JPA:
 
 ```java
-@Lock(LockModeType.PESSIMISTIC_WRITE)
+// @Lock(LockModeType.PESSIMISTIC_WRITE)
 ```
 
 ## Regra 52 — Erros de arquivo devem virar erro de aplicação

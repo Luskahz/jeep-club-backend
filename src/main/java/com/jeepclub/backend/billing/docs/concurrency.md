@@ -549,7 +549,7 @@ O adapter JPA deve garantir que `findByIdForUpdate` realmente aplique lock no ba
 Exemplo:
 
 ```java id="x6dwnu"
-@Lock(LockModeType.PESSIMISTIC_WRITE)
+// @Lock(LockModeType.PESSIMISTIC_WRITE)
 ```
 
 ## Transação obrigatória
@@ -559,10 +559,10 @@ Métodos que usam `findByIdForUpdate` devem executar dentro de transação.
 Exemplo:
 
 ```java id="t8f9wm"
-@Transactional
-public MemberPaymentResult confirm(...) {
-    ...
-}
+//@Transactional
+//public MemberPaymentResult confirm(...) {
+//    ...
+//}
 ```
 
 Sem transação, o lock pode não se comportar corretamente.
