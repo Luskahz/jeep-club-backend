@@ -5,7 +5,7 @@ import com.jeepclub.backend.medical.core.application.exceptions.DependentOwnersh
 import com.jeepclub.backend.medical.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.medical.core.application.exceptions.MedicalProfileAccessDeniedException;
 import com.jeepclub.backend.medical.core.application.exceptions.MedicalProfileNotFoundException;
-import com.jeepclub.backend.medical.core.application.ports.DependentOwnershipChecker;
+import com.jeepclub.backend.medical.core.ports.DependentOwnershipChecker;
 import com.jeepclub.backend.medical.core.domain.MedicalProfile;
 import com.jeepclub.backend.medical.core.domain.MedicalProfileOwnerType;
 import com.jeepclub.backend.medical.core.repository.MedicalProfileRepository;

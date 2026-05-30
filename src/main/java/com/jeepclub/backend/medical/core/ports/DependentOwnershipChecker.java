@@ -1,4 +1,4 @@
-package com.jeepclub.backend.medical.core.application.ports;
+package com.jeepclub.backend.medical.core.ports;
 
 public interface DependentOwnershipChecker {
 
