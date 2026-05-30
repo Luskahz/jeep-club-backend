@@ -2,10 +2,8 @@ package com.jeepclub.backend.billing.api.controller;
 
 import com.jeepclub.backend.billing.api.dto.charge.MemberChargeResponse;
 import com.jeepclub.backend.billing.api.dto.charge.MemberChargeSummaryResponse;
-import com.jeepclub.backend.billing.api.dto.charge.RefreshMemberChargeStatusesResponse;
 import com.jeepclub.backend.billing.api.dto.charge.UpdateMemberChargeFinalAmountRequest;
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
-import com.jeepclub.backend.billing.core.application.result.charge.RefreshMemberChargeStatusesResult;
 import com.jeepclub.backend.billing.core.application.service.MemberChargeService;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
@@ -38,7 +36,7 @@ public class MemberChargeController {
     @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_READ')")
     @Operation(
             summary = "Listar cobranças de membros",
-            description = "Lista cobranças de membros de forma paginada, com filtros opcionais por usuário e status."
+            description = "Lista cobranças de membros de forma paginada, com filtro opcional por usuário e status persistido."
     )
     public ResponseEntity<Page<MemberChargeSummaryResponse>> findAll(
             @RequestParam(required = false) @Positive(message = "ID do usuário deve ser maior que zero.") Long userId,
@@ -58,7 +56,7 @@ public class MemberChargeController {
     @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_READ')")
     @Operation(
             summary = "Buscar cobrança de membro por ID",
-            description = "Consulta os dados completos de uma cobrança de membro específica."
+            description = "Consulta os dados completos de uma cobrança de membro específica, incluindo o status calculado na data atual."
     )
     public ResponseEntity<MemberChargeResponse> findById(
             @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId
@@ -112,7 +110,7 @@ public class MemberChargeController {
     @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
     @Operation(
             summary = "Atualizar valor final da cobrança",
-            description = "Atualiza o valor final de uma cobrança aberta, permitindo ajuste administrativo."
+            description = "Atualiza o valor final de uma cobrança pendente, desde que não esteja expirada e não possua pagamento pendente de validação."
     )
     public ResponseEntity<MemberChargeResponse> updateFinalAmount(
             @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId,
@@ -126,51 +124,11 @@ public class MemberChargeController {
         return ResponseEntity.ok(MemberChargeResponse.from(result));
     }
 
-    @PatchMapping("/billing/member-charges/{memberChargeId}/mark-overdue")
-    @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
-    @Operation(
-            summary = "Marcar cobrança como vencida",
-            description = "Marca uma cobrança pendente como vencida quando ela passou da data de vencimento e ainda aceita pagamento."
-    )
-    public ResponseEntity<MemberChargeResponse> markAsOverdue(
-            @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId
-    ) {
-        MemberChargeResult result = memberChargeService.markAsOverdue(memberChargeId);
-
-        return ResponseEntity.ok(MemberChargeResponse.from(result));
-    }
-
-    @PatchMapping("/billing/member-charges/{memberChargeId}/expire")
-    @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
-    @Operation(
-            summary = "Expirar cobrança",
-            description = "Expira uma cobrança aberta quando a janela de pagamento permitida já terminou."
-    )
-    public ResponseEntity<MemberChargeResponse> expire(
-            @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId
-    ) {
-        MemberChargeResult result = memberChargeService.expire(memberChargeId);
-
-        return ResponseEntity.ok(MemberChargeResponse.from(result));
-    }
-
-    @PatchMapping("/billing/member-charges/refresh-statuses")
-    @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_UPDATE')")
-    @Operation(
-            summary = "Atualizar status das cobranças abertas",
-            description = "Processa cobranças pendentes e vencidas, marcando como OVERDUE ou EXPIRED conforme a política de aceitação de pagamento."
-    )
-    public ResponseEntity<RefreshMemberChargeStatusesResponse> refreshOpenChargeStatuses() {
-        RefreshMemberChargeStatusesResult result = memberChargeService.refreshOpenChargeStatuses();
-
-        return ResponseEntity.ok(RefreshMemberChargeStatusesResponse.from(result));
-    }
-
     @PatchMapping("/billing/member-charges/{memberChargeId}/cancel")
     @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_CANCEL')")
     @Operation(
             summary = "Cancelar cobrança de membro",
-            description = "Cancela uma cobrança de membro aberta."
+            description = "Cancela uma cobrança de membro que ainda não foi paga."
     )
     public ResponseEntity<MemberChargeResponse> cancel(
             @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId

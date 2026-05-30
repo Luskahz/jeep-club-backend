@@ -1,5 +1,6 @@
 package com.jeepclub.backend.billing.core.application.result.charge;
 
+import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeEffectiveStatus;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
@@ -21,15 +22,19 @@ public record MemberChargeResult(
         Integer latePaymentGraceDays,
         LocalDate paymentAllowedUntil,
         MemberChargeStatus status,
+        MemberChargeEffectiveStatus effectiveStatus,
         Instant createdAt,
         Instant updatedAt,
         Instant paidAt,
-        Instant canceledAt,
-        Instant expiredAt
+        Instant canceledAt
 ) {
 
-    public static MemberChargeResult from(MemberCharge memberCharge) {
+    public static MemberChargeResult from(
+            MemberCharge memberCharge,
+            LocalDate referenceDate
+    ) {
         Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+        Objects.requireNonNull(referenceDate, "referenceDate cannot be null");
 
         return new MemberChargeResult(
                 memberCharge.getId(),
@@ -43,11 +48,11 @@ public record MemberChargeResult(
                 memberCharge.getLatePaymentGraceDays(),
                 memberCharge.getPaymentAllowedUntil(),
                 memberCharge.getStatus(),
+                memberCharge.effectiveStatusAt(referenceDate),
                 memberCharge.getCreatedAt(),
                 memberCharge.getUpdatedAt(),
                 memberCharge.getPaidAt(),
-                memberCharge.getCanceledAt(),
-                memberCharge.getExpiredAt()
+                memberCharge.getCanceledAt()
         );
     }
 }

@@ -41,8 +41,6 @@ public interface MemberChargeRepository {
 
     List<MemberCharge> findOpenByChargeCycleId(Long chargeCycleId);
 
-    List<MemberCharge> findOpenForStatusRefresh();
-
     boolean existsByUserIdAndChargeCycleId(
             Long userId,
             Long chargeCycleId

@@ -4,7 +4,6 @@ import com.jeepclub.backend.billing.core.application.exception.charge.MemberChar
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeCannotUpdateFinalAmountException;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
-import com.jeepclub.backend.billing.core.application.result.charge.RefreshMemberChargeStatusesResult;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
@@ -20,7 +19,6 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Objects;
 
 @Service
@@ -41,21 +39,21 @@ public class MemberChargeService {
 
         if (userId != null && status != null) {
             return memberChargeRepository.findByUserIdAndStatus(userId, status, pageable)
-                    .map(MemberChargeResult::from);
+                    .map(this::toResult);
         }
 
         if (userId != null) {
             return memberChargeRepository.findByUserId(userId, pageable)
-                    .map(MemberChargeResult::from);
+                    .map(this::toResult);
         }
 
         if (status != null) {
             return memberChargeRepository.findByStatus(status, pageable)
-                    .map(MemberChargeResult::from);
+                    .map(this::toResult);
         }
 
         return memberChargeRepository.findAll(pageable)
-                .map(MemberChargeResult::from);
+                .map(this::toResult);
     }
 
     @Transactional(readOnly = true)
@@ -73,18 +71,18 @@ public class MemberChargeService {
                             status,
                             pageable
                     )
-                    .map(MemberChargeResult::from);
+                    .map(this::toResult);
         }
 
         return memberChargeRepository.findByUserId(authenticatedUserId, pageable)
-                .map(MemberChargeResult::from);
+                .map(this::toResult);
     }
 
     @Transactional(readOnly = true)
     public MemberChargeResult findById(Long id) {
         MemberCharge memberCharge = findMemberChargeOrThrow(id);
 
-        return MemberChargeResult.from(memberCharge);
+        return toResult(memberCharge);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +100,7 @@ public class MemberChargeService {
             );
         }
 
-        return MemberChargeResult.from(memberCharge);
+        return toResult(memberCharge);
     }
 
     @Transactional
@@ -110,83 +108,22 @@ public class MemberChargeService {
             Long id,
             BigDecimal finalAmount
     ) {
+        LocalDate today = LocalDate.now(clock);
+        Instant now = Instant.now(clock);
+
         MemberCharge memberCharge = findMemberChargeOrThrow(id);
 
         ensureMemberChargeHasNoPendingValidationPayments(memberCharge.getId());
 
         memberCharge.updateFinalAmount(
                 finalAmount,
-                Instant.now(clock)
+                today,
+                now
         );
 
         MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
 
-        return MemberChargeResult.from(savedMemberCharge);
-    }
-
-    @Transactional
-    public MemberChargeResult markAsOverdue(Long id) {
-        MemberCharge memberCharge = findMemberChargeOrThrow(id);
-
-        memberCharge.markAsOverdue(
-                LocalDate.now(clock),
-                Instant.now(clock)
-        );
-
-        MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
-
-        return MemberChargeResult.from(savedMemberCharge);
-    }
-
-    @Transactional
-    public MemberChargeResult expire(Long id) {
-        MemberCharge memberCharge = findMemberChargeOrThrow(id);
-
-        memberCharge.expire(
-                LocalDate.now(clock),
-                Instant.now(clock)
-        );
-
-        MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
-
-        return MemberChargeResult.from(savedMemberCharge);
-    }
-
-    @Transactional
-    public RefreshMemberChargeStatusesResult refreshOpenChargeStatuses() {
-        LocalDate today = LocalDate.now(clock);
-        Instant now = Instant.now(clock);
-
-        List<MemberCharge> openCharges = memberChargeRepository.findOpenForStatusRefresh();
-
-        int markedOverdueCharges = 0;
-        int expiredCharges = 0;
-        int unchangedCharges = 0;
-
-        for (MemberCharge memberCharge : openCharges) {
-            if (memberCharge.shouldExpireAt(today)) {
-                memberCharge.expire(today, now);
-                memberChargeRepository.save(memberCharge);
-                expiredCharges++;
-                continue;
-            }
-
-            if (memberCharge.shouldBecomeOverdueAt(today)) {
-                memberCharge.markAsOverdue(today, now);
-                memberChargeRepository.save(memberCharge);
-                markedOverdueCharges++;
-                continue;
-            }
-
-            unchangedCharges++;
-        }
-
-        return new RefreshMemberChargeStatusesResult(
-                openCharges.size(),
-                markedOverdueCharges,
-                expiredCharges,
-                unchangedCharges
-        );
+        return toResult(savedMemberCharge);
     }
 
     @Transactional
@@ -197,7 +134,7 @@ public class MemberChargeService {
 
         MemberCharge savedMemberCharge = memberChargeRepository.save(memberCharge);
 
-        return MemberChargeResult.from(savedMemberCharge);
+        return toResult(savedMemberCharge);
     }
 
     private void ensureMemberChargeHasNoPendingValidationPayments(Long memberChargeId) {
@@ -211,6 +148,13 @@ public class MemberChargeService {
                     "Member charge final amount cannot be updated while there are pending validation payments."
             );
         }
+    }
+
+    private MemberChargeResult toResult(MemberCharge memberCharge) {
+        return MemberChargeResult.from(
+                memberCharge,
+                LocalDate.now(clock)
+        );
     }
 
     private MemberCharge findMemberChargeOrThrow(Long id) {

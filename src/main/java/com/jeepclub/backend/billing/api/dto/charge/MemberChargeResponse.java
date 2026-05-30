@@ -1,6 +1,7 @@
 package com.jeepclub.backend.billing.api.dto.charge;
 
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
+import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeEffectiveStatus;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -43,8 +44,11 @@ public record MemberChargeResponse(
         @Schema(description = "Última data em que a cobrança aceita pagamento. Nulo significa sem limite definido.", example = "2026-02-25", nullable = true)
         LocalDate paymentAllowedUntil,
 
-        @Schema(description = "Status da cobrança.", example = "PENDING")
+        @Schema(description = "Status persistido da cobrança.", example = "PENDING")
         MemberChargeStatus status,
+
+        @Schema(description = "Status calculado da cobrança na data da consulta.", example = "OVERDUE")
+        MemberChargeEffectiveStatus effectiveStatus,
 
         @Schema(description = "Data de criação da cobrança.")
         Instant createdAt,
@@ -56,10 +60,7 @@ public record MemberChargeResponse(
         Instant paidAt,
 
         @Schema(description = "Data em que a cobrança foi cancelada.", nullable = true)
-        Instant canceledAt,
-
-        @Schema(description = "Data em que a cobrança expirou.", nullable = true)
-        Instant expiredAt
+        Instant canceledAt
 ) {
 
     public static MemberChargeResponse from(MemberChargeResult result) {
@@ -77,11 +78,11 @@ public record MemberChargeResponse(
                 result.latePaymentGraceDays(),
                 result.paymentAllowedUntil(),
                 result.status(),
+                result.effectiveStatus(),
                 result.createdAt(),
                 result.updatedAt(),
                 result.paidAt(),
-                result.canceledAt(),
-                result.expiredAt()
+                result.canceledAt()
         );
     }
 }

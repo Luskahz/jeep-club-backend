@@ -1,5 +1,6 @@
 package com.jeepclub.backend.billing.core.domain.model;
 
+import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeEffectiveStatus;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy;
 import com.jeepclub.backend.billing.core.domain.exception.charge.InvalidMemberChargeStateException;
@@ -31,7 +32,6 @@ public class MemberCharge {
     private Instant updatedAt;
     private Instant paidAt;
     private Instant canceledAt;
-    private Instant expiredAt;
 
     private MemberCharge(
             Long id,
@@ -48,8 +48,7 @@ public class MemberCharge {
             Instant createdAt,
             Instant updatedAt,
             Instant paidAt,
-            Instant canceledAt,
-            Instant expiredAt
+            Instant canceledAt
     ) {
         this.id = id;
         this.userId = validateId(userId, "userId");
@@ -69,7 +68,6 @@ public class MemberCharge {
         this.updatedAt = updatedAt;
         this.paidAt = paidAt;
         this.canceledAt = canceledAt;
-        this.expiredAt = expiredAt;
 
         validateAmountConsistency(this.originalAmount, this.finalAmount);
         validatePaymentAcceptancePolicyConsistency(
@@ -81,8 +79,7 @@ public class MemberCharge {
         validateStatusConsistency(
                 this.status,
                 this.paidAt,
-                this.canceledAt,
-                this.expiredAt
+                this.canceledAt
         );
     }
 
@@ -119,7 +116,6 @@ public class MemberCharge {
                 now,
                 null,
                 null,
-                null,
                 null
         );
     }
@@ -139,8 +135,7 @@ public class MemberCharge {
             Instant createdAt,
             Instant updatedAt,
             Instant paidAt,
-            Instant canceledAt,
-            Instant expiredAt
+            Instant canceledAt
     ) {
         return new MemberCharge(
                 id,
@@ -157,13 +152,17 @@ public class MemberCharge {
                 createdAt,
                 updatedAt,
                 paidAt,
-                canceledAt,
-                expiredAt
+                canceledAt
         );
     }
 
-    public void markAsPaid(Instant paidAt, Instant now) {
+    public void markAsPaid(
+            Instant paidAt,
+            LocalDate paymentDate,
+            Instant now
+    ) {
         Objects.requireNonNull(paidAt, "paidAt cannot be null");
+        Objects.requireNonNull(paymentDate, "paymentDate cannot be null");
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == MemberChargeStatus.PAID) {
@@ -174,59 +173,14 @@ public class MemberCharge {
             throw new InvalidMemberChargeStateException("Canceled member charge cannot be paid.");
         }
 
-        if (status == MemberChargeStatus.EXPIRED) {
-            throw new InvalidMemberChargeStateException("Expired member charge cannot be paid.");
+        if (!acceptsPaymentOn(paymentDate)) {
+            throw new InvalidMemberChargeStateException(
+                    "Member charge does not accept payment at the current date."
+            );
         }
 
         this.status = MemberChargeStatus.PAID;
         this.paidAt = paidAt;
-        this.updatedAt = now;
-    }
-
-    public void markAsOverdue(
-            LocalDate today,
-            Instant now
-    ) {
-        Objects.requireNonNull(today, "today cannot be null");
-        Objects.requireNonNull(now, "now cannot be null");
-
-        if (status == MemberChargeStatus.OVERDUE) {
-            throw new InvalidMemberChargeStateException("Member charge is already overdue.");
-        }
-
-        if (status != MemberChargeStatus.PENDING) {
-            throw new InvalidMemberChargeStateException("Only pending member charges can be marked as overdue.");
-        }
-
-        if (!shouldBecomeOverdueAt(today)) {
-            throw new InvalidMemberChargeStateException("Member charge cannot be marked as overdue at the current date.");
-        }
-
-        this.status = MemberChargeStatus.OVERDUE;
-        this.updatedAt = now;
-    }
-
-    public void expire(
-            LocalDate today,
-            Instant now
-    ) {
-        Objects.requireNonNull(today, "today cannot be null");
-        Objects.requireNonNull(now, "now cannot be null");
-
-        if (status == MemberChargeStatus.EXPIRED) {
-            throw new InvalidMemberChargeStateException("Member charge is already expired.");
-        }
-
-        if (!isOpen()) {
-            throw new InvalidMemberChargeStateException("Only open member charges can expire.");
-        }
-
-        if (!shouldExpireAt(today)) {
-            throw new InvalidMemberChargeStateException("Member charge payment window has not expired yet.");
-        }
-
-        this.status = MemberChargeStatus.EXPIRED;
-        this.expiredAt = now;
         this.updatedAt = now;
     }
 
@@ -241,20 +195,29 @@ public class MemberCharge {
             throw new InvalidMemberChargeStateException("Member charge is already canceled.");
         }
 
-        if (status == MemberChargeStatus.EXPIRED) {
-            throw new InvalidMemberChargeStateException("Expired member charge cannot be canceled.");
-        }
-
         this.status = MemberChargeStatus.CANCELED;
         this.canceledAt = now;
         this.updatedAt = now;
     }
 
-    public void updateFinalAmount(BigDecimal finalAmount, Instant now) {
+    public void updateFinalAmount(
+            BigDecimal finalAmount,
+            LocalDate referenceDate,
+            Instant now
+    ) {
+        Objects.requireNonNull(referenceDate, "referenceDate cannot be null");
         Objects.requireNonNull(now, "now cannot be null");
 
-        if (status != MemberChargeStatus.PENDING && status != MemberChargeStatus.OVERDUE) {
-            throw new InvalidMemberChargeStateException("Only pending or overdue member charges can have final amount updated.");
+        if (status != MemberChargeStatus.PENDING) {
+            throw new InvalidMemberChargeStateException(
+                    "Only pending member charges can have final amount updated."
+            );
+        }
+
+        if (isExpiredAt(referenceDate)) {
+            throw new InvalidMemberChargeStateException(
+                    "Expired member charges cannot have final amount updated."
+            );
         }
 
         BigDecimal validatedFinalAmount = validateAmount(finalAmount, "finalAmount");
@@ -273,20 +236,12 @@ public class MemberCharge {
         return status == MemberChargeStatus.PENDING;
     }
 
-    public boolean isOverdue() {
-        return status == MemberChargeStatus.OVERDUE;
-    }
-
-    public boolean isExpired() {
-        return status == MemberChargeStatus.EXPIRED;
-    }
-
     public boolean isCanceled() {
         return status == MemberChargeStatus.CANCELED;
     }
 
     public boolean isOpen() {
-        return status == MemberChargeStatus.PENDING || status == MemberChargeStatus.OVERDUE;
+        return status == MemberChargeStatus.PENDING;
     }
 
     public boolean isDue(LocalDate today) {
@@ -298,31 +253,45 @@ public class MemberCharge {
     public boolean acceptsPaymentOn(LocalDate paymentDate) {
         Objects.requireNonNull(paymentDate, "paymentDate cannot be null");
 
-        if (!isOpen()) {
-            return false;
-        }
-
-        if (paymentAllowedUntil == null) {
-            return true;
-        }
-
-        return !paymentDate.isAfter(paymentAllowedUntil);
+        return isOpen() && !isExpiredAt(paymentDate);
     }
 
-    public boolean shouldBecomeOverdueAt(LocalDate today) {
+    public boolean isOverdueAt(LocalDate today) {
         Objects.requireNonNull(today, "today cannot be null");
 
-        return isPending()
+        return isOpen()
                 && today.isAfter(dueDate)
-                && acceptsPaymentOn(today);
+                && !isExpiredAt(today);
     }
 
-    public boolean shouldExpireAt(LocalDate today) {
+    public boolean isExpiredAt(LocalDate today) {
         Objects.requireNonNull(today, "today cannot be null");
 
         return isOpen()
                 && paymentAllowedUntil != null
                 && today.isAfter(paymentAllowedUntil);
+    }
+
+    public MemberChargeEffectiveStatus effectiveStatusAt(LocalDate today) {
+        Objects.requireNonNull(today, "today cannot be null");
+
+        if (isPaid()) {
+            return MemberChargeEffectiveStatus.PAID;
+        }
+
+        if (isCanceled()) {
+            return MemberChargeEffectiveStatus.CANCELED;
+        }
+
+        if (isExpiredAt(today)) {
+            return MemberChargeEffectiveStatus.EXPIRED;
+        }
+
+        if (isOverdueAt(today)) {
+            return MemberChargeEffectiveStatus.OVERDUE;
+        }
+
+        return MemberChargeEffectiveStatus.PENDING;
     }
 
     private static LocalDate calculatePaymentAllowedUntil(
@@ -408,8 +377,7 @@ public class MemberCharge {
     private static void validateStatusConsistency(
             MemberChargeStatus status,
             Instant paidAt,
-            Instant canceledAt,
-            Instant expiredAt
+            Instant canceledAt
     ) {
         if (status == MemberChargeStatus.PAID && paidAt == null) {
             throw new IllegalArgumentException("paidAt is required when member charge is paid.");
@@ -425,14 +393,6 @@ public class MemberCharge {
 
         if (status != MemberChargeStatus.CANCELED && canceledAt != null) {
             throw new IllegalArgumentException("canceledAt must be null when member charge is not canceled.");
-        }
-
-        if (status == MemberChargeStatus.EXPIRED && expiredAt == null) {
-            throw new IllegalArgumentException("expiredAt is required when member charge is expired.");
-        }
-
-        if (status != MemberChargeStatus.EXPIRED && expiredAt != null) {
-            throw new IllegalArgumentException("expiredAt must be null when member charge is not expired.");
         }
     }
 }

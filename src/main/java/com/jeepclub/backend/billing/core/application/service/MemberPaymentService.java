@@ -60,12 +60,6 @@ public class MemberPaymentService {
             );
         }
 
-        refreshChargeStatusIfNeeded(
-                memberCharge,
-                today,
-                now
-        );
-
         ensureChargeCanReceivePayment(
                 memberCharge,
                 today
@@ -128,13 +122,10 @@ public class MemberPaymentService {
         MemberPayment memberPayment = findMemberPaymentOrThrow(paymentId);
         MemberCharge memberCharge = findMemberChargeOrThrow(memberPayment.getMemberChargeId());
 
-        refreshChargeStatusIfNeeded(
+        ensureChargeCanBeMarkedAsPaid(
                 memberCharge,
-                today,
-                now
+                today
         );
-
-        ensureChargeCanBeMarkedAsPaid(memberCharge);
 
         ensurePaymentAmountStillMatchesCharge(
                 memberPayment,
@@ -142,7 +133,11 @@ public class MemberPaymentService {
         );
 
         memberPayment.confirm(confirmedByUserId, now);
-        memberCharge.markAsPaid(memberPayment.getPaidAt(), now);
+        memberCharge.markAsPaid(
+                memberPayment.getPaidAt(),
+                today,
+                now
+        );
 
         memberChargeRepository.save(memberCharge);
         MemberPayment savedMemberPayment = memberPaymentRepository.save(memberPayment);
@@ -171,39 +166,12 @@ public class MemberPaymentService {
         return MemberPaymentResult.from(savedMemberPayment);
     }
 
-    private void refreshChargeStatusIfNeeded(
-            MemberCharge memberCharge,
-            LocalDate today,
-            Instant now
-    ) {
-        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
-        Objects.requireNonNull(today, "today cannot be null");
-        Objects.requireNonNull(now, "now cannot be null");
-
-        if (memberCharge.shouldExpireAt(today)) {
-            memberCharge.expire(today, now);
-            memberChargeRepository.save(memberCharge);
-            return;
-        }
-
-        if (memberCharge.shouldBecomeOverdueAt(today)) {
-            memberCharge.markAsOverdue(today, now);
-            memberChargeRepository.save(memberCharge);
-        }
-    }
-
     private static void ensureChargeCanReceivePayment(
             MemberCharge memberCharge,
             LocalDate paymentSubmissionDate
     ) {
         Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
         Objects.requireNonNull(paymentSubmissionDate, "paymentSubmissionDate cannot be null");
-
-        if (!memberCharge.isOpen()) {
-            throw new InvalidMemberPaymentStateException(
-                    "Only open member charges can receive payment submissions."
-            );
-        }
 
         if (!memberCharge.acceptsPaymentOn(paymentSubmissionDate)) {
             throw new InvalidMemberPaymentStateException(
@@ -212,12 +180,16 @@ public class MemberPaymentService {
         }
     }
 
-    private static void ensureChargeCanBeMarkedAsPaid(MemberCharge memberCharge) {
+    private static void ensureChargeCanBeMarkedAsPaid(
+            MemberCharge memberCharge,
+            LocalDate paymentConfirmationDate
+    ) {
         Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+        Objects.requireNonNull(paymentConfirmationDate, "paymentConfirmationDate cannot be null");
 
-        if (!memberCharge.isOpen()) {
+        if (!memberCharge.acceptsPaymentOn(paymentConfirmationDate)) {
             throw new InvalidMemberPaymentStateException(
-                    "Only open member charges can be paid."
+                    "Member charge cannot be paid at the current date."
             );
         }
     }
