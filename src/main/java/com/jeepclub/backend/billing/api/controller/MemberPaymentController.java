@@ -4,6 +4,8 @@ import com.jeepclub.backend.billing.api.dto.payment.MemberPaymentResponse;
 import com.jeepclub.backend.billing.api.dto.payment.MemberPaymentSummaryResponse;
 import com.jeepclub.backend.billing.api.dto.payment.RejectMemberPaymentRequest;
 import com.jeepclub.backend.billing.api.dto.payment.SubmitMemberPaymentRequest;
+import com.jeepclub.backend.billing.api.dto.payment.UpdateMemberPaymentRequest;
+import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentReceiptException;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.application.service.MemberPaymentService;
 import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
@@ -23,6 +25,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.net.URI;
@@ -32,7 +35,7 @@ import java.net.URI;
 @Validated
 @Tag(
         name = "Billing - Member Payments",
-        description = "Endpoints para envio, consulta e validação de pagamentos de membros."
+        description = "Endpoints para envio, atualização, consulta e validação de pagamentos de membros."
 )
 public class MemberPaymentController {
 
@@ -50,14 +53,10 @@ public class MemberPaymentController {
             @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId,
             @Valid @ModelAttribute SubmitMemberPaymentRequest request,
             Authentication authentication
-    ) throws IOException {
+    ) {
         Long authenticatedUserId = extractUserId(authentication);
 
-        PaymentReceiptFile receiptFile = new PaymentReceiptFile(
-                request.receiptFile().getOriginalFilename(),
-                request.receiptFile().getContentType(),
-                request.receiptFile().getBytes()
-        );
+        PaymentReceiptFile receiptFile = toPaymentReceiptFile(request.receiptFile());
 
         MemberPaymentResult result = memberPaymentService.submitForValidation(
                 authenticatedUserId,
@@ -72,6 +71,36 @@ public class MemberPaymentController {
         return ResponseEntity
                 .created(URI.create("/billing/member-payments/" + result.id()))
                 .body(MemberPaymentResponse.from(result));
+    }
+
+    @PutMapping(
+            value = "/billing/member-payments/{paymentId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Operation(
+            summary = "Atualizar comprovante de pagamento",
+            description = "Permite que o usuário autenticado atualize um pagamento próprio enquanto ele estiver pendente de validação ou rejeitado."
+    )
+    public ResponseEntity<MemberPaymentResponse> updateSubmission(
+            @PathVariable @Positive(message = "ID do pagamento deve ser maior que zero.") Long paymentId,
+            @Valid @ModelAttribute UpdateMemberPaymentRequest request,
+            Authentication authentication
+    ) {
+        Long authenticatedUserId = extractUserId(authentication);
+
+        PaymentReceiptFile receiptFile = toPaymentReceiptFile(request.receiptFile());
+
+        MemberPaymentResult result = memberPaymentService.updateSubmission(
+                authenticatedUserId,
+                paymentId,
+                request.amount(),
+                request.paymentMethod(),
+                request.paidAt(),
+                receiptFile,
+                request.notes()
+        );
+
+        return ResponseEntity.ok(MemberPaymentResponse.from(result));
     }
 
     @GetMapping("/billing/member-payments")
@@ -143,6 +172,22 @@ public class MemberPaymentController {
         );
 
         return ResponseEntity.ok(MemberPaymentResponse.from(result));
+    }
+
+    private PaymentReceiptFile toPaymentReceiptFile(MultipartFile multipartFile) {
+        if (multipartFile == null || multipartFile.isEmpty()) {
+            throw new InvalidPaymentReceiptException("Payment receipt file is required.");
+        }
+
+        try {
+            return new PaymentReceiptFile(
+                    multipartFile.getOriginalFilename(),
+                    multipartFile.getContentType(),
+                    multipartFile.getBytes()
+            );
+        } catch (IOException exception) {
+            throw new InvalidPaymentReceiptException("Could not read payment receipt file.");
+        }
     }
 
     private Long extractUserId(Authentication authentication) {

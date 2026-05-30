@@ -14,6 +14,8 @@ public interface MemberChargeRepository {
 
     Optional<MemberCharge> findById(Long id);
 
+    Optional<MemberCharge> findByIdForUpdate(Long id);
+
     Page<MemberCharge> findAll(Pageable pageable);
 
     Page<MemberCharge> findByStatus(

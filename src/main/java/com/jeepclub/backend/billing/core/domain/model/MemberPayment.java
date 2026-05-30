@@ -201,6 +201,43 @@ public class MemberPayment {
         this.updatedAt = now;
     }
 
+    public void updateSubmission(
+            BigDecimal amount,
+            PaymentMethod paymentMethod,
+            Instant paidAt,
+            String receiptStorageKey,
+            String receiptUrl,
+            String notes,
+            Instant now
+    ) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        if (status != MemberPaymentStatus.PENDING_VALIDATION
+                && status != MemberPaymentStatus.REJECTED) {
+            throw new InvalidMemberPaymentStateException(
+                    "Only pending validation or rejected payments can be updated."
+            );
+        }
+
+        this.amount = validateAmount(amount);
+        this.paymentMethod = Objects.requireNonNull(paymentMethod, "paymentMethod cannot be null");
+        this.paidAt = Objects.requireNonNull(paidAt, "paidAt cannot be null");
+        this.receiptStorageKey = validateRequiredText(receiptStorageKey, "receiptStorageKey");
+        this.receiptUrl = validateRequiredText(receiptUrl, "receiptUrl");
+        this.notes = normalizeNullableText(notes);
+
+        this.status = MemberPaymentStatus.PENDING_VALIDATION;
+
+        this.rejectedAt = null;
+        this.rejectedByUserId = null;
+        this.rejectionReason = null;
+
+        this.canceledAt = null;
+        this.updatedAt = now;
+
+        validateStatusConsistency();
+    }
+
     public boolean isPendingValidation() {
         return status == MemberPaymentStatus.PENDING_VALIDATION;
     }

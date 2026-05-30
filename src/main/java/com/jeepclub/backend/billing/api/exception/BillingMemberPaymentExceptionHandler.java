@@ -1,9 +1,6 @@
 package com.jeepclub.backend.billing.api.exception;
 
-import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentAmountException;
-import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentReceiptException;
-import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentAccessDeniedException;
-import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
+import com.jeepclub.backend.billing.core.application.exception.payment.*;
 import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberPaymentAlreadyRefundedException;
 import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
@@ -77,6 +74,17 @@ public class BillingMemberPaymentExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "INVALID_MEMBER_PAYMENT_STATE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MemberPaymentAlreadyExistsException.class)
+    public ResponseEntity<ApiErrorResponse> handleMemberPaymentAlreadyExists(
+            MemberPaymentAlreadyExistsException exception
+    ) {
+        return buildErrorResponse(
+                "MEMBER_PAYMENT_ALREADY_EXISTS",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );

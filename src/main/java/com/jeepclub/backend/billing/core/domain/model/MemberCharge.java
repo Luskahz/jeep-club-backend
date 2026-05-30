@@ -158,11 +158,9 @@ public class MemberCharge {
 
     public void markAsPaid(
             Instant paidAt,
-            LocalDate paymentDate,
             Instant now
     ) {
         Objects.requireNonNull(paidAt, "paidAt cannot be null");
-        Objects.requireNonNull(paymentDate, "paymentDate cannot be null");
         Objects.requireNonNull(now, "now cannot be null");
 
         if (status == MemberChargeStatus.PAID) {
@@ -171,12 +169,6 @@ public class MemberCharge {
 
         if (status == MemberChargeStatus.CANCELED) {
             throw new InvalidMemberChargeStateException("Canceled member charge cannot be paid.");
-        }
-
-        if (!acceptsPaymentOn(paymentDate)) {
-            throw new InvalidMemberChargeStateException(
-                    "Member charge does not accept payment at the current date."
-            );
         }
 
         this.status = MemberChargeStatus.PAID;

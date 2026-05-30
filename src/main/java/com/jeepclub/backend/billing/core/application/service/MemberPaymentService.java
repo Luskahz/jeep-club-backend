@@ -3,6 +3,7 @@ package com.jeepclub.backend.billing.core.application.service;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.charge.MemberChargeNotFoundException;
 import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentAmountException;
+import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentAlreadyExistsException;
 import com.jeepclub.backend.billing.core.application.exception.payment.MemberPaymentNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
@@ -25,11 +26,17 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class MemberPaymentService {
+
+    private static final List<MemberPaymentStatus> EDITABLE_PAYMENT_STATUSES = List.of(
+            MemberPaymentStatus.PENDING_VALIDATION,
+            MemberPaymentStatus.REJECTED
+    );
 
     private final MemberPaymentRepository memberPaymentRepository;
     private final MemberChargeRepository memberChargeRepository;
@@ -52,15 +59,16 @@ public class MemberPaymentService {
         LocalDate today = LocalDate.now(clock);
         Instant now = Instant.now(clock);
 
-        MemberCharge memberCharge = findMemberChargeOrThrow(memberChargeId);
+        MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(memberChargeId);
 
-        if (!memberCharge.getUserId().equals(authenticatedUserId)) {
-            throw new MemberChargeAccessDeniedException(
-                    "Member charge does not belong to authenticated user."
-            );
-        }
+        ensureChargeBelongsToAuthenticatedUser(
+                memberCharge,
+                authenticatedUserId
+        );
 
-        ensureChargeCanReceivePayment(
+        ensureNoEditablePaymentExistsForCharge(memberCharge.getId());
+
+        ensureChargeCanReceiveNewPaymentSubmission(
                 memberCharge,
                 today
         );
@@ -74,6 +82,61 @@ public class MemberPaymentService {
 
         MemberPayment memberPayment = MemberPayment.submitForValidation(
                 memberCharge.getId(),
+                amount,
+                paymentMethod,
+                paidAt,
+                storedReceipt.storageKey(),
+                storedReceipt.url(),
+                notes,
+                now
+        );
+
+        MemberPayment savedMemberPayment = memberPaymentRepository.save(memberPayment);
+
+        return MemberPaymentResult.from(savedMemberPayment);
+    }
+
+    @Transactional
+    public MemberPaymentResult updateSubmission(
+            Long authenticatedUserId,
+            Long paymentId,
+            BigDecimal amount,
+            PaymentMethod paymentMethod,
+            Instant paidAt,
+            PaymentReceiptFile receiptFile,
+            String notes
+    ) {
+        Objects.requireNonNull(authenticatedUserId, "authenticatedUserId cannot be null");
+        Objects.requireNonNull(receiptFile, "receiptFile cannot be null");
+
+        LocalDate today = LocalDate.now(clock);
+        Instant now = Instant.now(clock);
+
+        MemberPayment memberPayment = findMemberPaymentForUpdateOrThrow(paymentId);
+        MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(memberPayment.getMemberChargeId());
+
+        ensureChargeBelongsToAuthenticatedUser(
+                memberCharge,
+                authenticatedUserId
+        );
+
+        ensureChargeCanHavePaymentUpdated(memberCharge);
+
+        if (memberPayment.isRejected()) {
+            ensureChargeCanReceiveNewPaymentSubmission(
+                    memberCharge,
+                    today
+            );
+        }
+
+        ensurePaymentAmountMatchesCharge(
+                amount,
+                memberCharge
+        );
+
+        StoredPaymentReceipt storedReceipt = paymentReceiptStoragePort.store(receiptFile);
+
+        memberPayment.updateSubmission(
                 amount,
                 paymentMethod,
                 paidAt,
@@ -116,16 +179,12 @@ public class MemberPaymentService {
     ) {
         Objects.requireNonNull(confirmedByUserId, "confirmedByUserId cannot be null");
 
-        LocalDate today = LocalDate.now(clock);
         Instant now = Instant.now(clock);
 
-        MemberPayment memberPayment = findMemberPaymentOrThrow(paymentId);
-        MemberCharge memberCharge = findMemberChargeOrThrow(memberPayment.getMemberChargeId());
+        MemberPayment memberPayment = findMemberPaymentForUpdateOrThrow(paymentId);
+        MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(memberPayment.getMemberChargeId());
 
-        ensureChargeCanBeMarkedAsPaid(
-                memberCharge,
-                today
-        );
+        ensureChargeCanBeMarkedAsPaid(memberCharge);
 
         ensurePaymentAmountStillMatchesCharge(
                 memberPayment,
@@ -135,7 +194,6 @@ public class MemberPaymentService {
         memberPayment.confirm(confirmedByUserId, now);
         memberCharge.markAsPaid(
                 memberPayment.getPaidAt(),
-                today,
                 now
         );
 
@@ -153,7 +211,7 @@ public class MemberPaymentService {
     ) {
         Objects.requireNonNull(rejectedByUserId, "rejectedByUserId cannot be null");
 
-        MemberPayment memberPayment = findMemberPaymentOrThrow(paymentId);
+        MemberPayment memberPayment = findMemberPaymentForUpdateOrThrow(paymentId);
 
         memberPayment.reject(
                 rejectedByUserId,
@@ -166,7 +224,36 @@ public class MemberPaymentService {
         return MemberPaymentResult.from(savedMemberPayment);
     }
 
-    private static void ensureChargeCanReceivePayment(
+    private void ensureNoEditablePaymentExistsForCharge(Long memberChargeId) {
+        Objects.requireNonNull(memberChargeId, "memberChargeId cannot be null");
+
+        List<MemberPayment> existingPayments = memberPaymentRepository.findByMemberChargeIdAndStatusIn(
+                memberChargeId,
+                EDITABLE_PAYMENT_STATUSES
+        );
+
+        if (!existingPayments.isEmpty()) {
+            throw new MemberPaymentAlreadyExistsException(
+                    "Member charge already has an editable payment. Update the existing payment instead of creating a new one."
+            );
+        }
+    }
+
+    private static void ensureChargeBelongsToAuthenticatedUser(
+            MemberCharge memberCharge,
+            Long authenticatedUserId
+    ) {
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+        Objects.requireNonNull(authenticatedUserId, "authenticatedUserId cannot be null");
+
+        if (!memberCharge.getUserId().equals(authenticatedUserId)) {
+            throw new MemberChargeAccessDeniedException(
+                    "Member charge does not belong to authenticated user."
+            );
+        }
+    }
+
+    private static void ensureChargeCanReceiveNewPaymentSubmission(
             MemberCharge memberCharge,
             LocalDate paymentSubmissionDate
     ) {
@@ -180,16 +267,22 @@ public class MemberPaymentService {
         }
     }
 
-    private static void ensureChargeCanBeMarkedAsPaid(
-            MemberCharge memberCharge,
-            LocalDate paymentConfirmationDate
-    ) {
+    private static void ensureChargeCanHavePaymentUpdated(MemberCharge memberCharge) {
         Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
-        Objects.requireNonNull(paymentConfirmationDate, "paymentConfirmationDate cannot be null");
 
-        if (!memberCharge.acceptsPaymentOn(paymentConfirmationDate)) {
+        if (!memberCharge.isPending()) {
             throw new InvalidMemberPaymentStateException(
-                    "Member charge cannot be paid at the current date."
+                    "Only pending member charges can have payments updated."
+            );
+        }
+    }
+
+    private static void ensureChargeCanBeMarkedAsPaid(MemberCharge memberCharge) {
+        Objects.requireNonNull(memberCharge, "memberCharge cannot be null");
+
+        if (!memberCharge.isPending()) {
+            throw new InvalidMemberPaymentStateException(
+                    "Only pending member charges can be paid."
             );
         }
     }
@@ -231,10 +324,19 @@ public class MemberPaymentService {
                 ));
     }
 
-    private MemberCharge findMemberChargeOrThrow(Long id) {
+    private MemberPayment findMemberPaymentForUpdateOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
 
-        return memberChargeRepository.findById(id)
+        return memberPaymentRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new MemberPaymentNotFoundException(
+                        "Member payment not found."
+                ));
+    }
+
+    private MemberCharge findMemberChargeForUpdateOrThrow(Long id) {
+        Objects.requireNonNull(id, "id cannot be null");
+
+        return memberChargeRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new MemberChargeNotFoundException(
                         "Member charge not found."
                 ));
