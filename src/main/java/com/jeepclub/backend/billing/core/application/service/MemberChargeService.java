@@ -111,7 +111,7 @@ public class MemberChargeService {
         LocalDate today = LocalDate.now(clock);
         Instant now = Instant.now(clock);
 
-        MemberCharge memberCharge = findMemberChargeOrThrow(id);
+        MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(id);
 
         ensureMemberChargeHasNoPendingValidationPayments(memberCharge.getId());
 
@@ -128,7 +128,7 @@ public class MemberChargeService {
 
     @Transactional
     public MemberChargeResult cancel(Long id) {
-        MemberCharge memberCharge = findMemberChargeOrThrow(id);
+        MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(id);
 
         memberCharge.cancel(Instant.now(clock));
 
@@ -161,6 +161,15 @@ public class MemberChargeService {
         Objects.requireNonNull(id, "id cannot be null");
 
         return memberChargeRepository.findById(id)
+                .orElseThrow(() -> new MemberChargeNotFoundException(
+                        "Member charge not found."
+                ));
+    }
+
+    private MemberCharge findMemberChargeForUpdateOrThrow(Long id) {
+        Objects.requireNonNull(id, "id cannot be null");
+
+        return memberChargeRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new MemberChargeNotFoundException(
                         "Member charge not found."
                 ));
