@@ -1,13 +1,15 @@
-package com.jeepclub.backend.vehicles.core.repository;
+package com.jeepclub.backend.vehicles.infra.persistence.jpa;
 
-import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface VehicleRepository {
+
+public interface VechileJpaRepository extends JpaRepository<VehicleEntity, Long> {
+
+
 
     boolean existsByPlate(String plate);
 
@@ -15,8 +17,5 @@ public interface VehicleRepository {
 
     boolean existsById(Long id);
 
-    Vehicle save(Vehicle vehicle);
-
-    Optional<Vehicle> findByIdAndOwnerId(Long id, Long memberId);
+    Optional<VehicleEntity> findByIdAndOwnerId(Long id, Long ownerId);
 }
-
