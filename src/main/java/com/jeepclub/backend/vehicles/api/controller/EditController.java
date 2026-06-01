@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.edit.EditRequestDTO;
 import com.jeepclub.backend.vehicles.core.application.services.EditService;
@@ -8,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -29,17 +32,15 @@ public class EditController {
     public ResponseEntity<Void> editMemberVehicle(
             @PathVariable Long vehicleId,
             @RequestBody @Valid EditRequestDTO requestDTO,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        Long memberId = principal.getUserId();
-
-        editService.execute(vehicleId, memberId, requestDTO);
+        editService.execute(vehicleId, principal.getUserId(), requestDTO);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/admin/{vehicleId}")
-    // pre autorize boi
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_UPDATE')")
+    @RequiredPermission("VEHICLES_VEHICLE_UPDATE")
     @Operation(
             summary = "Editar qualquer veículo",
             description = "Atualiza os dados de qualquer veículo pelo ID"

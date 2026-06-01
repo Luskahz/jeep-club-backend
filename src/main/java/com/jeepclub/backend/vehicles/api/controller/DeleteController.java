@@ -1,13 +1,16 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
 
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.core.application.services.DeleteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,17 +36,16 @@ public class DeleteController {
     )
     public ResponseEntity<Void> deleteMemberVehicle(
             @PathVariable Long vehicleId,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        Long memberId = principal.getUserId();
+        deleteService.execute(vehicleId, principal.getUserId());
 
-        deleteService.execute(vehicleId, memberId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/admin/{vehicleId}")
-    // pre autorize
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_DELETE')")
+    @RequiredPermission("VEHICLES_VEHICLE_DELETE")
     @Operation(
             summary = "Deletar qualquer veículo",
             description = "Realiza soft delete de qualquer veículo pelo ID"

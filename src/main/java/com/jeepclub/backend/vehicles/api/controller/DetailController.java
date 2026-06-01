@@ -1,5 +1,7 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
+import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.detail.DetailResponseDTO;
 import com.jeepclub.backend.vehicles.core.application.services.DetailService;
@@ -7,7 +9,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,16 +37,14 @@ public class DetailController {
     )
     public ResponseEntity<DetailResponseDTO> detailMemberVehicle(
             @PathVariable Long vehicleId,
-            Authentication authentication
-    ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        Long memberId = principal.getUserId();
-
-        return ResponseEntity.ok(detailService.execute(vehicleId, memberId));
+            @AuthenticationPrincipal UserPrincipal principal
+            ) {
+        return ResponseEntity.ok(detailService.execute(vehicleId, principal.getUserId()));
     }
 
     @GetMapping("/admin/{vehicleId}")
-    // pre autorize
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_READ')")
+    @RequiredPermission("VEHICLES_VEHICLE_READ")
     @Operation(
             summary = "Detalhar qualquer veículo",
             description = "Retorna os detalhes de qualquer veículo pelo ID"

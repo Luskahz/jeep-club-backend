@@ -1,6 +1,8 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
 
+import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
 import com.jeepclub.backend.infra.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.include.IncludeRequestDTO;
 import com.jeepclub.backend.vehicles.core.application.services.IncludeService;
@@ -11,7 +13,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -33,12 +37,10 @@ public class IncludeController {
             description = "Cria um novo veiculo anexado a um membro"
     )
     public ResponseEntity<Void> includeVehicle(
-            Authentication authentication,
-            @RequestBody @Valid IncludeRequestDTO requestDTO
+            @RequestBody @Valid IncludeRequestDTO requestDTO,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
 
-        Long id = principal.getUserId();
 
         Vehicle vehicle = includeService.includeVehicle(
                 requestDTO.nickname(),
@@ -54,13 +56,15 @@ public class IncludeController {
                 requestDTO.fuelType(),
                 requestDTO.engineDisplacement(),
                 requestDTO.towing(),
-                id
+                principal.getUserId()
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @PostMapping("/include/admin/{memberId}")
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_INCLUDE')")
+    @RequiredPermission("VEHICLES_VEHICLE_INCLUDE")
     @Operation(
             summary = "Registrar veículo para um membro cadastrado",
             description = "Cria um novo veículo anexado a um membro pelo seu ID"
