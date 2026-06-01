@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.api.exceptions;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
@@ -35,6 +36,15 @@ public class VehicleExceptionHandler extends BuilderExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleVehicleIdNotFoundException(VehicleIdNotFoundException exception) {
         return buildErrorResponse(
                 "VEHICLE_ID_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotFoundException(UserNotFoundException exception) {
+        return buildErrorResponse(
+                "USER_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
         );
