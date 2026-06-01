@@ -13,26 +13,23 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/vehicles")
 @RequiredArgsConstructor
 @Validated
 @Tag(
-        name = "Vehicles - Include",
-        description = "Inclusão de veículos de um membro."
+        name = "Vehicles",
+        description = ""
 )
 public class IncludeController {
 
     private final IncludeService includeService;
 
-    @PostMapping("/include")
+    @PostMapping("/include/member")
     @Operation(
-            summary = "Registrar veiculo",
+            summary = "Registrar veiculo para o usu'ario logado",
             description = "Cria um novo veiculo anexado a um membro"
     )
     public ResponseEntity<Void> includeVehicle(
@@ -58,6 +55,35 @@ public class IncludeController {
                 requestDTO.engineDisplacement(),
                 requestDTO.towing(),
                 id
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @PostMapping("/include/admin/{memberId}")
+    @Operation(
+            summary = "Registrar veículo para um membro cadastrado",
+            description = "Cria um novo veículo anexado a um membro pelo seu ID"
+    )
+    public ResponseEntity<Void> includeVehicle(
+            @PathVariable Long memberId,
+            @RequestBody @Valid IncludeRequestDTO requestDTO
+    ) {
+        includeService.includeVehicleAsAdmin(
+                requestDTO.nickname(),
+                requestDTO.photo(),
+                requestDTO.plate(),
+                requestDTO.renavam(),
+                requestDTO.brand(),
+                requestDTO.model(),
+                requestDTO.manufacturingYear(),
+                requestDTO.modelYear(),
+                requestDTO.color(),
+                requestDTO.seatingCapacity(),
+                requestDTO.fuelType(),
+                requestDTO.engineDisplacement(),
+                requestDTO.towing(),
+                memberId
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

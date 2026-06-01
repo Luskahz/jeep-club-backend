@@ -47,7 +47,7 @@ public record IncludeRequestDTO(
 
         @Schema(
                 description = "Código RENAVAM do veículo (específico para o Brasil).",
-                example = "95753736308",
+                example = "38249206428",
                 minLength = 11,
                 maxLength = 11,
                 requiredMode = Schema.RequiredMode.REQUIRED
