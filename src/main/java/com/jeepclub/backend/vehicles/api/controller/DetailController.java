@@ -15,23 +15,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/vehicles")
+@RequestMapping("/vehicles/detail")
 @RequiredArgsConstructor
 @Validated
 @Tag(
-        name = "Vehicles - Detail",
-        description = "Visualização de um veículo de um membro."
+        name = "Vehicles",
+        description = ""
 )
 public class DetailController {
 
     private final DetailService detailService;
 
-    @GetMapping("/{vehicleId}")
+    @GetMapping("/member/{vehicleId}")
     @Operation(
-            summary = "Detalhar 1 veículo de um membro",
+            summary = "Detalhar veiculo pertencente ao membro logado",
             description = "Retorna os detalhes de um veículo pelo seu ID"
     )
-    public ResponseEntity<DetailResponseDTO> detail(
+    public ResponseEntity<DetailResponseDTO> detailMemberVehicle(
             @PathVariable Long vehicleId,
             Authentication authentication
     ) {
@@ -39,5 +39,15 @@ public class DetailController {
         Long memberId = principal.getUserId();
 
         return ResponseEntity.ok(detailService.execute(vehicleId, memberId));
+    }
+
+    @GetMapping("/admin/{vehicleId}")
+    // pre autorize
+    @Operation(
+            summary = "Detalhar qualquer veículo",
+            description = "Retorna os detalhes de qualquer veículo pelo ID"
+    )
+    public ResponseEntity<DetailResponseDTO> detailVehicle(@PathVariable Long vehicleId) {
+        return ResponseEntity.ok(detailService.executeAsAdmin(vehicleId));
     }
 }
