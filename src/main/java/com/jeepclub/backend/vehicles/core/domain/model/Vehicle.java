@@ -114,4 +114,40 @@ public class Vehicle {
         vehicle.disabledAt = disabledAt;
         return vehicle;
     }
+
+    public Vehicle softDelete() {
+        this.status = VehicleStatus.SOFT_DELETED;
+        this.updatedAt = Instant.now();
+        this.disabledAt = Instant.now();
+        return this;
+    }
+
+    public void update(
+            String nickname,
+            String photo,
+            String plate,
+            String renavam,
+            String brand,
+            String model,
+            int manufacturingYear,
+            int modelYear,
+            String color,
+            int seatingCapacity,
+            FuelType fuelType,
+            double engineDisplacement
+    ) {
+        this.nickname = nickname;
+        this.photo = photo;
+        this.plate = plate;
+        this.renavam = renavam;
+        this.brand = brand;
+        this.model = model;
+        this.manufacturingYear = manufacturingYear;
+        this.modelYear = modelYear;
+        this.color = color;
+        this.seatingCapacity = seatingCapacity;
+        this.fuelType = fuelType;
+        this.engineDisplacement = engineDisplacement;
+        this.updatedAt = Instant.now();
+    }
 }
