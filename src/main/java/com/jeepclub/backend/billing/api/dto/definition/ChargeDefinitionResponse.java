@@ -45,7 +45,10 @@ public record ChargeDefinitionResponse(
         Instant createdAt,
 
         @Schema(description = "Data da última atualização da definição de cobrança.", nullable = true)
-        Instant updatedAt
+        Instant updatedAt,
+
+        @Schema(description = "Data de arquivamento da definição de cobrança.", nullable = true)
+        Instant archivedAt
 ) {
 
     public static ChargeDefinitionResponse from(ChargeDefinitionResult result) {
@@ -62,7 +65,8 @@ public record ChargeDefinitionResponse(
                 result.latePaymentGraceDays(),
                 result.status(),
                 result.createdAt(),
-                result.updatedAt()
+                result.updatedAt(),
+                result.archivedAt()
         );
     }
 

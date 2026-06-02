@@ -60,12 +60,14 @@ public class ChargeDefinition {
         this.status = Objects.requireNonNull(status, "status cannot be null");
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
+        this.archivedAt = archivedAt;
 
         validatePaymentAcceptancePolicyConsistency(
                 this.paymentAcceptancePolicy,
                 this.latePaymentGraceDays
         );
-        this.archivedAt = archivedAt;
+
+        validateArchiveConsistency();
     }
 
     public static ChargeDefinition create(
@@ -249,5 +251,15 @@ public class ChargeDefinition {
         }
 
         return value.trim();
+    }
+
+    private void validateArchiveConsistency() {
+        if (status == ChargeDefinitionStatus.ARCHIVED && archivedAt == null) {
+            throw new IllegalArgumentException("archivedAt is required when charge definition is archived.");
+        }
+
+        if (status != ChargeDefinitionStatus.ARCHIVED && archivedAt != null) {
+            throw new IllegalArgumentException("archivedAt must be null when charge definition is not archived.");
+        }
     }
 }

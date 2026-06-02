@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
+
 public record ChargeDefinitionResult(
         Long id,
         String name,
@@ -20,7 +21,8 @@ public record ChargeDefinitionResult(
         Integer latePaymentGraceDays,
         ChargeDefinitionStatus status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Instant archivedAt
 ) {
 
     public static ChargeDefinitionResult from(ChargeDefinition chargeDefinition) {
@@ -37,7 +39,8 @@ public record ChargeDefinitionResult(
                 chargeDefinition.getLatePaymentGraceDays(),
                 chargeDefinition.getStatus(),
                 chargeDefinition.getCreatedAt(),
-                chargeDefinition.getUpdatedAt()
+                chargeDefinition.getUpdatedAt(),
+                chargeDefinition.getArchivedAt()
         );
     }
 }

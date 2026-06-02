@@ -1,4 +1,4 @@
-package com.jeepclub.backend.billing.infra.persistence.repository.jpa;
+package com.jeepclub.backend.billing.infra.persistence.adapter;
 
 import com.jeepclub.backend.billing.core.domain.model.ChargeDefinition;
 import com.jeepclub.backend.billing.core.repository.ChargeDefinitionRepository;
