@@ -2,6 +2,7 @@ package com.jeepclub.backend.membership.api.controller;
 
 import com.jeepclub.backend.membership.api.dto.CreateMembershipApplicationRequestDTO;
 import com.jeepclub.backend.membership.api.dto.MembershipApplicationResponseDTO;
+import com.jeepclub.backend.membership.core.application.result.EnsureMembershipRequestResult;
 import com.jeepclub.backend.membership.core.application.service.EnsureMembershipRequestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,10 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/membership/request")
@@ -30,7 +28,22 @@ public class MembershipApplicationController {
     public ResponseEntity<MembershipApplicationResponseDTO> create(
             @RequestBody @Valid CreateMembershipApplicationRequestDTO request
     ) {
-        MembershipApplicationResponseDTO response = ensureService.ensure(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        EnsureMembershipRequestResult result = ensureService.ensure(
+                request.name(),
+                request.cpf(),
+                request.email(),
+                request.phoneNumber(),
+                request.message()
+        );
+
+        HttpStatus status = result.created()
+                ? HttpStatus.CREATED
+                : HttpStatus.OK;
+
+        MembershipApplicationResponseDTO response = MembershipApplicationResponseDTO.fromDomain(
+                result.application()
+        );
+
+        return ResponseEntity.status(status).body(response);
     }
 }

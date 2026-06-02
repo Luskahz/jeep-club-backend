@@ -1,7 +1,6 @@
 package com.jeepclub.backend.membership.core.application.service;
 
-import com.jeepclub.backend.membership.api.dto.CreateMembershipApplicationRequestDTO;
-import com.jeepclub.backend.membership.api.dto.MembershipApplicationResponseDTO;
+import com.jeepclub.backend.membership.core.application.result.EnsureMembershipRequestResult;
 import com.jeepclub.backend.membership.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.membership.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,24 +18,31 @@ public class EnsureMembershipRequestService {
     private final Clock clock;
 
     @Transactional
-    public MembershipApplicationResponseDTO ensure(CreateMembershipApplicationRequestDTO request) {
+    public EnsureMembershipRequestResult ensure(
+            String name,
+            String cpf,
+            String email,
+            String phoneNumber,
+            String message
+    ) {
         Instant now = Instant.now(clock);
-        String normalizedCpf = request.cpf().replaceAll("[^0-9]", "");
+        String normalizedCpf = cpf.replaceAll("[^0-9]", "");
 
-        // Se já existe uma solicitação para este CPF, retorna a existente sem erro.
         return membershipApplicationRepository.findByCpf(normalizedCpf)
-                .map(MembershipApplicationResponseDTO::fromDomain)
+                .map(EnsureMembershipRequestResult::existing)
                 .orElseGet(() -> {
                     MembershipApplication application = MembershipApplication.create(
-                            request.name(),
+                            name,
                             normalizedCpf,
-                            request.email(),
-                            request.phoneNumber(),
-                            request.message(),
+                            email,
+                            phoneNumber,
+                            message,
                             now
                     );
+
                     MembershipApplication saved = membershipApplicationRepository.save(application);
-                    return MembershipApplicationResponseDTO.fromDomain(saved);
+
+                    return EnsureMembershipRequestResult.created(saved);
                 });
     }
 }
