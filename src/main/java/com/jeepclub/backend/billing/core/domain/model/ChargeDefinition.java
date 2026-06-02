@@ -30,6 +30,7 @@ public class ChargeDefinition {
     private ChargeDefinitionStatus status;
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant archivedAt;
 
     private ChargeDefinition(
             Long id,
@@ -42,7 +43,8 @@ public class ChargeDefinition {
             Integer latePaymentGraceDays,
             ChargeDefinitionStatus status,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            Instant archivedAt
     ) {
         this.id = id;
         this.name = validateName(name);
@@ -63,6 +65,7 @@ public class ChargeDefinition {
                 this.paymentAcceptancePolicy,
                 this.latePaymentGraceDays
         );
+        this.archivedAt = archivedAt;
     }
 
     public static ChargeDefinition create(
@@ -88,6 +91,7 @@ public class ChargeDefinition {
                 latePaymentGraceDays,
                 ChargeDefinitionStatus.ACTIVE,
                 now,
+                null,
                 null
         );
     }
@@ -103,7 +107,8 @@ public class ChargeDefinition {
             Integer latePaymentGraceDays,
             ChargeDefinitionStatus status,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            Instant archivedAt
     ) {
         return new ChargeDefinition(
                 id,
@@ -116,7 +121,8 @@ public class ChargeDefinition {
                 latePaymentGraceDays,
                 status,
                 createdAt,
-                updatedAt
+                updatedAt,
+                archivedAt
         );
     }
 
@@ -184,6 +190,7 @@ public class ChargeDefinition {
         }
 
         this.status = ChargeDefinitionStatus.ARCHIVED;
+        this.archivedAt = now;
         this.updatedAt = now;
     }
 
