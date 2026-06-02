@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.infra.persistence.repository.jpa;
+package com.jeepclub.backend.authorization.infra.persistence.adapter;
 
 import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
@@ -14,7 +14,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class PermissionRepositoryJpa implements PermissionRepository {
+public class PermissionRepositoryAdapter implements PermissionRepository {
 
     private final PermissionJpaRepository jpa;
     private final PermissionMapper mapper;

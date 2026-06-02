@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.infra.persistence.repository.jpa;
+package com.jeepclub.backend.authorization.infra.persistence.adapter;
 
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.repository.RoleRepository;
@@ -13,7 +13,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class RoleRepositoryJpa implements RoleRepository {
+public class RoleRepositoryAdapter implements RoleRepository {
 
     private final RoleJpaRepository jpa;
     private final RoleMapper mapper;

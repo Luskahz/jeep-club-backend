@@ -13,12 +13,20 @@ public interface UserRoleJpaRepository extends JpaRepository<UserRoleEntity, Lon
     boolean existsByUserIdAndRole_Id(Long userId, Long roleId);
 
     @Query("""
-        select userRole.role
-        from UserRoleEntity userRole
-        where userRole.userId = :userId
-        order by userRole.role.name
-    """)
+            select userRole.role
+            from UserRoleEntity userRole
+            where userRole.userId = :userId
+            order by userRole.role.name
+            """)
     List<RoleEntity> findRolesByUserId(@Param("userId") Long userId);
+
+    @Query("""
+            select userRole.userId
+            from UserRoleEntity userRole
+            where userRole.role.id = :roleId
+            order by userRole.userId
+            """)
+    List<Long> findUserIdsByRoleId(@Param("roleId") Long roleId);
 
     void deleteByUserIdAndRole_Id(Long userId, Long roleId);
 

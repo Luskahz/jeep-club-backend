@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.infra.persistence.repository.jpa;
+package com.jeepclub.backend.authorization.infra.persistence.adapter;
 
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import com.jeepclub.backend.authorization.core.repository.UserPermissionQueryRepository;

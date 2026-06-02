@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.infra.persistence.repository.jpa;
+package com.jeepclub.backend.authorization.infra.persistence.adapter;
 
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.domain.model.UserRole;
@@ -14,7 +14,7 @@ import java.util.List;
 
 @Repository
 @RequiredArgsConstructor
-public class UserRoleRepositoryJpa implements UserRoleRepository {
+public class UserRoleRepositoryAdapter implements UserRoleRepository {
 
     private final UserRoleJpaRepository jpa;
     private final UserRoleMapper userRoleMapper;
@@ -55,6 +55,11 @@ public class UserRoleRepositoryJpa implements UserRoleRepository {
                 .stream()
                 .map(roleMapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public List<Long> findUserIdsByRoleId(Long roleId) {
+        return jpa.findUserIdsByRoleId(roleId);
     }
 
     @Override
