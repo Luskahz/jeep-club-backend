@@ -5,6 +5,7 @@ import com.jeepclub.backend.authentication.core.application.results.login.Authen
 import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
+import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.Test;
