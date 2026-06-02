@@ -4,10 +4,11 @@ import com.jeepclub.backend.membership.core.domain.enums.MembershipApplicationSt
 import com.jeepclub.backend.membership.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.membership.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -17,13 +18,13 @@ public class ListMembershipApplicationsService {
     private final MembershipApplicationRepository membershipApplicationRepository;
 
     @Transactional(readOnly = true)
-    public List<MembershipApplication> listAll() {
-        return membershipApplicationRepository.findAll();
+    public Page<MembershipApplication> listAll(Pageable pageable) {
+        return membershipApplicationRepository.findAll(pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<MembershipApplication> listByStatus(MembershipApplicationStatus status) {
-        return membershipApplicationRepository.findAllByStatus(status);
+    public Page<MembershipApplication> listByStatus(MembershipApplicationStatus status, Pageable pageable) {
+        return membershipApplicationRepository.findAllByStatus(status, pageable);
     }
 
     @Transactional(readOnly = true)

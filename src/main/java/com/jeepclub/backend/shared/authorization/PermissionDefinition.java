@@ -73,7 +73,6 @@ public enum PermissionDefinition {
     ),
 
     // AUTHENTICATION / PASSWORD RECOVERY
-
     AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE(
             PermissionCode.AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE,
             ModuleCode.AUTHENTICATION,
@@ -122,6 +121,31 @@ public enum PermissionDefinition {
             PermissionCode.AUTHORIZATION_USER_ROLE_REVOKE,
             ModuleCode.AUTHORIZATION,
             "Permite remover papéis de usuários"
+    ),
+
+    // MEMBERSHIP / MEMBERSHIP REQUEST
+    MEMBERSHIP_MEMBERSHIP_REQUEST_READ(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_READ,
+            ModuleCode.MEMBERSHIP,
+            "Permite consultar solicitações de adesão"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE,
+            ModuleCode.MEMBERSHIP,
+            "Permite aprovar solicitações de adesão"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT,
+            ModuleCode.MEMBERSHIP,
+            "Permite rejeitar solicitações de adesão"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND,
+            ModuleCode.MEMBERSHIP,
+            "Permite reenviar o convite de ativação para um solicitante aprovado"
     );
 
     private final PermissionCode code;

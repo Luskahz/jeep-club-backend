@@ -2,6 +2,8 @@ package com.jeepclub.backend.membership.core.repository;
 
 import com.jeepclub.backend.membership.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.membership.core.domain.model.MembershipApplication;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,6 +19,10 @@ public interface MembershipApplicationRepository {
     List<MembershipApplication> findAll();
 
     List<MembershipApplication> findAllByStatus(MembershipApplicationStatus status);
+
+    Page<MembershipApplication> findAll(Pageable pageable);
+
+    Page<MembershipApplication> findAllByStatus(MembershipApplicationStatus status, Pageable pageable);
 
     boolean existsByCpf(String cpf);
 }

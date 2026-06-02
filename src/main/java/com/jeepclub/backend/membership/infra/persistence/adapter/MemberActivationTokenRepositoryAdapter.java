@@ -1,4 +1,4 @@
-package com.jeepclub.backend.membership.infra.persistence.repository;
+package com.jeepclub.backend.membership.infra.persistence.adapter;
 
 import com.jeepclub.backend.membership.core.domain.model.MemberActivationToken;
 import com.jeepclub.backend.membership.core.repository.MemberActivationTokenRepository;
@@ -12,10 +12,7 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-
-//escolher entre  persistence.adapter e repositoryJpa ambos são a mesma coisa, eu recomendo que vc padronize tudo em persistence.adapter
-// o adapter do membershipApplication que vai virar MembershipRequest e o adapter do MemberActivationTokenMapper.
-public class MemberActivationTokenRepositoryJpa implements MemberActivationTokenRepository {
+public class MemberActivationTokenRepositoryAdapter implements MemberActivationTokenRepository {
 
     private final MemberActivationTokenJpaRepository jpaRepository;
 

@@ -1,5 +1,8 @@
 package com.jeepclub.backend.membership.core.domain.model;
 
+import com.jeepclub.backend.membership.core.application.exception.MemberActivationTokenAlreadyUsedException;
+import com.jeepclub.backend.membership.core.application.exception.MemberActivationTokenExpiredException;
+
 import java.time.Duration;
 import java.time.Instant;
 
@@ -57,6 +60,19 @@ public class MemberActivationToken {
 
     public boolean isValid(Instant now) {
         return !isExpired(now) && !isUsed();
+    }
+
+    /**
+     * Valida o token lançando exceções de domínio descritivas.
+     * Verifica primeiro se foi usado, depois se expirou.
+     */
+    public void validateOrThrow(Instant now) {
+        if (isUsed()) {
+            throw new MemberActivationTokenAlreadyUsedException();
+        }
+        if (isExpired(now)) {
+            throw new MemberActivationTokenExpiredException();
+        }
     }
 
     public void markAsUsed(Instant now) {

@@ -7,6 +7,8 @@ import com.jeepclub.backend.membership.infra.persistence.entity.MembershipApplic
 import com.jeepclub.backend.membership.infra.persistence.jpa.MembershipApplicationJpaRepository;
 import com.jeepclub.backend.membership.infra.persistence.mapper.MembershipApplicationMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -51,6 +53,18 @@ public class MembershipApplicationRepositoryAdapter implements MembershipApplica
                 .stream()
                 .map(MembershipApplicationMapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public Page<MembershipApplication> findAll(Pageable pageable) {
+        return jpaRepository.findAll(pageable)
+                .map(MembershipApplicationMapper::toDomain);
+    }
+
+    @Override
+    public Page<MembershipApplication> findAllByStatus(MembershipApplicationStatus status, Pageable pageable) {
+        return jpaRepository.findAllByStatus(status, pageable)
+                .map(MembershipApplicationMapper::toDomain);
     }
 
     @Override

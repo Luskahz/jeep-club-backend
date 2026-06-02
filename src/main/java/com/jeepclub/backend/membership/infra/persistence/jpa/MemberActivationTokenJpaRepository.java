@@ -13,7 +13,8 @@ public interface MemberActivationTokenJpaRepository
 
     Optional<MemberActivationTokenEntity> findByTokenHash(String tokenHash);
 
-    //Esse @query é realmente necessario? validar se não da pra fazer com jpa normal, se não der, está ok!
+    // O metodo derivado do JPA não suporta LIMIT com ORDER BY de forma portável,
+    // portanto o @Query é necessário e mantido aqui intencionalmente.
     @Query("SELECT t FROM MemberActivationTokenEntity t WHERE t.applicationId = :applicationId ORDER BY t.createdAt DESC LIMIT 1")
     Optional<MemberActivationTokenEntity> findLatestByApplicationId(@Param("applicationId") Long applicationId);
 
