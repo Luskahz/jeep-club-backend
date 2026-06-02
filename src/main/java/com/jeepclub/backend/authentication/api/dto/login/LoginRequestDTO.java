@@ -21,7 +21,7 @@ public record LoginRequestDTO(
 
         @Schema(
                 description = "Senha do usuário.",
-                example = "Senha@123",
+                example = "admin123",
                 minLength = 8,
                 maxLength = 100,
                 requiredMode = Schema.RequiredMode.REQUIRED

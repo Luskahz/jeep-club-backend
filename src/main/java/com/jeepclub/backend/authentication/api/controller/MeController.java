@@ -40,6 +40,7 @@ public class MeController {
             throw new IllegalStateException("Authenticated principal is not a valid UserPrincipal.");
         }
 
+
         MeResult result = meService.me(
                 principal.getUserId(),
                 principal.getSessionId(),
