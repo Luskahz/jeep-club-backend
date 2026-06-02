@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Objects;
 
-
 public record ChargeDefinitionResult(
         Long id,
         String name,
