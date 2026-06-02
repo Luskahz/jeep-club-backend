@@ -1,8 +1,11 @@
 package com.jeepclub.backend.vehicles.api.dto.edit;
 
+import com.jeepclub.backend.vehicles.api.validation.ValidRenavam;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
+
+// pendente mais infos do swagger, como o description
 public record EditRequestDTO(
 
         @Schema(example = "Jipe do João")
@@ -15,6 +18,7 @@ public record EditRequestDTO(
         String plate,
 
         @Schema(example = "12345678901")
+        @ValidRenavam
         String renavam,
 
         @Schema(example = "Jeep")

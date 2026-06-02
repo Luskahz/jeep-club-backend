@@ -10,13 +10,19 @@ import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
+import java.time.Instant;
+
 @Service
 @RequiredArgsConstructor
 public class EditService {
 
     private final VehicleRepository vehicleRepository;
+    private final Clock Clock;
 
     public void execute(Long vehicleId, Long memberId, EditRequestDTO dto) {
+
+        Instant now = Instant.now(Clock);
         Vehicle vehicle = vehicleRepository
                 .findByIdAndOwnerId(vehicleId, memberId)
                 .orElseThrow(() -> new VehicleIdNotFoundException("Vehicle not found."));
@@ -36,13 +42,15 @@ public class EditService {
         vehicle.update(
                 dto.nickname(), dto.photo(), dto.plate(), dto.renavam(),
                 dto.brand(), dto.model(), dto.manufacturingYear(), dto.modelYear(),
-                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement()
+                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement(), now
         );
 
         vehicleRepository.save(vehicle);
     }
 
     public void executeAsAdmin(Long vehicleId, EditRequestDTO dto) {
+        Instant now = Instant.now(Clock);
+
         Vehicle vehicle = vehicleRepository
                 .findById(vehicleId)
                 .orElseThrow(() -> new VehicleIdNotFoundException("Vehicle not found."));
@@ -62,7 +70,7 @@ public class EditService {
         vehicle.update(
                 dto.nickname(), dto.photo(), dto.plate(), dto.renavam(),
                 dto.brand(), dto.model(), dto.manufacturingYear(), dto.modelYear(),
-                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement()
+                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement(), now
         );
 
         vehicleRepository.save(vehicle);

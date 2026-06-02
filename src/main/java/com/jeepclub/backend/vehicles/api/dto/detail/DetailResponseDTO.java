@@ -9,6 +9,7 @@ import java.time.Instant;
 
 @Getter
 @Builder
+// pendente swagger pras respostas DTO
 public class DetailResponseDTO {
 
         private Long id;
@@ -51,7 +52,7 @@ public class DetailResponseDTO {
                         .ownerId(vehicle.getOwnerId())
                         .createdAt(vehicle.getCreatedAt())
                         .updatedAt(vehicle.getUpdatedAt())
-                        .disabledAt(vehicle.getDisabledAt())
+                        .disabledAt(vehicle.getDeletedAt())
                         .build();
         }
 }

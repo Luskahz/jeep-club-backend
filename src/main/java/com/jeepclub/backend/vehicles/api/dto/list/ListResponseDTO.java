@@ -2,6 +2,7 @@ package com.jeepclub.backend.vehicles.api.dto.list;
 
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 
+// interessante ter tags Swagger na resposta tbm.
 public record ListResponseDTO(
         Long id,
         String nickname,

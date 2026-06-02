@@ -3,6 +3,7 @@ package com.jeepclub.backend.vehicles.core.domain.model;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,6 +11,7 @@ import java.time.Instant;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Vehicle {
     private Long id;
     private String nickname;            // Nome que o membro da para o proprio veiculo
@@ -31,10 +33,10 @@ public class Vehicle {
 
     private Instant createdAt;
     private Instant updatedAt;
-    private Instant disabledAt;
+    private Instant deletedAt;
 
 
-    public Vehicle(
+    public static Vehicle create(
             String nickname,
             String photo,
             String plate,
@@ -48,27 +50,31 @@ public class Vehicle {
             FuelType fuelType,
             double engineDisplacement,
             Boolean towing,
-            Long ownerId
+            Long ownerId,
+            Instant createdAt
     ) {
-        this.nickname = nickname;
-        this.photo = photo;
-        this.plate = plate;
-        this.renavam = renavam;
-        this.brand = brand;
-        this.model = model;
-        this.manufacturingYear = manufacturingYear;
-        this.modelYear = modelYear;
-        this.color = color;
-        this.seatingCapacity = seatingCapacity;
-        this.fuelType = fuelType;
-        this.engineDisplacement = engineDisplacement;
-        this.towing = towing;
-        this.ownerId = ownerId;
+        return new Vehicle(
+                null,
+                nickname,
+                photo,
+                plate,
+                renavam,
+                brand,
+                model,
+                manufacturingYear,
+                modelYear,
+                color,
+                seatingCapacity,
+                fuelType,
+                engineDisplacement,
+                VehicleStatus.ACTIVE,
+                towing,
+                ownerId,
+                createdAt,
+                null,
+                null
+        );
 
-
-        this.status = VehicleStatus.ACTIVE;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
     }
 
     public static Vehicle reconstitute(
@@ -111,14 +117,14 @@ public class Vehicle {
         vehicle.ownerId = ownerId;
         vehicle.createdAt = createdAt;
         vehicle.updatedAt = updatedAt;
-        vehicle.disabledAt = disabledAt;
+        vehicle.deletedAt = disabledAt;
         return vehicle;
     }
 
     public Vehicle softDelete() {
         this.status = VehicleStatus.SOFT_DELETED;
         this.updatedAt = Instant.now();
-        this.disabledAt = Instant.now();
+        this.deletedAt = Instant.now();
         return this;
     }
 
@@ -134,7 +140,8 @@ public class Vehicle {
             String color,
             int seatingCapacity,
             FuelType fuelType,
-            double engineDisplacement
+            double engineDisplacement,
+            Instant now
     ) {
         this.nickname = nickname;
         this.photo = photo;
@@ -148,6 +155,6 @@ public class Vehicle {
         this.seatingCapacity = seatingCapacity;
         this.fuelType = fuelType;
         this.engineDisplacement = engineDisplacement;
-        this.updatedAt = Instant.now();
+        this.updatedAt = now;
     }
 }

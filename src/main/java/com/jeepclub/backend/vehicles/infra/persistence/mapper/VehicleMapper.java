@@ -73,7 +73,7 @@ public class VehicleMapper {
         entity.setOwnerId(domain.getOwnerId());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
-        entity.setDisabledAt(domain.getDisabledAt());
+        entity.setDisabledAt(domain.getDeletedAt());
 
         return entity;
     }

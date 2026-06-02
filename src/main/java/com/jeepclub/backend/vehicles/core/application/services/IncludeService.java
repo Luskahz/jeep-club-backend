@@ -10,6 +10,7 @@ import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Service
@@ -18,6 +19,7 @@ public class IncludeService {
 
     private final VehicleRepository vehicleRepository;
     private final UserPort userPort;
+    private final Clock Clock;
 
     public Vehicle includeVehicle(
             String nickname,
@@ -35,7 +37,7 @@ public class IncludeService {
             Boolean towing,
             Long ownerId
     ) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(Clock);
 
         if (vehicleRepository.existsByPlate(plate)) {
             throw new VehiclePlateAlreadyExistsException("The license PLATE provided is already registered.");
@@ -45,7 +47,7 @@ public class IncludeService {
             throw new VehicleRenavamAlreadyExistsException("The RENAVAM number provided is already registered.");
         }
 
-        Vehicle newVehicle = new Vehicle(
+        Vehicle newVehicle = Vehicle.create(
                 nickname,
                 photo,
                 plate,
@@ -59,7 +61,8 @@ public class IncludeService {
                 fuelType,
                 engineDisplacement,
                 towing,
-                ownerId
+                ownerId,
+                now
 
         );
 
@@ -82,6 +85,8 @@ public class IncludeService {
             Boolean towing,
             Long ownerId
     ) {
+
+        Instant now = Instant.now(Clock);
         if (vehicleRepository.existsByPlate(plate)) {
             throw new VehiclePlateAlreadyExistsException("The license PLATE provided is already registered.");
         }
@@ -94,7 +99,7 @@ public class IncludeService {
             throw new UserNotFoundException("User id not found.");
         }
 
-        Vehicle newVehicle = new Vehicle(
+        Vehicle newVehicle = Vehicle.create(
                 nickname,
                 photo,
                 plate,
@@ -108,7 +113,8 @@ public class IncludeService {
                 fuelType,
                 engineDisplacement,
                 towing,
-                ownerId
+                ownerId,
+                now
         );
 
         return vehicleRepository.save(newVehicle);
