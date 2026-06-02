@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.persistence.repository;
+package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
 import com.jeepclub.backend.authentication.core.domain.model.PasswordChangeChallenge;
 import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;

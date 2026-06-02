@@ -134,6 +134,31 @@ public enum PermissionDefinition {
             PermissionCode.HEALTH_MEDICAL_PROFILE_READ,
             ModuleCode.HEALTH,
             "Permite consultar o perfil médico"
+    ),
+
+    // MEMBERSHIP / MEMBERSHIP REQUEST
+    MEMBERSHIP_MEMBERSHIP_REQUEST_READ(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_READ,
+            ModuleCode.MEMBERSHIP,
+            "Permite consultar solicitações de adesão"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE,
+            ModuleCode.MEMBERSHIP,
+            "Permite aprovar solicitações de adesão"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT,
+            ModuleCode.MEMBERSHIP,
+            "Permite rejeitar solicitações de adesão"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND,
+            ModuleCode.MEMBERSHIP,
+            "Permite reenviar o convite de ativação para um solicitante aprovado"
     );
 
     private final PermissionCode code;

@@ -36,7 +36,8 @@ public class SecurityConfig {
                                 "/authentication/login",
                                 "/authentication/register",
                                 "/authentication/refresh",
-                                "/membership-applications",
+                                "/membership/request",
+                                "/membership/activate",
                                 "/authentication/login/password-change",
 
                                 "/swagger-ui.html",
