@@ -1,14 +1,13 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
 
-import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.core.application.services.DeleteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;

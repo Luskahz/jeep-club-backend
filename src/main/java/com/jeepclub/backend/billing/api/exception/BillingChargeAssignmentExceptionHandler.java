@@ -5,8 +5,8 @@ import com.jeepclub.backend.billing.core.application.exception.assignment.Charge
 import com.jeepclub.backend.billing.core.application.exception.assignment.ChargeAssignmentNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyActiveException;
 import com.jeepclub.backend.billing.core.domain.exception.assignment.ChargeAssignmentAlreadyInactiveException;
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
-import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

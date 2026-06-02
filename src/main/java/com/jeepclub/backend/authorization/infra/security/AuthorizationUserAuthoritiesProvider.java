@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.infra.security;
 
 import com.jeepclub.backend.authorization.core.application.service.UserPermissionQueryService;
-import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
+import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

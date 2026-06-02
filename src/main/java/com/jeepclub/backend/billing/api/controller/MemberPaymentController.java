@@ -10,7 +10,7 @@ import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.application.service.MemberPaymentService;
 import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

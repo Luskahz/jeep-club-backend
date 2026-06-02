@@ -4,7 +4,7 @@ import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
-import com.jeepclub.backend.membership.core.port.CreateUserWithPendingFirstAccessPort;
+import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

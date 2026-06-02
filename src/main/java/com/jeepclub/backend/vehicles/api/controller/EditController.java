@@ -1,7 +1,7 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
-import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.edit.EditRequestDTO;
 import com.jeepclub.backend.vehicles.core.application.services.EditService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController

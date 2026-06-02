@@ -4,8 +4,8 @@ import com.jeepclub.backend.billing.core.application.exception.refund.InvalidRef
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundAccessDeniedException;
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.domain.exception.refund.InvalidMemberRefundStateException;
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
-import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

@@ -1,9 +1,8 @@
 package com.jeepclub.backend.vehicles.api.controller;
 
 
-import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.dto.include.IncludeRequestDTO;
 import com.jeepclub.backend.vehicles.core.application.services.IncludeService;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -14,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;

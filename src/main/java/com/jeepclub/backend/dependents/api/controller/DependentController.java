@@ -1,7 +1,7 @@
 package com.jeepclub.backend.dependents.api.controller;
 
-import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.dependents.api.dto.dependent.CreateDependentRequestDTO;
 import com.jeepclub.backend.dependents.api.dto.dependent.DependentResponseDTO;
 import com.jeepclub.backend.dependents.api.dto.dependent.UpdateDependentRequestDTO;

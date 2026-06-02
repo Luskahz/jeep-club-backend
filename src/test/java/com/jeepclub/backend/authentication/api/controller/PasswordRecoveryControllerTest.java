@@ -6,8 +6,8 @@ import com.jeepclub.backend.authentication.core.application.services.PasswordRec
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
-import com.jeepclub.backend.infra.security.authorization.UserAuthoritiesProvider;
-import com.jeepclub.backend.infra.security.jwt.JwtTokenParser;
+import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
+import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

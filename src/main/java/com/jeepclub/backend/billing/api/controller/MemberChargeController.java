@@ -6,7 +6,7 @@ import com.jeepclub.backend.billing.api.dto.charge.UpdateMemberChargeFinalAmount
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
 import com.jeepclub.backend.billing.core.application.service.MemberChargeService;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

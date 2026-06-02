@@ -2,8 +2,8 @@ package com.jeepclub.backend.authentication.api.exception;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RFInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RFNotFoundException;
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
-import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

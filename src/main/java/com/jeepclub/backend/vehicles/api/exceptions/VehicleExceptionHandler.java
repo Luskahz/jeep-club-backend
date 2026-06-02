@@ -4,7 +4,7 @@ import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundExc
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.shared.exception.BuilderExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -7,8 +7,8 @@ import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleAlrea
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeArchivedException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeCanceledException;
 import com.jeepclub.backend.billing.core.domain.exception.cycle.ChargeCycleCannotBeFinishedException;
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
-import com.jeepclub.backend.infra.web.exception.ApiExceptionHandler;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

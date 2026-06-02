@@ -1,6 +1,6 @@
 package com.jeepclub.backend.tools.api.controller;
 
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.tools.api.dto.ToolCreateRequestDTO;
 import com.jeepclub.backend.tools.api.dto.ToolResponseDTO;
 import com.jeepclub.backend.tools.api.dto.ToolSummaryResponseDTO;

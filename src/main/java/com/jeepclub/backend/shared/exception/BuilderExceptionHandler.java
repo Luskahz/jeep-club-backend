@@ -1,6 +1,6 @@
 package com.jeepclub.backend.shared.exception;
 
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 

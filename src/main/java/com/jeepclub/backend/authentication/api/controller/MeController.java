@@ -3,7 +3,7 @@ package com.jeepclub.backend.authentication.api.controller;
 import com.jeepclub.backend.authentication.api.dto.me.MeResponseDTO;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.services.MeService;
-import com.jeepclub.backend.infra.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

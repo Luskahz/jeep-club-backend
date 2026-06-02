@@ -10,7 +10,7 @@ import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlr
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.InactiveRoleCannotBeUsedException;
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;

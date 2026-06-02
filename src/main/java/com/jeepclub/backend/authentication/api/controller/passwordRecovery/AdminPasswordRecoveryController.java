@@ -5,7 +5,7 @@ import com.jeepclub.backend.authentication.api.dto.recovery.TemporaryPasswordAdm
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
-import com.jeepclub.backend.infra.config.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;

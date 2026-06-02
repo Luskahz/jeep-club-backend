@@ -1,6 +1,6 @@
 package com.jeepclub.backend.dependents.api.exception;
 
-import com.jeepclub.backend.infra.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
