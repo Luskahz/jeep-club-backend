@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.controller.passwordRecovery.AdminPasswordRecoveryController;
+import com.jeepclub.backend.authentication.api.controller.passwordRecovery.AdminPasswordRecoveryRequestController;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AdminPasswordRecoveryController.class)
+@WebMvcTest(AdminPasswordRecoveryRequestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class AdminPasswordRecoveryControllerTest {
 

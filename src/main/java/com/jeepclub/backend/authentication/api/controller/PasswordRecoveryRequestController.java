@@ -1,0 +1,47 @@
+package com.jeepclub.backend.authentication.api.controller;
+
+import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.refresh.RefreshRequestDTO;
+import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.services.RefreshService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/authentication")
+@RequiredArgsConstructor
+@Validated
+@Tag(
+        name = "Authentication - Refresh",
+        description = "Renovação de tokens de autenticação."
+)
+public class PasswordRecoveryRequestController {
+
+    private final RefreshService refreshService;
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Renovar tokens",
+            description = "Gera um novo access token e um novo refresh token a partir de um refresh token válido."
+    )
+    public ResponseEntity<AuthTokenResponseDTO> refresh(
+            @RequestBody @Valid RefreshRequestDTO request
+    ) {
+        AuthTokens tokens = refreshService.refresh(
+                request.refreshToken()
+        );
+
+        return ResponseEntity.ok(
+                new AuthTokenResponseDTO(
+                        tokens.refreshToken(),
+                        tokens.accessToken(),
+                        tokens.expiresInSeconds()
+                )
+        );
+    }
+}

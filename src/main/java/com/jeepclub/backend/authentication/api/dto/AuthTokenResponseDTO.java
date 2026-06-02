@@ -1,29 +1,42 @@
 package com.jeepclub.backend.authentication.api.dto;
 
+import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "Tokens de autenticação gerados para o usuário autenticado.")
+import java.util.Objects;
+
+@Schema(
+        name = "AuthTokenResponse",
+        description = "Tokens emitidos após autenticação ou renovação."
+)
 public record AuthTokenResponseDTO(
 
         @Schema(
-                description = "Refresh token utilizado para renovar a sessão.",
-                example = "eyJhbGciOiJIUzI1NiJ9.refresh-token-example",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                description = "Refresh token usado para renovar a autenticação.",
+                example = "8f6c1a6d-raw-refresh-token-example"
         )
         String refreshToken,
 
         @Schema(
-                description = "Access token JWT utilizado para autenticação das requisições.",
-                example = "eyJhbGciOiJIUzI1NiJ9.access-token-example",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                description = "Access token JWT usado nas chamadas autenticadas.",
+                example = "eyJhbGciOiJIUzI1NiJ9..."
         )
         String accessToken,
 
         @Schema(
-                description = "Tempo restante de validade do access token, em segundos.",
-                example = "900",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                description = "Tempo restante de validade do access token em segundos.",
+                example = "900"
         )
         long expiresInSeconds
 ) {
+
+        public static AuthTokenResponseDTO from(AuthTokens tokens) {
+                Objects.requireNonNull(tokens, "tokens cannot be null");
+
+                return new AuthTokenResponseDTO(
+                        tokens.refreshToken(),
+                        tokens.accessToken(),
+                        tokens.expiresInSeconds()
+                );
+        }
 }

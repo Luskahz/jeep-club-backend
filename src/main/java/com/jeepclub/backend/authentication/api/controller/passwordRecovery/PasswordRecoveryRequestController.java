@@ -1,6 +1,8 @@
 package com.jeepclub.backend.authentication.api.controller.passwordRecovery;
 
-import com.jeepclub.backend.authentication.api.dto.recovery.*;
+import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestDTO;
+import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetDTO;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,16 +13,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-
 @RestController
 @RequestMapping("/authentication/password-recovery/requests")
 @RequiredArgsConstructor
 @Validated
 @Tag(
-        name = "Authentication - Password Recovery",
+        name = "Authentication - Password Recovery Requests",
         description = "Fluxo público de solicitação e conclusão de recuperação de senha."
 )
-public class PasswordRecoveryController {
+public class PasswordRecoveryRequestController {
 
     private final PasswordRecoveryService passwordRecoveryService;
 
@@ -55,8 +56,6 @@ public class PasswordRecoveryController {
                 PasswordRecoveryRequestResponseDTO.from(recoveryRequest)
         );
     }
-
-
 
     @PostMapping("/token/reset")
     @Operation(

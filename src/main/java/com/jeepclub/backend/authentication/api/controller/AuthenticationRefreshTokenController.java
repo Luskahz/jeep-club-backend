@@ -17,10 +17,10 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Validated
 @Tag(
-        name = "Authentication - Refresh",
-        description = "Renovação de tokens de autenticação."
+        name = "Authentication - Refresh Tokens",
+        description = "Rotação e renovação de tokens de autenticação."
 )
-public class RefreshController {
+public class AuthenticationRefreshTokenController {
 
     private final RefreshService refreshService;
 
@@ -37,11 +37,7 @@ public class RefreshController {
         );
 
         return ResponseEntity.ok(
-                new AuthTokenResponseDTO(
-                        tokens.refreshToken(),
-                        tokens.accessToken(),
-                        tokens.expiresInSeconds()
-                )
+                AuthTokenResponseDTO.from(tokens)
         );
     }
 }

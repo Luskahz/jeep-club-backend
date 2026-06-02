@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 @Validated
 @Tag(
-        name = "Authentication - Register",
-        description = "Registro de usuários e emissão inicial de tokens."
+        name = "Authentication - User Registration",
+        description = "Registro público de usuários e emissão inicial de tokens."
 )
-public class RegisterController {
+public class AuthenticationUserRegistrationController {
 
     private final RegisterService registerService;
     private final LoginService loginService;
@@ -49,10 +49,6 @@ public class RegisterController {
         AuthTokens tokens = loginService.authenticateRegisteredUser(user);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthTokenResponseDTO(
-                        tokens.refreshToken(),
-                        tokens.accessToken(),
-                        tokens.expiresInSeconds()
-                ));
+                .body(AuthTokenResponseDTO.from(tokens));
     }
 }
