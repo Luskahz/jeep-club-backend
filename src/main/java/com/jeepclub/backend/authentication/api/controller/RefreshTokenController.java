@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
         name = "Authentication - Refresh Tokens",
         description = "Rotação e renovação de tokens de autenticação."
 )
-public class AuthenticationRefreshTokenController {
+public class RefreshTokenController {
 
     private final RefreshService refreshService;
 

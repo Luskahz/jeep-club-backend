@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
         name = "Authentication - User Registration",
         description = "Registro público de usuários e emissão inicial de tokens."
 )
-public class AuthenticationUserRegistrationController {
+public class UserController {
 
     private final RegisterService registerService;
     private final LoginService loginService;

@@ -26,7 +26,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthenticationSessionController.class)
+@WebMvcTest(SessionController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @AutoConfigureRestDocs(outputDir = "target/generated-snippets")
 class LoginControllerRestDocsTest {

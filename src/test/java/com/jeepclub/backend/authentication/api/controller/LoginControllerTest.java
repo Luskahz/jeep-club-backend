@@ -25,7 +25,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuthenticationSessionController.class)
+@WebMvcTest(SessionController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class LoginControllerTest {
 

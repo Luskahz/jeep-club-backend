@@ -33,7 +33,7 @@ import java.util.Objects;
         name = "Authentication - Sessions",
         description = "Operações de autenticação, sessão atual e encerramento de sessão."
 )
-public class AuthenticationSessionController {
+public class SessionController {
 
     private final LoginService loginService;
     private final LogoutService logoutService;
