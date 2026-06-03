@@ -14,11 +14,11 @@ import java.nio.charset.StandardCharsets;
 public class SwaggerUiIndexTransformer implements SwaggerIndexTransformer {
 
     private static final String CUSTOM_SWAGGER_SCRIPT = """
-            <script src="/swagger/swagger-operation-groups.js"></script>
+            <script src="/openapi-custom/swagger-operation-groups.js"></script>
             """;
 
     private static final String CUSTOM_SWAGGER_STYLE = """
-            <link rel="stylesheet" type="text/css" href="/swagger/swagger-operation-groups.css">
+            <link rel="stylesheet" type="text/css" href="/openapi-custom/swagger-operation-groups.css">
             """;
 
     @Override
