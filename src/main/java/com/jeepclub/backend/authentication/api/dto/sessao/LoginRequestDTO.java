@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto.login;
+package com.jeepclub.backend.authentication.api.dto.sessao;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;

@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto.register;
+package com.jeepclub.backend.authentication.api.dto.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -9,7 +9,7 @@ import org.hibernate.validator.constraints.br.CPF;
 import java.time.LocalDate;
 
 @Schema(description = "Dados necessários para registrar um novo usuário.")
-public record RegisterRequestDTO(
+public record UserRegistrationRequestDTO(
 
         @Schema(
                 description = "Nome completo do usuário.",

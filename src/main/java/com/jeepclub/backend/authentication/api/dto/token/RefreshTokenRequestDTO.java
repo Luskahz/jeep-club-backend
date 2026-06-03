@@ -1,10 +1,10 @@
-package com.jeepclub.backend.authentication.api.dto.refresh;
+package com.jeepclub.backend.authentication.api.dto.token;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 @Schema(description = "Dados necessários para renovar os tokens de autenticação.")
-public record RefreshRequestDTO(
+public record RefreshTokenRequestDTO(
 
         @Schema(
                 description = "Refresh token válido do usuário autenticado.",

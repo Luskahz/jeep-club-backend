@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto;
+package com.jeepclub.backend.authentication.api.dto.token;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import io.swagger.v3.oas.annotations.media.Schema;

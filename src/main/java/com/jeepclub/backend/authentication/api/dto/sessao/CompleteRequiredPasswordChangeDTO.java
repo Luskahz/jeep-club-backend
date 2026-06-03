@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto.login;
+package com.jeepclub.backend.authentication.api.dto.sessao;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

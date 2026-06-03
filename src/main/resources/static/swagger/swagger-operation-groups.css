@@ -1,0 +1,24 @@
+.swagger-operation-group {
+    margin: 12px 0 16px 0;
+    padding: 10px 12px;
+    border: 1px solid rgba(73, 204, 144, 0.35);
+    border-radius: 4px;
+    background: rgba(73, 204, 144, 0.04);
+}
+
+.swagger-operation-group-title {
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #49cc90;
+}
+
+.swagger-operation-group-title::marker {
+    color: #49cc90;
+}
+
+.swagger-operation-group > .opblock {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}

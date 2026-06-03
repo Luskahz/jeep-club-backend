@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto.me;
+package com.jeepclub.backend.authentication.api.dto.sessao;
 
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import io.swagger.v3.oas.annotations.media.ArraySchema;

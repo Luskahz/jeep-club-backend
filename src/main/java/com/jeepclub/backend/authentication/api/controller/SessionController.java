@@ -1,10 +1,10 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.login.CompleteRequiredPasswordChangeDTO;
-import com.jeepclub.backend.authentication.api.dto.login.LoginRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.login.LoginResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.me.MeResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.sessao.CompleteRequiredPasswordChangeDTO;
+import com.jeepclub.backend.authentication.api.dto.sessao.LoginRequestDTO;
+import com.jeepclub.backend.authentication.api.dto.sessao.LoginResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.sessao.MeResponseDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.results.login.LoginResult;

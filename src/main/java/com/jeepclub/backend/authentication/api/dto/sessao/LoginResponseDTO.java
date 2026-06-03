@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.dto.login;
+package com.jeepclub.backend.authentication.api.dto.sessao;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;

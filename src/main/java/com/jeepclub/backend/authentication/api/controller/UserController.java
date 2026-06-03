@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.dto.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.register.RegisterRequestDTO;
+import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.user.UserRegistrationRequestDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;
@@ -34,7 +34,7 @@ public class UserController {
             description = "Cria uma nova conta de usuário e retorna os tokens de autenticação."
     )
     public ResponseEntity<AuthTokenResponseDTO> register(
-            @RequestBody @Valid RegisterRequestDTO request
+            @RequestBody @Valid UserRegistrationRequestDTO request
     ) {
         User user = registerService.registerUser(
                 request.name(),
