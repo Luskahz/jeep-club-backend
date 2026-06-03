@@ -7,6 +7,7 @@
     const INTERVAL_MS = 250;
 
     let attempts = 0;
+    let originalTagsClosed = false;
 
     function getSwaggerSpec() {
         try {
@@ -91,15 +92,17 @@
         return {
             name: operation[GROUP_NAME_EXTENSION] || DEFAULT_GROUP_NAME,
             order: order === undefined || order === null
-                    ? DEFAULT_GROUP_ORDER
-                    : Number(order)
+                ? DEFAULT_GROUP_ORDER
+                : Number(order)
         };
     }
 
     function createGroupElement(groupName) {
         const details = document.createElement("details");
         details.className = "swagger-operation-group";
-        details.open = true;
+
+        // Subgrupos customizados nascem fechados.
+        details.open = false;
 
         const summary = document.createElement("summary");
         summary.className = "swagger-operation-group-title";
@@ -112,9 +115,9 @@
 
     function groupTagSection(tagSection, swaggerSpec) {
         const operations = Array.from(tagSection.querySelectorAll(".opblock"))
-                .filter(function (operationElement) {
-                    return !operationElement.closest(".swagger-operation-group");
-                });
+            .filter(function (operationElement) {
+                return !operationElement.closest(".swagger-operation-group");
+            });
 
         if (operations.length === 0) {
             return false;
@@ -144,13 +147,13 @@
         });
 
         const sortedGroups = Array.from(groups.values())
-                .sort(function (left, right) {
-                    if (left.order !== right.order) {
-                        return left.order - right.order;
-                    }
+            .sort(function (left, right) {
+                if (left.order !== right.order) {
+                    return left.order - right.order;
+                }
 
-                    return left.name.localeCompare(right.name);
-                });
+                return left.name.localeCompare(right.name);
+            });
 
         if (sortedGroups.length <= 1 && sortedGroups[0] && sortedGroups[0].name === DEFAULT_GROUP_NAME) {
             return false;
@@ -195,10 +198,58 @@
         return applied;
     }
 
+    function closeOriginalSwaggerTags() {
+        if (originalTagsClosed) {
+            return;
+        }
+
+        const tagSections = Array.from(document.querySelectorAll(".opblock-tag-section"));
+
+        if (tagSections.length === 0) {
+            return;
+        }
+
+        tagSections.forEach(function (tagSection) {
+            const tagButton = tagSection.querySelector(".opblock-tag");
+
+            if (!tagButton) {
+                return;
+            }
+
+            const hasVisibleOperations = tagSection.querySelector(".opblock") !== null;
+
+            if (hasVisibleOperations) {
+                tagButton.click();
+            }
+        });
+
+        originalTagsClosed = true;
+
+        console.info("[swagger-operation-groups] Original Swagger tags closed.");
+    }
+
+    function closeCustomGroups() {
+        document.querySelectorAll(".swagger-operation-group").forEach(function (groupElement) {
+            groupElement.open = false;
+        });
+    }
+
+    function applyAndClose() {
+        const applied = applyOperationGroups();
+
+        if (applied) {
+            closeCustomGroups();
+        }
+
+        closeOriginalSwaggerTags();
+
+        return applied;
+    }
+
     function retryUntilSwaggerIsReady() {
         attempts++;
 
-        const applied = applyOperationGroups();
+        const applied = applyAndClose();
 
         if (applied) {
             console.info("[swagger-operation-groups] Groups applied.");
@@ -206,6 +257,7 @@
         }
 
         if (attempts >= MAX_ATTEMPTS) {
+            closeOriginalSwaggerTags();
             console.warn("[swagger-operation-groups] Swagger UI was not ready or no groups were applied.");
             return;
         }
@@ -222,6 +274,7 @@
 
         const observer = new MutationObserver(function () {
             applyOperationGroups();
+            closeCustomGroups();
         });
 
         observer.observe(root, {

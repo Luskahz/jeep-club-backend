@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/openapi-custom/**",
+                                "/docs/**",
 
                                 "/error"
 
