@@ -40,11 +40,10 @@ public class SecurityConfig {
                                 "/membership/activate",
                                 "/authentication/login/password-change",
 
-                                "/swagger-ui.html",
                                 "/swagger-ui/**",
-                                "/v3/api-docs",
+                                "/swagger-ui.html",
                                 "/v3/api-docs/**",
-                                "/swagger/**",
+                                "/openapi-custom/**",
 
                                 "/error"
 

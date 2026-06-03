@@ -3,71 +3,81 @@
     const GROUP_ORDER_EXTENSION = "x-operation-group-order";
     const DEFAULT_GROUP_NAME = "Outras rotas";
     const DEFAULT_GROUP_ORDER = 9999;
+    const MAX_ATTEMPTS = 80;
+    const INTERVAL_MS = 250;
+
+    let attempts = 0;
 
     function getSwaggerSpec() {
         try {
-            return window.ui
-                ?.getSystem?.()
-                ?.specSelectors
-                ?.specJson?.()
-                ?.toJS?.();
-        } catch (error) {
-            return null;
-        }
-    }
-
-    function normalizeText(value) {
-        return String(value || "")
-            .toLowerCase()
-            .replace(/[^a-z0-9]/g, "");
-    }
-
-    function getOperationDataFromElement(operationElement, swaggerSpec) {
-        if (!swaggerSpec || !swaggerSpec.paths) {
-            return null;
-        }
-
-        const operationText = normalizeText(operationElement.textContent);
-        const operationId = normalizeText(operationElement.getAttribute("id"));
-
-        for (const path of Object.keys(swaggerSpec.paths)) {
-            const pathItem = swaggerSpec.paths[path];
-
-            for (const method of Object.keys(pathItem)) {
-                const operation = pathItem[method];
-
-                if (!operation || typeof operation !== "object") {
-                    continue;
-                }
-
-                const normalizedMethod = normalizeText(method);
-                const normalizedPath = normalizeText(path);
-                const normalizedSummary = normalizeText(operation.summary);
-                const normalizedOperationId = normalizeText(operation.operationId);
-
-                const matchesByOperationId =
-                    normalizedOperationId && operationId.includes(normalizedOperationId);
-
-                const matchesByPathAndMethod =
-                    operationText.includes(normalizedMethod)
-                    && operationText.includes(normalizedPath);
-
-                const matchesBySummaryAndMethod =
-                    normalizedSummary
-                    && operationText.includes(normalizedMethod)
-                    && operationText.includes(normalizedSummary);
-
-                if (matchesByOperationId || matchesByPathAndMethod || matchesBySummaryAndMethod) {
-                    return operation;
-                }
+            if (!window.ui || !window.ui.getSystem) {
+                return null;
             }
+
+            const system = window.ui.getSystem();
+
+            if (!system || !system.specSelectors || !system.specSelectors.specJson) {
+                return null;
+            }
+
+            const immutableSpec = system.specSelectors.specJson();
+
+            if (!immutableSpec || !immutableSpec.toJS) {
+                return null;
+            }
+
+            return immutableSpec.toJS();
+        } catch (error) {
+            console.warn("[swagger-operation-groups] Could not read swagger spec.", error);
+            return null;
+        }
+    }
+
+    function getOperationMethod(operationElement) {
+        const methodElement = operationElement.querySelector(".opblock-summary-method");
+
+        if (!methodElement) {
+            return null;
         }
 
-        return null;
+        return methodElement.textContent.trim().toLowerCase();
+    }
+
+    function getOperationPath(operationElement) {
+        const pathElement = operationElement.querySelector(".opblock-summary-path");
+
+        if (!pathElement) {
+            return null;
+        }
+
+        const dataPath = pathElement.getAttribute("data-path");
+
+        if (dataPath) {
+            return dataPath.trim();
+        }
+
+        return pathElement.textContent.trim();
+    }
+
+    function findOperationInSpec(operationElement, swaggerSpec) {
+        const method = getOperationMethod(operationElement);
+        const path = getOperationPath(operationElement);
+
+        if (!method || !path || !swaggerSpec || !swaggerSpec.paths) {
+            return null;
+        }
+
+        const pathItem = swaggerSpec.paths[path];
+
+        if (!pathItem) {
+            return null;
+        }
+
+        return pathItem[method] || null;
     }
 
     function getOperationGroup(operationElement, swaggerSpec) {
-        const operation = getOperationDataFromElement(operationElement, swaggerSpec);
+        const operation = findOperationInSpec(operationElement, swaggerSpec);
 
         if (!operation) {
             return {
@@ -76,9 +86,13 @@
             };
         }
 
+        const order = operation[GROUP_ORDER_EXTENSION];
+
         return {
             name: operation[GROUP_NAME_EXTENSION] || DEFAULT_GROUP_NAME,
-            order: Number(operation[GROUP_ORDER_EXTENSION] ?? DEFAULT_GROUP_ORDER)
+            order: order === undefined || order === null
+                    ? DEFAULT_GROUP_ORDER
+                    : Number(order)
         };
     }
 
@@ -96,25 +110,27 @@
         return details;
     }
 
-    function groupOperationsInsideTag(tagSection, swaggerSpec) {
+    function groupTagSection(tagSection, swaggerSpec) {
         const operations = Array.from(tagSection.querySelectorAll(".opblock"))
-            .filter(operation => !operation.closest(".swagger-operation-group"));
+                .filter(function (operationElement) {
+                    return !operationElement.closest(".swagger-operation-group");
+                });
 
         if (operations.length === 0) {
-            return;
+            return false;
         }
 
-        const firstOperationParent = operations[0].parentElement;
+        const container = operations[0].parentElement;
 
-        if (!firstOperationParent || firstOperationParent.dataset.operationGroupsApplied === "true") {
-            return;
+        if (!container || container.dataset.operationGroupsApplied === "true") {
+            return false;
         }
 
         const groups = new Map();
 
-        for (const operationElement of operations) {
+        operations.forEach(function (operationElement) {
             const group = getOperationGroup(operationElement, swaggerSpec);
-            const groupKey = `${group.order}::${group.name}`;
+            const groupKey = group.order + "::" + group.name;
 
             if (!groups.has(groupKey)) {
                 groups.set(groupKey, {
@@ -125,63 +141,106 @@
             }
 
             groups.get(groupKey).operations.push(operationElement);
-        }
+        });
 
         const sortedGroups = Array.from(groups.values())
-            .sort((left, right) => {
-                if (left.order !== right.order) {
-                    return left.order - right.order;
-                }
+                .sort(function (left, right) {
+                    if (left.order !== right.order) {
+                        return left.order - right.order;
+                    }
 
-                return left.name.localeCompare(right.name);
-            });
+                    return left.name.localeCompare(right.name);
+                });
 
-        if (sortedGroups.length <= 1 && sortedGroups[0]?.name === DEFAULT_GROUP_NAME) {
-            return;
+        if (sortedGroups.length <= 1 && sortedGroups[0] && sortedGroups[0].name === DEFAULT_GROUP_NAME) {
+            return false;
         }
 
-        firstOperationParent.dataset.operationGroupsApplied = "true";
+        container.dataset.operationGroupsApplied = "true";
 
-        for (const group of sortedGroups) {
+        sortedGroups.forEach(function (group) {
             const groupElement = createGroupElement(group.name);
 
-            for (const operationElement of group.operations) {
+            group.operations.forEach(function (operationElement) {
                 groupElement.appendChild(operationElement);
-            }
+            });
 
-            firstOperationParent.appendChild(groupElement);
-        }
+            container.appendChild(groupElement);
+        });
+
+        return true;
     }
 
     function applyOperationGroups() {
         const swaggerSpec = getSwaggerSpec();
 
         if (!swaggerSpec) {
-            return;
+            return false;
         }
 
         const tagSections = document.querySelectorAll(".opblock-tag-section");
 
-        for (const tagSection of tagSections) {
-            groupOperationsInsideTag(tagSection, swaggerSpec);
+        if (!tagSections || tagSections.length === 0) {
+            return false;
         }
+
+        let applied = false;
+
+        tagSections.forEach(function (tagSection) {
+            if (groupTagSection(tagSection, swaggerSpec)) {
+                applied = true;
+            }
+        });
+
+        return applied;
     }
 
-    function bootstrap() {
+    function retryUntilSwaggerIsReady() {
+        attempts++;
+
+        const applied = applyOperationGroups();
+
+        if (applied) {
+            console.info("[swagger-operation-groups] Groups applied.");
+            return;
+        }
+
+        if (attempts >= MAX_ATTEMPTS) {
+            console.warn("[swagger-operation-groups] Swagger UI was not ready or no groups were applied.");
+            return;
+        }
+
+        window.setTimeout(retryUntilSwaggerIsReady, INTERVAL_MS);
+    }
+
+    function observeSwaggerChanges() {
+        const root = document.getElementById("swagger-ui");
+
+        if (!root) {
+            return;
+        }
+
         const observer = new MutationObserver(function () {
             applyOperationGroups();
         });
 
-        observer.observe(document.body, {
+        observer.observe(root, {
             childList: true,
             subtree: true
         });
-
-        setTimeout(applyOperationGroups, 300);
-        setTimeout(applyOperationGroups, 800);
-        setTimeout(applyOperationGroups, 1500);
-        setTimeout(applyOperationGroups, 3000);
     }
 
-    window.addEventListener("load", bootstrap);
+    function start() {
+        console.info("[swagger-operation-groups] Script loaded.");
+
+        retryUntilSwaggerIsReady();
+
+        window.setTimeout(observeSwaggerChanges, 1000);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start);
+    } else {
+        start();
+    }
 })();
