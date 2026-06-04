@@ -233,6 +233,7 @@ public class SessionService {
 
         return new MeResult(
                 user.getId(),
+                user.getName(),
                 session.getId(),
                 session.isValid(now),
                 getAccessTokenRemainingSeconds(now, accessTokenExpiresAt)
