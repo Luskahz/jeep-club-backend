@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.*;
 )
 public class RefreshTokenController {
 
-    private final RefreshTokenService refreshService;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping(
             value = "/refresh",
@@ -75,7 +75,7 @@ public class RefreshTokenController {
     public ResponseEntity<AuthTokenResponseDTO> refresh(
             @RequestBody @Valid RefreshTokenRequestDTO request
     ) {
-        AuthTokens tokens = refreshService.refresh(
+        AuthTokens tokens = refreshTokenService.refresh(
                 request.refreshToken()
         );
 
