@@ -6,6 +6,7 @@ import com.jeepclub.backend.authentication.core.application.exceptions.user.User
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
+import com.jeepclub.backend.authentication.core.application.results.admin.recovery.AdminPasswordRecoveryRequestResult;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
@@ -17,12 +18,13 @@ import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -163,6 +165,57 @@ public class PasswordRecoveryService {
                 savedRecoveryRequest
         );
     }
+
+
+
+    @Transactional(readOnly = true)
+    public List<AdminPasswordRecoveryRequestResult> findAllRecoveryRequestsByAdmin() {
+        return AdminPasswordRecoveryRequestResult.from(
+                passwordRecoveryRequestRepository.findAll()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public AdminPasswordRecoveryRequestResult findRecoveryRequestByIdByAdmin(Long requestId) {
+        PasswordRecoveryRequest request = findPasswordResetRequestById(requestId);
+
+        return AdminPasswordRecoveryRequestResult.from(request);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminPasswordRecoveryRequestResult> findRecoveryRequestsByUserIdByAdmin(Long userId) {
+        ensureUserExists(userId);
+
+        return AdminPasswordRecoveryRequestResult.from(
+                passwordRecoveryRequestRepository.findByUserId(userId)
+        );
+    }
+
+    @Transactional
+    public AdminPasswordRecoveryRequestResult cancelRecoveryRequestByAdmin(Long requestId) {
+        PasswordRecoveryRequest request = findPasswordResetRequestById(requestId);
+        Instant now = Instant.now(clock);
+
+        request.cancel(now);
+
+        PasswordRecoveryRequest savedRequest = passwordRecoveryRequestRepository.save(request);
+
+        return AdminPasswordRecoveryRequestResult.from(savedRequest);
+    }
+
+
+
+    private PasswordRecoveryRequest findPasswordResetRequestById(Long requestId) {
+        return passwordRecoveryRequestRepository.findById(requestId)
+                .orElseThrow(() -> new PasswordRecoveryRequestNotFoundException(requestId));
+    }
+
+    private void ensureUserExists(Long userId) {
+        if (userRepository.findById(userId).isEmpty()) {
+            throw new UserIdNotFoundException(userId);
+        }
+    }
+
 
     private PasswordRecoveryRequest getOrCreateOpenRecoveryRequest(
             Long userId,
