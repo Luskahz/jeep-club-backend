@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.controller;
+package com.jeepclub.backend.authentication.api.controller.session;
 
 import com.jeepclub.backend.authentication.api.dto.sessao.CompleteRequiredPasswordChangeDTO;
 import com.jeepclub.backend.authentication.api.dto.sessao.LoginRequestDTO;

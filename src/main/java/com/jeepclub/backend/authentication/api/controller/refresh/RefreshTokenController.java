@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.api.controller;
+package com.jeepclub.backend.authentication.api.controller.refresh;
 
 import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.token.RefreshTokenRequestDTO;
