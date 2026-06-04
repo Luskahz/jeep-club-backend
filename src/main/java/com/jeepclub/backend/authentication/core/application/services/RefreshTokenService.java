@@ -21,7 +21,7 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
-public class RefreshService {
+public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;

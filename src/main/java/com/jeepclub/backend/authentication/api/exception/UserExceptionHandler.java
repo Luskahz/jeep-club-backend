@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
-public class AuthenticationUserExceptionHandler extends ApiExceptionHandler {
+public class UserExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(UserCpfNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleUserCpfNotFound(UserCpfNotFoundException exception) {

@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
-public class AuthenticationRefreshTokenExceptionHandler extends ApiExceptionHandler {
+public class RefreshTokenExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(RFInvalidException.class)
     public ResponseEntity<ApiErrorResponse> handleRFInvalid(RFInvalidException exception) {

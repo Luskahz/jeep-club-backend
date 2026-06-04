@@ -12,7 +12,7 @@ import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
-public class RegisterService {
+public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;

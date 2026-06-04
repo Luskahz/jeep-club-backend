@@ -3,20 +3,29 @@ package com.jeepclub.backend.authentication.api.controller;
 import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.user.UserRegistrationRequestDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.services.LoginService;
-import com.jeepclub.backend.authentication.core.application.services.RegisterService;
+import com.jeepclub.backend.authentication.core.application.services.SessionService;
+import com.jeepclub.backend.authentication.core.application.services.UserService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/authentication")
+@RequestMapping(
+        value = "/authentication",
+        produces = MediaType.APPLICATION_JSON_VALUE
+)
 @RequiredArgsConstructor
 @Validated
 @Tag(
@@ -25,18 +34,52 @@ import org.springframework.web.bind.annotation.*;
 )
 public class UserController {
 
-    private final RegisterService registerService;
-    private final LoginService loginService;
+    private final UserService userService;
+    private final SessionService sessionService;
 
-    @PostMapping("/register")
+    @PostMapping(
+            value = "/register",
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    @SwaggerOperationGroup(value = "Rotas públicas", order = 10)
     @Operation(
             summary = "Registrar usuário",
-            description = "Cria uma nova conta de usuário e retorna os tokens de autenticação."
+            description = """
+                    Cria uma nova conta de usuário a partir dos dados cadastrais informados.
+                    Após o registro, autentica o usuário criado e retorna access token e refresh token.
+                    """,
+            security = {},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "201",
+                            description = "Usuário registrado e autenticado com sucesso.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = AuthTokenResponseDTO.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Requisição inválida ou dados cadastrais inconsistentes.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Já existe usuário cadastrado com os dados únicos informados.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    )
+            }
     )
     public ResponseEntity<AuthTokenResponseDTO> register(
             @RequestBody @Valid UserRegistrationRequestDTO request
     ) {
-        User user = registerService.registerUser(
+        User user = userService.registerUser(
                 request.name(),
                 request.birthData(),
                 request.email(),
@@ -46,7 +89,7 @@ public class UserController {
                 request.phoneNumber()
         );
 
-        AuthTokens tokens = loginService.authenticateRegisteredUser(user);
+        AuthTokens tokens = sessionService.authenticateRegisteredUser(user);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(AuthTokenResponseDTO.from(tokens));

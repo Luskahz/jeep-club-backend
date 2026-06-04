@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
-public class AuthenticationTokenHashExceptionHandler extends ApiExceptionHandler {
+public class TokenHashExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(TokenInvalidException.class)
     public ResponseEntity<ApiErrorResponse> handleTokenInvalid(TokenInvalidException exception) {

@@ -2,33 +2,35 @@ package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordChangeChallengeInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordRecoveryRequestNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.results.LogoutResult;
+import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.results.login.LoginResult;
 import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.model.*;
-import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
-import com.jeepclub.backend.authentication.core.port.JwtService;
-import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
-import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
+import com.jeepclub.backend.authentication.core.port.*;
 import com.jeepclub.backend.authentication.core.repository.*;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
+
 
 @Service
 @RequiredArgsConstructor
-public class LoginService {
+public class SessionService {
 
     private final UserRepository userRepository;
     private final SessionRepository sessionRepository;
@@ -204,4 +206,62 @@ public class LoginService {
                 expiresInSeconds
         );
     }
+
+
+
+    @Transactional(readOnly = true)
+    public MeResult me(
+            Long userId,
+            Long sessionId,
+            Instant accessTokenExpiresAt
+    ) {
+        Objects.requireNonNull(userId, "userId cannot be null");
+        Objects.requireNonNull(sessionId, "sessionId cannot be null");
+        Objects.requireNonNull(accessTokenExpiresAt, "accessTokenExpiresAt cannot be null");
+
+        Instant now = Instant.now(clock);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserIdNotFoundException("User not found"));
+
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new SessionNotFoundException("Session not found"));
+
+        if (!session.getUserId().equals(user.getId())) {
+            throw new SessionUserMismatchException("Session does not belong to this user");
+        }
+
+        return new MeResult(
+                user.getId(),
+                session.getId(),
+                session.isValid(now),
+                getAccessTokenRemainingSeconds(now, accessTokenExpiresAt)
+        );
+    }
+
+    private long getAccessTokenRemainingSeconds(
+            Instant now,
+            Instant accessTokenExpiresAt
+    ) {
+        return Math.max(
+                Duration.between(now, accessTokenExpiresAt).getSeconds(),
+                0
+        );
+    }
+
+    @Transactional
+    public LogoutResult logout(Long userId) {
+        Instant now = Instant.now();
+        Session session = sessionRepository.findActiveByUserId(userId)
+                .orElseThrow(() -> new SessionNotFoundException("Session not found."));
+
+        userRepository.findById(session.getUserId())
+                .orElseThrow(() -> new UserIdNotFoundException("User not found."));
+
+        session.logout(now);
+        sessionRepository.save(session);
+
+        return new LogoutResult("Logout successful!");
+    }
+
 }
