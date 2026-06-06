@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.results.admin.recovery;
 
-import com.jeepclub.backend.authentication.core.domain.model.PasswordResetRequest;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 
 import java.time.Instant;
 import java.util.List;
@@ -10,21 +10,21 @@ public record AdminPasswordRecoveryRequestResult(
         Long id,
         Long userId,
         String status,
-        String origin,
+        String method,
         Instant createdAt,
         Instant expiresAt,
         Instant resolvedAt,
         Instant cancelledAt
 ) {
 
-    public static AdminPasswordRecoveryRequestResult from(PasswordResetRequest request) {
+    public static AdminPasswordRecoveryRequestResult from(PasswordRecoveryRequest request) {
         Objects.requireNonNull(request, "request cannot be null");
 
         return new AdminPasswordRecoveryRequestResult(
                 request.getId(),
                 request.getUserId(),
                 request.getStatus().name(),
-                request.getOrigin() == null ? null : request.getOrigin().name(),
+                request.getMethod().name(),
                 request.getCreatedAt(),
                 request.getExpiresAt(),
                 request.getResolvedAt(),
@@ -32,7 +32,7 @@ public record AdminPasswordRecoveryRequestResult(
         );
     }
 
-    public static List<AdminPasswordRecoveryRequestResult> from(List<PasswordResetRequest> requests) {
+    public static List<AdminPasswordRecoveryRequestResult> from(List<PasswordRecoveryRequest> requests) {
         Objects.requireNonNull(requests, "requests cannot be null");
 
         return requests.stream()

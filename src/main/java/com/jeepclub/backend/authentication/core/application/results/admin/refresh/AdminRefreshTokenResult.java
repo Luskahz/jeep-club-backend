@@ -13,20 +13,21 @@ public record AdminRefreshTokenResult(
         String status,
         Instant createdAt,
         Instant expiresAt,
-        Instant revokedAt
+        Long replacedByTokenId
 ) {
 
     public static AdminRefreshTokenResult from(RefreshToken refreshToken) {
         Objects.requireNonNull(refreshToken, "refreshToken cannot be null");
+        Objects.requireNonNull(refreshToken.getSession(), "refreshToken.session cannot be null");
 
         return new AdminRefreshTokenResult(
                 refreshToken.getId(),
-                refreshToken.getUserId(),
-                refreshToken.getSessionId(),
+                refreshToken.getSession().getUserId(),
+                refreshToken.getSession().getId(),
                 refreshToken.getStatus().name(),
                 refreshToken.getCreatedAt(),
                 refreshToken.getExpiresAt(),
-                refreshToken.getRevokedAt()
+                refreshToken.getReplacedByTokenId()
         );
     }
 
