@@ -18,7 +18,8 @@ public class CorsConfig {
                 registry.addMapping("/**")
                         .allowedOrigins(
                                 "http://localhost:8080",
-                                "http://localhost:3000"
+                                "http://localhost:3000",
+                                "https://jeep-club-backend-production.up.railway.app"
                         )
                         .allowedMethods(
                                 "GET",
