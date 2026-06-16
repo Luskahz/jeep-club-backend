@@ -8,6 +8,7 @@ import com.jeepclub.backend.authentication.infra.persistence.mapper.SessionMappe
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -32,5 +33,21 @@ public class SessionRepositoryAdapter implements SessionRepository {
         // ATUALIZADO: Chamando o método novo que blinda a aplicação contra sessões duplicadas
         return jpaRepository.findFirstByUserIdAndStatusOrderByCreatedAtDesc(userId, SessionStatus.ACTIVE)
                 .map(SessionMapper::toDomain);
+    }
+
+    @Override
+    public List<Session> findAll() {
+        return jpaRepository.findAll()
+                .stream()
+                .map(SessionMapper::toDomain)
+                .toList();
+    }
+
+    @Override
+    public List<Session> findByUserId(Long userId) {
+        return jpaRepository.findByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(SessionMapper::toDomain)
+                .toList();
     }
 }

@@ -65,4 +65,11 @@ public class UserRepositoryAdapter implements UserRepository {
                 UserStatus.ACTIVE
         );
     }
+    @Override
+    public List<User> findAll() {
+        return jpaRepository.findAll()
+                .stream()
+                .map(UserMapper::toDomain)
+                .toList();
+    }
 }

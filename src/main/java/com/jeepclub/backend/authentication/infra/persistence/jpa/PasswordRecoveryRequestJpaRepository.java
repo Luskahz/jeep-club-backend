@@ -6,6 +6,7 @@ import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordReco
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface PasswordRecoveryRequestJpaRepository
@@ -13,13 +14,19 @@ public interface PasswordRecoveryRequestJpaRepository
 
     Optional<PasswordRecoveryRequestEntity> findByTokenHash(String tokenHash);
 
-    Optional<PasswordRecoveryRequestEntity> findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+    List<PasswordRecoveryRequestEntity> findByUserIdOrderByCreatedAtDesc(
+            Long userId
+    );
+
+    Optional<PasswordRecoveryRequestEntity>
+    findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
             Long userId,
             PasswordRecoveryRequestStatus status,
             Instant now
     );
 
-    Optional<PasswordRecoveryRequestEntity> findFirstByUserIdAndStatusAndMethodAndExpiresAtAfterOrderByCreatedAtDesc(
+    Optional<PasswordRecoveryRequestEntity>
+    findFirstByUserIdAndStatusAndMethodAndExpiresAtAfterOrderByCreatedAtDesc(
             Long userId,
             PasswordRecoveryRequestStatus status,
             PasswordRecoveryRequestMethod method,

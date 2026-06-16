@@ -3,6 +3,7 @@ package com.jeepclub.backend.authentication.infra.persistence.adapter;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
+import com.jeepclub.backend.authentication.infra.persistence.entity.RefreshTokenEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.RefreshTokenMapper;
@@ -10,40 +11,160 @@ import com.jeepclub.backend.authentication.infra.persistence.mapper.SessionMappe
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Repository
 @RequiredArgsConstructor
-public class RefreshTokenRepositoryAdapter implements RefreshTokenRepository {
+public class RefreshTokenRepositoryAdapter
+        implements RefreshTokenRepository {
 
-    private final RefreshTokenJpaRepository jpa;
-    private final SessionJpaRepository sessionJpa;
+    private final RefreshTokenJpaRepository jpaRepository;
+    private final SessionJpaRepository sessionJpaRepository;
 
     @Override
-    public RefreshToken save(RefreshToken token, Session session) {
-        var entity = jpa.findBySessionId(session.getId())
-                .map(e -> {
-                    e.setTokenHash(token.getTokenHash());
-                    e.setExpiresAt(token.getExpiresAt());
-                    e.setStatus(token.getStatus());
-                    e.setReplacedByTokenId(token.getReplacedByTokenId());
-                    return e;
-                })
-                .orElseGet(() -> RefreshTokenMapper.toEntity(token));
+    public RefreshToken save(
+            RefreshToken token,
+            Session session
+    ) {
+        RefreshTokenEntity entity =
+                jpaRepository.findBySessionId(session.getId())
+                        .map(existingEntity -> {
+                            existingEntity.setTokenHash(token.getTokenHash());
+                            existingEntity.setExpiresAt(token.getExpiresAt());
+                            existingEntity.setStatus(token.getStatus());
+                            existingEntity.setReplacedByTokenId(
+                                    token.getReplacedByTokenId()
+                            );
 
-        var saved = jpa.save(entity);
-        return RefreshTokenMapper.toDomain(saved, session);
+                            return existingEntity;
+                        })
+                        .orElseGet(() ->
+                                RefreshTokenMapper.toEntity(token)
+                        );
+
+        RefreshTokenEntity savedEntity =
+                jpaRepository.save(entity);
+
+        return RefreshTokenMapper.toDomain(
+                savedEntity,
+                session
+        );
+    }
+
+    @Override
+    public List<RefreshToken> findAll() {
+        List<RefreshTokenEntity> tokenEntities =
+                jpaRepository.findAll();
+
+        return mapToDomains(tokenEntities);
+    }
+
+    @Override
+    public Optional<RefreshToken> findById(Long id) {
+        return jpaRepository.findById(id)
+                .flatMap(this::mapToDomain);
     }
 
     @Override
     public Optional<RefreshToken> findByTokenHash(String tokenHash) {
-        return jpa.findByTokenHash(tokenHash)
-                .flatMap(entity ->
-                        sessionJpa.findById(entity.getSessionId())
-                                .map(sessionEntity ->
-                                        RefreshTokenMapper.toDomain(entity, SessionMapper.toDomain(sessionEntity))
-                                )
+        return jpaRepository.findByTokenHash(tokenHash)
+                .flatMap(this::mapToDomain);
+    }
+
+    @Override
+    public List<RefreshToken> findByUserId(Long userId) {
+        List<Session> sessions =
+                sessionJpaRepository
+                        .findByUserIdOrderByCreatedAtDesc(userId)
+                        .stream()
+                        .map(SessionMapper::toDomain)
+                        .toList();
+
+        if (sessions.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> sessionIds = sessions.stream()
+                .map(Session::getId)
+                .toList();
+
+        List<RefreshTokenEntity> tokenEntities =
+                jpaRepository
+                        .findBySessionIdInOrderByCreatedAtDesc(
+                                sessionIds
+                        );
+
+        Map<Long, Session> sessionsById = sessions.stream()
+                .collect(Collectors.toMap(
+                        Session::getId,
+                        Function.identity()
+                ));
+
+        return tokenEntities.stream()
+                .map(entity -> RefreshTokenMapper.toDomain(
+                        entity,
+                        sessionsById.get(entity.getSessionId())
+                ))
+                .toList();
+    }
+
+    private Optional<RefreshToken> mapToDomain(
+            RefreshTokenEntity entity
+    ) {
+        return sessionJpaRepository
+                .findById(entity.getSessionId())
+                .map(SessionMapper::toDomain)
+                .map(session ->
+                        RefreshTokenMapper.toDomain(
+                                entity,
+                                session
+                        )
                 );
     }
 
+    private List<RefreshToken> mapToDomains(
+            Collection<RefreshTokenEntity> tokenEntities
+    ) {
+        if (tokenEntities.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> sessionIds = tokenEntities.stream()
+                .map(RefreshTokenEntity::getSessionId)
+                .distinct()
+                .toList();
+
+        Map<Long, Session> sessionsById =
+                sessionJpaRepository.findAllById(sessionIds)
+                        .stream()
+                        .map(SessionMapper::toDomain)
+                        .collect(Collectors.toMap(
+                                Session::getId,
+                                Function.identity()
+                        ));
+
+        return tokenEntities.stream()
+                .map(entity -> {
+                    Session session =
+                            sessionsById.get(entity.getSessionId());
+
+                    if (session == null) {
+                        throw new IllegalStateException(
+                                "Session not found for refresh token id: "
+                                        + entity.getId()
+                        );
+                    }
+
+                    return RefreshTokenMapper.toDomain(
+                            entity,
+                            session
+                    );
+                })
+                .toList();
+    }
 }

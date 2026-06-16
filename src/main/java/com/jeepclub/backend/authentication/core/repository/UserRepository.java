@@ -9,6 +9,8 @@ public interface UserRepository {
 
     User save(User user);
 
+    List<User> findAll();
+
     Optional<User> findById(Long id);
 
     Optional<User> findByCpf(String cpf);

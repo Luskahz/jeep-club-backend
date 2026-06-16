@@ -31,4 +31,5 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
             order by user.id
             """)
     List<Long> findActiveUserIds();
+
 }
