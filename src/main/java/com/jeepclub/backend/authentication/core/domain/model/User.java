@@ -160,11 +160,6 @@ public class User {
         this.failedLoginAttempts = 0;
     }
 
-    public void reactivate() {
-        if (status != UserStatus.DISABLED) throw new UserNotDisableException("User is not disable.");
-        this.status = UserStatus.ACTIVE;
-    }
-
 
     public void recordSuccessfulLogin(Instant now) {
         this.lastLoginAt = now;

@@ -29,7 +29,7 @@ public record AdminPasswordRecoveryRequestResponseDTO(
 
         @Schema(
                 description = "Status atual da solicitação de recuperação.",
-                example = "PENDING",
+                example = "OPEN",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         String status,

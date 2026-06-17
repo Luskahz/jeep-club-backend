@@ -1,14 +1,14 @@
 package com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken;
 
-public class RFNotFoundException extends RuntimeException {
+public class RefreshTokenNotFoundException extends RuntimeException {
 
-    public RFNotFoundException(Long refreshTokenId) {
+    public RefreshTokenNotFoundException(Long refreshTokenId) {
         super(
                 "Refresh token not found with id: "
                         + refreshTokenId
         );
     }
-    public RFNotFoundException(String message) {
+    public RefreshTokenNotFoundException(String message) {
         super(message);
     }
 }

@@ -75,15 +75,6 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserNotDisableException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserNotDisable(UserNotDisableException exception) {
-        return buildErrorResponse(
-                "USER_NOT_DISABLE",
-                exception.getMessage(),
-                HttpStatus.CONFLICT
-        );
-    }
-
     @ExceptionHandler(UserNotLockoutException.class)
     public ResponseEntity<ApiErrorResponse> handleUserNotLockout(UserNotLockoutException exception) {
         return buildErrorResponse(
@@ -135,6 +126,28 @@ public class UserExceptionHandler extends ApiExceptionHandler {
                 "USER_ID_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(UserAlreadyDisabledException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserAlreadyDisabled(
+            UserAlreadyDisabledException exception
+    ) {
+        return buildErrorResponse(
+                "USER_ALREADY_DISABLED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(UserNotDisabledException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotDisabled(
+            UserNotDisabledException exception
+    ) {
+        return buildErrorResponse(
+                "USER_NOT_DISABLED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }
