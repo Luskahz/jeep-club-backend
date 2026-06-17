@@ -232,26 +232,24 @@ public class User {
     public boolean isChangePasswordRequired() {
         return status == UserStatus.CHANGE_PASSWORD_REQUIRED;
     }
+
     public void disable(Instant now) {
         validateNow(now);
 
         if (isDisabled()) {
-            throw new IllegalStateException(
-                    "User is already disabled."
-            );
+            throw new UserAlreadyDisabledException(id);
         }
 
         this.status = UserStatus.DISABLED;
         this.disabledAt = now;
         this.updatedAt = now;
     }
+
     public void enable(Instant now) {
         validateNow(now);
 
         if (!isDisabled()) {
-            throw new IllegalStateException(
-                    "Only disabled users can be enabled."
-            );
+            throw new UserNotDisabledException(id);
         }
 
         this.status = UserStatus.ACTIVE;

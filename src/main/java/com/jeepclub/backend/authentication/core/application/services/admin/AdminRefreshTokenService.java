@@ -50,7 +50,7 @@ public class AdminRefreshTokenService {
         RefreshToken refreshToken = refreshTokenRepository
                 .findById(refreshTokenId)
                 .orElseThrow(() ->
-                        new RefreshTokenNotFoundException(
+                        new RFNotFoundException(
                                 refreshTokenId
                         )
                 );

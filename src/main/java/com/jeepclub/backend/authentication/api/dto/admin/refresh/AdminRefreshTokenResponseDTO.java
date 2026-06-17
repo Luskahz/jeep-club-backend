@@ -56,11 +56,10 @@ public record AdminRefreshTokenResponseDTO(
         Instant expiresAt,
 
         @Schema(
-                description = "Data de revogação do refresh token, quando houver.",
-                example = "2026-06-04T18:00:00Z",
+                description = "Identificador do refresh token que substituiu este token após uma rotação.",
+                example = "51",
                 nullable = true
-        )
-        Instant revokedAt
+        ) Long replacedByTokenId
 ) {
 
     public static AdminRefreshTokenResponseDTO from(AdminRefreshTokenResult result) {
@@ -73,7 +72,7 @@ public record AdminRefreshTokenResponseDTO(
                 result.status(),
                 result.createdAt(),
                 result.expiresAt(),
-                result.revokedAt()
+                result.replacedByTokenId()
         );
     }
 

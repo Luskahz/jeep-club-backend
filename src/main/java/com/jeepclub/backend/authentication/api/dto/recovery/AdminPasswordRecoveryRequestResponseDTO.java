@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.recovery;
 
-import com.jeepclub.backend.authentication.core.application.results.AdminPasswordRecoveryRequestResult;
+import com.jeepclub.backend.authentication.core.application.results.admin.recovery.AdminPasswordRecoveryRequestResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -39,7 +39,7 @@ public record AdminPasswordRecoveryRequestResponseDTO(
                 example = "ADMIN_RESET_LINK",
                 nullable = true
         )
-        String origin,
+        String method,
 
         @Schema(
                 description = "Data de criação da solicitação.",
@@ -79,7 +79,7 @@ public record AdminPasswordRecoveryRequestResponseDTO(
                 result.id(),
                 result.userId(),
                 result.status(),
-                result.origin(),
+                result.method(),
                 result.createdAt(),
                 result.expiresAt(),
                 result.resolvedAt(),
