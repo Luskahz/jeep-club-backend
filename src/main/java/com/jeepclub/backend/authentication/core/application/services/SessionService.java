@@ -176,10 +176,14 @@ public class SessionService {
             User user,
             Instant now
     ) {
-        Session session = sessionRepository.findActiveByUserId(user.getId())
+        Session session = sessionRepository
+                .findActiveByUserId(user.getId())
                 .filter(existing -> existing.isValid(now))
                 .orElseGet(() -> sessionRepository.save(
-                        Session.create(user.getId(), authTimeProperties.sessionTtl())
+                        Session.create(
+                                user.getId(),
+                                authTimeProperties.sessionTtl()
+                        )
                 ));
 
         String rawToken = tokenGenerator.generate();
@@ -191,12 +195,19 @@ public class SessionService {
                 authTimeProperties.refreshTokenTtl()
         );
 
-        refreshTokenRepository.save(refreshToken, session);
+        refreshTokenRepository.save(refreshToken);
 
-        IssuedAccessToken issuedAccessToken = jwtService.generateAccessToken(user, session);
+        IssuedAccessToken issuedAccessToken =
+                jwtService.generateAccessToken(
+                        user,
+                        session
+                );
 
         long expiresInSeconds = Math.max(
-                Duration.between(now, issuedAccessToken.expiresAt()).getSeconds(),
+                Duration.between(
+                        now,
+                        issuedAccessToken.expiresAt()
+                ).getSeconds(),
                 0
         );
 

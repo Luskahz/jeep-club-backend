@@ -54,8 +54,15 @@ public class RefreshTokenService {
                 newTokenHash,
                 authTimeProperties.refreshTokenTtl()
         );
-        RefreshToken savedNewToken = refreshTokenRepository.save(newToken);
-        existingToken.rotate(savedNewToken.getId(), now);
+
+        RefreshToken savedNewToken =
+                refreshTokenRepository.save(newToken);
+
+        existingToken.rotate(
+                savedNewToken.getId(),
+                now
+        );
+
         refreshTokenRepository.save(existingToken);
 
         IssuedAccessToken issuedAccessToken = jwtService.generateAccessToken(user, existingToken.getSession());

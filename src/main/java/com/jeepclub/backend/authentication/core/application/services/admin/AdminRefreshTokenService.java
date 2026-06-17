@@ -45,14 +45,24 @@ public class AdminRefreshTokenService {
 
     @Transactional
     public AdminRefreshTokenResult revoke(Long refreshTokenId) {
-        RefreshToken refreshToken = findRefreshTokenById(refreshTokenId);
         Instant now = Instant.now(clock);
+
+        RefreshToken refreshToken = refreshTokenRepository
+                .findById(refreshTokenId)
+                .orElseThrow(() ->
+                        new RefreshTokenNotFoundException(
+                                refreshTokenId
+                        )
+                );
 
         refreshToken.revoke(now);
 
-        RefreshToken savedRefreshToken = refreshTokenRepository.save(refreshToken);
+        RefreshToken savedRefreshToken =
+                refreshTokenRepository.save(refreshToken);
 
-        return AdminRefreshTokenResult.from(savedRefreshToken);
+        return AdminRefreshTokenResult.from(
+                savedRefreshToken
+        );
     }
 
     private RefreshToken findRefreshTokenById(Long refreshTokenId) {

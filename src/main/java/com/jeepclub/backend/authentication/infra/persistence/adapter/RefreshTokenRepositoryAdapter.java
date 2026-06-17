@@ -28,42 +28,17 @@ public class RefreshTokenRepositoryAdapter
 
     @Override
     public RefreshToken save(RefreshToken token) {
-        Session session = token.getSession();
-
-        if (session == null) {
-            throw new IllegalArgumentException(
-                    "Refresh token session is required."
-            );
-        }
-
-        if (session.getId() == null) {
-            throw new IllegalArgumentException(
-                    "Refresh token session id is required."
-            );
-        }
+        validateTokenSession(token);
 
         RefreshTokenEntity entity =
-                jpaRepository.findBySessionId(session.getId())
-                        .map(existingEntity -> {
-                            existingEntity.setTokenHash(token.getTokenHash());
-                            existingEntity.setExpiresAt(token.getExpiresAt());
-                            existingEntity.setStatus(token.getStatus());
-                            existingEntity.setReplacedByTokenId(
-                                    token.getReplacedByTokenId()
-                            );
-
-                            return existingEntity;
-                        })
-                        .orElseGet(() ->
-                                RefreshTokenMapper.toEntity(token)
-                        );
+                RefreshTokenMapper.toEntity(token);
 
         RefreshTokenEntity savedEntity =
                 jpaRepository.save(entity);
 
         return RefreshTokenMapper.toDomain(
                 savedEntity,
-                session
+                token.getSession()
         );
     }
 
@@ -117,9 +92,9 @@ public class RefreshTokenRepositoryAdapter
                 ));
 
         return tokenEntities.stream()
-                .map(entity -> RefreshTokenMapper.toDomain(
+                .map(entity -> mapToDomain(
                         entity,
-                        sessionsById.get(entity.getSessionId())
+                        sessionsById
                 ))
                 .toList();
     }
@@ -160,22 +135,50 @@ public class RefreshTokenRepositoryAdapter
                         ));
 
         return tokenEntities.stream()
-                .map(entity -> {
-                    Session session =
-                            sessionsById.get(entity.getSessionId());
-
-                    if (session == null) {
-                        throw new IllegalStateException(
-                                "Session not found for refresh token id: "
-                                        + entity.getId()
-                        );
-                    }
-
-                    return RefreshTokenMapper.toDomain(
-                            entity,
-                            session
-                    );
-                })
+                .map(entity -> mapToDomain(
+                        entity,
+                        sessionsById
+                ))
                 .toList();
+    }
+
+    private RefreshToken mapToDomain(
+            RefreshTokenEntity entity,
+            Map<Long, Session> sessionsById
+    ) {
+        Session session =
+                sessionsById.get(entity.getSessionId());
+
+        if (session == null) {
+            throw new IllegalStateException(
+                    "Session not found for refresh token id: "
+                            + entity.getId()
+            );
+        }
+
+        return RefreshTokenMapper.toDomain(
+                entity,
+                session
+        );
+    }
+
+    private void validateTokenSession(RefreshToken token) {
+        if (token == null) {
+            throw new IllegalArgumentException(
+                    "Refresh token is required."
+            );
+        }
+
+        if (token.getSession() == null) {
+            throw new IllegalArgumentException(
+                    "Refresh token session is required."
+            );
+        }
+
+        if (token.getSession().getId() == null) {
+            throw new IllegalArgumentException(
+                    "Refresh token session id is required."
+            );
+        }
     }
 }

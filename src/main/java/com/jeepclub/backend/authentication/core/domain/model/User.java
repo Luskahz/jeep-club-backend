@@ -182,14 +182,17 @@ public class User {
         return this;
     }
 
-    public void changePassword(String newHash, Instant now) {
+    public void changePassword(
+            String newHash,
+            Instant now
+    ) {
         if (newHash == null || newHash.isBlank()) {
-            throw new UserNewHashRequiredException("newHash is required");
+            throw new UserNewHashRequiredException(
+                    "newHash is required."
+            );
         }
 
-        if (now == null) {
-            throw new UserNowInstantRequiredException("now is required");
-        }
+        validateNow(now);
 
         this.passwordHash = newHash;
         this.passwordChangedAt = now;
@@ -198,14 +201,20 @@ public class User {
         this.updatedAt = now;
     }
 
-    public void changeToTemporaryPassword(String temporaryPasswordHash, Instant now) {
-        if (temporaryPasswordHash == null || temporaryPasswordHash.isBlank()) {
-            throw new UserNewHashRequiredException("temporaryPasswordHash is required");
+    public void changeToTemporaryPassword(
+            String temporaryPasswordHash,
+            Instant now
+    ) {
+        if (
+                temporaryPasswordHash == null
+                        || temporaryPasswordHash.isBlank()
+        ) {
+            throw new UserNewHashRequiredException(
+                    "temporaryPasswordHash is required."
+            );
         }
 
-        if (now == null) {
-            throw new UserNowInstantRequiredException("now is required");
-        }
+        validateNow(now);
 
         this.passwordHash = temporaryPasswordHash;
         this.passwordChangedAt = now;
@@ -226,29 +235,29 @@ public class User {
     public void disable(Instant now) {
         validateNow(now);
 
-        if (status == UserStatus.DISABLED) {
+        if (isDisabled()) {
             throw new IllegalStateException(
                     "User is already disabled."
             );
         }
 
-        status = UserStatus.DISABLED;
-        disabledAt = now;
-        updatedAt = now;
+        this.status = UserStatus.DISABLED;
+        this.disabledAt = now;
+        this.updatedAt = now;
     }
     public void enable(Instant now) {
         validateNow(now);
 
-        if (status != UserStatus.DISABLED) {
+        if (!isDisabled()) {
             throw new IllegalStateException(
                     "Only disabled users can be enabled."
             );
         }
 
-        status = UserStatus.ACTIVE;
-        disabledAt = null;
-        failedLoginAttempts = 0;
-        updatedAt = now;
+        this.status = UserStatus.ACTIVE;
+        this.disabledAt = null;
+        this.failedLoginAttempts = 0;
+        this.updatedAt = now;
     }
 
     private void validateNow(Instant now) {
