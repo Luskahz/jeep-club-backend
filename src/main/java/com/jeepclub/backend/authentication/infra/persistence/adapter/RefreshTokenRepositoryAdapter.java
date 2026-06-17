@@ -27,10 +27,21 @@ public class RefreshTokenRepositoryAdapter
     private final SessionJpaRepository sessionJpaRepository;
 
     @Override
-    public RefreshToken save(
-            RefreshToken token,
-            Session session
-    ) {
+    public RefreshToken save(RefreshToken token) {
+        Session session = token.getSession();
+
+        if (session == null) {
+            throw new IllegalArgumentException(
+                    "Refresh token session is required."
+            );
+        }
+
+        if (session.getId() == null) {
+            throw new IllegalArgumentException(
+                    "Refresh token session id is required."
+            );
+        }
+
         RefreshTokenEntity entity =
                 jpaRepository.findBySessionId(session.getId())
                         .map(existingEntity -> {

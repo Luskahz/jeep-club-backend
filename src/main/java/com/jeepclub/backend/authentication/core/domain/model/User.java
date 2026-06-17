@@ -223,4 +223,39 @@ public class User {
     public boolean isChangePasswordRequired() {
         return status == UserStatus.CHANGE_PASSWORD_REQUIRED;
     }
+    public void disable(Instant now) {
+        validateNow(now);
+
+        if (status == UserStatus.DISABLED) {
+            throw new IllegalStateException(
+                    "User is already disabled."
+            );
+        }
+
+        status = UserStatus.DISABLED;
+        disabledAt = now;
+        updatedAt = now;
+    }
+    public void enable(Instant now) {
+        validateNow(now);
+
+        if (status != UserStatus.DISABLED) {
+            throw new IllegalStateException(
+                    "Only disabled users can be enabled."
+            );
+        }
+
+        status = UserStatus.ACTIVE;
+        disabledAt = null;
+        failedLoginAttempts = 0;
+        updatedAt = now;
+    }
+
+    private void validateNow(Instant now) {
+        if (now == null) {
+            throw new UserNowInstantRequiredException(
+                    "now is required."
+            );
+        }
+    }
 }
