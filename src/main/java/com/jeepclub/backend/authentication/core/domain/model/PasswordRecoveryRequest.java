@@ -136,11 +136,13 @@ public class PasswordRecoveryRequest {
 
         assertOpen(validatedNow);
 
+        String normalizedTokenHash =
+                validateRequiredTokenHash(tokenHash);
+
         this.method =
                 PasswordRecoveryRequestMethod.EMAIL_TOKEN;
 
-        this.tokenHash =
-                validateRequiredTokenHash(tokenHash);
+        this.tokenHash = normalizedTokenHash;
     }
 
     public void changeToAdminResetLinkMethod(
@@ -151,11 +153,13 @@ public class PasswordRecoveryRequest {
 
         assertOpen(validatedNow);
 
+        String normalizedTokenHash =
+                validateRequiredTokenHash(tokenHash);
+
         this.method =
                 PasswordRecoveryRequestMethod.ADMIN_RESET_LINK;
 
-        this.tokenHash =
-                validateRequiredTokenHash(tokenHash);
+        this.tokenHash = normalizedTokenHash;
     }
 
     public void changeToAdminTemporaryPasswordMethod(
