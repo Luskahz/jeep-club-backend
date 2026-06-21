@@ -3,6 +3,7 @@ package com.jeepclub.backend.authentication.api.controller.passwordRecovery;
 import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestDTO;
 import com.jeepclub.backend.authentication.api.dto.recovery.PasswordRecoveryRequestResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.recovery.PasswordResetDTO;
+import com.jeepclub.backend.authentication.core.application.results.PublicPasswordRecoveryResult;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
@@ -17,7 +18,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
@@ -34,13 +38,19 @@ public class PasswordRecoveryRequestController {
 
     private final PasswordRecoveryService passwordRecoveryService;
 
-    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @SwaggerOperationGroup(value = "Rotas públicas", order = 10)
+    @PostMapping(
+            consumes = MediaType.APPLICATION_JSON_VALUE
+    )
+    @SwaggerOperationGroup(
+            value = "Rotas públicas",
+            order = 10
+    )
     @Operation(
             summary = "Criar ou consultar solicitação de recuperação de senha",
             description = """
                     Cria uma solicitação de recuperação de senha para o CPF informado.
-                    Caso já exista uma solicitação aberta e válida para o usuário, retorna a solicitação existente.
+                    Caso já exista uma solicitação aberta e válida para o usuário,
+                    retorna a solicitação existente.
                     """,
             security = {},
             responses = {
@@ -49,7 +59,10 @@ public class PasswordRecoveryRequestController {
                             description = "Solicitação de recuperação retornada com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = PasswordRecoveryRequestResponseDTO.class)
+                                    schema = @Schema(
+                                            implementation =
+                                                    PasswordRecoveryRequestResponseDTO.class
+                                    )
                             )
                     ),
                     @ApiResponse(
@@ -57,32 +70,48 @@ public class PasswordRecoveryRequestController {
                             description = "Requisição inválida ou dados inconsistentes.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                                    schema = @Schema(
+                                            implementation =
+                                                    ApiErrorResponse.class
+                                    )
                             )
                     )
             }
     )
-    public ResponseEntity<PasswordRecoveryRequestResponseDTO> createOrGetOpenRecoveryRequest(
-            @RequestBody @Valid PasswordRecoveryRequestDTO request
+    public ResponseEntity<PasswordRecoveryRequestResponseDTO>
+    createOrGetOpenRecoveryRequest(
+            @RequestBody
+            @Valid
+            PasswordRecoveryRequestDTO request
     ) {
-        PasswordRecoveryRequest recoveryRequest =
-                passwordRecoveryService.createOrGetOpenRecoveryRequest(request.cpf());
+        PublicPasswordRecoveryResult recoveryResult =
+                passwordRecoveryService
+                        .createOrGetOpenRecoveryRequest(
+                                request.cpf()
+                        );
 
-        return ResponseEntity.ok(
-                PasswordRecoveryRequestResponseDTO.from(recoveryRequest)
-        );
+        PasswordRecoveryRequestResponseDTO response =
+                PasswordRecoveryRequestResponseDTO.from(
+                        recoveryResult
+                );
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(
             value = "/email-token",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    @SwaggerOperationGroup(value = "Rotas públicas", order = 10)
+    @SwaggerOperationGroup(
+            value = "Rotas públicas",
+            order = 10
+    )
     @Operation(
             summary = "Enviar token de recuperação por e-mail",
             description = """
                     Define o método da solicitação como recuperação por e-mail.
-                    Gera um token de redefinição e envia o link para o e-mail cadastrado do usuário.
+                    Gera um token de redefinição e envia o link para o e-mail
+                    cadastrado do usuário.
                     """,
             security = {},
             responses = {
@@ -91,7 +120,10 @@ public class PasswordRecoveryRequestController {
                             description = "Token de recuperação gerado e enviado por e-mail.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = PasswordRecoveryRequestResponseDTO.class)
+                                    schema = @Schema(
+                                            implementation =
+                                                    PasswordRecoveryRequestResponseDTO.class
+                                    )
                             )
                     ),
                     @ApiResponse(
@@ -99,27 +131,42 @@ public class PasswordRecoveryRequestController {
                             description = "Requisição inválida ou dados inconsistentes.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                                    schema = @Schema(
+                                            implementation =
+                                                    ApiErrorResponse.class
+                                    )
                             )
                     )
             }
     )
-    public ResponseEntity<PasswordRecoveryRequestResponseDTO> sendRecoveryEmailToken(
-            @RequestBody @Valid PasswordRecoveryRequestDTO request
+    public ResponseEntity<PasswordRecoveryRequestResponseDTO>
+    sendRecoveryEmailToken(
+            @RequestBody
+            @Valid
+            PasswordRecoveryRequestDTO request
     ) {
         PasswordRecoveryRequest recoveryRequest =
-                passwordRecoveryService.sendRecoveryEmailToken(request.cpf());
+                passwordRecoveryService
+                        .sendRecoveryEmailToken(
+                                request.cpf()
+                        );
 
-        return ResponseEntity.ok(
-                PasswordRecoveryRequestResponseDTO.from(recoveryRequest)
-        );
+        PasswordRecoveryRequestResponseDTO response =
+                PasswordRecoveryRequestResponseDTO.from(
+                        recoveryRequest
+                );
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping(
             value = "/token/reset",
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
-    @SwaggerOperationGroup(value = "Rotas públicas", order = 10)
+    @SwaggerOperationGroup(
+            value = "Rotas públicas",
+            order = 10
+    )
     @Operation(
             summary = "Redefinir senha por token",
             description = """
@@ -138,13 +185,18 @@ public class PasswordRecoveryRequestController {
                             description = "Token inválido, expirado ou requisição inconsistente.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                                    schema = @Schema(
+                                            implementation =
+                                                    ApiErrorResponse.class
+                                    )
                             )
                     )
             }
     )
     public ResponseEntity<Void> resetPasswordByToken(
-            @RequestBody @Valid PasswordResetDTO request
+            @RequestBody
+            @Valid
+            PasswordResetDTO request
     ) {
         passwordRecoveryService.resetPasswordByToken(
                 request.token(),

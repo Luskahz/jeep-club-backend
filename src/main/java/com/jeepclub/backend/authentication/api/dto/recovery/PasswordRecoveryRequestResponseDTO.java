@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.recovery;
 
+import com.jeepclub.backend.authentication.core.application.results.PublicPasswordRecoveryResult;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
@@ -15,7 +16,11 @@ public record PasswordRecoveryRequestResponseDTO(
                 description = "Status atual da solicitação.",
                 example = "OPEN",
                 requiredMode = Schema.RequiredMode.REQUIRED,
-                allowableValues = {"OPEN", "RESOLVED", "CANCELLED"}
+                allowableValues = {
+                        "OPEN",
+                        "RESOLVED",
+                        "CANCELLED"
+                }
         )
         PasswordRecoveryRequestStatus status,
 
@@ -23,7 +28,12 @@ public record PasswordRecoveryRequestResponseDTO(
                 description = "Método usado para resolver a recuperação.",
                 example = "UNDEFINED",
                 requiredMode = Schema.RequiredMode.REQUIRED,
-                allowableValues = {"UNDEFINED", "EMAIL_TOKEN", "ADMIN_RESET_LINK", "ADMIN_TEMPORARY_PASSWORD"}
+                allowableValues = {
+                        "UNDEFINED",
+                        "EMAIL_TOKEN",
+                        "ADMIN_RESET_LINK",
+                        "ADMIN_TEMPORARY_PASSWORD"
+                }
         )
         PasswordRecoveryRequestMethod method,
 
@@ -59,7 +69,10 @@ public record PasswordRecoveryRequestResponseDTO(
     public static PasswordRecoveryRequestResponseDTO from(
             PasswordRecoveryRequest request
     ) {
-        Objects.requireNonNull(request, "request cannot be null");
+        Objects.requireNonNull(
+                request,
+                "request cannot be null"
+        );
 
         return new PasswordRecoveryRequestResponseDTO(
                 request.getStatus(),
@@ -68,6 +81,24 @@ public record PasswordRecoveryRequestResponseDTO(
                 request.getExpiresAt(),
                 request.getResolvedAt(),
                 request.getCancelledAt()
+        );
+    }
+
+    public static PasswordRecoveryRequestResponseDTO from(
+            PublicPasswordRecoveryResult result
+    ) {
+        Objects.requireNonNull(
+                result,
+                "result cannot be null"
+        );
+
+        return new PasswordRecoveryRequestResponseDTO(
+                result.status(),
+                result.method(),
+                result.createdAt(),
+                result.expiresAt(),
+                result.resolvedAt(),
+                result.cancelledAt()
         );
     }
 }
