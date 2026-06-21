@@ -2,6 +2,7 @@ package com.jeepclub.backend.authentication.api.exception;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RefreshTokenInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RefreshTokenNotFoundException;
+import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RefreshTokenStateException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -29,6 +30,17 @@ public class RefreshTokenExceptionHandler extends ApiExceptionHandler {
                 "REFRESH_TOKEN_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(RefreshTokenStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleRefreshTokenState(
+            RefreshTokenStateException exception
+    ) {
+        return buildErrorResponse(
+                "REFRESH_TOKEN_STATE_CONFLICT",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }

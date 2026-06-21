@@ -1,7 +1,8 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
-import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RTInvalidExpiresAtValueException;
+import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RefreshTokenInvalidExpiresAtValueException;
+import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RefreshTokenStateException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -71,7 +72,7 @@ public class RefreshToken {
         Objects.requireNonNull(status, "status is required");
 
         if (!expiresAt.isAfter(createdAt)) {
-            throw new RTInvalidExpiresAtValueException("expiresAt must be after createdAt");
+            throw new RefreshTokenInvalidExpiresAtValueException("expiresAt must be after createdAt");
         }
 
         validateStatusConsistency(status, replacedByTokenId);
@@ -114,29 +115,38 @@ public class RefreshToken {
         Objects.requireNonNull(now, "now is required");
 
         if (!isActive(now)) {
-            throw new IllegalStateException("Only active refresh token can be revoked");
+            throw new RefreshTokenStateException(
+                    "Only active refresh tokens can be revoked."
+            );
         }
 
-        this.status = RefreshTokenStatus.REVOKED;
+        status = RefreshTokenStatus.REVOKED;
     }
 
     public void rotate(
             Long newRefreshTokenId,
             Instant now
     ) {
-        Objects.requireNonNull(newRefreshTokenId, "newRefreshTokenId is required");
+        Objects.requireNonNull(
+                newRefreshTokenId,
+                "newRefreshTokenId is required"
+        );
         Objects.requireNonNull(now, "now is required");
 
         if (!isValid(now)) {
-            throw new IllegalStateException("RefreshToken inválido, não pode ser rotacionado");
+            throw new RefreshTokenStateException(
+                    "Only valid refresh tokens can be rotated."
+            );
         }
 
-        if (this.replacedByTokenId != null) {
-            throw new IllegalStateException("RefreshToken já foi rotacionado");
+        if (replacedByTokenId != null) {
+            throw new RefreshTokenStateException(
+                    "Refresh token has already been rotated."
+            );
         }
 
-        this.replacedByTokenId = newRefreshTokenId;
-        this.status = RefreshTokenStatus.ROTATED;
+        replacedByTokenId = newRefreshTokenId;
+        status = RefreshTokenStatus.ROTATED;
     }
 
     private static void validateCreation(
