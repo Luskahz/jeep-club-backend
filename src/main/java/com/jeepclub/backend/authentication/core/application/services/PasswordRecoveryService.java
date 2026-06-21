@@ -207,15 +207,22 @@ public class PasswordRecoveryService {
     }
 
     @Transactional
-    public AdminPasswordRecoveryRequestResult cancelRecoveryRequestByAdmin(Long requestId) {
-        PasswordRecoveryRequest request = findPasswordResetRequestById(requestId);
+    public AdminPasswordRecoveryRequestResult cancelRecoveryRequestByAdmin(
+            Long requestId
+    ) {
+        PasswordRecoveryRequest request =
+                findPasswordResetRequestByIdForUpdate(requestId);
+
         Instant now = Instant.now(clock);
 
         request.cancel(now);
 
-        PasswordRecoveryRequest savedRequest = passwordRecoveryRequestRepository.save(request);
+        PasswordRecoveryRequest savedRequest =
+                passwordRecoveryRequestRepository.save(request);
 
-        return AdminPasswordRecoveryRequestResult.from(savedRequest);
+        return AdminPasswordRecoveryRequestResult.from(
+                savedRequest
+        );
     }
 
 
@@ -255,6 +262,18 @@ public class PasswordRecoveryService {
                 );
 
         return passwordRecoveryRequestRepository.save(recoveryRequest);
+    }
+
+    private PasswordRecoveryRequest findPasswordResetRequestByIdForUpdate(
+            Long requestId
+    ) {
+        return passwordRecoveryRequestRepository
+                .findByIdForUpdate(requestId)
+                .orElseThrow(
+                        () -> new PasswordRecoveryRequestNotFoundException(
+                                requestId
+                        )
+                );
     }
 
     private String buildResetLink(String rawToken) {

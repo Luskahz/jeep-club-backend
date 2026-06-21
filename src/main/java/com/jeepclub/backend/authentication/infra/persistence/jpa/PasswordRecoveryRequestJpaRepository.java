@@ -22,6 +22,8 @@ public interface PasswordRecoveryRequestJpaRepository
             Long userId
     );
 
+
+
     Optional<PasswordRecoveryRequestEntity>
     findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
             Long userId,
@@ -35,6 +37,16 @@ public interface PasswordRecoveryRequestJpaRepository
             PasswordRecoveryRequestStatus status,
             PasswordRecoveryRequestMethod method,
             Instant now
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT request
+        FROM PasswordRecoveryRequestEntity request
+        WHERE request.id = :id
+        """)
+    Optional<PasswordRecoveryRequestEntity> findByIdForUpdate(
+            @Param("id") Long id
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -15,6 +15,8 @@ public interface PasswordRecoveryRequestRepository {
 
     Optional<PasswordRecoveryRequest> findById(Long id);
 
+    Optional<PasswordRecoveryRequest> findByIdForUpdate(Long id);
+
     List<PasswordRecoveryRequest> findByUserId(Long userId);
 
     Optional<PasswordRecoveryRequest> findByTokenHash(String tokenHash);

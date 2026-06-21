@@ -85,6 +85,14 @@ public class PasswordRecoveryRequestRepositoryAdapter implements PasswordRecover
     }
 
     @Override
+    public Optional<PasswordRecoveryRequest> findByIdForUpdate(
+            Long id
+    ) {
+        return jpaRepository.findByIdForUpdate(id)
+                .map(PasswordRecoveryRequestMapper::toDomain);
+    }
+
+    @Override
     public List<PasswordRecoveryRequest> findByUserId(Long userId) {
         return jpaRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
