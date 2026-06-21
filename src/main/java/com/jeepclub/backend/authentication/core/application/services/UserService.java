@@ -7,6 +7,7 @@ import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -16,6 +17,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
+    private final Clock clock;
 
     public User registerUser(
             String name,
@@ -27,7 +29,7 @@ public class UserService {
             String phoneNumber
 
     ) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         if (userRepository.existsByCpf(cpf)) {
             throw new UserCpfInvalidException("The CPF number provided is already in use.");

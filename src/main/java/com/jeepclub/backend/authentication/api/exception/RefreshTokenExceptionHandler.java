@@ -17,7 +17,7 @@ public class RefreshTokenExceptionHandler extends ApiExceptionHandler {
         return buildErrorResponse(
                 "REFRESH_TOKEN_INVALID",
                 exception.getMessage(),
-                HttpStatus.BAD_REQUEST
+                HttpStatus.UNAUTHORIZED
         );
     }
 

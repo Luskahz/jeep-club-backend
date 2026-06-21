@@ -121,10 +121,10 @@ public class Vehicle {
         return vehicle;
     }
 
-    public Vehicle softDelete() {
+    public Vehicle softDelete(Instant now) {
         this.status = VehicleStatus.SOFT_DELETED;
-        this.updatedAt = Instant.now();
-        this.deletedAt = Instant.now();
+        this.updatedAt = now;
+        this.deletedAt = now;
         return this;
     }
 

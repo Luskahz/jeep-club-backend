@@ -12,6 +12,7 @@ import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Service
@@ -20,9 +21,10 @@ public class AccessTokenAuthenticationService {
 
     private final SessionRepository sessionRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     public void validate(Long userId, Long sessionId) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new SessionNotFoundException("Session not found."));

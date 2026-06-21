@@ -51,17 +51,6 @@ public class Session {
 
     public static Session create(
             @NotNull Long userId,
-            @NotNull Duration ttl
-    ) {
-        return new Session(
-                userId,
-                ttl,
-                Instant.now()
-        );
-    }
-
-    public static Session create(
-            @NotNull Long userId,
             @NotNull Duration ttl,
             @NotNull Instant now
     ) {
