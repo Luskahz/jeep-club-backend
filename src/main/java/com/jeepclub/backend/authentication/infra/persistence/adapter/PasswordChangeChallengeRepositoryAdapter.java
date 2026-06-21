@@ -67,14 +67,16 @@ public class PasswordChangeChallengeRepositoryAdapter
             Long userId,
             Instant now
     ) {
-        jpaRepository.findByUserIdAndUsedFalse(userId)
+        jpaRepository
+                .findByUserIdAndUsedFalseAndExpiresAtAfter(
+                        userId,
+                        now
+                )
                 .forEach(entity -> {
-                    if (!entity.isUsed()) {
-                        entity.setUsed(true);
-                        entity.setUsedAt(now);
+                    entity.setUsed(true);
+                    entity.setUsedAt(now);
 
-                        jpaRepository.save(entity);
-                    }
+                    jpaRepository.save(entity);
                 });
     }
 }
