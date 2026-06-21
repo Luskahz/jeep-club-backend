@@ -1,22 +1,26 @@
 package com.jeepclub.backend.authentication.api.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.authentication.api.controller.passwordRecovery.PasswordRecoveryRequestController;
+import com.jeepclub.backend.authentication.api.exception.PasswordRecoveryExceptionHandler;
 import com.jeepclub.backend.authentication.core.application.results.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
-import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
-import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
+import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.time.Instant;
 
@@ -26,8 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(PasswordRecoveryRequestController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith(MockitoExtension.class)
 class PasswordRecoveryControllerTest {
 
     private static final String BASE_PATH =
@@ -41,20 +44,31 @@ class PasswordRecoveryControllerTest {
     private static final Instant EXPIRES_AT =
             Instant.parse("2026-05-28T18:00:00Z");
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
+    @Mock
     private PasswordRecoveryService passwordRecoveryService;
 
-    @MockitoBean
-    private JwtTokenParser jwtTokenParser;
+    private MockMvc mockMvc;
 
-    @MockitoBean
-    private UserAuthoritiesProvider userAuthoritiesProvider;
+    @BeforeEach
+    void setUp() {
+        ObjectMapper objectMapper = new ObjectMapper()
+                .findAndRegisterModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
 
-    @MockitoBean
-    private AccessTokenAuthenticationService accessTokenAuthenticationService;
+        PasswordRecoveryRequestController controller =
+                new PasswordRecoveryRequestController(passwordRecoveryService);
+
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(
+                        new GlobalExceptionHandler(),
+                        new PasswordRecoveryExceptionHandler()
+                )
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setValidator(validator)
+                .build();
+    }
 
     @Test
     @DisplayName("Sucesso: cria ou consulta solicitação aberta de recuperação")

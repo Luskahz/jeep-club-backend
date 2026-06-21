@@ -23,11 +23,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.Objects;
 
 @RestController
 @RequestMapping(
@@ -170,9 +174,9 @@ public class SessionController {
                     )
             }
     )
-    public ResponseEntity<Void> logout(Authentication authentication) {
-        UserPrincipal principal = getAuthenticatedPrincipal(authentication);
-
+    public ResponseEntity<Void> logout(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
         sessionService.logout(principal.getUserId(), principal.getSessionId());
 
         return ResponseEntity.noContent().build();
@@ -202,9 +206,10 @@ public class SessionController {
                     )
             }
     )
-    public ResponseEntity<MeResponseDTO> getMe(Authentication authentication) {
-        UserPrincipal principal = getAuthenticatedPrincipal(authentication);
-
+    public ResponseEntity<MeResponseDTO> getMe(
+            @AuthenticationPrincipal UserPrincipal principal,
+            Authentication authentication
+    ) {
         MeResult result = sessionService.me(
                 principal.getUserId(),
                 principal.getSessionId(),
@@ -220,15 +225,5 @@ public class SessionController {
         return ResponseEntity.ok(
                 MeResponseDTO.from(result, authorities)
         );
-    }
-
-    private UserPrincipal getAuthenticatedPrincipal(Authentication authentication) {
-        Objects.requireNonNull(authentication, "authentication cannot be null");
-
-        if (!(authentication.getPrincipal() instanceof UserPrincipal principal)) {
-            throw new IllegalStateException("Authenticated principal is not a valid UserPrincipal.");
-        }
-
-        return principal;
     }
 }

@@ -1,12 +1,17 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
-import com.jeepclub.backend.authentication.core.domain.exception.user.*;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserAlreadyDisabledException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserBlockedForLoginException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserCannotChangePasswordException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNewHashRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNotDisabledException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNotLockoutException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNowInstantRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserPasswordChangeRequiredException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotNull;
-import org.jspecify.annotations.NonNull;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -20,7 +25,7 @@ public class User {
 
     private Long id;
     private String name;
-    private LocalDate birthData;
+    private LocalDate birthDate;
     private String email;
     private String cpf;
     private String rg;
@@ -38,9 +43,18 @@ public class User {
     private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
 
 
-    private User(String name, LocalDate birthData, String email, String cpf, String rg, String passwordHash, String phoneNumber, Instant now){
+    private User(
+            String name,
+            LocalDate birthDate,
+            String email,
+            String cpf,
+            String rg,
+            String passwordHash,
+            String phoneNumber,
+            Instant now
+    ) {
         this.name = name;
-        this.birthData = birthData;
+        this.birthDate = birthDate;
         this.email = email;
         this.cpf = cpf;
         this.rg = rg;
@@ -51,9 +65,9 @@ public class User {
         this.failedLoginAttempts = 0;
     }
 
-    public static @NotNull User create(
+    public static User create(
             String name,
-            LocalDate birthData,
+            LocalDate birthDate,
             String email,
             String cpf,
             String rg,
@@ -63,7 +77,7 @@ public class User {
     ) {
         return new User(
                 name,
-                birthData,
+                birthDate,
                 email,
                 cpf,
                 rg,
@@ -77,10 +91,10 @@ public class User {
      * Factory method para RECONSTITUIR um usuário existente através da
      * infraestrutura (banco de dados)
      */
-    public static @NonNull User reconstitute(
+    public static User reconstitute(
             Long id,
             String name,
-            LocalDate birthData,
+            LocalDate birthDate,
             String email,
             String cpf,
             String rg,
@@ -98,7 +112,7 @@ public class User {
         User user = new User();
         user.id = id;
         user.name = name;
-        user.birthData = birthData;
+        user.birthDate = birthDate;
         user.email = email;
         user.cpf = cpf;
         user.rg = rg;

@@ -1,47 +1,82 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.jeepclub.backend.authentication.api.controller.session.SessionController;
+import com.jeepclub.backend.authentication.api.exception.PasswordChangeChallengeExceptionHandler;
+import com.jeepclub.backend.authentication.api.exception.SessionExceptionHandler;
+import com.jeepclub.backend.authentication.api.exception.UserExceptionHandler;
+import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
-import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
-import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
+import com.jeepclub.backend.authentication.core.application.services.SessionService;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.time.Instant;
+import java.util.Arrays;
 
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(SessionController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith(MockitoExtension.class)
 class LoginControllerTest {
 
-    @Autowired
+    @Mock
+    private SessionService sessionService;
+
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private LoginService loginService;
+    @BeforeEach
+    void setUp() {
+        ObjectMapper objectMapper = new ObjectMapper()
+                .findAndRegisterModules()
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
 
-    @MockitoBean
-    private JwtTokenParser jwtTokenParser;
+        SessionController controller = new SessionController(sessionService);
 
-    @MockitoBean
-    private UserAuthoritiesProvider userAuthoritiesProvider;
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(
+                        new GlobalExceptionHandler(),
+                        new UserExceptionHandler(),
+                        new SessionExceptionHandler(),
+                        new PasswordChangeChallengeExceptionHandler()
+                )
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setValidator(validator)
+                .build();
+    }
 
-    @MockitoBean
-    private AccessTokenAuthenticationService accessTokenAuthenticationService;
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     @DisplayName("Sucesso: login com credenciais definitivas retorna 200 e tokens")
@@ -52,7 +87,7 @@ class LoginControllerTest {
                 3600L
         );
 
-        when(loginService.login("52998224725", "senha123"))
+        when(sessionService.login("52998224725", "senha123"))
                 .thenReturn(new AuthenticatedLoginResult(tokens));
 
         String payload = """
@@ -77,7 +112,7 @@ class LoginControllerTest {
     void shouldReturnPasswordChangeRequiredWhenTemporaryPasswordIsUsed() throws Exception {
         Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
 
-        when(loginService.login("52998224725", "senhaProvisoria123"))
+        when(sessionService.login("52998224725", "senhaProvisoria123"))
                 .thenReturn(new PasswordChangeRequiredLoginResult(
                         "password-change-token-xyz",
                         expiresAt
@@ -100,10 +135,10 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: senha incorreta retorna 401 Unauthorized")
-    void shouldReturnUnauthorizedOnInvalidPassword() throws Exception {
-        when(loginService.login(anyString(), anyString()))
-                .thenThrow(new UserInvalidPasswordException(1L));
+    @DisplayName("Falha: credenciais inválidas retornam 401 Unauthorized")
+    void shouldReturnUnauthorizedOnInvalidCredentials() throws Exception {
+        when(sessionService.login("52998224725", "senhaErrada"))
+                .thenThrow(new InvalidCredentialsException());
 
         String payload = """
                 {
@@ -115,30 +150,62 @@ class LoginControllerTest {
         mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
     }
 
     @Test
-    @DisplayName("Falha: usuário inexistente retorna 404 Not Found")
-    void shouldReturnNotFoundOnUserNotFound() throws Exception {
-        when(loginService.login(anyString(), anyString()))
-                .thenThrow(new UserCpfNotFoundException("CPF não encontrado"));
+    @DisplayName("Sucesso: consultar sessão autenticada usa o principal e ordena authorities")
+    void shouldReturnAuthenticatedSessionData() throws Exception {
+        Authentication authentication = authenticatedUser(
+                "AUTHENTICATION_USER_READ",
+                "AUTHENTICATION_SESSION_READ"
+        );
 
-        String payload = """
-                {
-                    "cpf": "52998224725",
-                    "senha": "senha123"
-                }
-                """;
+        when(sessionService.me(
+                1L,
+                10L,
+                Instant.parse("2026-05-21T20:30:00Z")
+        )).thenReturn(new MeResult(
+                1L,
+                "Lucas Alves",
+                10L,
+                true,
+                900L
+        ));
 
-        mockMvc.perform(post("/authentication/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(payload))
-                .andExpect(status().isNotFound());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        mockMvc.perform(get("/authentication/me")
+                        .principal(authentication))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(1L))
+                .andExpect(jsonPath("$.userName").value("Lucas Alves"))
+                .andExpect(jsonPath("$.sessionId").value(10L))
+                .andExpect(jsonPath("$.sessionActive").value(true))
+                .andExpect(jsonPath("$.expiresInSeconds").value(900L))
+                .andExpect(jsonPath("$.authorities[0]").value("AUTHENTICATION_SESSION_READ"))
+                .andExpect(jsonPath("$.authorities[1]").value("AUTHENTICATION_USER_READ"));
     }
 
     @Test
-    @DisplayName("Falha: dados inválidos retorna 400 Bad Request")
+    @DisplayName("Sucesso: logout usa os identificadores do principal autenticado")
+    void shouldLogoutUsingAuthenticatedPrincipal() throws Exception {
+        Authentication authentication = authenticatedUser(
+                "AUTHENTICATION_SESSION_LOGOUT"
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        mockMvc.perform(post("/authentication/logout")
+                        .principal(authentication))
+                .andExpect(status().isNoContent());
+
+        verify(sessionService).logout(1L, 10L);
+    }
+
+    @Test
+    @DisplayName("Falha: dados inválidos retornam 400 Bad Request")
     void shouldReturnBadRequestOnInvalidData() throws Exception {
         String payload = """
                 {
@@ -151,5 +218,21 @@ class LoginControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
                 .andExpect(status().isBadRequest());
+    }
+
+    private Authentication authenticatedUser(String... authorities) {
+        UserPrincipal principal = new UserPrincipal(
+                1L,
+                10L,
+                Instant.parse("2026-05-21T20:30:00Z")
+        );
+
+        return new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                Arrays.stream(authorities)
+                        .map(SimpleGrantedAuthority::new)
+                        .toList()
+        );
     }
 }

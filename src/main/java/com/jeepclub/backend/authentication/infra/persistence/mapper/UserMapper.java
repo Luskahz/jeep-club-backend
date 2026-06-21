@@ -16,7 +16,7 @@ public final class UserMapper {
         return User.reconstitute(
                 entity.getId(),
                 entity.getName(),
-                entity.getBirthData(),
+                entity.getBirthDate(),
                 entity.getEmail(),
                 entity.getCpf(),
                 entity.getRg(),
@@ -42,7 +42,7 @@ public final class UserMapper {
 
         entity.setId(domain.getId());
         entity.setName(domain.getName());
-        entity.setBirthData(domain.getBirthData());
+        entity.setBirthDate(domain.getBirthDate());
         entity.setEmail(domain.getEmail());
         entity.setCpf(domain.getCpf());
         entity.setRg(domain.getRg());

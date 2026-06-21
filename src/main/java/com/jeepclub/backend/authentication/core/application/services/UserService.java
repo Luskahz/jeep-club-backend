@@ -21,7 +21,7 @@ public class UserService {
 
     public User registerUser(
             String name,
-            LocalDate birthData,
+            LocalDate birthDate,
             String email,
             String cpf,
             String rg,
@@ -39,7 +39,7 @@ public class UserService {
 
         User newUser = User.create(
                 name,
-                birthData,
+                birthDate,
                 email,
                 cpf,
                 rg,

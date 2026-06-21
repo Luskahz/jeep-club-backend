@@ -1,8 +1,14 @@
 package com.jeepclub.backend.authentication.infra.persistence.entity;
 
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
-import jakarta.persistence.*;
-
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -26,7 +32,7 @@ public class UserEntity {
     private String name;
 
     @Column(name = "birth_data")
-    private LocalDate birthData;
+    private LocalDate birthDate;
 
     @Column(unique = true)
     private String email;

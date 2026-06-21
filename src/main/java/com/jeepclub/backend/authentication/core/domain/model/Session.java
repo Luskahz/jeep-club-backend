@@ -1,12 +1,22 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
-import com.jeepclub.backend.authentication.core.domain.exception.session.*;
-import com.jeepclub.backend.authentication.core.domain.exception.user.UserIdRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionInvalidActiveStateException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionInvalidExpirationDateException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionInvalidLogoutStateException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionInvalidRevokeStateException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionInvalidTtlValueException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionMissingCreatedAtException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionMissingExpiresAtException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionMissingIdException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionMissingStatusException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionMissingTtlException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionMissingUserIdException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionNotActiveException;
+import com.jeepclub.backend.authentication.core.domain.exception.session.SessionNowInstantRequiredException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -50,9 +60,9 @@ public class Session {
     }
 
     public static Session create(
-            @NotNull Long userId,
-            @NotNull Duration ttl,
-            @NotNull Instant now
+            Long userId,
+            Duration ttl,
+            Instant now
     ) {
         return new Session(
                 userId,

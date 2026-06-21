@@ -63,20 +63,13 @@ public class PasswordChangeChallengeRepositoryAdapter
     }
 
     @Override
-    public void invalidateActiveByUserId(
+    public int invalidateActiveByUserId(
             Long userId,
             Instant now
     ) {
-        jpaRepository
-                .findByUserIdAndUsedFalseAndExpiresAtAfter(
-                        userId,
-                        now
-                )
-                .forEach(entity -> {
-                    entity.setUsed(true);
-                    entity.setUsedAt(now);
-
-                    jpaRepository.save(entity);
-                });
+        return jpaRepository.invalidateActiveByUserId(
+                userId,
+                now
+        );
     }
 }

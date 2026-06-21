@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -26,7 +27,8 @@ public record UserRegistrationRequestDTO(
                 example = "2000-05-17",
                 nullable = true
         )
-        LocalDate birthData,
+        @JsonProperty("birthData")
+        LocalDate birthDate,
 
         @Schema(
                 description = "E-mail do usuário.",
