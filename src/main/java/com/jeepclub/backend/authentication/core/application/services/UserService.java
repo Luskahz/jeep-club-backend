@@ -27,7 +27,6 @@ public class UserService {
             String rg,
             String passwordRaw,
             String phoneNumber
-
     ) {
         Instant now = Instant.now(clock);
 
@@ -35,10 +34,20 @@ public class UserService {
             throw new RegistrationConflictException();
         }
 
-        String passwordHash = passwordHasher.hash(passwordRaw);
+        String passwordHash =
+                passwordHasher.hash(passwordRaw);
 
-        User newUser = User.create(name, birthData, email, cpf, rg, passwordHash, phoneNumber, now);
+        User newUser = User.create(
+                name,
+                birthData,
+                email,
+                cpf,
+                rg,
+                passwordHash,
+                phoneNumber,
+                now
+        );
 
-        return userRepository.save(newUser);
+        return userRepository.create(newUser);
     }
 }

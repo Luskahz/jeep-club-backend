@@ -63,6 +63,7 @@ public class RefreshTokenRepositoryAdapter
         return jpaRepository.findById(id)
                 .flatMap(this::mapToDomain);
     }
+
     @Override
     public Optional<RefreshToken> findByIdForUpdate(Long id) {
         return jpaRepository.findByIdForUpdate(id)
@@ -70,9 +71,20 @@ public class RefreshTokenRepositoryAdapter
     }
 
     @Override
-    public Optional<RefreshToken> findByTokenHash(String tokenHash) {
+    public Optional<RefreshToken> findByTokenHash(
+            String tokenHash
+    ) {
         return jpaRepository.findByTokenHash(tokenHash)
                 .flatMap(this::mapToDomain);
+    }
+
+    @Override
+    public Optional<Long> findSessionIdByTokenHash(
+            String tokenHash
+    ) {
+        return jpaRepository.findSessionIdByTokenHash(
+                tokenHash
+        );
     }
 
     @Override
@@ -98,11 +110,12 @@ public class RefreshTokenRepositoryAdapter
                                 sessionIds
                         );
 
-        Map<Long, Session> sessionsById = sessions.stream()
-                .collect(Collectors.toMap(
-                        Session::getId,
-                        Function.identity()
-                ));
+        Map<Long, Session> sessionsById =
+                sessions.stream()
+                        .collect(Collectors.toMap(
+                                Session::getId,
+                                Function.identity()
+                        ));
 
         return tokenEntities.stream()
                 .map(entity -> mapToDomain(
@@ -175,7 +188,9 @@ public class RefreshTokenRepositoryAdapter
         );
     }
 
-    private void validateTokenSession(RefreshToken token) {
+    private void validateTokenSession(
+            RefreshToken token
+    ) {
         if (token == null) {
             throw new IllegalArgumentException(
                     "Refresh token is required."

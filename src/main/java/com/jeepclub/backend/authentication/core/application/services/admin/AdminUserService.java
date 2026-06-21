@@ -21,7 +21,9 @@ public class AdminUserService {
 
     @Transactional(readOnly = true)
     public List<AdminUserResult> findAll() {
-        return AdminUserResult.from(userRepository.findAll());
+        return AdminUserResult.from(
+                userRepository.findAll()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -33,30 +35,52 @@ public class AdminUserService {
 
     @Transactional
     public AdminUserResult disable(Long userId) {
-        User user = findUserById(userId);
+        User user =
+                findUserByIdForUpdate(userId);
+
         Instant now = Instant.now(clock);
 
         user.disable(now);
 
-        User savedUser = userRepository.save(user);
+        User savedUser =
+                userRepository.save(user);
 
         return AdminUserResult.from(savedUser);
     }
 
     @Transactional
     public AdminUserResult enable(Long userId) {
-        User user = findUserById(userId);
+        User user =
+                findUserByIdForUpdate(userId);
+
         Instant now = Instant.now(clock);
 
         user.enable(now);
 
-        User savedUser = userRepository.save(user);
+        User savedUser =
+                userRepository.save(user);
 
         return AdminUserResult.from(savedUser);
     }
 
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new UserIdNotFoundException(userId));
+                .orElseThrow(
+                        () -> new UserIdNotFoundException(
+                                userId
+                        )
+                );
+    }
+
+    private User findUserByIdForUpdate(
+            Long userId
+    ) {
+        return userRepository
+                .findByIdForUpdate(userId)
+                .orElseThrow(
+                        () -> new UserIdNotFoundException(
+                                userId
+                        )
+                );
     }
 }

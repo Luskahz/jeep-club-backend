@@ -15,7 +15,18 @@ import java.util.Optional;
 public interface RefreshTokenJpaRepository
         extends JpaRepository<RefreshTokenEntity, Long> {
 
-    Optional<RefreshTokenEntity> findByTokenHash(String tokenHash);
+    Optional<RefreshTokenEntity> findByTokenHash(
+            String tokenHash
+    );
+
+    @Query("""
+            SELECT token.sessionId
+            FROM RefreshTokenEntity token
+            WHERE token.tokenHash = :tokenHash
+            """)
+    Optional<Long> findSessionIdByTokenHash(
+            @Param("tokenHash") String tokenHash
+    );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -29,10 +40,10 @@ public interface RefreshTokenJpaRepository
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
-        SELECT token
-        FROM RefreshTokenEntity token
-        WHERE token.id = :id
-        """)
+            SELECT token
+            FROM RefreshTokenEntity token
+            WHERE token.id = :id
+            """)
     Optional<RefreshTokenEntity> findByIdForUpdate(
             @Param("id") Long id
     );
@@ -42,11 +53,12 @@ public interface RefreshTokenJpaRepository
             RefreshTokenStatus status
     );
 
-    Optional<RefreshTokenEntity> findBySessionId(Long sessionId);
-
-    List<RefreshTokenEntity> findBySessionIdInOrderByCreatedAtDesc(
-            Collection<Long> sessionIds
+    Optional<RefreshTokenEntity> findBySessionId(
+            Long sessionId
     );
 
-
+    List<RefreshTokenEntity>
+    findBySessionIdInOrderByCreatedAtDesc(
+            Collection<Long> sessionIds
+    );
 }

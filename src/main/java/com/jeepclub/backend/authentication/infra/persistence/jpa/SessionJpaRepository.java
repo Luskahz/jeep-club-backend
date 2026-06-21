@@ -2,7 +2,11 @@ package com.jeepclub.backend.authentication.infra.persistence.jpa;
 
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.SessionEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -10,10 +14,39 @@ import java.util.Optional;
 public interface SessionJpaRepository
         extends JpaRepository<SessionEntity, Long> {
 
-    Optional<SessionEntity> findFirstByUserIdAndStatusOrderByCreatedAtDesc(
+    Optional<SessionEntity>
+    findFirstByUserIdAndStatusOrderByCreatedAtDesc(
             Long userId,
             SessionStatus status
     );
 
-    List<SessionEntity> findByUserIdOrderByCreatedAtDesc(Long userId);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<SessionEntity>
+    findTopByUserIdAndStatusOrderByCreatedAtDesc(
+            Long userId,
+            SessionStatus status
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT session
+            FROM SessionEntity session
+            WHERE session.id = :id
+            """)
+    Optional<SessionEntity> findByIdForUpdate(
+            @Param("id") Long id
+    );
+
+    @Query("""
+            SELECT session.userId
+            FROM SessionEntity session
+            WHERE session.id = :id
+            """)
+    Optional<Long> findUserIdById(
+            @Param("id") Long id
+    );
+
+    List<SessionEntity> findByUserIdOrderByCreatedAtDesc(
+            Long userId
+    );
 }

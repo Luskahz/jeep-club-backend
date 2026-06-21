@@ -13,18 +13,30 @@ import com.jeepclub.backend.authentication.core.application.results.login.Authen
 import com.jeepclub.backend.authentication.core.application.results.login.LoginResult;
 import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
-import com.jeepclub.backend.authentication.core.domain.model.*;
-import com.jeepclub.backend.authentication.core.port.*;
-import com.jeepclub.backend.authentication.core.repository.*;
-import org.springframework.transaction.annotation.Transactional;
+import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordChangeChallenge;
+import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
+import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
+import com.jeepclub.backend.authentication.core.domain.model.Session;
+import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.port.ApplicationTimeProperties;
+import com.jeepclub.backend.authentication.core.port.JwtService;
+import com.jeepclub.backend.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
+import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
+import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;
+import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
+import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
+import com.jeepclub.backend.authentication.core.repository.SessionRepository;
+import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-
 
 @Service
 @RequiredArgsConstructor
@@ -34,24 +46,38 @@ public class SessionService {
     private final SessionRepository sessionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordChangeChallengeRepository passwordChangeChallengeRepository;
+    private final PasswordRecoveryRequestRepository passwordRecoveryRequestRepository;
     private final PasswordHasher passwordHasher;
     private final RefreshTokenHashService tokenHashService;
     private final RefreshTokenGenerator tokenGenerator;
     private final JwtService jwtService;
     private final ApplicationTimeProperties authTimeProperties;
     private final Clock clock;
-    private final PasswordRecoveryRequestRepository passwordRecoveryRequestRepository;
 
-    @Transactional(noRollbackFor = InvalidCredentialsException.class)
-    public LoginResult login(String cpf, String senha) {
+    @Transactional(
+            noRollbackFor = InvalidCredentialsException.class
+    )
+    public LoginResult login(
+            String cpf,
+            String senha
+    ) {
         Instant now = Instant.now(clock);
 
-        User user = userRepository.findByCpf(cpf)
-                .orElseThrow(InvalidCredentialsException::new);
+        User user = userRepository
+                .findByCpfForUpdate(cpf)
+                .orElseThrow(
+                        InvalidCredentialsException::new
+                );
 
-        if (!passwordHasher.matches(senha, user.getPasswordHash())) {
+        if (
+                !passwordHasher.matches(
+                        senha,
+                        user.getPasswordHash()
+                )
+        ) {
             user.registerFailedLogin();
             userRepository.save(user);
+
             throw new InvalidCredentialsException();
         }
 
@@ -59,14 +85,18 @@ public class SessionService {
 
         if (user.isChangePasswordRequired()) {
             PasswordChangeRequiredLoginResult result =
-                    createPasswordChangeRequiredResult(user, now);
+                    createPasswordChangeRequiredResult(
+                            user,
+                            now
+                    );
 
             userRepository.save(user);
 
             return result;
         }
 
-        AuthTokens tokens = authenticateUser(user, now);
+        AuthTokens tokens =
+                authenticateUser(user, now);
 
         user.recordSuccessfulLogin(now);
         userRepository.save(user);
@@ -81,22 +111,36 @@ public class SessionService {
     ) {
         Instant now = Instant.now(clock);
 
-        String tokenHash = tokenHashService.hash(passwordChangeToken);
+        String tokenHash =
+                tokenHashService.hash(passwordChangeToken);
 
-        PasswordChangeChallenge challenge = passwordChangeChallengeRepository
-                .findByTokenHash(tokenHash)
-                .orElseThrow(() -> new PasswordChangeChallengeInvalidException(
-                        "Password change challenge is invalid or expired."
-                ));
+        Long userId = passwordChangeChallengeRepository
+                .findUserIdByTokenHash(tokenHash)
+                .orElseThrow(
+                        () -> invalidPasswordChangeChallenge()
+                );
 
-        if (!challenge.isValid(now)) {
-            throw new PasswordChangeChallengeInvalidException(
-                    "Password change challenge is invalid or expired."
-            );
+        User user = userRepository
+                .findByIdForUpdate(userId)
+                .orElseThrow(
+                        () -> new UserIdNotFoundException(
+                                "User not found."
+                        )
+                );
+
+        PasswordChangeChallenge challenge =
+                passwordChangeChallengeRepository
+                        .findByTokenHashForUpdate(tokenHash)
+                        .orElseThrow(
+                                () -> invalidPasswordChangeChallenge()
+                        );
+
+        if (
+                !challenge.getUserId().equals(user.getId())
+                        || !challenge.isValid(now)
+        ) {
+            throw invalidPasswordChangeChallenge();
         }
-
-        User user = userRepository.findById(challenge.getUserId())
-                .orElseThrow(() -> new UserIdNotFoundException("User not found."));
 
         user.assertCanAttemptLogin();
 
@@ -104,65 +148,105 @@ public class SessionService {
             throw new UserPasswordChangeNotRequiredException();
         }
 
-        PasswordRecoveryRequest recoveryRequest = passwordRecoveryRequestRepository
-                .findOpenByUserIdAndMethod(
-                        user.getId(),
-                        PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD,
-                        now
-                )
-                .orElseThrow(() -> new PasswordRecoveryRequestNotFoundException(
-                        "Open temporary password recovery request not found."
-                ));
+        PasswordRecoveryRequest recoveryRequest =
+                passwordRecoveryRequestRepository
+                        .findOpenByUserIdAndMethodForUpdate(
+                                user.getId(),
+                                PasswordRecoveryRequestMethod
+                                        .ADMIN_TEMPORARY_PASSWORD,
+                                now
+                        )
+                        .orElseThrow(
+                                () -> new PasswordRecoveryRequestNotFoundException(
+                                        "Open temporary password recovery request not found."
+                                )
+                        );
 
-        String newPasswordHash = passwordHasher.hash(newPassword);
+        String newPasswordHash =
+                passwordHasher.hash(newPassword);
 
-        user.changePassword(newPasswordHash, now);
+        user.changePassword(
+                newPasswordHash,
+                now
+        );
+
         recoveryRequest.resolve(now);
         challenge.markAsUsed(now);
 
-        AuthTokens tokens = authenticateUser(user, now);
+        AuthTokens tokens =
+                authenticateUser(user, now);
 
         user.recordSuccessfulLogin(now);
 
         userRepository.save(user);
-        passwordRecoveryRequestRepository.save(recoveryRequest);
-        passwordChangeChallengeRepository.save(challenge);
+        passwordRecoveryRequestRepository.save(
+                recoveryRequest
+        );
+        passwordChangeChallengeRepository.save(
+                challenge
+        );
 
         return tokens;
     }
 
     @Transactional
-    public AuthTokens authenticateRegisteredUser(User user) {
+    public AuthTokens authenticateRegisteredUser(
+            User user
+    ) {
         Instant now = Instant.now(clock);
 
-        user.assertCanAuthenticate();
+        User lockedUser = userRepository
+                .findByIdForUpdate(user.getId())
+                .orElseThrow(
+                        () -> new UserIdNotFoundException(
+                                "Registered user not found."
+                        )
+                );
 
-        AuthTokens tokens = authenticateUser(user, now);
+        lockedUser.assertCanAuthenticate();
 
-        user.recordSuccessfulLogin(now);
-        userRepository.save(user);
+        AuthTokens tokens =
+                authenticateUser(lockedUser, now);
+
+        lockedUser.recordSuccessfulLogin(now);
+        userRepository.save(lockedUser);
 
         return tokens;
     }
 
-
-    private PasswordChangeRequiredLoginResult createPasswordChangeRequiredResult(
+    private PasswordChangeRequiredLoginResult
+    createPasswordChangeRequiredResult(
             User user,
             Instant now
     ) {
-        String rawToken = tokenGenerator.generate();
-        String tokenHash = tokenHashService.hash(rawToken);
+        passwordChangeChallengeRepository
+                .invalidateActiveByUserId(
+                        user.getId(),
+                        now
+                );
 
-        Instant expiresAt = now.plus(authTimeProperties.passwordChangeChallengeTtl());
+        String rawToken =
+                tokenGenerator.generate();
 
-        PasswordChangeChallenge challenge = PasswordChangeChallenge.create(
-                user.getId(),
-                tokenHash,
-                now,
-                expiresAt
+        String tokenHash =
+                tokenHashService.hash(rawToken);
+
+        Instant expiresAt = now.plus(
+                authTimeProperties
+                        .passwordChangeChallengeTtl()
         );
 
-        passwordChangeChallengeRepository.save(challenge);
+        PasswordChangeChallenge challenge =
+                PasswordChangeChallenge.create(
+                        user.getId(),
+                        tokenHash,
+                        now,
+                        expiresAt
+                );
+
+        passwordChangeChallengeRepository.save(
+                challenge
+        );
 
         return new PasswordChangeRequiredLoginResult(
                 rawToken,
@@ -175,25 +259,33 @@ public class SessionService {
             Instant now
     ) {
         Session session = sessionRepository
-                .findActiveByUserId(user.getId())
-                .filter(existing -> existing.isValid(now))
-                .orElseGet(() -> sessionRepository.save(
-                        Session.create(
-                                user.getId(),
-                                authTimeProperties.sessionTtl(),
-                                now
+                .findActiveByUserIdForUpdate(user.getId())
+                .filter(existing ->
+                        existing.isValid(now)
+                )
+                .orElseGet(() ->
+                        sessionRepository.save(
+                                Session.create(
+                                        user.getId(),
+                                        authTimeProperties.sessionTtl(),
+                                        now
+                                )
                         )
-                ));
+                );
 
-        String rawToken = tokenGenerator.generate();
-        String tokenHash = tokenHashService.hash(rawToken);
+        String rawToken =
+                tokenGenerator.generate();
 
-        RefreshToken refreshToken = RefreshToken.create(
-                session,
-                tokenHash,
-                authTimeProperties.refreshTokenTtl(),
-                now
-        );
+        String tokenHash =
+                tokenHashService.hash(rawToken);
+
+        RefreshToken refreshToken =
+                RefreshToken.create(
+                        session,
+                        tokenHash,
+                        authTimeProperties.refreshTokenTtl(),
+                        now
+                );
 
         refreshTokenRepository.save(refreshToken);
 
@@ -218,28 +310,46 @@ public class SessionService {
         );
     }
 
-
-
     @Transactional(readOnly = true)
     public MeResult me(
             Long userId,
             Long sessionId,
             Instant accessTokenExpiresAt
     ) {
-        Objects.requireNonNull(userId, "userId cannot be null");
-        Objects.requireNonNull(sessionId, "sessionId cannot be null");
-        Objects.requireNonNull(accessTokenExpiresAt, "accessTokenExpiresAt cannot be null");
+        Objects.requireNonNull(
+                userId,
+                "userId cannot be null"
+        );
+        Objects.requireNonNull(
+                sessionId,
+                "sessionId cannot be null"
+        );
+        Objects.requireNonNull(
+                accessTokenExpiresAt,
+                "accessTokenExpiresAt cannot be null"
+        );
 
         Instant now = Instant.now(clock);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User not found"));
+                .orElseThrow(
+                        () -> new UserIdNotFoundException(
+                                "User not found"
+                        )
+                );
 
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new SessionNotFoundException("Session not found"));
+        Session session =
+                sessionRepository.findById(sessionId)
+                        .orElseThrow(
+                                () -> new SessionNotFoundException(
+                                        "Session not found"
+                                )
+                        );
 
         if (!session.getUserId().equals(user.getId())) {
-            throw new SessionUserMismatchException("Session does not belong to this user");
+            throw new SessionUserMismatchException(
+                    "Session does not belong to this user"
+            );
         }
 
         return new MeResult(
@@ -247,7 +357,10 @@ public class SessionService {
                 user.getName(),
                 session.getId(),
                 session.isValid(now),
-                getAccessTokenRemainingSeconds(now, accessTokenExpiresAt)
+                getAccessTokenRemainingSeconds(
+                        now,
+                        accessTokenExpiresAt
+                )
         );
     }
 
@@ -256,16 +369,28 @@ public class SessionService {
             Instant accessTokenExpiresAt
     ) {
         return Math.max(
-                Duration.between(now, accessTokenExpiresAt).getSeconds(),
+                Duration.between(
+                        now,
+                        accessTokenExpiresAt
+                ).getSeconds(),
                 0
         );
     }
 
     @Transactional
-    public void logout(Long userId, Long sessionId) {
+    public void logout(
+            Long userId,
+            Long sessionId
+    ) {
         Instant now = Instant.now(clock);
-        Session session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new SessionNotFoundException(sessionId));
+
+        Session session = sessionRepository
+                .findByIdForUpdate(sessionId)
+                .orElseThrow(
+                        () -> new SessionNotFoundException(
+                                sessionId
+                        )
+                );
 
         if (!session.getUserId().equals(userId)) {
             throw new SessionUserMismatchException(
@@ -277,4 +402,10 @@ public class SessionService {
         sessionRepository.save(session);
     }
 
+    private PasswordChangeChallengeInvalidException
+    invalidPasswordChangeChallenge() {
+        return new PasswordChangeChallengeInvalidException(
+                "Password change challenge is invalid or expired."
+        );
+    }
 }

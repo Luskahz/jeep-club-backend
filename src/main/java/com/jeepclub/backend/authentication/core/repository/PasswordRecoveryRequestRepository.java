@@ -9,7 +9,9 @@ import java.util.Optional;
 
 public interface PasswordRecoveryRequestRepository {
 
-    PasswordRecoveryRequest save(PasswordRecoveryRequest request);
+    PasswordRecoveryRequest save(
+            PasswordRecoveryRequest request
+    );
 
     List<PasswordRecoveryRequest> findAll();
 
@@ -19,7 +21,14 @@ public interface PasswordRecoveryRequestRepository {
 
     List<PasswordRecoveryRequest> findByUserId(Long userId);
 
-    Optional<PasswordRecoveryRequest> findByTokenHash(String tokenHash);
+    Optional<PasswordRecoveryRequest> findByTokenHash(
+            String tokenHash
+    );
+
+    Optional<Long> findUserIdByTokenHash(
+            String tokenHash
+    );
+
     Optional<PasswordRecoveryRequest> findByTokenHashForUpdate(
             String tokenHash
     );
@@ -29,11 +38,23 @@ public interface PasswordRecoveryRequestRepository {
             Instant now
     );
 
-    Optional<PasswordRecoveryRequest> findOpenByUserIdAndMethod(
+    Optional<PasswordRecoveryRequest>
+    findOpenByUserIdForUpdate(
+            Long userId,
+            Instant now
+    );
+
+    Optional<PasswordRecoveryRequest>
+    findOpenByUserIdAndMethod(
             Long userId,
             PasswordRecoveryRequestMethod method,
             Instant now
     );
 
-
+    Optional<PasswordRecoveryRequest>
+    findOpenByUserIdAndMethodForUpdate(
+            Long userId,
+            PasswordRecoveryRequestMethod method,
+            Instant now
+    );
 }

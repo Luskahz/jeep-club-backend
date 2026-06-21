@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
@@ -7,26 +8,41 @@ import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Adaptador Secundário / Adaptador de Repositório (Hexagonal Architecture).
- * Esta classe IMPLEMENTA a interface contida no CORE, mas injeta o componente do Spring.
- * Assim o Core não sabe quem faz as buscas ao banco, mascarando o Spring Data.
- */
-@RequiredArgsConstructor
 @Repository
-public class UserRepositoryAdapter implements UserRepository {
+@RequiredArgsConstructor
+public class UserRepositoryAdapter
+        implements UserRepository {
 
     private final UserJpaRepository jpaRepository;
 
     @Override
+    public User create(User user) {
+        try {
+            UserEntity entity =
+                    UserMapper.toEntity(user);
+
+            UserEntity savedEntity =
+                    jpaRepository.saveAndFlush(entity);
+
+            return UserMapper.toDomain(savedEntity);
+        } catch (DataIntegrityViolationException exception) {
+            throw new RegistrationConflictException();
+        }
+    }
+
+    @Override
     public User save(User user) {
-        UserEntity entity = UserMapper.toEntity(user);
-        UserEntity savedEntity = jpaRepository.save(entity);
+        UserEntity entity =
+                UserMapper.toEntity(user);
+
+        UserEntity savedEntity =
+                jpaRepository.save(entity);
 
         return UserMapper.toDomain(savedEntity);
     }
@@ -38,8 +54,20 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByIdForUpdate(Long id) {
+        return jpaRepository.findByIdForUpdate(id)
+                .map(UserMapper::toDomain);
+    }
+
+    @Override
     public Optional<User> findByCpf(String cpf) {
         return jpaRepository.findByCpf(cpf)
+                .map(UserMapper::toDomain);
+    }
+
+    @Override
+    public Optional<User> findByCpfForUpdate(String cpf) {
+        return jpaRepository.findByCpfForUpdate(cpf)
                 .map(UserMapper::toDomain);
     }
 
@@ -65,6 +93,7 @@ public class UserRepositoryAdapter implements UserRepository {
                 UserStatus.ACTIVE
         );
     }
+
     @Override
     public List<User> findAll() {
         return jpaRepository.findAll()
