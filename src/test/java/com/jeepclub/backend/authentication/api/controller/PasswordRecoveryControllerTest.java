@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.controller.passwordRecovery.PasswordRecoveryController;
+import com.jeepclub.backend.authentication.api.controller.passwordRecovery.PasswordRecoveryRequestController;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
 import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(PasswordRecoveryController.class)
+@WebMvcTest(PasswordRecoveryRequestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class PasswordRecoveryControllerTest {
 

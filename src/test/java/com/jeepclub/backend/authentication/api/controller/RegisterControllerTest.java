@@ -2,7 +2,6 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
-import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.authentication.core.application.services.RegisterService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;

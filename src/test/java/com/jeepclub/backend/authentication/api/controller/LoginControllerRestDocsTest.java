@@ -4,7 +4,6 @@ import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
-import com.jeepclub.backend.authentication.core.application.services.LoginService;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.Test;
@@ -26,7 +25,7 @@ import static org.springframework.restdocs.payload.PayloadDocumentation.response
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(LoginController.class)
+@WebMvcTest(SessionController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @AutoConfigureRestDocs(outputDir = "target/generated-snippets")
 class LoginControllerRestDocsTest {
