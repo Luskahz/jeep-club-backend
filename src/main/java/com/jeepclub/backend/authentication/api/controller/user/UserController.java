@@ -3,6 +3,7 @@ package com.jeepclub.backend.authentication.api.controller.user;
 import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.user.UserRegistrationRequestDTO;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.services.RegistrationService;
 import com.jeepclub.backend.authentication.core.application.services.SessionService;
 import com.jeepclub.backend.authentication.core.application.services.UserService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
@@ -34,8 +35,7 @@ import org.springframework.web.bind.annotation.*;
 )
 public class UserController {
 
-    private final UserService userService;
-    private final SessionService sessionService;
+    private final RegistrationService registrationService;
 
     @PostMapping(
             value = "/register",
@@ -79,7 +79,7 @@ public class UserController {
     public ResponseEntity<AuthTokenResponseDTO> register(
             @RequestBody @Valid UserRegistrationRequestDTO request
     ) {
-        User user = userService.registerUser(
+        AuthTokens tokens = registrationService.registerAndAuthenticate(
                 request.name(),
                 request.birthData(),
                 request.email(),
@@ -88,8 +88,6 @@ public class UserController {
                 request.password(),
                 request.phoneNumber()
         );
-
-        AuthTokens tokens = sessionService.authenticateRegisteredUser(user);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(AuthTokenResponseDTO.from(tokens));
