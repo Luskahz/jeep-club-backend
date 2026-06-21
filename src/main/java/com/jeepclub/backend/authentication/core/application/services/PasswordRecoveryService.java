@@ -6,6 +6,7 @@ import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
+import com.jeepclub.backend.authentication.core.application.results.PublicPasswordRecoveryResult;
 import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.application.results.admin.recovery.AdminPasswordRecoveryRequestResult;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
@@ -43,15 +44,28 @@ public class PasswordRecoveryService {
     private final Clock clock;
 
     @Transactional
-    public PasswordRecoveryRequest createOrGetOpenRecoveryRequest(String cpf) {
+    public PublicPasswordRecoveryResult createOrGetOpenRecoveryRequest(
+            String cpf
+    ) {
         Instant now = Instant.now(clock);
+        Instant genericExpiresAt = now.plus(
+                authTimeProperties.passwordRecoveryRequestTtl()
+        );
 
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(UserInvalidCredentialsException::new);
+                .orElse(null);
 
-        user.assertCanRequestPasswordChange();
+        if (user == null || user.isDisabled()) {
+            return PublicPasswordRecoveryResult.pending(
+                    now,
+                    genericExpiresAt
+            );
+        }
 
-        return getOrCreateOpenRecoveryRequest(user.getId(), now);
+        PasswordRecoveryRequest request =
+                getOrCreateOpenRecoveryRequest(user.getId(), now);
+
+        return PublicPasswordRecoveryResult.from(request);
     }
 
     @Transactional
