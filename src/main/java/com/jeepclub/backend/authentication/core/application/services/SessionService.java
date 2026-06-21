@@ -180,7 +180,8 @@ public class SessionService {
                 .orElseGet(() -> sessionRepository.save(
                         Session.create(
                                 user.getId(),
-                                authTimeProperties.sessionTtl()
+                                authTimeProperties.sessionTtl(),
+                                now
                         )
                 ));
 

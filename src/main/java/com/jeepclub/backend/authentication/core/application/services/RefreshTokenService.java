@@ -38,7 +38,7 @@ public class RefreshTokenService {
 
         String tokenHash = tokenHashService.hash(rawRefreshToken);
         RefreshToken existingToken = refreshTokenRepository
-                .findByTokenHash(tokenHash)
+                .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(RefreshTokenInvalidException::new);
 
         if (!existingToken.isValid(now)) {
@@ -48,6 +48,10 @@ public class RefreshTokenService {
         User user = userRepository
                 .findById(existingToken.getSession().getUserId())
                 .orElseThrow(RefreshTokenInvalidException::new);
+
+        if (!user.isActive()) {
+            throw new RefreshTokenInvalidException();
+        }
 
         String newRawToken = tokenGenerator.generate();
         String newTokenHash = tokenHashService.hash(newRawToken);

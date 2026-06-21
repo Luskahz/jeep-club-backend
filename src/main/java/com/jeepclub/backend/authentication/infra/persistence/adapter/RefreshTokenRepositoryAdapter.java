@@ -8,7 +8,11 @@ import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpa
 import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.RefreshTokenMapper;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.SessionMapper;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
@@ -40,6 +44,14 @@ public class RefreshTokenRepositoryAdapter
                 savedEntity,
                 token.getSession()
         );
+    }
+
+    @Override
+    public Optional<RefreshToken> findByTokenHashForUpdate(
+            String tokenHash
+    ) {
+        return jpaRepository.findByTokenHashForUpdate(tokenHash)
+                .flatMap(this::mapToDomain);
     }
 
     @Override

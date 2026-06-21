@@ -1,7 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfInvalidException;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
