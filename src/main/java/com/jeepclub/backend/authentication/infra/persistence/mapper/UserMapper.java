@@ -3,26 +3,16 @@ package com.jeepclub.backend.authentication.infra.persistence.mapper;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 
-/**
- * Utilitário responsável pela conversão bidirecional entre Camada de Infra (Entity) 
- * e Camada Core (Domain Model). Garante que a entidade do banco nunca suba para a regra
- * de negócio e vice-versa.
- */
-public class UserMapper {
+public final class UserMapper {
 
     private UserMapper() {
-        // Classe utilitária
     }
 
-    /**
-     * Converte de JPA Entity para Modelo de Domínio
-     * Utiliza o método estático 'reconstitute' do Core para manter a integridade sem alterar regras
-     */
     public static User toDomain(UserEntity entity) {
         if (entity == null) {
             return null;
         }
-        
+
         return User.reconstitute(
                 entity.getId(),
                 entity.getName(),
@@ -43,15 +33,13 @@ public class UserMapper {
         );
     }
 
-    /**
-     * Converte de Modelo de Domínio para JPA Entity
-     */
     public static UserEntity toEntity(User domain) {
         if (domain == null) {
             return null;
         }
 
         UserEntity entity = new UserEntity();
+
         entity.setId(domain.getId());
         entity.setName(domain.getName());
         entity.setBirthData(domain.getBirthData());
@@ -66,6 +54,12 @@ public class UserMapper {
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setDisabledAt(domain.getDisabledAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
+        entity.setPasswordChangeAt(
+                domain.getPasswordChangedAt()
+        );
+        entity.setFailedLoginAttempts(
+                domain.getFailedLoginAttempts()
+        );
 
         return entity;
     }

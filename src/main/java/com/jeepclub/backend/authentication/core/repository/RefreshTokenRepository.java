@@ -1,15 +1,19 @@
 package com.jeepclub.backend.authentication.core.repository;
 
-import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
-import com.jeepclub.backend.authentication.core.domain.model.Session;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface RefreshTokenRepository {
 
-    RefreshToken save(RefreshToken token, Session session);
+    RefreshToken save(RefreshToken token);
+
+    List<RefreshToken> findAll();
+
+    Optional<RefreshToken> findById(Long id);
 
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
+    List<RefreshToken> findByUserId(Long userId);
 }

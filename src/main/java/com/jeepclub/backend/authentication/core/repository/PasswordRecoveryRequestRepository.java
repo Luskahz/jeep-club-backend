@@ -4,9 +4,19 @@ import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryReq
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface PasswordRecoveryRequestRepository {
+
+    PasswordRecoveryRequest save(PasswordRecoveryRequest request);
+
+    List<PasswordRecoveryRequest> findAll();
+
+    Optional<PasswordRecoveryRequest> findById(Long id);
+
+    List<PasswordRecoveryRequest> findByUserId(Long userId);
+
     Optional<PasswordRecoveryRequest> findByTokenHash(String tokenHash);
 
     Optional<PasswordRecoveryRequest> findOpenByUserId(
@@ -19,6 +29,4 @@ public interface PasswordRecoveryRequestRepository {
             PasswordRecoveryRequestMethod method,
             Instant now
     );
-
-    PasswordRecoveryRequest save(PasswordRecoveryRequest request);
 }

@@ -160,11 +160,6 @@ public class User {
         this.failedLoginAttempts = 0;
     }
 
-    public void reactivate() {
-        if (status != UserStatus.DISABLED) throw new UserNotDisableException("User is not disable.");
-        this.status = UserStatus.ACTIVE;
-    }
-
 
     public void recordSuccessfulLogin(Instant now) {
         this.lastLoginAt = now;
@@ -182,14 +177,17 @@ public class User {
         return this;
     }
 
-    public void changePassword(String newHash, Instant now) {
+    public void changePassword(
+            String newHash,
+            Instant now
+    ) {
         if (newHash == null || newHash.isBlank()) {
-            throw new UserNewHashRequiredException("newHash is required");
+            throw new UserNewHashRequiredException(
+                    "newHash is required."
+            );
         }
 
-        if (now == null) {
-            throw new UserNowInstantRequiredException("now is required");
-        }
+        validateNow(now);
 
         this.passwordHash = newHash;
         this.passwordChangedAt = now;
@@ -198,14 +196,20 @@ public class User {
         this.updatedAt = now;
     }
 
-    public void changeToTemporaryPassword(String temporaryPasswordHash, Instant now) {
-        if (temporaryPasswordHash == null || temporaryPasswordHash.isBlank()) {
-            throw new UserNewHashRequiredException("temporaryPasswordHash is required");
+    public void changeToTemporaryPassword(
+            String temporaryPasswordHash,
+            Instant now
+    ) {
+        if (
+                temporaryPasswordHash == null
+                        || temporaryPasswordHash.isBlank()
+        ) {
+            throw new UserNewHashRequiredException(
+                    "temporaryPasswordHash is required."
+            );
         }
 
-        if (now == null) {
-            throw new UserNowInstantRequiredException("now is required");
-        }
+        validateNow(now);
 
         this.passwordHash = temporaryPasswordHash;
         this.passwordChangedAt = now;
@@ -222,5 +226,38 @@ public class User {
     }
     public boolean isChangePasswordRequired() {
         return status == UserStatus.CHANGE_PASSWORD_REQUIRED;
+    }
+
+    public void disable(Instant now) {
+        validateNow(now);
+
+        if (isDisabled()) {
+            throw new UserAlreadyDisabledException(id);
+        }
+
+        this.status = UserStatus.DISABLED;
+        this.disabledAt = now;
+        this.updatedAt = now;
+    }
+
+    public void enable(Instant now) {
+        validateNow(now);
+
+        if (!isDisabled()) {
+            throw new UserNotDisabledException(id);
+        }
+
+        this.status = UserStatus.ACTIVE;
+        this.disabledAt = null;
+        this.failedLoginAttempts = 0;
+        this.updatedAt = now;
+    }
+
+    private void validateNow(Instant now) {
+        if (now == null) {
+            throw new UserNowInstantRequiredException(
+                    "now is required."
+            );
+        }
     }
 }

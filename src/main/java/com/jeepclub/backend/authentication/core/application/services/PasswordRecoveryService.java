@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordRecoveryRequestNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
