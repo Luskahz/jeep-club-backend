@@ -19,30 +19,60 @@ public class PasswordChangeChallengeRepositoryAdapter
     private final PasswordChangeChallengeJpaRepository jpaRepository;
 
     @Override
-    public PasswordChangeChallenge save(PasswordChangeChallenge challenge) {
+    public PasswordChangeChallenge save(
+            PasswordChangeChallenge challenge
+    ) {
         PasswordChangeChallengeEntity entity =
-                PasswordChangeChallengeMapper.toEntity(challenge);
+                PasswordChangeChallengeMapper.toEntity(
+                        challenge
+                );
 
-        PasswordChangeChallengeEntity saved = jpaRepository.save(entity);
+        PasswordChangeChallengeEntity savedEntity =
+                jpaRepository.save(entity);
 
-        return PasswordChangeChallengeMapper.toDomain(saved);
+        return PasswordChangeChallengeMapper.toDomain(
+                savedEntity
+        );
     }
 
     @Override
-    public Optional<PasswordChangeChallenge> findByTokenHash(String tokenHash) {
+    public Optional<PasswordChangeChallenge> findByTokenHash(
+            String tokenHash
+    ) {
         return jpaRepository.findByTokenHash(tokenHash)
                 .map(PasswordChangeChallengeMapper::toDomain);
     }
 
     @Override
-    public void invalidateActiveByUserId(Long userId, Instant now) {
+    public Optional<Long> findUserIdByTokenHash(
+            String tokenHash
+    ) {
+        return jpaRepository.findUserIdByTokenHash(
+                tokenHash
+        );
+    }
 
+    @Override
+    public Optional<PasswordChangeChallenge>
+    findByTokenHashForUpdate(
+            String tokenHash
+    ) {
+        return jpaRepository
+                .findByTokenHashForUpdate(tokenHash)
+                .map(PasswordChangeChallengeMapper::toDomain);
+    }
 
+    @Override
+    public void invalidateActiveByUserId(
+            Long userId,
+            Instant now
+    ) {
         jpaRepository.findByUserIdAndUsedFalse(userId)
                 .forEach(entity -> {
-                    if (entity.getUsedAt() == null) {
+                    if (!entity.isUsed()) {
                         entity.setUsed(true);
                         entity.setUsedAt(now);
+
                         jpaRepository.save(entity);
                     }
                 });

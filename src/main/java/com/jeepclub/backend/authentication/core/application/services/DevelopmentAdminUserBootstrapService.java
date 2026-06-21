@@ -1,12 +1,12 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.shared.bootstrap.AdminBootstrapConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -20,19 +20,33 @@ public class DevelopmentAdminUserBootstrapService {
     private final AdminBootstrapConfig adminBootstrapConfig;
     private final Clock clock;
 
-    @Transactional
     public Long createAdminUserIfMissing() {
-        return userRepository.findByCpf(adminBootstrapConfig.cpf())
+        return userRepository
+                .findByCpf(adminBootstrapConfig.cpf())
                 .map(User::getId)
-                .orElseGet(this::createAdminUser);
+                .orElseGet(
+                        this::createAdminUserHandlingConcurrency
+                );
+    }
+
+    private Long createAdminUserHandlingConcurrency() {
+        try {
+            return createAdminUser();
+        } catch (RegistrationConflictException exception) {
+            return userRepository
+                    .findByCpf(adminBootstrapConfig.cpf())
+                    .map(User::getId)
+                    .orElseThrow(() -> exception);
+        }
     }
 
     private Long createAdminUser() {
         Instant now = Instant.now(clock);
 
-        String passwordHash = passwordHasher.hash(
-                adminBootstrapConfig.password()
-        );
+        String passwordHash =
+                passwordHasher.hash(
+                        adminBootstrapConfig.password()
+                );
 
         User user = User.create(
                 adminBootstrapConfig.name(),
@@ -45,7 +59,8 @@ public class DevelopmentAdminUserBootstrapService {
                 now
         );
 
-        User savedUser = userRepository.save(user);
+        User savedUser =
+                userRepository.create(user);
 
         return savedUser.getId();
     }
