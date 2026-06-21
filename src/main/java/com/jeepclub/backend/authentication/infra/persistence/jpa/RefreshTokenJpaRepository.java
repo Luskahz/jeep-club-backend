@@ -27,6 +27,16 @@ public interface RefreshTokenJpaRepository
             @Param("tokenHash") String tokenHash
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT token
+        FROM RefreshTokenEntity token
+        WHERE token.id = :id
+        """)
+    Optional<RefreshTokenEntity> findByIdForUpdate(
+            @Param("id") Long id
+    );
+
     Optional<RefreshTokenEntity> findBySessionIdAndStatus(
             Long sessionId,
             RefreshTokenStatus status

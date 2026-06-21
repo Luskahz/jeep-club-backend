@@ -24,12 +24,16 @@ public class AdminRefreshTokenService {
 
     @Transactional(readOnly = true)
     public List<AdminRefreshTokenResult> findAll() {
-        return AdminRefreshTokenResult.from(refreshTokenRepository.findAll());
+        List<RefreshToken> refreshTokens =
+                refreshTokenRepository.findAll();
+
+        return AdminRefreshTokenResult.from(refreshTokens);
     }
 
     @Transactional(readOnly = true)
     public AdminRefreshTokenResult findById(Long refreshTokenId) {
-        RefreshToken refreshToken = findRefreshTokenById(refreshTokenId);
+        RefreshToken refreshToken =
+                findRefreshTokenById(refreshTokenId);
 
         return AdminRefreshTokenResult.from(refreshToken);
     }
@@ -38,36 +42,43 @@ public class AdminRefreshTokenService {
     public List<AdminRefreshTokenResult> findByUserId(Long userId) {
         ensureUserExists(userId);
 
-        return AdminRefreshTokenResult.from(
-                refreshTokenRepository.findByUserId(userId)
-        );
+        List<RefreshToken> refreshTokens =
+                refreshTokenRepository.findByUserId(userId);
+
+        return AdminRefreshTokenResult.from(refreshTokens);
     }
 
     @Transactional
     public AdminRefreshTokenResult revoke(Long refreshTokenId) {
         Instant now = Instant.now(clock);
 
-        RefreshToken refreshToken = refreshTokenRepository
-                .findById(refreshTokenId)
-                .orElseThrow(() ->
-                        new RefreshTokenNotFoundException(
-                                refreshTokenId
-                        )
-                );
+        RefreshToken refreshToken =
+                findRefreshTokenByIdForUpdate(refreshTokenId);
 
         refreshToken.revoke(now);
 
         RefreshToken savedRefreshToken =
                 refreshTokenRepository.save(refreshToken);
 
-        return AdminRefreshTokenResult.from(
-                savedRefreshToken
-        );
+        return AdminRefreshTokenResult.from(savedRefreshToken);
     }
 
     private RefreshToken findRefreshTokenById(Long refreshTokenId) {
-        return refreshTokenRepository.findById(refreshTokenId)
-                .orElseThrow(() -> new RefreshTokenNotFoundException(refreshTokenId));
+        return refreshTokenRepository
+                .findById(refreshTokenId)
+                .orElseThrow(() ->
+                        new RefreshTokenNotFoundException(refreshTokenId)
+                );
+    }
+
+    private RefreshToken findRefreshTokenByIdForUpdate(
+            Long refreshTokenId
+    ) {
+        return refreshTokenRepository
+                .findByIdForUpdate(refreshTokenId)
+                .orElseThrow(() ->
+                        new RefreshTokenNotFoundException(refreshTokenId)
+                );
     }
 
     private void ensureUserExists(Long userId) {

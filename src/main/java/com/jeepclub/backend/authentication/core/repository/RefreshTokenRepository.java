@@ -13,6 +13,8 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findById(Long id);
 
+    Optional<RefreshToken> findByIdForUpdate(Long id);
+
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
     Optional<RefreshToken> findByTokenHashForUpdate(String tokenHash);
