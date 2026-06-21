@@ -8,7 +8,6 @@ import com.jeepclub.backend.authentication.core.application.exceptions.session.S
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.results.LogoutResult;
 import com.jeepclub.backend.authentication.core.application.results.MeResult;
 import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.results.login.LoginResult;

@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.api.exception;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.*;
 import com.jeepclub.backend.authentication.core.domain.exception.user.*;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
@@ -11,24 +12,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
 public class UserExceptionHandler extends ApiExceptionHandler {
-
-    @ExceptionHandler(UserCpfNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserCpfNotFound(UserCpfNotFoundException exception) {
-        return buildErrorResponse(
-                "USER_CPF_NOT_FOUND",
-                exception.getMessage(),
-                HttpStatus.NOT_FOUND
-        );
-    }
-
-    @ExceptionHandler(UserInvalidPasswordException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserInvalidPassword(UserInvalidPasswordException exception) {
-        return buildErrorResponse(
-                "USER_INVALID_PASSWORD",
-                exception.getMessage(),
-                HttpStatus.UNAUTHORIZED
-        );
-    }
 
     @ExceptionHandler(UserBlockedForLoginException.class)
     public ResponseEntity<ApiErrorResponse> handleUserBlockedForLogin(UserBlockedForLoginException exception) {
@@ -148,6 +131,17 @@ public class UserExceptionHandler extends ApiExceptionHandler {
                 "USER_NOT_DISABLED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(
+            InvalidCredentialsException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_CREDENTIALS",
+                exception.getMessage(),
+                HttpStatus.UNAUTHORIZED
         );
     }
 }
