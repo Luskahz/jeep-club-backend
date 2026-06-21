@@ -18,6 +18,9 @@ public interface PasswordRecoveryRequestRepository {
     List<PasswordRecoveryRequest> findByUserId(Long userId);
 
     Optional<PasswordRecoveryRequest> findByTokenHash(String tokenHash);
+    Optional<PasswordRecoveryRequest> findByTokenHashForUpdate(
+            String tokenHash
+    );
 
     Optional<PasswordRecoveryRequest> findOpenByUserId(
             Long userId,
@@ -29,4 +32,6 @@ public interface PasswordRecoveryRequestRepository {
             PasswordRecoveryRequestMethod method,
             Instant now
     );
+
+
 }

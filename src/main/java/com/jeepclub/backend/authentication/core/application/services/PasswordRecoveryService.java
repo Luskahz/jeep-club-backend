@@ -89,7 +89,7 @@ public class PasswordRecoveryService {
         String hashedToken = tokenHashService.hash(rawToken);
 
         PasswordRecoveryRequest recoveryRequest =
-                passwordRecoveryRequestRepository.findByTokenHash(hashedToken)
+                passwordRecoveryRequestRepository.findByTokenHashForUpdate(hashedToken)
                         .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
 
         if (!recoveryRequest.isTokenBased()) {

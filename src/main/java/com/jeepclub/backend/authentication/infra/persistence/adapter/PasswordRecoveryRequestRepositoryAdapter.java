@@ -35,6 +35,14 @@ public class PasswordRecoveryRequestRepositoryAdapter implements PasswordRecover
     }
 
     @Override
+    public Optional<PasswordRecoveryRequest> findByTokenHashForUpdate(
+            String tokenHash
+    ) {
+        return jpaRepository.findByTokenHashForUpdate(tokenHash)
+                .map(PasswordRecoveryRequestMapper::toDomain);
+    }
+
+    @Override
     public Optional<PasswordRecoveryRequest> findOpenByUserId(
             Long userId,
             Instant now
