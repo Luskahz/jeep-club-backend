@@ -144,4 +144,15 @@ public class UserExceptionHandler extends ApiExceptionHandler {
                 HttpStatus.UNAUTHORIZED
         );
     }
+
+    @ExceptionHandler(RegistrationConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleRegistrationConflict(
+            RegistrationConflictException exception
+    ) {
+        return buildErrorResponse(
+                "REGISTRATION_CONFLICT",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
 }
