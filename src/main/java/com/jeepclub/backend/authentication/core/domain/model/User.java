@@ -117,7 +117,7 @@ public class User {
 
     public void registerFailedLogin() {
         if(isBlockedForLogin()){
-            throw new UserLockoutException("Account temporarily locked due to multiple failed login attempts. Please try again later.");
+            return;
         }
         failedLoginAttempts++;
 

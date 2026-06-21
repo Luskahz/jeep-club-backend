@@ -16,6 +16,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -29,22 +30,24 @@ public class RefreshTokenService {
     private final RefreshTokenGenerator tokenGenerator;
     private final JwtService jwtService;
     private final ApplicationTimeProperties authTimeProperties;
+    private final Clock clock;
 
     @Transactional
     public AuthTokens refresh(String rawRefreshToken) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         String tokenHash = tokenHashService.hash(rawRefreshToken);
-
-        RefreshToken existingToken = refreshTokenRepository.findByTokenHash(tokenHash)
-                .orElseThrow(() -> new RefreshTokenNotFoundException("Refresh token not found."));
+        RefreshToken existingToken = refreshTokenRepository
+                .findByTokenHash(tokenHash)
+                .orElseThrow(RefreshTokenInvalidException::new);
 
         if (!existingToken.isValid(now)) {
-            throw new RefreshTokenInvalidException("Invalid refresh token for rotation rules");
+            throw new RefreshTokenInvalidException();
         }
 
-        User user = userRepository.findById(existingToken.getSession().getUserId())
-                .orElseThrow(() -> new SecurityException("User not found with this token."));
+        User user = userRepository
+                .findById(existingToken.getSession().getUserId())
+                .orElseThrow(RefreshTokenInvalidException::new);
 
         String newRawToken = tokenGenerator.generate();
         String newTokenHash = tokenHashService.hash(newRawToken);
@@ -52,7 +55,8 @@ public class RefreshTokenService {
         RefreshToken newToken = RefreshToken.create(
                 existingToken.getSession(),
                 newTokenHash,
-                authTimeProperties.refreshTokenTtl()
+                authTimeProperties.refreshTokenTtl(),
+                now
         );
 
         RefreshToken savedNewToken =

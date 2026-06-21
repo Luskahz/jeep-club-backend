@@ -1,7 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken;
 
 public class RefreshTokenInvalidException extends RuntimeException {
-    public RefreshTokenInvalidException(String message) {
-        super(message);
+
+    public RefreshTokenInvalidException() {
+        super("Refresh token is invalid or expired.");
     }
 }

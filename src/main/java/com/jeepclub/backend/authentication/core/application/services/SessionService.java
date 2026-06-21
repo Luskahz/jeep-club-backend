@@ -1,12 +1,11 @@
 package com.jeepclub.backend.authentication.core.application.services;
 
+import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordChangeChallengeInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordRecoveryRequestNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.results.LogoutResult;
@@ -42,19 +41,19 @@ public class SessionService {
     private final JwtService jwtService;
     private final ApplicationTimeProperties authTimeProperties;
     private final Clock clock;
-    private PasswordRecoveryRequestRepository passwordRecoveryRequestRepository;
+    private final PasswordRecoveryRequestRepository passwordRecoveryRequestRepository;
 
-    @Transactional
+    @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResult login(String cpf, String senha) {
         Instant now = Instant.now(clock);
 
         User user = userRepository.findByCpf(cpf)
-                .orElseThrow(() -> new UserCpfNotFoundException("CPF not found."));
+                .orElseThrow(InvalidCredentialsException::new);
 
         if (!passwordHasher.matches(senha, user.getPasswordHash())) {
             user.registerFailedLogin();
             userRepository.save(user);
-            throw new UserInvalidPasswordException(user.getId());
+            throw new InvalidCredentialsException();
         }
 
         user.assertCanAttemptLogin();
@@ -192,7 +191,8 @@ public class SessionService {
         RefreshToken refreshToken = RefreshToken.create(
                 session,
                 tokenHash,
-                authTimeProperties.refreshTokenTtl()
+                authTimeProperties.refreshTokenTtl(),
+                now
         );
 
         refreshTokenRepository.save(refreshToken);
@@ -262,18 +262,19 @@ public class SessionService {
     }
 
     @Transactional
-    public LogoutResult logout(Long userId) {
-        Instant now = Instant.now();
-        Session session = sessionRepository.findActiveByUserId(userId)
-                .orElseThrow(() -> new SessionNotFoundException("Session not found."));
+    public void logout(Long userId, Long sessionId) {
+        Instant now = Instant.now(clock);
+        Session session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new SessionNotFoundException(sessionId));
 
-        userRepository.findById(session.getUserId())
-                .orElseThrow(() -> new UserIdNotFoundException("User not found."));
+        if (!session.getUserId().equals(userId)) {
+            throw new SessionUserMismatchException(
+                    "Session does not belong to the authenticated user."
+            );
+        }
 
         session.logout(now);
         sessionRepository.save(session);
-
-        return new LogoutResult("Logout successful!");
     }
 
 }

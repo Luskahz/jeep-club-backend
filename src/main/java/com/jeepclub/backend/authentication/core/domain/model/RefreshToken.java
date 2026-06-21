@@ -27,10 +27,9 @@ public class RefreshToken {
     private RefreshToken(
             Session session,
             String tokenHash,
-            Duration ttl
+            Duration ttl,
+            Instant now
     ) {
-        Instant now = Instant.now();
-
         this.session = session;
         this.tokenHash = tokenHash;
         this.createdAt = now;
@@ -38,18 +37,20 @@ public class RefreshToken {
         this.status = RefreshTokenStatus.ACTIVE;
     }
 
-    @Contract("_, _, _ -> new")
+    @Contract("_, _, _, _ -> new")
     public static @NotNull RefreshToken create(
             Session session,
             String tokenHash,
-            Duration ttl
+            Duration ttl,
+            Instant now
     ) {
-        validateCreation(session, tokenHash, ttl);
+        validateCreation(session, tokenHash, ttl, now);
 
         return new RefreshToken(
                 session,
                 tokenHash,
-                ttl
+                ttl,
+                now
         );
     }
 
@@ -141,14 +142,18 @@ public class RefreshToken {
     private static void validateCreation(
             Session session,
             String tokenHash,
-            Duration ttl
+            Duration ttl,
+            Instant now
     ) {
         Objects.requireNonNull(session, "session is required");
         validateTokenHash(tokenHash);
         Objects.requireNonNull(ttl, "ttl is required");
+        Objects.requireNonNull(now, "now is required");
 
         if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException("ttl must be greater than zero");
+            throw new IllegalArgumentException(
+                    "ttl must be greater than zero"
+            );
         }
     }
     private static void validateTokenHash(String tokenHash) {

@@ -173,7 +173,7 @@ public class SessionController {
     public ResponseEntity<Void> logout(Authentication authentication) {
         UserPrincipal principal = getAuthenticatedPrincipal(authentication);
 
-        sessionService.logout(principal.getUserId());
+        sessionService.logout(principal.getUserId(), principal.getSessionId());
 
         return ResponseEntity.noContent().build();
     }
