@@ -63,11 +63,11 @@ public class PasswordChangeChallengeRepositoryAdapter
     }
 
     @Override
-    public int invalidateActiveByUserId(
+    public void invalidateActiveByUserId(
             Long userId,
             Instant now
     ) {
-        return jpaRepository.invalidateActiveByUserId(
+        jpaRepository.invalidateActiveByUserId(
                 userId,
                 now
         );

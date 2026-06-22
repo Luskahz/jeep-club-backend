@@ -23,7 +23,7 @@ public interface PasswordChangeChallengeRepository {
             String tokenHash
     );
 
-    int invalidateActiveByUserId(
+    void invalidateActiveByUserId(
             Long userId,
             Instant now
     );

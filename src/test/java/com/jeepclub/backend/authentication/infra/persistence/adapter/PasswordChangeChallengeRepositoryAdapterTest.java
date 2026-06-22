@@ -10,9 +10,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Instant;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PasswordChangeChallengeRepositoryAdapterTest {
@@ -28,12 +26,8 @@ class PasswordChangeChallengeRepositoryAdapterTest {
     void shouldDelegateInvalidationToBulkUpdate() {
         Instant now = Instant.parse("2026-05-21T18:00:00Z");
 
-        when(jpaRepository.invalidateActiveByUserId(7L, now))
-                .thenReturn(3);
+        adapter.invalidateActiveByUserId(7L, now);
 
-        int updatedCount = adapter.invalidateActiveByUserId(7L, now);
-
-        assertEquals(3, updatedCount);
         verify(jpaRepository).invalidateActiveByUserId(7L, now);
     }
 }

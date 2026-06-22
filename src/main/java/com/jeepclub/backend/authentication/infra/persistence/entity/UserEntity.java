@@ -69,8 +69,8 @@ public class UserEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @Column(name = "password_change_at")
-    private Instant passwordChangeAt;
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
 
     @Column(name = "failed_login_attempts")
     private int failedLoginAttempts;

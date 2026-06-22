@@ -28,7 +28,7 @@ public final class UserMapper {
                 entity.getCreatedAt(),
                 entity.getDisabledAt(),
                 entity.getUpdatedAt(),
-                entity.getPasswordChangeAt(),
+                entity.getPasswordChangedAt(),
                 entity.getFailedLoginAttempts()
         );
     }
@@ -54,7 +54,7 @@ public final class UserMapper {
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setDisabledAt(domain.getDisabledAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
-        entity.setPasswordChangeAt(
+        entity.setPasswordChangedAt(
                 domain.getPasswordChangedAt()
         );
         entity.setFailedLoginAttempts(
