@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.recovery;
 
-import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
+import com.jeepclub.backend.authentication.core.application.result.TemporaryPasswordAdminResult;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import io.swagger.v3.oas.annotations.media.Schema;

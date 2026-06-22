@@ -23,6 +23,10 @@ public interface UserRepository {
 
     boolean existsByCpf(String cpf);
 
+    boolean existsByEmail(String email);
+
+    boolean existsByRg(String rg);
+
     boolean existsById(Long id);
 
     List<Long> findActiveUserIds();

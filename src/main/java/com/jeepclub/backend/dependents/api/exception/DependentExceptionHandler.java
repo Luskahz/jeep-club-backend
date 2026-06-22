@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 
 // handler fora do padrão, verificar como está o handler do authentication e replicar.
-@RestControllerAdvice(basePackages = "com.jeepclub.backend.dependencemanager.api")
+@RestControllerAdvice(basePackages = "com.jeepclub.backend.dependents.api")
 public class DependentExceptionHandler {
 
     @ExceptionHandler(DependentException.class)

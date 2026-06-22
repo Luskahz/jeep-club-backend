@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.time.Instant;
 
 @Repository
 @RequiredArgsConstructor
@@ -37,7 +38,7 @@ public class MemberActivationTokenRepositoryAdapter implements MemberActivationT
 
     @Override
     @Transactional
-    public void invalidateAllByApplicationId(Long applicationId) {
-        jpaRepository.invalidateAllByApplicationId(applicationId);
+    public void invalidateAllByApplicationId(Long applicationId, Instant now) {
+        jpaRepository.invalidateAllByApplicationId(applicationId, now);
     }
 }

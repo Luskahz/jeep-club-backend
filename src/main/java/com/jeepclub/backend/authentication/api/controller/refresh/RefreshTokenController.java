@@ -2,8 +2,8 @@ package com.jeepclub.backend.authentication.api.controller.refresh;
 
 import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.token.RefreshTokenRequestDTO;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.services.RefreshTokenService;
+import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.service.RotateRefreshTokenService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +16,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(
@@ -31,7 +34,7 @@ import org.springframework.web.bind.annotation.*;
 )
 public class RefreshTokenController {
 
-    private final RefreshTokenService refreshTokenService;
+    private final RotateRefreshTokenService refreshTokenService;
 
     @PostMapping(
             value = "/refresh",
@@ -75,7 +78,7 @@ public class RefreshTokenController {
     public ResponseEntity<AuthTokenResponseDTO> refresh(
             @RequestBody @Valid RefreshTokenRequestDTO request
     ) {
-        AuthTokens tokens = refreshTokenService.refresh(
+        AuthTokens tokens = refreshTokenService.rotate(
                 request.refreshToken()
         );
 

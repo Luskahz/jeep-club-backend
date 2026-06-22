@@ -125,6 +125,16 @@ public class RefreshTokenRepositoryAdapter
                 .toList();
     }
 
+    @Override
+    public void revokeActiveByUserId(Long userId) {
+        jpaRepository.revokeActiveByUserId(userId);
+    }
+
+    @Override
+    public void revokeActiveBySessionId(Long sessionId) {
+        jpaRepository.revokeActiveBySessionId(sessionId);
+    }
+
     private Optional<RefreshToken> mapToDomain(
             RefreshTokenEntity entity
     ) {

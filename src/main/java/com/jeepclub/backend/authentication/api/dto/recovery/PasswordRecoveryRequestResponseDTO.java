@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.recovery;
 
-import com.jeepclub.backend.authentication.core.application.results.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;

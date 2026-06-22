@@ -23,7 +23,9 @@ public final class UserMapper {
                 entity.getPasswordHash(),
                 entity.getPhoneNumber(),
                 entity.getProfilePhotoUrl(),
-                entity.getStatus(),
+                entity.getAccountStatus(),
+                entity.getAuthenticationStatus(),
+                entity.getCredentialStatus(),
                 entity.getLastLoginAt(),
                 entity.getCreatedAt(),
                 entity.getDisabledAt(),
@@ -49,7 +51,9 @@ public final class UserMapper {
         entity.setPasswordHash(domain.getPasswordHash());
         entity.setPhoneNumber(domain.getPhoneNumber());
         entity.setProfilePhotoUrl(domain.getProfilePhotoUrl());
-        entity.setStatus(domain.getStatus());
+        entity.setAccountStatus(domain.getAccountStatus());
+        entity.setAuthenticationStatus(domain.getAuthenticationStatus());
+        entity.setCredentialStatus(domain.getCredentialStatus());
         entity.setLastLoginAt(domain.getLastLoginAt());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setDisabledAt(domain.getDisabledAt());

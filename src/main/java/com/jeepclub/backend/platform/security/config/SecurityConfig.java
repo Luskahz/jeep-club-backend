@@ -5,6 +5,7 @@ import com.jeepclub.backend.platform.security.jwt.JwtProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -49,6 +50,12 @@ public class SecurityConfig {
                                 "/error"
 
 
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/authentication/password-recovery/requests",
+                                "/authentication/password-recovery/requests/email-token",
+                                "/authentication/password-recovery/requests/token/reset"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

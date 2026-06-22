@@ -2,7 +2,7 @@ package com.jeepclub.backend.dependents.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
+import com.jeepclub.backend.authentication.core.application.service.AccessTokenAuthenticationService;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
@@ -15,16 +15,23 @@ import com.jeepclub.backend.dependents.core.application.service.UpdateDependentS
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -39,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(DependentController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(DependentControllerTest.AuthenticationPrincipalTestConfiguration.class)
 class DependentControllerTest {
 
     @Autowired
@@ -91,6 +99,12 @@ class DependentControllerTest {
 
         UserPrincipal principal = new UserPrincipal(1L, 100L, Instant.now().plusSeconds(3600));
         mockAuth = new UsernamePasswordAuthenticationToken(principal, null, List.of());
+        SecurityContextHolder.getContext().setAuthentication(mockAuth);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -268,5 +282,12 @@ class DependentControllerTest {
         mockMvc.perform(get("/socios/5/dependents/10"))
                 .andExpect(status().isBadRequest());
     }
-}
 
+    @TestConfiguration
+    static class AuthenticationPrincipalTestConfiguration implements WebMvcConfigurer {
+        @Override
+        public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
+            resolvers.add(new AuthenticationPrincipalArgumentResolver());
+        }
+    }
+}

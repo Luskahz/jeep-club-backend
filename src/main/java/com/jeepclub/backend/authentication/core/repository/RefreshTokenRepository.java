@@ -24,4 +24,8 @@ public interface RefreshTokenRepository {
     );
 
     List<RefreshToken> findByUserId(Long userId);
+
+    void revokeActiveByUserId(Long userId);
+
+    void revokeActiveBySessionId(Long sessionId);
 }

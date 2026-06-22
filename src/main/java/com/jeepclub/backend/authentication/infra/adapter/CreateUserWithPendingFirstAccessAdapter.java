@@ -1,6 +1,5 @@
 package com.jeepclub.backend.authentication.infra.adapter;
 
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
@@ -36,23 +35,13 @@ public class CreateUserWithPendingFirstAccessAdapter
         String passwordHash =
                 passwordHasher.hash(temporaryPassword);
 
-        User newUser = User.reconstitute(
-                null,
+        User newUser = User.createPendingFirstAccess(
                 name,
-                null,
                 email,
                 cpf,
-                null,
                 passwordHash,
                 phoneNumber,
-                null,
-                UserStatus.PENDING_FIRST_ACCESS,
-                null,
-                now,
-                null,
-                null,
-                null,
-                0
+                now
         );
 
         User savedUser =

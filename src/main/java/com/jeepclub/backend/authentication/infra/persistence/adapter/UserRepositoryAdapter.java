@@ -1,7 +1,9 @@
 package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
@@ -32,7 +34,10 @@ public class UserRepositoryAdapter
 
             return UserMapper.toDomain(savedEntity);
         } catch (DataIntegrityViolationException exception) {
-            throw new RegistrationConflictException();
+            if (isRegistrationUniqueConflict(exception)) {
+                throw new RegistrationConflictException();
+            }
+            throw exception;
         }
     }
 
@@ -77,6 +82,16 @@ public class UserRepositoryAdapter
     }
 
     @Override
+    public boolean existsByEmail(String email) {
+        return email != null && jpaRepository.existsByEmail(email);
+    }
+
+    @Override
+    public boolean existsByRg(String rg) {
+        return rg != null && jpaRepository.existsByRg(rg);
+    }
+
+    @Override
     public boolean existsById(Long id) {
         return jpaRepository.existsById(id);
     }
@@ -88,9 +103,11 @@ public class UserRepositoryAdapter
 
     @Override
     public boolean existsActiveById(Long id) {
-        return jpaRepository.existsByIdAndStatus(
+        return jpaRepository.existsByIdAndAccountStatusAndAuthenticationStatusAndCredentialStatus(
                 id,
-                UserStatus.ACTIVE
+                AccountStatus.ACTIVE,
+                AuthenticationStatus.ENABLED,
+                CredentialStatus.PERMANENT
         );
     }
 
@@ -100,5 +117,17 @@ public class UserRepositoryAdapter
                 .stream()
                 .map(UserMapper::toDomain)
                 .toList();
+    }
+
+    private boolean isRegistrationUniqueConflict(DataIntegrityViolationException exception) {
+        String message = exception.getMostSpecificCause().getMessage();
+        if (message == null) {
+            return false;
+        }
+        String normalized = message.toLowerCase();
+        return normalized.contains("authentication_users")
+                && (normalized.contains("cpf")
+                || normalized.contains("email")
+                || normalized.contains("rg"));
     }
 }

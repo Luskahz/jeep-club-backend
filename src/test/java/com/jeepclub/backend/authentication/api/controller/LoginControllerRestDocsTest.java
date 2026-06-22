@@ -6,10 +6,10 @@ import com.jeepclub.backend.authentication.api.controller.session.SessionControl
 import com.jeepclub.backend.authentication.api.exception.PasswordChangeChallengeExceptionHandler;
 import com.jeepclub.backend.authentication.api.exception.SessionExceptionHandler;
 import com.jeepclub.backend.authentication.api.exception.UserExceptionHandler;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
-import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.application.services.SessionService;
+import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.authentication.core.application.service.LoginService;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LoginControllerRestDocsTest {
 
     @Mock
-    private SessionService sessionService;
+    private LoginService loginService;
 
     private MockMvc mockMvc;
 
@@ -52,7 +52,7 @@ class LoginControllerRestDocsTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        SessionController controller = new SessionController(sessionService);
+        SessionController controller = new SessionController(loginService, null, null, null);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
@@ -75,7 +75,7 @@ class LoginControllerRestDocsTest {
                 3600L
         );
 
-        when(sessionService.login("52998224725", "senha123"))
+        when(loginService.login("52998224725", "senha123"))
                 .thenReturn(new AuthenticatedLoginResult(tokens));
 
         mockMvc.perform(post("/authentication/login")
@@ -107,7 +107,7 @@ class LoginControllerRestDocsTest {
     void shouldDocumentLoginPasswordChangeRequired() throws Exception {
         Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
 
-        when(sessionService.login("52998224725", "senhaProvisoria123"))
+        when(loginService.login("52998224725", "senhaProvisoria123"))
                 .thenReturn(new PasswordChangeRequiredLoginResult(
                         "password-change-token-example",
                         expiresAt

@@ -1,9 +1,11 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.controller.passwordRecovery.AdminPasswordRecoveryRequestController;
-import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
-import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
-import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
+import com.jeepclub.backend.authentication.api.controller.admin.passwordrecovery.AdminPasswordRecoveryRequestController;
+import com.jeepclub.backend.authentication.core.application.result.PasswordResetLinkAdminResult;
+import com.jeepclub.backend.authentication.core.application.result.TemporaryPasswordAdminResult;
+import com.jeepclub.backend.authentication.core.application.service.GenerateAdminPasswordResetLinkService;
+import com.jeepclub.backend.authentication.core.application.service.GenerateTemporaryPasswordService;
+import com.jeepclub.backend.authentication.core.application.service.ManagePasswordRecoveryRequestService;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
@@ -30,7 +32,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminPasswordRecoveryControllerTest {
 
     @Mock
-    private PasswordRecoveryService passwordRecoveryService;
+    private ManagePasswordRecoveryRequestService manageRecoveryRequestService;
+    @Mock
+    private GenerateTemporaryPasswordService generateTemporaryPasswordService;
+    @Mock
+    private GenerateAdminPasswordResetLinkService generateResetLinkService;
 
     private MockMvc mockMvc;
 
@@ -40,7 +46,11 @@ class AdminPasswordRecoveryControllerTest {
         validator.afterPropertiesSet();
 
         AdminPasswordRecoveryRequestController controller =
-                new AdminPasswordRecoveryRequestController(passwordRecoveryService);
+                new AdminPasswordRecoveryRequestController(
+                        manageRecoveryRequestService,
+                        generateTemporaryPasswordService,
+                        generateResetLinkService
+                );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setValidator(validator)
@@ -68,7 +78,7 @@ class AdminPasswordRecoveryControllerTest {
                         recoveryRequest
                 );
 
-        when(passwordRecoveryService.generateTemporaryPasswordByAdmin(anyLong()))
+        when(generateTemporaryPasswordService.generate(anyLong()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/authentication/admin/password-recovery/requests/users/{userId}/temporary-password", 1L)
@@ -103,7 +113,7 @@ class AdminPasswordRecoveryControllerTest {
                         recoveryRequest
                 );
 
-        when(passwordRecoveryService.generateResetLinkByAdmin(anyLong()))
+        when(generateResetLinkService.generate(anyLong()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/authentication/admin/password-recovery/requests/users/{userId}/reset-link", 1L)

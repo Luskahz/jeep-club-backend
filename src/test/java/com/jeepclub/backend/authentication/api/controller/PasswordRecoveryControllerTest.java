@@ -2,10 +2,12 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.controller.passwordRecovery.PasswordRecoveryRequestController;
+import com.jeepclub.backend.authentication.api.controller.passwordrecovery.PasswordRecoveryRequestController;
 import com.jeepclub.backend.authentication.api.exception.PasswordRecoveryExceptionHandler;
-import com.jeepclub.backend.authentication.core.application.results.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
+import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.authentication.core.application.service.RequestPasswordRecoveryService;
+import com.jeepclub.backend.authentication.core.application.service.ResetPasswordByTokenService;
+import com.jeepclub.backend.authentication.core.application.service.SendPasswordRecoveryEmailService;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
@@ -45,7 +47,11 @@ class PasswordRecoveryControllerTest {
             Instant.parse("2026-05-28T18:00:00Z");
 
     @Mock
-    private PasswordRecoveryService passwordRecoveryService;
+    private RequestPasswordRecoveryService requestPasswordRecoveryService;
+    @Mock
+    private SendPasswordRecoveryEmailService sendPasswordRecoveryEmailService;
+    @Mock
+    private ResetPasswordByTokenService resetPasswordByTokenService;
 
     private MockMvc mockMvc;
 
@@ -58,7 +64,11 @@ class PasswordRecoveryControllerTest {
         validator.afterPropertiesSet();
 
         PasswordRecoveryRequestController controller =
-                new PasswordRecoveryRequestController(passwordRecoveryService);
+                new PasswordRecoveryRequestController(
+                        requestPasswordRecoveryService,
+                        sendPasswordRecoveryEmailService,
+                        resetPasswordByTokenService
+                );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
@@ -77,8 +87,7 @@ class PasswordRecoveryControllerTest {
                 createOpenRecoveryRequest();
 
         when(
-                passwordRecoveryService
-                        .createOrGetOpenRecoveryRequest(CPF)
+                requestPasswordRecoveryService.request(CPF)
         ).thenReturn(PublicPasswordRecoveryResult.from(recoveryRequest));
 
         mockMvc.perform(post(BASE_PATH)
@@ -100,8 +109,7 @@ class PasswordRecoveryControllerTest {
                 .andExpect(jsonPath("$.resolvedAt").doesNotExist())
                 .andExpect(jsonPath("$.cancelledAt").doesNotExist());
 
-        verify(passwordRecoveryService)
-                .createOrGetOpenRecoveryRequest(CPF);
+        verify(requestPasswordRecoveryService).request(CPF);
     }
 
     @Test
@@ -116,9 +124,8 @@ class PasswordRecoveryControllerTest {
         );
 
         when(
-                passwordRecoveryService
-                        .sendRecoveryEmailToken(CPF)
-        ).thenReturn(recoveryRequest);
+                sendPasswordRecoveryEmailService.send(CPF)
+        ).thenReturn(PublicPasswordRecoveryResult.from(recoveryRequest));
 
         mockMvc.perform(post(BASE_PATH + "/email-token")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -139,8 +146,7 @@ class PasswordRecoveryControllerTest {
                 .andExpect(jsonPath("$.resolvedAt").doesNotExist())
                 .andExpect(jsonPath("$.cancelledAt").doesNotExist());
 
-        verify(passwordRecoveryService)
-                .sendRecoveryEmailToken(CPF);
+        verify(sendPasswordRecoveryEmailService).send(CPF);
     }
 
     @Test
@@ -161,8 +167,7 @@ class PasswordRecoveryControllerTest {
                         .content(payload))
                 .andExpect(status().isNoContent());
 
-        verify(passwordRecoveryService)
-                .resetPasswordByToken(token, newPassword);
+        verify(resetPasswordByTokenService).reset(token, newPassword);
     }
 
     private PasswordRecoveryRequest createOpenRecoveryRequest() {

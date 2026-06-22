@@ -58,7 +58,7 @@ public class ApproveMembershipApplicationService {
         // Invalida tokens anteriores e gera um novo par raw/hash.
         // O rawToken é enviado por e-mail; o tokenHash é persistido para validação
         // quando o usuário clicar no link de ativação.
-        memberActivationTokenRepository.invalidateAllByApplicationId(applicationId);
+        memberActivationTokenRepository.invalidateAllByApplicationId(applicationId, now);
 
         String rawToken = tokenGenerator.generate();
         String tokenHash = tokenHashService.hash(rawToken);

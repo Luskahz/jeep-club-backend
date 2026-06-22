@@ -1,8 +1,20 @@
 package com.jeepclub.backend.authentication.api.exception;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.*;
-import com.jeepclub.backend.authentication.core.domain.exception.user.*;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfInvalidException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserAlreadyDisabledException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserBlockedForLoginException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserCannotChangePasswordException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserIdRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserLockoutException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNewHashRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNotDisabledException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNotLockoutException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserNowInstantRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.user.UserPasswordChangeRequiredException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;

@@ -1,6 +1,8 @@
 package com.jeepclub.backend.authentication.infra.persistence.jpa;
 
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,16 +40,26 @@ public interface UserJpaRepository
 
     boolean existsByCpf(String cpf);
 
-    boolean existsByIdAndStatus(
+    boolean existsByEmail(String email);
+
+    boolean existsByRg(String rg);
+
+    boolean existsByIdAndAccountStatusAndAuthenticationStatusAndCredentialStatus(
             Long id,
-            UserStatus status
+            AccountStatus accountStatus,
+            AuthenticationStatus authenticationStatus,
+            CredentialStatus credentialStatus
     );
 
     @Query("""
             SELECT user.id
             FROM UserEntity user
-            WHERE user.status =
-                com.jeepclub.backend.authentication.core.domain.enums.UserStatus.ACTIVE
+            WHERE user.accountStatus =
+                com.jeepclub.backend.authentication.core.domain.enums.AccountStatus.ACTIVE
+              AND user.authenticationStatus =
+                com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus.ENABLED
+              AND user.credentialStatus =
+                com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus.PERMANENT
             ORDER BY user.id
             """)
     List<Long> findActiveUserIds();

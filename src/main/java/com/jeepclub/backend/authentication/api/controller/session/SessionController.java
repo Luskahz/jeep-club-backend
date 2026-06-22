@@ -1,14 +1,17 @@
 package com.jeepclub.backend.authentication.api.controller.session;
 
-import com.jeepclub.backend.authentication.api.dto.sessao.CompleteRequiredPasswordChangeDTO;
-import com.jeepclub.backend.authentication.api.dto.sessao.LoginRequestDTO;
-import com.jeepclub.backend.authentication.api.dto.sessao.LoginResponseDTO;
-import com.jeepclub.backend.authentication.api.dto.sessao.MeResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.session.CompleteRequiredPasswordChangeDTO;
+import com.jeepclub.backend.authentication.api.dto.session.LoginRequestDTO;
+import com.jeepclub.backend.authentication.api.dto.session.LoginResponseDTO;
+import com.jeepclub.backend.authentication.api.dto.session.MeResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.results.MeResult;
-import com.jeepclub.backend.authentication.core.application.results.login.LoginResult;
-import com.jeepclub.backend.authentication.core.application.services.SessionService;
+import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.result.MeResult;
+import com.jeepclub.backend.authentication.core.application.result.login.LoginResult;
+import com.jeepclub.backend.authentication.core.application.service.CompleteRequiredPasswordChangeService;
+import com.jeepclub.backend.authentication.core.application.service.GetCurrentSessionService;
+import com.jeepclub.backend.authentication.core.application.service.LoginService;
+import com.jeepclub.backend.authentication.core.application.service.LogoutService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
@@ -46,7 +49,10 @@ import java.util.List;
 )
 public class SessionController {
 
-    private final SessionService sessionService;
+    private final LoginService loginService;
+    private final CompleteRequiredPasswordChangeService completePasswordChangeService;
+    private final LogoutService logoutService;
+    private final GetCurrentSessionService getCurrentSessionService;
 
     @PostMapping(
             value = "/login",
@@ -91,7 +97,7 @@ public class SessionController {
     public ResponseEntity<LoginResponseDTO> login(
             @RequestBody @Valid LoginRequestDTO request
     ) {
-        LoginResult result = sessionService.login(
+        LoginResult result = loginService.login(
                 request.cpf(),
                 request.senha()
         );
@@ -143,7 +149,7 @@ public class SessionController {
     public ResponseEntity<AuthTokenResponseDTO> completeRequiredPasswordChange(
             @RequestBody @Valid CompleteRequiredPasswordChangeDTO request
     ) {
-        AuthTokens tokens = sessionService.completeRequiredPasswordChange(
+        AuthTokens tokens = completePasswordChangeService.complete(
                 request.passwordChangeToken(),
                 request.newPassword()
         );
@@ -177,7 +183,7 @@ public class SessionController {
     public ResponseEntity<Void> logout(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        sessionService.logout(principal.getUserId(), principal.getSessionId());
+        logoutService.logout(principal.getUserId(), principal.getSessionId());
 
         return ResponseEntity.noContent().build();
     }
@@ -210,7 +216,7 @@ public class SessionController {
             @AuthenticationPrincipal UserPrincipal principal,
             Authentication authentication
     ) {
-        MeResult result = sessionService.me(
+        MeResult result = getCurrentSessionService.get(
                 principal.getUserId(),
                 principal.getSessionId(),
                 principal.getAccessTokenExpiresAt()

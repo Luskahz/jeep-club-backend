@@ -5,6 +5,7 @@ import com.jeepclub.backend.authentication.infra.persistence.entity.SessionEntit
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -49,4 +50,15 @@ public interface SessionJpaRepository
     List<SessionEntity> findByUserIdOrderByCreatedAtDesc(
             Long userId
     );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE SessionEntity session
+            SET session.status =
+                com.jeepclub.backend.authentication.core.domain.enums.SessionStatus.REVOKED
+            WHERE session.userId = :userId
+              AND session.status =
+                com.jeepclub.backend.authentication.core.domain.enums.SessionStatus.ACTIVE
+            """)
+    void revokeActiveByUserId(@Param("userId") Long userId);
 }

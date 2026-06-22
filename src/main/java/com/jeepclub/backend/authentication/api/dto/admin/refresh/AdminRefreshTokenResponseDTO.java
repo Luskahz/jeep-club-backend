@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.admin.refresh;
 
-import com.jeepclub.backend.authentication.core.application.results.admin.refresh.AdminRefreshTokenResult;
+import com.jeepclub.backend.authentication.core.application.result.admin.refresh.AdminRefreshTokenResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;

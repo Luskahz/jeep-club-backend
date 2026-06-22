@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.authentication.api.controller.user.UserController;
 import com.jeepclub.backend.authentication.api.exception.UserExceptionHandler;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.services.RegistrationService;
+import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.service.RegisterAndAuthenticateService;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RegisterControllerTest {
 
     @Mock
-    private RegistrationService registrationService;
+    private RegisterAndAuthenticateService registrationService;
 
     private MockMvc mockMvc;
 

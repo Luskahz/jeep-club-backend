@@ -2,8 +2,8 @@ package com.jeepclub.backend.authentication.api.controller.user;
 
 import com.jeepclub.backend.authentication.api.dto.token.AuthTokenResponseDTO;
 import com.jeepclub.backend.authentication.api.dto.user.UserRegistrationRequestDTO;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.services.RegistrationService;
+import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.service.RegisterAndAuthenticateService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 )
 public class UserController {
 
-    private final RegistrationService registrationService;
+    private final RegisterAndAuthenticateService registrationService;
 
     @PostMapping(
             value = "/register",

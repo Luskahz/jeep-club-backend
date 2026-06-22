@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.recovery;
 
-import com.jeepclub.backend.authentication.core.application.results.admin.recovery.AdminPasswordRecoveryRequestResult;
+import com.jeepclub.backend.authentication.core.application.result.admin.recovery.AdminPasswordRecoveryRequestResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;

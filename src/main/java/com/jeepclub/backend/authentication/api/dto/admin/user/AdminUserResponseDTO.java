@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.api.dto.admin.user;
 
-import com.jeepclub.backend.authentication.core.application.results.admin.user.AdminUserResult;
+import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;

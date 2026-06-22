@@ -22,4 +22,6 @@ public interface SessionRepository {
     Optional<Session> findActiveByUserId(Long userId);
 
     Optional<Session> findActiveByUserIdForUpdate(Long userId);
+
+    void revokeActiveByUserId(Long userId);
 }

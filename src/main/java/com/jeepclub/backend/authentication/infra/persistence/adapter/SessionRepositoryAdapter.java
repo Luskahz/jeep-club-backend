@@ -82,4 +82,9 @@ public class SessionRepositoryAdapter
                 .map(SessionMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public void revokeActiveByUserId(Long userId) {
+        jpaRepository.revokeActiveByUserId(userId);
+    }
 }

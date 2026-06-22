@@ -46,7 +46,7 @@ public class ResendActivationTokenService {
             );
         }
 
-        memberActivationTokenRepository.invalidateAllByApplicationId(applicationId);
+        memberActivationTokenRepository.invalidateAllByApplicationId(applicationId, now);
 
         String rawToken = tokenGenerator.generate();
         String tokenHash = tokenHashService.hash(rawToken);

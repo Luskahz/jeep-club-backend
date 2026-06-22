@@ -7,11 +7,14 @@ import com.jeepclub.backend.authentication.api.exception.PasswordChangeChallenge
 import com.jeepclub.backend.authentication.api.exception.SessionExceptionHandler;
 import com.jeepclub.backend.authentication.api.exception.UserExceptionHandler;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
-import com.jeepclub.backend.authentication.core.application.results.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.results.MeResult;
-import com.jeepclub.backend.authentication.core.application.results.login.AuthenticatedLoginResult;
-import com.jeepclub.backend.authentication.core.application.results.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.application.services.SessionService;
+import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.authentication.core.application.result.MeResult;
+import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.authentication.core.application.service.CompleteRequiredPasswordChangeService;
+import com.jeepclub.backend.authentication.core.application.service.GetCurrentSessionService;
+import com.jeepclub.backend.authentication.core.application.service.LoginService;
+import com.jeepclub.backend.authentication.core.application.service.LogoutService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -46,7 +49,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LoginControllerTest {
 
     @Mock
-    private SessionService sessionService;
+    private LoginService loginService;
+    @Mock
+    private CompleteRequiredPasswordChangeService completePasswordChangeService;
+    @Mock
+    private LogoutService logoutService;
+    @Mock
+    private GetCurrentSessionService getCurrentSessionService;
 
     private MockMvc mockMvc;
 
@@ -58,7 +67,12 @@ class LoginControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        SessionController controller = new SessionController(sessionService);
+        SessionController controller = new SessionController(
+                loginService,
+                completePasswordChangeService,
+                logoutService,
+                getCurrentSessionService
+        );
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
@@ -87,7 +101,7 @@ class LoginControllerTest {
                 3600L
         );
 
-        when(sessionService.login("52998224725", "senha123"))
+        when(loginService.login("52998224725", "senha123"))
                 .thenReturn(new AuthenticatedLoginResult(tokens));
 
         String payload = """
@@ -112,7 +126,7 @@ class LoginControllerTest {
     void shouldReturnPasswordChangeRequiredWhenTemporaryPasswordIsUsed() throws Exception {
         Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
 
-        when(sessionService.login("52998224725", "senhaProvisoria123"))
+        when(loginService.login("52998224725", "senhaProvisoria123"))
                 .thenReturn(new PasswordChangeRequiredLoginResult(
                         "password-change-token-xyz",
                         expiresAt
@@ -137,7 +151,7 @@ class LoginControllerTest {
     @Test
     @DisplayName("Falha: credenciais inválidas retornam 401 Unauthorized")
     void shouldReturnUnauthorizedOnInvalidCredentials() throws Exception {
-        when(sessionService.login("52998224725", "senhaErrada"))
+        when(loginService.login("52998224725", "senhaErrada"))
                 .thenThrow(new InvalidCredentialsException());
 
         String payload = """
@@ -162,7 +176,7 @@ class LoginControllerTest {
                 "AUTHENTICATION_SESSION_READ"
         );
 
-        when(sessionService.me(
+        when(getCurrentSessionService.get(
                 1L,
                 10L,
                 Instant.parse("2026-05-21T20:30:00Z")
@@ -201,7 +215,7 @@ class LoginControllerTest {
                         .principal(authentication))
                 .andExpect(status().isNoContent());
 
-        verify(sessionService).logout(1L, 10L);
+        verify(logoutService).logout(1L, 10L);
     }
 
     @Test
