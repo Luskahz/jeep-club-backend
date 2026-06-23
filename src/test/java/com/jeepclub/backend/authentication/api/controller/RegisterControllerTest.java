@@ -2,10 +2,10 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.controller.user.UserController;
-import com.jeepclub.backend.authentication.api.exception.UserExceptionHandler;
+import com.jeepclub.backend.authentication.api.http.controller.UserController;
+import com.jeepclub.backend.authentication.api.http.exception.UserExceptionHandler;
 import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.service.RegisterAndAuthenticateService;
+import com.jeepclub.backend.authentication.core.application.service.user.UserService;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RegisterControllerTest {
 
     @Mock
-    private RegisterAndAuthenticateService registrationService;
+    private UserService userService;
 
     private MockMvc mockMvc;
 
@@ -43,7 +43,7 @@ class RegisterControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        UserController controller = new UserController(registrationService);
+        UserController controller = new UserController(userService);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
@@ -64,7 +64,7 @@ class RegisterControllerTest {
                 3600L
         );
 
-        when(registrationService.registerAndAuthenticate(
+        when(userService.registerAndAuthenticate(
                 eq("Teste"),
                 eq(LocalDate.of(1990, 1, 1)),
                 eq("teste@email.com"),

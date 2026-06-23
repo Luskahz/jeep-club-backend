@@ -1,6 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
 import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.authentication.core.application.service.internal.PasswordRecoveryRequestManager;
+import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
@@ -33,14 +35,20 @@ class RequestPasswordRecoveryServiceTest {
     private UserRepository userRepository;
     @Mock
     private PasswordRecoveryRequestManager requestManager;
-    private RequestPasswordRecoveryService service;
+    private PasswordRecoveryService service;
     private PublicPasswordRecoveryResult genericResult;
 
     @BeforeEach
     void setUp() {
-        service = new RequestPasswordRecoveryService(
+        service = new PasswordRecoveryService(
                 userRepository,
+                null,
                 requestManager,
+                null,
+                null,
+                null,
+                null,
+                null,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
         genericResult = new PublicPasswordRecoveryResult(

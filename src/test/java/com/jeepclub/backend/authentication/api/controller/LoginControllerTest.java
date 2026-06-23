@@ -2,19 +2,16 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.controller.session.SessionController;
-import com.jeepclub.backend.authentication.api.exception.PasswordChangeChallengeExceptionHandler;
-import com.jeepclub.backend.authentication.api.exception.SessionExceptionHandler;
-import com.jeepclub.backend.authentication.api.exception.UserExceptionHandler;
+import com.jeepclub.backend.authentication.api.http.controller.SessionController;
+import com.jeepclub.backend.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
+import com.jeepclub.backend.authentication.api.http.exception.SessionExceptionHandler;
+import com.jeepclub.backend.authentication.api.http.exception.UserExceptionHandler;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.result.MeResult;
 import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.application.service.CompleteRequiredPasswordChangeService;
-import com.jeepclub.backend.authentication.core.application.service.GetCurrentSessionService;
-import com.jeepclub.backend.authentication.core.application.service.LoginService;
-import com.jeepclub.backend.authentication.core.application.service.LogoutService;
+import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -49,13 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LoginControllerTest {
 
     @Mock
-    private LoginService loginService;
-    @Mock
-    private CompleteRequiredPasswordChangeService completePasswordChangeService;
-    @Mock
-    private LogoutService logoutService;
-    @Mock
-    private GetCurrentSessionService getCurrentSessionService;
+    private SessionService sessionService;
 
     private MockMvc mockMvc;
 
@@ -67,12 +58,7 @@ class LoginControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        SessionController controller = new SessionController(
-                loginService,
-                completePasswordChangeService,
-                logoutService,
-                getCurrentSessionService
-        );
+        SessionController controller = new SessionController(sessionService);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
@@ -101,7 +87,7 @@ class LoginControllerTest {
                 3600L
         );
 
-        when(loginService.login("52998224725", "senha123"))
+        when(sessionService.login("52998224725", "senha123"))
                 .thenReturn(new AuthenticatedLoginResult(tokens));
 
         String payload = """
@@ -126,7 +112,7 @@ class LoginControllerTest {
     void shouldReturnPasswordChangeRequiredWhenTemporaryPasswordIsUsed() throws Exception {
         Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
 
-        when(loginService.login("52998224725", "senhaProvisoria123"))
+        when(sessionService.login("52998224725", "senhaProvisoria123"))
                 .thenReturn(new PasswordChangeRequiredLoginResult(
                         "password-change-token-xyz",
                         expiresAt
@@ -151,7 +137,7 @@ class LoginControllerTest {
     @Test
     @DisplayName("Falha: credenciais inválidas retornam 401 Unauthorized")
     void shouldReturnUnauthorizedOnInvalidCredentials() throws Exception {
-        when(loginService.login("52998224725", "senhaErrada"))
+        when(sessionService.login("52998224725", "senhaErrada"))
                 .thenThrow(new InvalidCredentialsException());
 
         String payload = """
@@ -176,7 +162,7 @@ class LoginControllerTest {
                 "AUTHENTICATION_SESSION_READ"
         );
 
-        when(getCurrentSessionService.get(
+        when(sessionService.getCurrentSession(
                 1L,
                 10L,
                 Instant.parse("2026-05-21T20:30:00Z")
@@ -215,7 +201,7 @@ class LoginControllerTest {
                         .principal(authentication))
                 .andExpect(status().isNoContent());
 
-        verify(logoutService).logout(1L, 10L);
+        verify(sessionService).logout(1L, 10L);
     }
 
     @Test

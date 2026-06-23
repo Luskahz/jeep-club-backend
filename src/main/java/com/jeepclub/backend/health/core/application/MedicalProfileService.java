@@ -1,6 +1,6 @@
 package com.jeepclub.backend.health.core.application;
 
-import com.jeepclub.backend.health.api.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.core.application.exceptions.DependentOwnershipValidationUnavailableException;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;

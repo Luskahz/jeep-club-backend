@@ -1,7 +1,7 @@
 package com.jeepclub.backend.tools.core.application.service;
 
-import com.jeepclub.backend.tools.api.dto.ToolCreateRequestDTO;
-import com.jeepclub.backend.tools.api.dto.ToolUpdateRequestDTO;
+import com.jeepclub.backend.tools.api.http.dto.ToolCreateRequestDTO;
+import com.jeepclub.backend.tools.api.http.dto.ToolUpdateRequestDTO;
 import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;

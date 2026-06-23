@@ -2,12 +2,13 @@ package com.jeepclub.backend.dependents.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.jeepclub.backend.authentication.core.application.service.AccessTokenAuthenticationService;
+import com.jeepclub.backend.authentication.core.application.service.security.AccessTokenAuthenticationService;
+import com.jeepclub.backend.dependents.api.http.controller.DependentController;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
-import com.jeepclub.backend.dependents.api.dto.dependent.CreateDependentRequestDTO;
-import com.jeepclub.backend.dependents.api.dto.dependent.UpdateDependentRequestDTO;
+import com.jeepclub.backend.dependents.api.http.dto.dependent.CreateDependentRequestDTO;
+import com.jeepclub.backend.dependents.api.http.dto.dependent.UpdateDependentRequestDTO;
 import com.jeepclub.backend.dependents.core.application.service.CreateDependentService;
 import com.jeepclub.backend.dependents.core.application.service.DeleteDependentService;
 import com.jeepclub.backend.dependents.core.application.service.GetDependentService;

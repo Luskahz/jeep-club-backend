@@ -2,12 +2,10 @@ package com.jeepclub.backend.authentication.api.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.controller.passwordrecovery.PasswordRecoveryRequestController;
-import com.jeepclub.backend.authentication.api.exception.PasswordRecoveryExceptionHandler;
+import com.jeepclub.backend.authentication.api.http.controller.PasswordRecoveryRequestController;
+import com.jeepclub.backend.authentication.api.http.exception.PasswordRecoveryExceptionHandler;
 import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.service.RequestPasswordRecoveryService;
-import com.jeepclub.backend.authentication.core.application.service.ResetPasswordByTokenService;
-import com.jeepclub.backend.authentication.core.application.service.SendPasswordRecoveryEmailService;
+import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
@@ -47,11 +45,7 @@ class PasswordRecoveryControllerTest {
             Instant.parse("2026-05-28T18:00:00Z");
 
     @Mock
-    private RequestPasswordRecoveryService requestPasswordRecoveryService;
-    @Mock
-    private SendPasswordRecoveryEmailService sendPasswordRecoveryEmailService;
-    @Mock
-    private ResetPasswordByTokenService resetPasswordByTokenService;
+    private PasswordRecoveryService passwordRecoveryService;
 
     private MockMvc mockMvc;
 
@@ -64,11 +58,7 @@ class PasswordRecoveryControllerTest {
         validator.afterPropertiesSet();
 
         PasswordRecoveryRequestController controller =
-                new PasswordRecoveryRequestController(
-                        requestPasswordRecoveryService,
-                        sendPasswordRecoveryEmailService,
-                        resetPasswordByTokenService
-                );
+                new PasswordRecoveryRequestController(passwordRecoveryService);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
@@ -87,7 +77,7 @@ class PasswordRecoveryControllerTest {
                 createOpenRecoveryRequest();
 
         when(
-                requestPasswordRecoveryService.request(CPF)
+                passwordRecoveryService.request(CPF)
         ).thenReturn(PublicPasswordRecoveryResult.from(recoveryRequest));
 
         mockMvc.perform(post(BASE_PATH)
@@ -109,7 +99,7 @@ class PasswordRecoveryControllerTest {
                 .andExpect(jsonPath("$.resolvedAt").doesNotExist())
                 .andExpect(jsonPath("$.cancelledAt").doesNotExist());
 
-        verify(requestPasswordRecoveryService).request(CPF);
+        verify(passwordRecoveryService).request(CPF);
     }
 
     @Test
@@ -124,7 +114,7 @@ class PasswordRecoveryControllerTest {
         );
 
         when(
-                sendPasswordRecoveryEmailService.send(CPF)
+                passwordRecoveryService.sendEmailToken(CPF)
         ).thenReturn(PublicPasswordRecoveryResult.from(recoveryRequest));
 
         mockMvc.perform(post(BASE_PATH + "/email-token")
@@ -146,7 +136,7 @@ class PasswordRecoveryControllerTest {
                 .andExpect(jsonPath("$.resolvedAt").doesNotExist())
                 .andExpect(jsonPath("$.cancelledAt").doesNotExist());
 
-        verify(sendPasswordRecoveryEmailService).send(CPF);
+        verify(passwordRecoveryService).sendEmailToken(CPF);
     }
 
     @Test
@@ -167,7 +157,7 @@ class PasswordRecoveryControllerTest {
                         .content(payload))
                 .andExpect(status().isNoContent());
 
-        verify(resetPasswordByTokenService).reset(token, newPassword);
+        verify(passwordRecoveryService).resetPasswordByToken(token, newPassword);
     }
 
     private PasswordRecoveryRequest createOpenRecoveryRequest() {

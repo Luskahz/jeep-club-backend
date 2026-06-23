@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
+import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
@@ -35,7 +36,7 @@ class ConcurrentLoginIntegrationTest {
     private static final String PASSWORD = "Senha@123";
 
     @Autowired
-    private LoginService loginService;
+    private SessionService sessionService;
     @Autowired
     private PasswordHasher passwordHasher;
     @Autowired
@@ -92,7 +93,7 @@ class ConcurrentLoginIntegrationTest {
             if (!start.await(5, TimeUnit.SECONDS)) {
                 throw new IllegalStateException("Concurrent login start timed out");
             }
-            loginService.login(CPF, PASSWORD);
+            sessionService.login(CPF, PASSWORD);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Concurrent login interrupted", exception);

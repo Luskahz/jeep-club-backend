@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
+import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
 import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
