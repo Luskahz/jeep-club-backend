@@ -12,6 +12,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 
@@ -21,10 +22,11 @@ public class JwtServiceImpl implements JwtService {
 
     private final JwtProperties jwtProperties;
     private final JwtSigningKeyProvider keyProvider;
+    private final Clock clock;
 
     @Override
     public IssuedAccessToken generateAccessToken(@NotNull User user, @NotNull Session session) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         Instant expiresAt = now.plusSeconds(jwtProperties.getAccessTokenExpirationSeconds());
 
         String token = Jwts.builder()

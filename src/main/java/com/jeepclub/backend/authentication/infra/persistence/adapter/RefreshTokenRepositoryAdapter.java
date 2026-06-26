@@ -43,6 +43,14 @@ public class RefreshTokenRepositoryAdapter
     }
 
     @Override
+    public Optional<RefreshToken> findByTokenHashForUpdate(
+            String tokenHash
+    ) {
+        return jpaRepository.findByTokenHashForUpdate(tokenHash)
+                .flatMap(this::mapToDomain);
+    }
+
+    @Override
     public List<RefreshToken> findAll() {
         List<RefreshTokenEntity> tokenEntities =
                 jpaRepository.findAll();
@@ -57,9 +65,26 @@ public class RefreshTokenRepositoryAdapter
     }
 
     @Override
-    public Optional<RefreshToken> findByTokenHash(String tokenHash) {
+    public Optional<RefreshToken> findByIdForUpdate(Long id) {
+        return jpaRepository.findByIdForUpdate(id)
+                .flatMap(this::mapToDomain);
+    }
+
+    @Override
+    public Optional<RefreshToken> findByTokenHash(
+            String tokenHash
+    ) {
         return jpaRepository.findByTokenHash(tokenHash)
                 .flatMap(this::mapToDomain);
+    }
+
+    @Override
+    public Optional<Long> findSessionIdByTokenHash(
+            String tokenHash
+    ) {
+        return jpaRepository.findSessionIdByTokenHash(
+                tokenHash
+        );
     }
 
     @Override
@@ -85,11 +110,12 @@ public class RefreshTokenRepositoryAdapter
                                 sessionIds
                         );
 
-        Map<Long, Session> sessionsById = sessions.stream()
-                .collect(Collectors.toMap(
-                        Session::getId,
-                        Function.identity()
-                ));
+        Map<Long, Session> sessionsById =
+                sessions.stream()
+                        .collect(Collectors.toMap(
+                                Session::getId,
+                                Function.identity()
+                        ));
 
         return tokenEntities.stream()
                 .map(entity -> mapToDomain(
@@ -97,6 +123,16 @@ public class RefreshTokenRepositoryAdapter
                         sessionsById
                 ))
                 .toList();
+    }
+
+    @Override
+    public void revokeActiveByUserId(Long userId) {
+        jpaRepository.revokeActiveByUserId(userId);
+    }
+
+    @Override
+    public void revokeActiveBySessionId(Long sessionId) {
+        jpaRepository.revokeActiveBySessionId(sessionId);
     }
 
     private Optional<RefreshToken> mapToDomain(
@@ -162,7 +198,9 @@ public class RefreshTokenRepositoryAdapter
         );
     }
 
-    private void validateTokenSession(RefreshToken token) {
+    private void validateTokenSession(
+            RefreshToken token
+    ) {
         if (token == null) {
             throw new IllegalArgumentException(
                     "Refresh token is required."

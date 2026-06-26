@@ -16,19 +16,21 @@ public final class UserMapper {
         return User.reconstitute(
                 entity.getId(),
                 entity.getName(),
-                entity.getBirthData(),
+                entity.getBirthDate(),
                 entity.getEmail(),
                 entity.getCpf(),
                 entity.getRg(),
                 entity.getPasswordHash(),
                 entity.getPhoneNumber(),
                 entity.getProfilePhotoUrl(),
-                entity.getStatus(),
+                entity.getAccountStatus(),
+                entity.getAuthenticationStatus(),
+                entity.getCredentialStatus(),
                 entity.getLastLoginAt(),
                 entity.getCreatedAt(),
                 entity.getDisabledAt(),
                 entity.getUpdatedAt(),
-                entity.getPasswordChangeAt(),
+                entity.getPasswordChangedAt(),
                 entity.getFailedLoginAttempts()
         );
     }
@@ -42,19 +44,21 @@ public final class UserMapper {
 
         entity.setId(domain.getId());
         entity.setName(domain.getName());
-        entity.setBirthData(domain.getBirthData());
+        entity.setBirthDate(domain.getBirthDate());
         entity.setEmail(domain.getEmail());
         entity.setCpf(domain.getCpf());
         entity.setRg(domain.getRg());
         entity.setPasswordHash(domain.getPasswordHash());
         entity.setPhoneNumber(domain.getPhoneNumber());
         entity.setProfilePhotoUrl(domain.getProfilePhotoUrl());
-        entity.setStatus(domain.getStatus());
+        entity.setAccountStatus(domain.getAccountStatus());
+        entity.setAuthenticationStatus(domain.getAuthenticationStatus());
+        entity.setCredentialStatus(domain.getCredentialStatus());
         entity.setLastLoginAt(domain.getLastLoginAt());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setDisabledAt(domain.getDisabledAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
-        entity.setPasswordChangeAt(
+        entity.setPasswordChangedAt(
                 domain.getPasswordChangedAt()
         );
         entity.setFailedLoginAttempts(

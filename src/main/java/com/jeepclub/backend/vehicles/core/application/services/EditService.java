@@ -1,6 +1,6 @@
 package com.jeepclub.backend.vehicles.core.application.services;
 
-import com.jeepclub.backend.vehicles.api.dto.edit.EditRequestDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestDTO;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;

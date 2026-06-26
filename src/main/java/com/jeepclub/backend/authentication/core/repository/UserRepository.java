@@ -7,15 +7,25 @@ import java.util.Optional;
 
 public interface UserRepository {
 
+    User create(User user);
+
     User save(User user);
 
     List<User> findAll();
 
     Optional<User> findById(Long id);
 
+    Optional<User> findByIdForUpdate(Long id);
+
     Optional<User> findByCpf(String cpf);
 
+    Optional<User> findByCpfForUpdate(String cpf);
+
     boolean existsByCpf(String cpf);
+
+    boolean existsByEmail(String email);
+
+    boolean existsByRg(String rg);
 
     boolean existsById(Long id);
 

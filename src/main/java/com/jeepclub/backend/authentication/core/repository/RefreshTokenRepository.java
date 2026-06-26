@@ -13,7 +13,19 @@ public interface RefreshTokenRepository {
 
     Optional<RefreshToken> findById(Long id);
 
+    Optional<RefreshToken> findByIdForUpdate(Long id);
+
     Optional<RefreshToken> findByTokenHash(String tokenHash);
 
+    Optional<Long> findSessionIdByTokenHash(String tokenHash);
+
+    Optional<RefreshToken> findByTokenHashForUpdate(
+            String tokenHash
+    );
+
     List<RefreshToken> findByUserId(Long userId);
+
+    void revokeActiveByUserId(Long userId);
+
+    void revokeActiveBySessionId(Long sessionId);
 }

@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.query;
 
+import com.jeepclub.backend.authentication.api.module.user.UserQuery;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -10,15 +11,23 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class AuthenticationUserQueryService {
+class AuthenticationUserQueryService implements UserQuery {
 
     private final UserRepository userRepository;
 
+    @Override
+    @Transactional(readOnly = true)
+    public boolean existsById(Long userId) {
+        return userRepository.existsById(userId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<Long> findActiveUserIds() {
         return userRepository.findActiveUserIds();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public boolean existsActiveUserById(Long userId) {
         Objects.requireNonNull(userId, "userId cannot be null");

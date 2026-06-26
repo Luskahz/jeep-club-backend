@@ -75,9 +75,9 @@ public class MedicalProfile {
             String emergencyContactName,
             String emergencyContactPhone,
             String emergencyContactRelationship,
-            String observations
+            String observations,
+            Instant now
     ) {
-        Instant now = Instant.now();
 
         return new MedicalProfile(
                 null,
@@ -152,7 +152,8 @@ public class MedicalProfile {
             String emergencyContactName,
             String emergencyContactPhone,
             String emergencyContactRelationship,
-            String observations
+            String observations,
+            Instant now
     ) {
         this.bloodType = bloodType == null ? BloodType.UNKNOWN : bloodType;
         this.allergies = allergies;
@@ -165,7 +166,7 @@ public class MedicalProfile {
         this.emergencyContactPhone = emergencyContactPhone;
         this.emergencyContactRelationship = emergencyContactRelationship;
         this.observations = observations;
-        this.updatedAt = Instant.now();
+        this.updatedAt = now;
     }
 
     private static void validateOwner(MedicalProfileOwnerType ownerType, Long ownerId) {

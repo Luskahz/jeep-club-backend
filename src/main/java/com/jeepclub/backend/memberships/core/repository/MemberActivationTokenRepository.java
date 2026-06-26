@@ -3,6 +3,7 @@ package com.jeepclub.backend.memberships.core.repository;
 import com.jeepclub.backend.memberships.core.domain.model.MemberActivationToken;
 
 import java.util.Optional;
+import java.time.Instant;
 
 public interface MemberActivationTokenRepository {
 
@@ -12,5 +13,5 @@ public interface MemberActivationTokenRepository {
 
     Optional<MemberActivationToken> findLatestByApplicationId(Long applicationId);
 
-    void invalidateAllByApplicationId(Long applicationId);
+    void invalidateAllByApplicationId(Long applicationId, Instant now);
 }

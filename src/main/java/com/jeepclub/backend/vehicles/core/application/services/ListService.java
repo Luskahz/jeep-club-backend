@@ -1,6 +1,6 @@
 package com.jeepclub.backend.vehicles.core.application.services;
 
-import com.jeepclub.backend.vehicles.api.dto.list.ListResponseDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.list.ListResponseDTO;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;

@@ -6,25 +6,23 @@ import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 
+
 @Service
+@RequiredArgsConstructor
 public class UpdateDependentService {
 
     private final DependentRepository dependentRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
-    public UpdateDependentService(
-            DependentRepository dependentRepository,
-            UserRepository userRepository
-    ) {
-        this.dependentRepository = dependentRepository;
-        this.userRepository = userRepository;
-    }
 
     @Transactional
     public Dependent update(
@@ -39,6 +37,9 @@ public class UpdateDependentService {
             Long requestingUserId,
             boolean isDirector
     ) {
+        Instant now = Instant.now(clock);
+
+
         // 1. Buscar o dependente existente
         Dependent dependent = dependentRepository.findById(id)
                 .orElseThrow(() -> new DependentException("Dependente não encontrado com o ID fornecido."));
@@ -64,8 +65,6 @@ public class UpdateDependentService {
                 }
             }
         }
-
-        Instant now = Instant.now();
 
         // 4. Executar a alteração no modelo de domínio puro (validações LGPD de consentimento ocorrem internamente)
         dependent.update(

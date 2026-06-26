@@ -15,22 +15,48 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class PasswordRecoveryRequestRepositoryAdapter implements PasswordRecoveryRequestRepository {
+public class PasswordRecoveryRequestRepositoryAdapter
+        implements PasswordRecoveryRequestRepository {
 
     private final PasswordRecoveryRequestJpaRepository jpaRepository;
 
     @Override
-    public PasswordRecoveryRequest save(PasswordRecoveryRequest request) {
+    public PasswordRecoveryRequest save(
+            PasswordRecoveryRequest request
+    ) {
         return PasswordRecoveryRequestMapper.toDomain(
                 jpaRepository.save(
-                        PasswordRecoveryRequestMapper.toEntity(request)
+                        PasswordRecoveryRequestMapper.toEntity(
+                                request
+                        )
                 )
         );
     }
 
     @Override
-    public Optional<PasswordRecoveryRequest> findByTokenHash(String tokenHash) {
+    public Optional<PasswordRecoveryRequest> findByTokenHash(
+            String tokenHash
+    ) {
         return jpaRepository.findByTokenHash(tokenHash)
+                .map(PasswordRecoveryRequestMapper::toDomain);
+    }
+
+    @Override
+    public Optional<Long> findUserIdByTokenHash(
+            String tokenHash
+    ) {
+        return jpaRepository.findUserIdByTokenHash(
+                tokenHash
+        );
+    }
+
+    @Override
+    public Optional<PasswordRecoveryRequest>
+    findByTokenHashForUpdate(
+            String tokenHash
+    ) {
+        return jpaRepository
+                .findByTokenHashForUpdate(tokenHash)
                 .map(PasswordRecoveryRequestMapper::toDomain);
     }
 
@@ -39,7 +65,8 @@ public class PasswordRecoveryRequestRepositoryAdapter implements PasswordRecover
             Long userId,
             Instant now
     ) {
-        return jpaRepository.findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+        return jpaRepository
+                .findFirstByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
                         userId,
                         PasswordRecoveryRequestStatus.OPEN,
                         now
@@ -48,12 +75,46 @@ public class PasswordRecoveryRequestRepositoryAdapter implements PasswordRecover
     }
 
     @Override
-    public Optional<PasswordRecoveryRequest> findOpenByUserIdAndMethod(
+    public Optional<PasswordRecoveryRequest>
+    findOpenByUserIdForUpdate(
+            Long userId,
+            Instant now
+    ) {
+        return jpaRepository
+                .findTopByUserIdAndStatusAndExpiresAtAfterOrderByCreatedAtDesc(
+                        userId,
+                        PasswordRecoveryRequestStatus.OPEN,
+                        now
+                )
+                .map(PasswordRecoveryRequestMapper::toDomain);
+    }
+
+    @Override
+    public Optional<PasswordRecoveryRequest>
+    findOpenByUserIdAndMethod(
             Long userId,
             PasswordRecoveryRequestMethod method,
             Instant now
     ) {
-        return jpaRepository.findFirstByUserIdAndStatusAndMethodAndExpiresAtAfterOrderByCreatedAtDesc(
+        return jpaRepository
+                .findFirstByUserIdAndStatusAndMethodAndExpiresAtAfterOrderByCreatedAtDesc(
+                        userId,
+                        PasswordRecoveryRequestStatus.OPEN,
+                        method,
+                        now
+                )
+                .map(PasswordRecoveryRequestMapper::toDomain);
+    }
+
+    @Override
+    public Optional<PasswordRecoveryRequest>
+    findOpenByUserIdAndMethodForUpdate(
+            Long userId,
+            PasswordRecoveryRequestMethod method,
+            Instant now
+    ) {
+        return jpaRepository
+                .findTopByUserIdAndStatusAndMethodAndExpiresAtAfterOrderByCreatedAtDesc(
                         userId,
                         PasswordRecoveryRequestStatus.OPEN,
                         method,
@@ -71,14 +132,27 @@ public class PasswordRecoveryRequestRepositoryAdapter implements PasswordRecover
     }
 
     @Override
-    public Optional<PasswordRecoveryRequest> findById(Long id) {
+    public Optional<PasswordRecoveryRequest> findById(
+            Long id
+    ) {
         return jpaRepository.findById(id)
                 .map(PasswordRecoveryRequestMapper::toDomain);
     }
 
     @Override
-    public List<PasswordRecoveryRequest> findByUserId(Long userId) {
-        return jpaRepository.findByUserIdOrderByCreatedAtDesc(userId)
+    public Optional<PasswordRecoveryRequest> findByIdForUpdate(
+            Long id
+    ) {
+        return jpaRepository.findByIdForUpdate(id)
+                .map(PasswordRecoveryRequestMapper::toDomain);
+    }
+
+    @Override
+    public List<PasswordRecoveryRequest> findByUserId(
+            Long userId
+    ) {
+        return jpaRepository
+                .findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(PasswordRecoveryRequestMapper::toDomain)
                 .toList();

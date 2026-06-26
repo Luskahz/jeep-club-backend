@@ -1,6 +1,6 @@
 package com.jeepclub.backend.health.core.application;
 
-import com.jeepclub.backend.health.api.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.core.application.exceptions.DependentOwnershipValidationUnavailableException;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +26,7 @@ public class MedicalProfileService {
 
     private final MedicalProfileRepository medicalProfileRepository;
     private final Optional<DependentOwnershipChecker> dependentOwnershipChecker;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public MedicalProfile getMyMedicalProfile(Long userId) {
@@ -109,6 +112,7 @@ public class MedicalProfileService {
             MedicalProfile existing,
             MedicalProfileRequest request
     ) {
+        Instant now = Instant.now(clock);
         existing.update(
                 request.bloodType(),
                 clean(request.allergies()),
@@ -120,7 +124,8 @@ public class MedicalProfileService {
                 clean(request.emergencyContactName()),
                 normalizePhone(request.emergencyContactPhone()),
                 clean(request.emergencyContactRelationship()),
-                clean(request.observations())
+                clean(request.observations()),
+                now
         );
 
         return medicalProfileRepository.save(existing);
@@ -131,6 +136,8 @@ public class MedicalProfileService {
             Long ownerId,
             MedicalProfileRequest request
     ) {
+        Instant now = Instant.now(clock);
+
         var profile = MedicalProfile.create(
                 ownerType,
                 ownerId,
@@ -144,7 +151,8 @@ public class MedicalProfileService {
                 clean(request.emergencyContactName()),
                 normalizePhone(request.emergencyContactPhone()),
                 clean(request.emergencyContactRelationship()),
-                clean(request.observations())
+                clean(request.observations()),
+                now
         );
 
         return medicalProfileRepository.save(profile);

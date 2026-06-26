@@ -7,9 +7,24 @@ import java.util.Optional;
 
 public interface PasswordChangeChallengeRepository {
 
-    PasswordChangeChallenge save(PasswordChangeChallenge challenge);
+    PasswordChangeChallenge save(
+            PasswordChangeChallenge challenge
+    );
 
-    Optional<PasswordChangeChallenge> findByTokenHash(String tokenHash);
+    Optional<PasswordChangeChallenge> findByTokenHash(
+            String tokenHash
+    );
 
-    void invalidateActiveByUserId(Long userId, Instant now);
+    Optional<Long> findUserIdByTokenHash(
+            String tokenHash
+    );
+
+    Optional<PasswordChangeChallenge> findByTokenHashForUpdate(
+            String tokenHash
+    );
+
+    void invalidateActiveByUserId(
+            Long userId,
+            Instant now
+    );
 }

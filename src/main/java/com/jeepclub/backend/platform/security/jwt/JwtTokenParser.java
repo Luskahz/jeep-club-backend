@@ -7,6 +7,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Date;
 
@@ -20,6 +21,7 @@ public class JwtTokenParser {
 
     private final JwtProperties jwtProperties;
     private final JwtSigningKeyProvider keyProvider;
+    private final Clock clock;
 
     public JwtAuthenticatedUser parseAndValidate(String token) {
         if (token == null || token.isBlank()) {
@@ -96,6 +98,8 @@ public class JwtTokenParser {
     }
 
     private Instant extractExpiration(Claims claims) {
+        Instant now = Instant.now(clock);
+
         Date expiration = claims.getExpiration();
 
         if (expiration == null) {
@@ -104,7 +108,7 @@ public class JwtTokenParser {
 
         Instant expiresAt = expiration.toInstant();
 
-        if (!expiresAt.isAfter(Instant.now())) {
+        if (!expiresAt.isAfter(now)) {
             throw new IllegalArgumentException("JWT is expired.");
         }
 

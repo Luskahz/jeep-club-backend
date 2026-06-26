@@ -1,20 +1,20 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
-import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RTInvalidExpiresAtValueException;
+import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RefreshTokenStateException;
+import com.jeepclub.backend.authentication.core.domain.exception.refreshtoken.RefreshTokenValidationException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.jetbrains.annotations.Contract;
-import jakarta.validation.constraints.NotNull;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Objects;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class RefreshToken {
+
+    private static final int MAX_TOKEN_HASH_LENGTH = 255;
 
     private Long id;
     private Session session;
@@ -35,26 +35,36 @@ public class RefreshToken {
         this.createdAt = now;
         this.expiresAt = now.plus(ttl);
         this.status = RefreshTokenStatus.ACTIVE;
+        this.replacedByTokenId = null;
     }
 
-    @Contract("_, _, _, _ -> new")
-    public static @NotNull RefreshToken create(
+    public static RefreshToken create(
             Session session,
             String tokenHash,
             Duration ttl,
             Instant now
     ) {
-        validateCreation(session, tokenHash, ttl, now);
+        Session validatedSession =
+                validateSession(session);
+
+        String normalizedTokenHash =
+                validateTokenHash(tokenHash);
+
+        Duration validatedTtl =
+                validateTtl(ttl);
+
+        Instant validatedNow =
+                requireValue(now, "now");
 
         return new RefreshToken(
-                session,
-                tokenHash,
-                ttl,
-                now
+                validatedSession,
+                normalizedTokenHash,
+                validatedTtl,
+                validatedNow
         );
     }
 
-    public static @NotNull RefreshToken reconstitute(
+    public static RefreshToken reconstitute(
             Long id,
             Session session,
             String tokenHash,
@@ -63,43 +73,81 @@ public class RefreshToken {
             RefreshTokenStatus status,
             Long replacedByTokenId
     ) {
-        Objects.requireNonNull(id, "id is required");
-        Objects.requireNonNull(session, "session is required");
-        validateTokenHash(tokenHash);
-        Objects.requireNonNull(createdAt, "createdAt is required");
-        Objects.requireNonNull(expiresAt, "expiresAt is required");
-        Objects.requireNonNull(status, "status is required");
+        validateId(id);
 
-        if (!expiresAt.isAfter(createdAt)) {
-            throw new RTInvalidExpiresAtValueException("expiresAt must be after createdAt");
-        }
+        Session validatedSession =
+                validateSession(session);
 
-        validateStatusConsistency(status, replacedByTokenId);
+        String normalizedTokenHash =
+                validateTokenHash(tokenHash);
 
-        RefreshToken token = new RefreshToken();
+        Instant validatedCreatedAt =
+                requireValue(
+                        createdAt,
+                        "createdAt"
+                );
+
+        Instant validatedExpiresAt =
+                requireValue(
+                        expiresAt,
+                        "expiresAt"
+                );
+
+        RefreshTokenStatus validatedStatus =
+                requireValue(
+                        status,
+                        "status"
+                );
+
+        validateExpiration(
+                validatedCreatedAt,
+                validatedExpiresAt
+        );
+
+        validateReplacementTokenId(
+                replacedByTokenId
+        );
+
+        validateStatusConsistency(
+                validatedStatus,
+                replacedByTokenId
+        );
+
+        RefreshToken token =
+                new RefreshToken();
+
         token.id = id;
-        token.session = session;
-        token.tokenHash = tokenHash;
-        token.createdAt = createdAt;
-        token.expiresAt = expiresAt;
-        token.status = status;
+        token.session = validatedSession;
+        token.tokenHash = normalizedTokenHash;
+        token.createdAt = validatedCreatedAt;
+        token.expiresAt = validatedExpiresAt;
+        token.status = validatedStatus;
         token.replacedByTokenId = replacedByTokenId;
+
         return token;
     }
 
     public boolean isExpired(Instant now) {
-        Objects.requireNonNull(now, "now is required");
-        return !expiresAt.isAfter(now);
+        Instant validatedNow =
+                requireValue(now, "now");
+
+        return !validatedNow.isBefore(expiresAt);
     }
 
     public boolean isActive(Instant now) {
-        Objects.requireNonNull(now, "now is required");
-        return status == RefreshTokenStatus.ACTIVE && !isExpired(now);
+        Instant validatedNow =
+                requireValue(now, "now");
+
+        return status == RefreshTokenStatus.ACTIVE
+                && !isExpired(validatedNow);
     }
 
     public boolean isValid(Instant now) {
-        Objects.requireNonNull(now, "now is required");
-        return isActive(now) && session.isValid(now);
+        Instant validatedNow =
+                requireValue(now, "now");
+
+        return isActive(validatedNow)
+                && session.isValid(validatedNow);
     }
 
     public boolean isRevoked() {
@@ -111,70 +159,214 @@ public class RefreshToken {
     }
 
     public void revoke(Instant now) {
-        Objects.requireNonNull(now, "now is required");
+        Instant validatedNow =
+                requireValue(now, "now");
 
-        if (!isActive(now)) {
-            throw new IllegalStateException("Only active refresh token can be revoked");
+        if (status != RefreshTokenStatus.ACTIVE) {
+            throw new RefreshTokenStateException(
+                    "Only active refresh tokens can be revoked."
+            );
+        }
+
+        if (isExpired(validatedNow)) {
+            throw new RefreshTokenStateException(
+                    "Expired refresh tokens cannot be revoked."
+            );
         }
 
         this.status = RefreshTokenStatus.REVOKED;
+        this.replacedByTokenId = null;
     }
 
     public void rotate(
             Long newRefreshTokenId,
             Instant now
     ) {
-        Objects.requireNonNull(newRefreshTokenId, "newRefreshTokenId is required");
-        Objects.requireNonNull(now, "now is required");
+        Long validatedNewRefreshTokenId =
+                validateRequiredReplacementTokenId(
+                        newRefreshTokenId
+                );
 
-        if (!isValid(now)) {
-            throw new IllegalStateException("RefreshToken inválido, não pode ser rotacionado");
+        Instant validatedNow =
+                requireValue(now, "now");
+
+        if (!isValid(validatedNow)) {
+            throw new RefreshTokenStateException(
+                    "Only valid refresh tokens can be rotated."
+            );
         }
 
-        if (this.replacedByTokenId != null) {
-            throw new IllegalStateException("RefreshToken já foi rotacionado");
+        if (replacedByTokenId != null) {
+            throw new RefreshTokenStateException(
+                    "Refresh token has already been rotated."
+            );
         }
 
-        this.replacedByTokenId = newRefreshTokenId;
-        this.status = RefreshTokenStatus.ROTATED;
+        this.replacedByTokenId =
+                validatedNewRefreshTokenId;
+
+        this.status =
+                RefreshTokenStatus.ROTATED;
     }
 
-    private static void validateCreation(
-            Session session,
-            String tokenHash,
-            Duration ttl,
-            Instant now
-    ) {
-        Objects.requireNonNull(session, "session is required");
-        validateTokenHash(tokenHash);
-        Objects.requireNonNull(ttl, "ttl is required");
-        Objects.requireNonNull(now, "now is required");
+    private static void validateId(Long id) {
+        if (id == null) {
+            throw new RefreshTokenValidationException(
+                    "id cannot be null."
+            );
+        }
 
-        if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException(
-                    "ttl must be greater than zero"
+        if (id <= 0) {
+            throw new RefreshTokenValidationException(
+                    "id must be positive."
             );
         }
     }
-    private static void validateTokenHash(String tokenHash) {
-        if (tokenHash == null || tokenHash.isBlank()) {
-            throw new IllegalArgumentException("tokenHash is required");
+
+    private static Session validateSession(
+            Session session
+    ) {
+        return requireValue(
+                session,
+                "session"
+        );
+    }
+
+    private static String validateTokenHash(
+            String tokenHash
+    ) {
+        if (tokenHash == null) {
+            throw new RefreshTokenValidationException(
+                    "tokenHash cannot be null."
+            );
+        }
+
+        String normalizedTokenHash =
+                tokenHash.trim();
+
+        if (normalizedTokenHash.isBlank()) {
+            throw new RefreshTokenValidationException(
+                    "tokenHash cannot be blank."
+            );
+        }
+
+        if (
+                normalizedTokenHash.length()
+                        > MAX_TOKEN_HASH_LENGTH
+        ) {
+            throw new RefreshTokenValidationException(
+                    "tokenHash cannot exceed "
+                            + MAX_TOKEN_HASH_LENGTH
+                            + " characters."
+            );
+        }
+
+        return normalizedTokenHash;
+    }
+
+    private static Duration validateTtl(
+            Duration ttl
+    ) {
+        Duration validatedTtl =
+                requireValue(ttl, "ttl");
+
+        if (
+                validatedTtl.isZero()
+                        || validatedTtl.isNegative()
+        ) {
+            throw new RefreshTokenValidationException(
+                    "ttl must be greater than zero."
+            );
+        }
+
+        return validatedTtl;
+    }
+
+    private static void validateExpiration(
+            Instant createdAt,
+            Instant expiresAt
+    ) {
+        if (!expiresAt.isAfter(createdAt)) {
+            throw new RefreshTokenValidationException(
+                    "expiresAt must be after createdAt."
+            );
         }
     }
+
+    private static void validateReplacementTokenId(
+            Long replacedByTokenId
+    ) {
+        if (
+                replacedByTokenId != null
+                        && replacedByTokenId <= 0
+        ) {
+            throw new RefreshTokenValidationException(
+                    "replacedByTokenId must be positive."
+            );
+        }
+    }
+
+    private static Long
+    validateRequiredReplacementTokenId(
+            Long replacedByTokenId
+    ) {
+        if (replacedByTokenId == null) {
+            throw new RefreshTokenValidationException(
+                    "newRefreshTokenId cannot be null."
+            );
+        }
+
+        if (replacedByTokenId <= 0) {
+            throw new RefreshTokenValidationException(
+                    "newRefreshTokenId must be positive."
+            );
+        }
+
+        return replacedByTokenId;
+    }
+
     private static void validateStatusConsistency(
             RefreshTokenStatus status,
             Long replacedByTokenId
     ) {
-        if (status == RefreshTokenStatus.ACTIVE && replacedByTokenId != null) {
-            throw new IllegalStateException("ACTIVE token cannot have replacedByTokenId");
+        if (
+                status == RefreshTokenStatus.ACTIVE
+                        && replacedByTokenId != null
+        ) {
+            throw new RefreshTokenValidationException(
+                    "ACTIVE refresh token cannot have replacedByTokenId."
+            );
         }
 
-        if (status == RefreshTokenStatus.ROTATED && replacedByTokenId == null) {
-            throw new IllegalStateException("ROTATED token must have replacedByTokenId");
+        if (
+                status == RefreshTokenStatus.ROTATED
+                        && replacedByTokenId == null
+        ) {
+            throw new RefreshTokenValidationException(
+                    "ROTATED refresh token must have replacedByTokenId."
+            );
         }
 
-        if (status == RefreshTokenStatus.REVOKED && replacedByTokenId != null) {
-            throw new IllegalStateException("REVOKED token cannot have replacedByTokenId");
+        if (
+                status == RefreshTokenStatus.REVOKED
+                        && replacedByTokenId != null
+        ) {
+            throw new RefreshTokenValidationException(
+                    "REVOKED refresh token cannot have replacedByTokenId."
+            );
         }
+    }
+
+    private static <T> T requireValue(
+            T value,
+            String fieldName
+    ) {
+        if (value == null) {
+            throw new RefreshTokenValidationException(
+                    fieldName + " cannot be null."
+            );
+        }
+
+        return value;
     }
 }

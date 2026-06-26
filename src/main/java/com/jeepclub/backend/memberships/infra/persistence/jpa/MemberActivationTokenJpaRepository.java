@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.time.Instant;
 
 public interface MemberActivationTokenJpaRepository
         extends JpaRepository<MemberActivationTokenEntity, Long> {
@@ -19,6 +20,9 @@ public interface MemberActivationTokenJpaRepository
     Optional<MemberActivationTokenEntity> findLatestByApplicationId(@Param("applicationId") Long applicationId);
 
     @Modifying
-    @Query("UPDATE MemberActivationTokenEntity t SET t.usedAt = CURRENT_TIMESTAMP WHERE t.applicationId = :applicationId AND t.usedAt IS NULL")
-    void invalidateAllByApplicationId(@Param("applicationId") Long applicationId);
+    @Query("UPDATE MemberActivationTokenEntity t SET t.usedAt = :now WHERE t.applicationId = :applicationId AND t.usedAt IS NULL")
+    void invalidateAllByApplicationId(
+            @Param("applicationId") Long applicationId,
+            @Param("now") Instant now
+    );
 }

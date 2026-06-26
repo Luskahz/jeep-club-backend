@@ -1,6 +1,6 @@
 package com.jeepclub.backend.vehicles.core.application.services;
 
-import com.jeepclub.backend.vehicles.api.dto.detail.DetailResponseDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;

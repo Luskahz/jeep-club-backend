@@ -1,23 +1,22 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.controller.passwordRecovery.AdminPasswordRecoveryRequestController;
-import com.jeepclub.backend.authentication.core.application.results.PasswordResetLinkAdminResult;
-import com.jeepclub.backend.authentication.core.application.results.TemporaryPasswordAdminResult;
-import com.jeepclub.backend.authentication.core.application.services.AccessTokenAuthenticationService;
-import com.jeepclub.backend.authentication.core.application.services.PasswordRecoveryService;
+import com.jeepclub.backend.authentication.api.http.controller.admin.AdminPasswordRecoveryRequestController;
+import com.jeepclub.backend.authentication.core.application.result.PasswordResetLinkAdminResult;
+import com.jeepclub.backend.authentication.core.application.result.TemporaryPasswordAdminResult;
+import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
-import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
-import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.time.Instant;
 
@@ -27,24 +26,26 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AdminPasswordRecoveryRequestController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@ExtendWith(MockitoExtension.class)
 class AdminPasswordRecoveryControllerTest {
 
-    @Autowired
+    @Mock
+    private AdminPasswordRecoveryService adminPasswordRecoveryService;
+
     private MockMvc mockMvc;
 
-    @MockitoBean
-    private PasswordRecoveryService passwordRecoveryService;
+    @BeforeEach
+    void setUp() {
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
+        validator.afterPropertiesSet();
 
-    @MockitoBean
-    private JwtTokenParser jwtTokenParser;
+        AdminPasswordRecoveryRequestController controller =
+                new AdminPasswordRecoveryRequestController(adminPasswordRecoveryService);
 
-    @MockitoBean
-    private UserAuthoritiesProvider userAuthoritiesProvider;
-
-    @MockitoBean
-    private AccessTokenAuthenticationService accessTokenAuthenticationService;
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setValidator(validator)
+                .build();
+    }
 
     @Test
     @DisplayName("Sucesso: administrador gera senha provisória")
@@ -67,15 +68,15 @@ class AdminPasswordRecoveryControllerTest {
                         recoveryRequest
                 );
 
-        when(passwordRecoveryService.generateTemporaryPasswordByAdmin(anyLong()))
+        when(adminPasswordRecoveryService.generateTemporaryPassword(anyLong()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/authentication/admin/password-recovery/requests/users/{userId}/temporary-password", 1L)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.temporaryPassword").value("SenhaTemp@123"))
-                .andExpect(jsonPath("$.request.status").value(PasswordRecoveryRequestStatus.OPEN.name()))
-                .andExpect(jsonPath("$.request.method").value(PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD.name()));
+                .andExpect(jsonPath("$.status").value(PasswordRecoveryRequestStatus.OPEN.name()))
+                .andExpect(jsonPath("$.method").value(PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD.name()));
     }
 
     @Test
@@ -102,7 +103,7 @@ class AdminPasswordRecoveryControllerTest {
                         recoveryRequest
                 );
 
-        when(passwordRecoveryService.generateResetLinkByAdmin(anyLong()))
+        when(adminPasswordRecoveryService.generateResetLink(anyLong()))
                 .thenReturn(result);
 
         mockMvc.perform(post("/authentication/admin/password-recovery/requests/users/{userId}/reset-link", 1L)
