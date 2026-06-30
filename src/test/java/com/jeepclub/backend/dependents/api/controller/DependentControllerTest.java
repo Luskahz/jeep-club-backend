@@ -109,7 +109,7 @@ class DependentControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: Criar dependente para o Sócio autenticado")
+    @DisplayName("Sucesso: Criar dependente para o SÃ³cio autenticado")
     void shouldCreateDependentSuccessfully() throws Exception {
         CreateDependentRequestDTO request = new CreateDependentRequestDTO(
                 "Pedro Silva",
@@ -139,7 +139,7 @@ class DependentControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: Tentar criar dependente sem CPF deve retornar erro de validação")
+    @DisplayName("Falha: Tentar criar dependente sem CPF deve retornar erro de validaÃ§Ã£o")
     void shouldReturnBadRequestWhenCpfIsMissing() throws Exception {
         CreateDependentRequestDTO request = new CreateDependentRequestDTO(
                 "Pedro Silva",
@@ -159,7 +159,7 @@ class DependentControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: Listar dependentes do Sócio autenticado")
+    @DisplayName("Sucesso: Listar dependentes do SÃ³cio autenticado")
     void shouldListMyDependentsSuccessfully() throws Exception {
         when(getDependentService.getBySocioId(eq(1L), eq(1L), eq(false)))
                 .thenReturn(List.of(mockDependent));
@@ -237,7 +237,7 @@ class DependentControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: Diretor lista dependentes de qualquer Sócio")
+    @DisplayName("Sucesso: Diretor lista dependentes de qualquer SÃ³cio")
     void shouldAllowDirectorToListDependents() throws Exception {
         when(getDependentService.getBySocioId(eq(5L), any(), eq(true)))
                 .thenReturn(List.of(mockDependent));
@@ -248,7 +248,7 @@ class DependentControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: Diretor consulta dependente por ID de qualquer Sócio")
+    @DisplayName("Sucesso: Diretor consulta dependente por ID de qualquer SÃ³cio")
     void shouldAllowDirectorToGetDependentById() throws Exception {
         Dependent dependentOfSocio5 = Dependent.reconstitute(
                 10L,
@@ -275,7 +275,7 @@ class DependentControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: Diretor tenta consultar dependente que não pertence ao Sócio informado")
+    @DisplayName("Falha: Diretor tenta consultar dependente que nÃ£o pertence ao SÃ³cio informado")
     void shouldFailWhenDependentDoesNotBelongToSocio() throws Exception {
         when(getDependentService.getById(eq(10L), any(), eq(true)))
                 .thenReturn(mockDependent); // mockDependent pertence ao socioId = 1, mas requisitamos socioId = 5

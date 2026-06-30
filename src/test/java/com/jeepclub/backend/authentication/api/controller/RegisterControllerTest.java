@@ -56,7 +56,7 @@ class RegisterControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: registro com birthData no JSON mantém compatibilidade e retorna 201")
+    @DisplayName("Sucesso: registro com birthData no JSON mantÃ©m compatibilidade e retorna 201")
     void shouldReturnTokensOnSuccessfulRegistration() throws Exception {
         AuthTokens tokens = new AuthTokens(
                 "refresh-reg",
@@ -96,7 +96,7 @@ class RegisterControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: dados inválidos retornam 400 Bad Request")
+    @DisplayName("Falha: dados invÃ¡lidos retornam 400 Bad Request")
     void shouldReturnBadRequestOnInvalidData() throws Exception {
         String invalidPayload = """
                 {

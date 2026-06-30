@@ -108,7 +108,7 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: login com senha provisória retorna desafio de troca de senha")
+    @DisplayName("Sucesso: login com senha provisÃ³ria retorna desafio de troca de senha")
     void shouldReturnPasswordChangeRequiredWhenTemporaryPasswordIsUsed() throws Exception {
         Instant expiresAt = Instant.parse("2026-05-21T20:30:00Z");
 
@@ -135,7 +135,7 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: credenciais inválidas retornam 401 Unauthorized")
+    @DisplayName("Falha: credenciais invÃ¡lidas retornam 401 Unauthorized")
     void shouldReturnUnauthorizedOnInvalidCredentials() throws Exception {
         when(sessionService.login("52998224725", "senhaErrada"))
                 .thenThrow(new InvalidCredentialsException());
@@ -155,7 +155,7 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: consultar sessão autenticada usa o principal e ordena authorities")
+    @DisplayName("Sucesso: consultar sessÃ£o autenticada usa o principal e ordena authorities")
     void shouldReturnAuthenticatedSessionData() throws Exception {
         Authentication authentication = authenticatedUser(
                 "AUTHENTICATION_USER_READ",
@@ -205,7 +205,7 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Falha: dados inválidos retornam 400 Bad Request")
+    @DisplayName("Falha: dados invÃ¡lidos retornam 400 Bad Request")
     void shouldReturnBadRequestOnInvalidData() throws Exception {
         String payload = """
                 {
