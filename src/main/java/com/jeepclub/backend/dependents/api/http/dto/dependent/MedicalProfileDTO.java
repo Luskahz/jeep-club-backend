@@ -1,6 +1,8 @@
 package com.jeepclub.backend.dependents.api.http.dto.dependent;
 
-import com.jeepclub.backend.dependents.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.core.domain.BloodType;
+import com.jeepclub.backend.health.core.domain.MedicalProfile;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Perfil médico do dependente contendo dados sensíveis.")
@@ -25,22 +27,52 @@ public record MedicalProfileDTO(
             return new MedicalProfileDTO(null, null, null, null, null);
         }
         return new MedicalProfileDTO(
-                profile.getBloodType(),
+                profile.getBloodType() == null ? null : profile.getBloodType().name(),
                 profile.getAllergies(),
-                profile.getChronicDiseases(),
-                profile.getMedications(),
-                profile.getMedicalNotes()
+                profile.getChronicConditions(),
+                profile.getContinuousMedications(),
+                profile.getObservations()
         );
     }
 
-    public MedicalProfile toDomain() {
-        return new MedicalProfile(
-                bloodType,
+    public MedicalProfileRequest toHealthRequest() {
+        return new MedicalProfileRequest(
+                parseBloodType(bloodType),
                 allergies,
                 chronicDiseases,
                 medications,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
                 medicalNotes
         );
     }
-}
 
+    public boolean hasAnyValue() {
+        return hasText(bloodType)
+                || hasText(allergies)
+                || hasText(chronicDiseases)
+                || hasText(medications)
+                || hasText(medicalNotes);
+    }
+
+    private BloodType parseBloodType(String value) {
+        if (!hasText(value)) {
+            return BloodType.UNKNOWN;
+        }
+
+        String normalized = value.trim()
+                .toUpperCase()
+                .replace("+", "_POSITIVE")
+                .replace("-", "_NEGATIVE");
+
+        return BloodType.valueOf(normalized);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+}

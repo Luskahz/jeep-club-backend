@@ -2,7 +2,6 @@ package com.jeepclub.backend.dependents.infra.persistence.mapper;
 
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
 import org.springframework.stereotype.Component;
 
@@ -21,16 +20,6 @@ public class DependentMapper {
         entity.setBirthDate(domain.getBirthDate());
         entity.setRelationshipType(domain.getRelationshipType());
         entity.setPhoneNumber(domain.getPhoneNumber());
-
-        // Mapping Medical Profile
-        MedicalProfile medical = domain.getMedicalProfile();
-        if (medical != null) {
-            entity.setBloodType(medical.getBloodType());
-            entity.setAllergies(medical.getAllergies());
-            entity.setChronicDiseases(medical.getChronicDiseases());
-            entity.setMedications(medical.getMedications());
-            entity.setMedicalNotes(medical.getMedicalNotes());
-        }
 
         entity.setConsentAccepted(domain.isConsentAccepted());
         entity.setConsentAcceptedAt(domain.getConsentAcceptedAt());
@@ -53,14 +42,6 @@ public class DependentMapper {
             return null;
         }
 
-        MedicalProfile medical = new MedicalProfile(
-                entity.getBloodType(),
-                entity.getAllergies(),
-                entity.getChronicDiseases(),
-                entity.getMedications(),
-                entity.getMedicalNotes()
-        );
-
         Long socioId = (entity.getSocio() != null) ? entity.getSocio().getId() : null;
 
         return Dependent.reconstitute(
@@ -70,7 +51,6 @@ public class DependentMapper {
                 entity.getBirthDate(),
                 entity.getRelationshipType(),
                 entity.getPhoneNumber(),
-                medical,
                 entity.isConsentAccepted(),
                 entity.getConsentAcceptedAt(),
                 socioId,
@@ -79,4 +59,3 @@ public class DependentMapper {
         );
     }
 }
-

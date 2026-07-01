@@ -4,7 +4,6 @@ import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,7 +29,6 @@ public class CreateDependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            MedicalProfile medicalProfile,
             boolean consentAccepted,
             Long socioId
     ) {
@@ -69,7 +67,6 @@ public class CreateDependentService {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                medicalProfile,
                 consentAccepted,
                 socioId,
                 now
@@ -79,4 +76,3 @@ public class CreateDependentService {
         return dependentRepository.save(dependent);
     }
 }
-

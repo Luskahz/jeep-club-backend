@@ -15,6 +15,11 @@ import com.jeepclub.backend.dependents.core.application.service.GetDependentServ
 import com.jeepclub.backend.dependents.core.application.service.UpdateDependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
+import com.jeepclub.backend.dependents.api.http.dto.dependent.MedicalProfileDTO;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.core.application.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
+import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +45,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -66,6 +72,9 @@ class DependentControllerTest {
     private GetDependentService getDependentService;
 
     @MockitoBean
+    private MedicalProfileService medicalProfileService;
+
+    @MockitoBean
     private JwtTokenParser jwtTokenParser;
 
     @MockitoBean
@@ -90,7 +99,6 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11988887777",
-                null,
                 true,
                 Instant.now(),
                 1L, // socioId = 1
@@ -123,8 +131,10 @@ class DependentControllerTest {
 
         when(createDependentService.create(
                 anyString(), anyString(), any(LocalDate.class),
-                any(RelationshipType.class), anyString(), any(), anyBoolean(), anyLong()
+                any(RelationshipType.class), anyString(), anyBoolean(), anyLong()
         )).thenReturn(mockDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
 
         mockMvc.perform(post("/dependents")
                         .principal(mockAuth)
@@ -136,6 +146,39 @@ class DependentControllerTest {
                 .andExpect(jsonPath("$.cpf").value("12345678900"))
                 .andExpect(jsonPath("$.relationshipType").value("CHILD"))
                 .andExpect(jsonPath("$.consentAccepted").value(true));
+    }
+
+    @Test
+    @DisplayName("Sucesso: Criar dependente com perfil médico grava o perfil no módulo Health")
+    void shouldCreateDependentMedicalProfileInHealth() throws Exception {
+        CreateDependentRequestDTO request = new CreateDependentRequestDTO(
+                "Pedro Silva",
+                "12345678900",
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11988887777",
+                new MedicalProfileDTO("O+", "Dipirona", "Asma", "Aerolin", "Usar bombinha em crise"),
+                true
+        );
+
+        when(createDependentService.create(
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyBoolean(), anyLong()
+        )).thenReturn(mockDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
+
+        mockMvc.perform(post("/dependents")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        verify(medicalProfileService).upsertByOwner(
+                eq(MedicalProfileOwnerType.DEPENDENT),
+                eq(10L),
+                any(MedicalProfileRequest.class)
+        );
     }
 
     @Test
@@ -204,7 +247,6 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11999998888",
-                null,
                 true,
                 Instant.now(),
                 1L,
@@ -214,8 +256,10 @@ class DependentControllerTest {
 
         when(updateDependentService.update(
                 eq(10L), anyString(), anyString(), any(LocalDate.class),
-                any(RelationshipType.class), anyString(), any(), anyBoolean(), eq(1L), eq(false)
+                any(RelationshipType.class), anyString(), anyBoolean(), eq(1L), eq(false)
         )).thenReturn(updatedDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
 
         mockMvc.perform(put("/dependents/10")
                         .principal(mockAuth)
@@ -257,7 +301,6 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11988887777",
-                null,
                 true,
                 Instant.now(),
                 5L, // Pertence ao socioId = 5

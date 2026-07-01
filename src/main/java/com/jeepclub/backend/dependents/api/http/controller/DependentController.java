@@ -10,6 +10,10 @@ import com.jeepclub.backend.dependents.core.application.service.DeleteDependentS
 import com.jeepclub.backend.dependents.core.application.service.GetDependentService;
 import com.jeepclub.backend.dependents.core.application.service.UpdateDependentService;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
+import com.jeepclub.backend.health.core.application.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
+import com.jeepclub.backend.health.core.domain.MedicalProfile;
+import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +24,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,12 +43,14 @@ public class DependentController {
     private final UpdateDependentService updateDependentService;
     private final DeleteDependentService deleteDependentService;
     private final GetDependentService getDependentService;
+    private final MedicalProfileService medicalProfileService;
 
     // ==========================================
     // ENDPOINTS DO SÓCIO AUTENTICADO
     // ==========================================
 
     @PostMapping("/dependents")
+    @Transactional
     @Operation(
             summary = "Adicionar dependente",
             description = "Cadastra um novo dependente associado ao Sócio autenticado. Exige a flag de consentimento LGPD aceita."
@@ -60,13 +67,17 @@ public class DependentController {
                 request.birthDate(),
                 request.relationshipType(),
                 request.phoneNumber(),
-                request.medicalProfile() != null ? request.medicalProfile().toDomain() : null,
                 request.consentAccepted(),
                 principal.getUserId()
         );
 
+        upsertDependentMedicalProfileIfPresent(dependent, request.medicalProfile());
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(DependentResponseDTO.from(dependent));
+                .body(DependentResponseDTO.from(
+                        dependent,
+                        findDependentMedicalProfile(dependent.getId())
+                ));
     }
 
     @GetMapping("/dependents")
@@ -78,7 +89,9 @@ public class DependentController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         List<Dependent> list = getDependentService.getBySocioId(principal.getUserId(), principal.getUserId(), false);
-        return ResponseEntity.ok(DependentResponseDTO.from(list));
+        return ResponseEntity.ok(list.stream()
+                .map(this::toResponseWithMedicalProfile)
+                .toList());
     }
 
     @GetMapping("/dependents/{id}")
@@ -92,10 +105,11 @@ public class DependentController {
     ) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         Dependent dependent = getDependentService.getById(id, principal.getUserId(), false);
-        return ResponseEntity.ok(DependentResponseDTO.from(dependent));
+        return ResponseEntity.ok(toResponseWithMedicalProfile(dependent));
     }
 
     @PutMapping("/dependents/{id}")
+    @Transactional
     @Operation(
             summary = "Atualizar dependente",
             description = "Atualiza os dados de um dependente do Sócio autenticado. Exige confirmação de LGPD."
@@ -113,13 +127,17 @@ public class DependentController {
                 request.birthDate(),
                 request.relationshipType(),
                 request.phoneNumber(),
-                request.medicalProfile() != null ? request.medicalProfile().toDomain() : null,
                 request.consentAccepted(),
                 principal.getUserId(),
                 false
         );
 
-        return ResponseEntity.ok(DependentResponseDTO.from(dependent));
+        upsertDependentMedicalProfileIfPresent(dependent, request.medicalProfile());
+
+        return ResponseEntity.ok(DependentResponseDTO.from(
+                dependent,
+                findDependentMedicalProfile(dependent.getId())
+        ));
     }
 
     @DeleteMapping("/dependents/{id}")
@@ -155,7 +173,9 @@ public class DependentController {
             // se o socio tiver 100 dependentes, o back vai servir tudo pro frontend? precisamos aplicar logica de @Pagable
     ) {
         List<Dependent> list = getDependentService.getBySocioId(socioId, null, true);
-        return ResponseEntity.ok(DependentResponseDTO.from(list));
+        return ResponseEntity.ok(list.stream()
+                .map(this::toResponseWithMedicalProfile)
+                .toList());
     }
 
     @GetMapping("/socios/{socioId}/dependents/{id}")
@@ -176,7 +196,36 @@ public class DependentController {
             throw new IllegalArgumentException("O dependente informado não pertence ao sócio especificado.");
         }
         
-        return ResponseEntity.ok(DependentResponseDTO.from(dependent));
+        return ResponseEntity.ok(toResponseWithMedicalProfile(dependent));
+    }
+
+    private void upsertDependentMedicalProfileIfPresent(
+            Dependent dependent,
+            com.jeepclub.backend.dependents.api.http.dto.dependent.MedicalProfileDTO medicalProfile
+    ) {
+        if (medicalProfile == null || !medicalProfile.hasAnyValue()) {
+            return;
+        }
+
+        medicalProfileService.upsertByOwner(
+                MedicalProfileOwnerType.DEPENDENT,
+                dependent.getId(),
+                medicalProfile.toHealthRequest()
+        );
+    }
+
+    private DependentResponseDTO toResponseWithMedicalProfile(Dependent dependent) {
+        return DependentResponseDTO.from(
+                dependent,
+                findDependentMedicalProfile(dependent.getId())
+        );
+    }
+
+    private MedicalProfile findDependentMedicalProfile(Long dependentId) {
+        try {
+            return medicalProfileService.getByOwner(MedicalProfileOwnerType.DEPENDENT, dependentId);
+        } catch (MedicalProfileNotFoundException ex) {
+            return null;
+        }
     }
 }
-

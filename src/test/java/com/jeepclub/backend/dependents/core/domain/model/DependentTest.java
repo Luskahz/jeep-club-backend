@@ -23,7 +23,6 @@ class DependentTest {
                 LocalDate.of(2015, 5, 10),
                 RelationshipType.CHILD,
                 "11999999999",
-                null,
                 true,
                 1L,
                 now
@@ -50,7 +49,6 @@ class DependentTest {
                         LocalDate.of(2015, 5, 10),
                         RelationshipType.CHILD,
                         "11999999999",
-                        null,
                         false,
                         1L,
                         now
@@ -70,7 +68,6 @@ class DependentTest {
                         LocalDate.of(2018, 1, 1),
                         RelationshipType.CHILD,
                         "",
-                        null,
                         true,
                         1L,
                         now
@@ -89,7 +86,6 @@ class DependentTest {
                         LocalDate.of(2015, 5, 10),
                         RelationshipType.CHILD,
                         "11999999999",
-                        null,
                         true,
                         1L,
                         now
@@ -106,7 +102,6 @@ class DependentTest {
                 LocalDate.of(2015, 5, 10),
                 RelationshipType.CHILD,
                 "11999999999",
-                null,
                 true,
                 1L,
                 now
@@ -119,7 +114,6 @@ class DependentTest {
                 LocalDate.of(2015, 5, 10),
                 RelationshipType.CHILD,
                 "11988888888",
-                null,
                 true,
                 updateTime
         );
@@ -139,7 +133,6 @@ class DependentTest {
                 LocalDate.of(2015, 5, 10),
                 RelationshipType.CHILD,
                 "11999999999",
-                null,
                 true,
                 1L,
                 now
@@ -152,7 +145,6 @@ class DependentTest {
                         LocalDate.of(2015, 5, 10),
                         RelationshipType.CHILD,
                         "11999999999",
-                        null,
                         false,
                         Instant.now()
                 )
@@ -161,4 +153,3 @@ class DependentTest {
         assertEquals("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.", exception.getMessage());
     }
 }
-
