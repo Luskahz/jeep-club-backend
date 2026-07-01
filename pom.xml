@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="
+             http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -13,6 +17,7 @@
     <groupId>com.jeepclub</groupId>
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+
     <name>backend</name>
     <description>Jeep Club Backend</description>
 
@@ -20,9 +25,15 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.5</jjwt.version>
         <jetbrains.annotations.version>26.1.0</jetbrains.annotations.version>
+        <jacoco.version>0.8.15</jacoco.version>
     </properties>
 
     <dependencies>
+
+        <!-- ========================= -->
+        <!-- SPRING BOOT               -->
+        <!-- ========================= -->
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -48,6 +59,10 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
+        <!-- ========================= -->
+        <!-- JWT                       -->
+        <!-- ========================= -->
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -68,11 +83,19 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- ========================= -->
+        <!-- BANCO DE DADOS            -->
+        <!-- ========================= -->
+
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+
+        <!-- ========================= -->
+        <!-- UTILITÁRIOS               -->
+        <!-- ========================= -->
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -86,34 +109,42 @@
             <version>${jetbrains.annotations.version}</version>
         </dependency>
 
+        <!-- ========================= -->
+        <!-- DOCUMENTAÇÃO DA API       -->
+        <!-- ========================= -->
+
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>3.0.3</version>
         </dependency>
 
-        <!-- Testes gerais -->
+        <!-- ========================= -->
+        <!-- TESTES                    -->
+        <!-- ========================= -->
+
+        <!-- JUnit, Mockito, AssertJ e infraestrutura geral de testes -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Testes Spring MVC / MockMvc no Spring Boot 4 -->
+        <!-- Testes Spring MVC e MockMvc no Spring Boot 4 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Auto-configuração do Spring REST Docs no Spring Boot 4 -->
+        <!-- Auto-configuração do Spring REST Docs -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-restdocs</artifactId>
             <scope>test</scope>
         </dependency>
 
-        <!-- Biblioteca do Spring REST Docs para MockMvc -->
+        <!-- Integração do Spring REST Docs com MockMvc -->
         <dependency>
             <groupId>org.springframework.restdocs</groupId>
             <artifactId>spring-restdocs-mockmvc</artifactId>
@@ -121,7 +152,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- H2 Database para isolamento de testes de contexto -->
+        <!-- Banco em memória para testes de persistência e integração -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -139,9 +170,15 @@
 
     <build>
         <plugins>
+
+            <!-- ========================= -->
+            <!-- COMPILAÇÃO                -->
+            <!-- ========================= -->
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
@@ -152,9 +189,65 @@
                 </configuration>
             </plugin>
 
+            <!-- ========================= -->
+            <!-- COBERTURA DE TESTES       -->
+            <!-- ========================= -->
+
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+
+                <executions>
+
+                    <!-- Conecta o agente JaCoCo à execução dos testes -->
+                    <execution>
+                        <id>prepare-jacoco-agent</id>
+
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <!-- Gera o relatório ao executar a fase verify -->
+                    <execution>
+                        <id>generate-authentication-coverage-report</id>
+                        <phase>verify</phase>
+
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+
+                        <configuration>
+
+                            <!--
+                                Nesta primeira entrega, o relatório considera
+                                exclusivamente o módulo authentication.
+                            -->
+                            <includes>
+                                <include>com/jeepclub/backend/authentication/**</include>
+                            </includes>
+
+                            <formats>
+                                <format>HTML</format>
+                                <format>XML</format>
+                                <format>CSV</format>
+                            </formats>
+
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
+            <!-- ========================= -->
+            <!-- SPRING BOOT               -->
+            <!-- ========================= -->
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+
                 <configuration>
                     <excludes>
                         <exclude>
@@ -164,6 +257,7 @@
                     </excludes>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 
