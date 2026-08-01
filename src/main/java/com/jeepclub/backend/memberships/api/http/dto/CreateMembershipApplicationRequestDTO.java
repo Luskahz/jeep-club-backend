@@ -17,19 +17,20 @@ public record CreateMembershipApplicationRequestDTO(
                 regexp = "^(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})$",
                 message = "CPF deve estar no formato 00000000000 ou 000.000.000-00."
         )
-        @CPF
+        @CPF(message = "CPF inválido.")
         String cpf,
 
-        @NotBlank(message = "E-mail é obrigatório.")
         @Email(message = "E-mail inválido.")
         @Size(max = 180, message = "E-mail deve ter no máximo 180 caracteres.")
         String email,
 
         @NotBlank(message = "Telefone é obrigatório.")
-        @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres.")
+        @Pattern(
+                regexp = "^(?:\\+55\\s?)?(?:\\([1-9]{2}\\)|[1-9]{2})\\s?9\\d{4}[-\\s]?\\d{4}$",
+                message = "Telefone deve ser um celular brasileiro com DDD."
+        )
         String phoneNumber,
 
-        @NotBlank(message = "Mensagem é obrigatória.")
         @Size(max = 2000, message = "Mensagem deve ter no máximo 2000 caracteres.")
         String message
 ) {}

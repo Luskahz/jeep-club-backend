@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/membership/request")
+@RequestMapping("/membership-applications")
 @RequiredArgsConstructor
 @Tag(name = "Membership", description = "Solicitação pública de adesão ao clube.")
 public class MembershipApplicationController {
@@ -23,10 +23,13 @@ public class MembershipApplicationController {
     @PostMapping
     @Operation(
             summary = "Solicitar adesão ao clube",
-            description = "Rota pública. Se já existe uma solicitação para o CPF informado, retorna a existente. Caso contrário, cria uma nova."
+            description = """
+                Rota pública. Se já existir uma solicitação aberta para o CPF informado,
+                retorna a solicitação existente. Caso contrário, cria uma nova.
+                """
     )
     public ResponseEntity<MembershipApplicationResponseDTO> create(
-            @RequestBody @Valid CreateMembershipApplicationRequestDTO request
+            @Valid @RequestBody CreateMembershipApplicationRequestDTO request
     ) {
         EnsureMembershipRequestResult result = ensureService.ensure(
                 request.name(),
@@ -36,14 +39,13 @@ public class MembershipApplicationController {
                 request.message()
         );
 
-        HttpStatus status = result.created()
-                ? HttpStatus.CREATED
-                : HttpStatus.OK;
+        MembershipApplicationResponseDTO response =
+                MembershipApplicationResponseDTO.fromDomain(
+                        result.application()
+                );
 
-        MembershipApplicationResponseDTO response = MembershipApplicationResponseDTO.fromDomain(
-                result.application()
-        );
-
-        return ResponseEntity.status(status).body(response);
+        return ResponseEntity
+                .status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(response);
     }
 }
