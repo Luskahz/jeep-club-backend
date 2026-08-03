@@ -134,14 +134,9 @@ public record IncludeRequestDTO(
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @NotNull(message = "A informação sobre o guincho/reboque é obrigatória.")
-        Boolean towing,
+        Boolean towing
 
-        @Schema(
-                description = "ID do usuário que é proprietário do veículo.",
-                example = "1",
-                requiredMode = Schema.RequiredMode.REQUIRED
-        )
-        @NotNull(message = "O ID do proprietário é obrigatório.")
-        Long ownerId
+
+
 ) {
 }
