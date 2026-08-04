@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 @Tag(
         name = "Vehicles",
-        description = ""
+        description = "opa"
 )
 public class DetailForEditController {
     private final DetailForEditService detailForEditService;
