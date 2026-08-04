@@ -17,7 +17,22 @@ public interface CreateUserWithPendingFirstAccessPort {
      * @param email       e-mail do candidato
      * @param cpf         CPF normalizado (somente dígitos)
      * @param phoneNumber telefone do candidato
-     * @return ID do usuário criado
+     * @return usuário criado e senha temporária em texto puro para entrega única
      */
-    Long createPendingUser(String name, String email, String cpf, String phoneNumber);
+    PendingFirstAccessUser createPendingUserWithTemporaryPassword(
+            String name,
+            String email,
+            String cpf,
+            String phoneNumber
+    );
+
+    /**
+     * Cria um usuário pendente e gera um link que autoriza a definição da senha.
+     */
+    PendingFirstAccessLink createPendingUserWithAccessLink(
+            String name,
+            String email,
+            String cpf,
+            String phoneNumber
+    );
 }

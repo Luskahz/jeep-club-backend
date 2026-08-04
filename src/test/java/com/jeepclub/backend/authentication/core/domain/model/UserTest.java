@@ -66,8 +66,11 @@ class UserTest {
 
     @Test
     void legacyStatusUsesDocumentedPriority() {
-        assertThat(user(CredentialStatus.PENDING_FIRST_ACCESS).getStatus())
+        User pendingFirstAccess = user(CredentialStatus.PENDING_FIRST_ACCESS);
+
+        assertThat(pendingFirstAccess.getStatus())
                 .isEqualTo(UserStatus.PENDING_FIRST_ACCESS);
+        assertThat(pendingFirstAccess.isChangePasswordRequired()).isTrue();
         assertThat(user(CredentialStatus.CHANGE_REQUIRED).getStatus())
                 .isEqualTo(UserStatus.CHANGE_PASSWORD_REQUIRED);
         assertThat(user(
