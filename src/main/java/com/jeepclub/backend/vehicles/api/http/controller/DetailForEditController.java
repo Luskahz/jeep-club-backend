@@ -3,6 +3,7 @@ package com.jeepclub.backend.vehicles.api.http.controller;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditResponseDTO;
 import com.jeepclub.backend.vehicles.core.application.services.DetailForEditService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,7 +33,7 @@ public class DetailForEditController {
             summary = "Detalhar veiculo pertencente ao membro logado",
             description = "Retorna os detalhes de um veículo pelo seu ID"
     )
-    public ResponseEntity<DetailResponseDTO> detailMemberVehicle(
+    public ResponseEntity<DetailForEditResponseDTO> detailMemberVehicle(
             @PathVariable Long vehicleId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
@@ -46,7 +47,7 @@ public class DetailForEditController {
             summary = "Detalhar qualquer veículo",
             description = "Retorna os detalhes de qualquer veículo pelo ID"
     )
-    public ResponseEntity<DetailResponseDTO> detailVehicle(@PathVariable Long vehicleId) {
+    public ResponseEntity<DetailForEditResponseDTO> detailVehicle(@PathVariable Long vehicleId) {
         return ResponseEntity.ok(detailForEditService.executeAsAdmin(vehicleId));
     }
 }

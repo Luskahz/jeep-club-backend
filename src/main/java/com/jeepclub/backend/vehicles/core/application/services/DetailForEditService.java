@@ -1,6 +1,7 @@
 package com.jeepclub.backend.vehicles.core.application.services;
 
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditResponseDTO;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Service;
 public class DetailForEditService {
     private final VehicleRepository vehicleRepository;
 
-    public DetailResponseDTO execute(Long vehicleId, Long memberId) {
+    public DetailForEditResponseDTO execute(Long vehicleId, Long memberId) {
         Vehicle vehicle = vehicleRepository
                 .findByIdAndOwnerId(vehicleId, memberId)
                 .orElseThrow(() -> new VehicleIdNotFoundException("Vehicle not found."));
@@ -22,10 +23,10 @@ public class DetailForEditService {
             throw new VehicleIdNotFoundException("Vehicle not found.");
         }
 
-        return DetailResponseDTO.from(vehicle);
+        return DetailForEditResponseDTO.from(vehicle);
     }
 
-    public DetailResponseDTO executeAsAdmin(Long vehicleId) {
+    public DetailForEditResponseDTO executeAsAdmin(Long vehicleId) {
         Vehicle vehicle = vehicleRepository
                 .findById(vehicleId)
                 .orElseThrow(() -> new VehicleIdNotFoundException("Vehicle not found."));
@@ -34,7 +35,7 @@ public class DetailForEditService {
             throw new VehicleIdNotFoundException("Vehicle not found.");
         }
 
-        return DetailResponseDTO.from(vehicle);
+        return DetailForEditResponseDTO.from(vehicle);
     }
 }
 
