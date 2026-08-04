@@ -42,7 +42,8 @@ public class EditService {
         vehicle.update(
                 dto.nickname(), dto.photo(), dto.plate(), dto.renavam(),
                 dto.brand(), dto.model(), dto.manufacturingYear(), dto.modelYear(),
-                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement(), now
+                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement(),
+                dto.towing(), now
         );
 
         vehicleRepository.save(vehicle);
@@ -70,7 +71,8 @@ public class EditService {
         vehicle.update(
                 dto.nickname(), dto.photo(), dto.plate(), dto.renavam(),
                 dto.brand(), dto.model(), dto.manufacturingYear(), dto.modelYear(),
-                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement(), now
+                dto.color(), dto.seatingCapacity(), dto.fuelType(), dto.engineDisplacement(),
+                dto.towing(), now
         );
 
         vehicleRepository.save(vehicle);
