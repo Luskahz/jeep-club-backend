@@ -19,8 +19,13 @@ public class MembershipApplicationMapper {
                 entity.getMessage(),
                 entity.getStatus(),
                 entity.getRejectionReason(),
+                entity.getReviewedByUserId(),
+                entity.getCreatedUserId(),
                 entity.getRequestedAt(),
-                entity.getUpdatedAt()
+                entity.getReviewedAt(),
+                entity.getFinishedAt(),
+                entity.getUpdatedAt(),
+                entity.getVersion()
         );
     }
 
@@ -36,8 +41,13 @@ public class MembershipApplicationMapper {
         entity.setMessage(domain.getMessage());
         entity.setStatus(domain.getStatus());
         entity.setRejectionReason(domain.getRejectionReason());
+        entity.setReviewedByUserId(domain.getReviewedByUserId());
+        entity.setCreatedUserId(domain.getCreatedUserId());
         entity.setRequestedAt(domain.getRequestedAt());
+        entity.setReviewedAt(domain.getReviewedAt());
+        entity.setFinishedAt(domain.getFinishedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
+        entity.setVersion(domain.getVersion());
         return entity;
     }
 }

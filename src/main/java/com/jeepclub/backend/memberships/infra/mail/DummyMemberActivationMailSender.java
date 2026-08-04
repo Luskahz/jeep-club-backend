@@ -16,7 +16,7 @@ public class DummyMemberActivationMailSender implements MemberActivationMailSend
 
     @Override
     public void sendActivationLink(String recipientEmail, String recipientName, String activationToken) {
-        String activationLink = baseUrl + "/membership/activate?token=" + activationToken;
+        String activationLink = baseUrl + "/membership-applications/activate?token=" + activationToken;
 
         log.info("=================================================");
         log.info("📧 MOCK EMAIL NOTIFICATION");

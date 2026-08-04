@@ -1,4 +1,4 @@
-package com.jeepclub.backend.memberships.core.application.service;
+package com.jeepclub.backend.memberships.core.application.service.membershipactivationtoken;
 
 import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
@@ -19,7 +19,7 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
-public class ResendActivationTokenService {
+public class AdminMembershipActivationTokenService {
 
     private final MembershipApplicationRepository membershipApplicationRepository;
     private final MemberActivationTokenRepository memberActivationTokenRepository;
@@ -37,12 +37,10 @@ public class ResendActivationTokenService {
                 .findById(applicationId)
                 .orElseThrow(() -> new MembershipApplicationNotFoundException(applicationId));
 
-        MembershipApplicationStatus status = application.getStatus();
-
-        if (status != MembershipApplicationStatus.INVITE_SENT
-                && status != MembershipApplicationStatus.INVITE_EXPIRED) {
+        if (application.getStatus() != MembershipApplicationStatus.APPROVED) {
             throw new IllegalStateException(
-                    "Reenvio de convite não permitido para solicitações com status: " + status.name()
+                    "Reenvio de convite não permitido para solicitações com status: "
+                            + application.getStatus().name()
             );
         }
 
@@ -58,9 +56,6 @@ public class ResendActivationTokenService {
                 now
         );
         memberActivationTokenRepository.save(activationToken);
-
-        application.markAsInviteSent(now);
-        membershipApplicationRepository.save(application);
 
         mailSender.sendActivationLink(application.getEmail(), application.getName(), rawToken);
     }

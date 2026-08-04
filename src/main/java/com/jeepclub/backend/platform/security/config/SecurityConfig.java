@@ -37,8 +37,6 @@ public class SecurityConfig {
                                 "/authentication/login",
                                 "/authentication/register",
                                 "/authentication/refresh",
-                                "/membership/request",
-                                "/membership/activate",
                                 "/authentication/login/password-change",
 
                                 "/swagger-ui/**",
@@ -50,6 +48,14 @@ public class SecurityConfig {
                                 "/error"
 
 
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/membership-applications"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/membership-applications/activate"
                         ).permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,

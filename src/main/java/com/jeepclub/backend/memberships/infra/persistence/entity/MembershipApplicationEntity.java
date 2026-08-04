@@ -41,9 +41,24 @@ public class MembershipApplicationEntity {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Column(name = "reviewed_by_user_id")
+    private Long reviewedByUserId;
+
+    @Column(name = "created_user_id")
+    private Long createdUserId;
+
     @Column(name = "requested_at", nullable = false, updatable = false)
     private Instant requestedAt;
 
+    @Column(name = "reviewed_at")
+    private Instant reviewedAt;
+
+    @Column(name = "finished_at")
+    private Instant finishedAt;
+
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Version
+    private Long version;
 }

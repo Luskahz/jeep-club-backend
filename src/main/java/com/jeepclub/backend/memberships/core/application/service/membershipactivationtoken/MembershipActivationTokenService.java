@@ -1,4 +1,4 @@
-package com.jeepclub.backend.memberships.core.application.service;
+package com.jeepclub.backend.memberships.core.application.service.membershipactivationtoken;
 
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.memberships.core.application.exception.MemberActivationTokenNotFoundException;
@@ -13,7 +13,7 @@ import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
-public class ValidateActivationTokenService {
+public class MembershipActivationTokenService {
 
     private final MemberActivationTokenRepository memberActivationTokenRepository;
     private final RefreshTokenHashService tokenHashService;
@@ -29,7 +29,6 @@ public class ValidateActivationTokenService {
                 .orElseThrow(MemberActivationTokenNotFoundException::new);
 
         token.validateOrThrow(now);
-
         token.markAsUsed(now);
         memberActivationTokenRepository.save(token);
 

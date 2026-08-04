@@ -123,8 +123,7 @@ public class MembershipApplication {
 
         this.status = MembershipApplicationStatus.REJECTED;
         this.reviewedByUserId = reviewedByUserId;
-        this.rejectionReason =
-                requireText(rejectionReason, "rejectionReason");
+        this.rejectionReason = normalizeNullable(rejectionReason);
         this.reviewedAt = now;
         this.finishedAt = now;
         this.updatedAt = now;
