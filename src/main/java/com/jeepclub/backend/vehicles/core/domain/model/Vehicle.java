@@ -141,6 +141,7 @@ public class Vehicle {
             int seatingCapacity,
             FuelType fuelType,
             double engineDisplacement,
+            boolean towing,
             Instant now
     ) {
         this.nickname = nickname;
@@ -155,6 +156,7 @@ public class Vehicle {
         this.seatingCapacity = seatingCapacity;
         this.fuelType = fuelType;
         this.engineDisplacement = engineDisplacement;
+        this.towing = towing;
         this.updatedAt = now;
     }
 }

@@ -125,6 +125,12 @@ public record EditRequestDTO(
                 maximum = "20.0"
         )
         @Min(value = 0, message = "Cilindrada inválida")
-        @Max(value = 20, message = "Cilindrada inválida")
-        double engineDisplacement
+        double engineDisplacement,
+
+        @Schema(
+                description = "Indica se o veículo possui guincho/reboque",
+                example = "true",
+                nullable = true
+        )
+        boolean towing
 ) {}
