@@ -10,14 +10,21 @@ import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlr
 import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.InactiveRoleCannotBeUsedException;
+import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionCodeMismatchException;
+import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionDescriptionCannotBeBlankException;
+import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionDescriptionTooLongException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.RoleDescriptionTooLongException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.RoleNameCannotBeBlankException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.RoleNameTooLongException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authorization.api")
-public class AuthorizationExceptionHandler {
+public class AuthorizationExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(PermissionNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handlePermissionNotFound(
@@ -129,16 +136,30 @@ public class AuthorizationExceptionHandler {
         );
     }
 
-    private ResponseEntity<ApiErrorResponse> buildErrorResponse(
-            String code,
-            String message,
-            HttpStatus status
-    ) {
-        return ResponseEntity.status(status)
-                .body(ApiErrorResponse.of(
-                        code,
-                        message,
-                        status
-                ));
+    @ExceptionHandler({
+            PermissionDescriptionCannotBeBlankException.class,
+            PermissionDescriptionTooLongException.class,
+            PermissionCodeMismatchException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleInvalidPermission(RuntimeException exception) {
+        return buildErrorResponse(
+                "PERMISSION_INVALID_DATA",
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST
+        );
     }
+
+    @ExceptionHandler({
+            RoleNameCannotBeBlankException.class,
+            RoleNameTooLongException.class,
+            RoleDescriptionTooLongException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleInvalidRole(RuntimeException exception) {
+        return buildErrorResponse(
+                "ROLE_INVALID_DATA",
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
 }

@@ -20,11 +20,11 @@ public class GetDependentService {
     @Transactional(readOnly = true)
     public Dependent getById(Long id, Long requestingUserId, boolean isDirector) {
         Dependent dependent = dependentRepository.findById(id)
-                .orElseThrow(() -> new DependentException("Dependente não encontrado com o ID fornecido."));
+                .orElseThrow(DependentException::notFound);
 
         // Validar permissão de visualização (RN012: Dados sensíveis restritos ao titular e diretores)
         if (!isDirector && !dependent.getSocioId().equals(requestingUserId)) {
-            throw new DependentException("Você não tem permissão para visualizar este dependente.");
+            throw DependentException.accessDenied();
         }
 
         return dependent;
@@ -34,7 +34,7 @@ public class GetDependentService {
     public List<Dependent> getBySocioId(Long socioId, Long requestingUserId, boolean isDirector) {
         // Se não for diretor, o sócio só pode visualizar a sua própria lista de dependentes
         if (!isDirector && !socioId.equals(requestingUserId)) {
-            throw new DependentException("Você não tem permissão para listar dependentes de outro sócio.");
+            throw DependentException.accessDenied();
         }
 
         return dependentRepository.findAllBySocioId(socioId);

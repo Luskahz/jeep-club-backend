@@ -1,42 +1,50 @@
 package com.jeepclub.backend.dependents.api.http.exception;
 
-import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-
-// handler fora do padrão, verificar como está o handler do authentication e replicar.
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.dependents.api")
-public class DependentExceptionHandler {
+public class DependentExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(DependentException.class)
     public ResponseEntity<ApiErrorResponse> handleDependentException(DependentException exception) {
-        String message = exception.getMessage();
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-        String code = "DEPENDENT_BUSINESS_RULE_VIOLATION";
-
-        if (message.contains("não encontrado")) {
-            status = HttpStatus.NOT_FOUND;
-            code = "DEPENDENT_NOT_FOUND";
-        } else if (message.contains("permissão")) {
-            status = HttpStatus.FORBIDDEN;
-            code = "DEPENDENT_ACCESS_DENIED";
-        } else if (message.contains("Já existe")) {
-            status = HttpStatus.CONFLICT;
-            code = "DEPENDENT_CONFLICT";
-        }
-
-        return ResponseEntity.status(status)
-                .body(ApiErrorResponse.of(code, message, status));
+        return switch (exception.getViolation()) {
+            case NOT_FOUND -> buildErrorResponse(
+                    "DEPENDENT_NOT_FOUND",
+                    exception.getMessage(),
+                    HttpStatus.NOT_FOUND
+            );
+            case ACCESS_DENIED -> buildErrorResponse(
+                    "DEPENDENT_ACCESS_DENIED",
+                    exception.getMessage(),
+                    HttpStatus.FORBIDDEN
+            );
+            case CONFLICT -> buildErrorResponse(
+                    "DEPENDENT_CONFLICT",
+                    exception.getMessage(),
+                    HttpStatus.CONFLICT
+            );
+            case BUSINESS_RULE -> buildErrorResponse(
+                    "DEPENDENT_BUSINESS_RULE_VIOLATION",
+                    exception.getMessage(),
+                    HttpStatus.BAD_REQUEST
+            );
+        };
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception) {
-        HttpStatus status = HttpStatus.BAD_REQUEST;
-        return ResponseEntity.status(status)
-                .body(ApiErrorResponse.of("INVALID_ARGUMENT", exception.getMessage(), status));
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgumentException(
+            IllegalArgumentException exception
+    ) {
+        return buildErrorResponse(
+                "INVALID_ARGUMENT",
+                exception.getMessage(),
+                HttpStatus.BAD_REQUEST
+        );
     }
 }

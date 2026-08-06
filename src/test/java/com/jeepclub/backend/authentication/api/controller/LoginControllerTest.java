@@ -22,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -215,9 +216,15 @@ class LoginControllerTest {
                 """;
 
         mockMvc.perform(post("/authentication/login")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "pt-BR")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(payload))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("Existem campos inválidos na requisição."))
+                .andExpect(jsonPath("$.errors[0].field").exists())
+                .andExpect(jsonPath("$.errors[0].code").exists())
+                .andExpect(jsonPath("$.errors[0].rejectedValue").doesNotExist());
     }
 
     private Authentication authenticatedUser(String... authorities) {
