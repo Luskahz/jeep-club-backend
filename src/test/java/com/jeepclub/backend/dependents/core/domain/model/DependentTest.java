@@ -3,162 +3,234 @@ package com.jeepclub.backend.dependents.core.domain.model;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
 import java.time.LocalDate;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DependentTest {
 
-    private final Instant now = Instant.now();
+    private static final Instant NOW = Instant.parse("2026-06-30T12:00:00Z");
 
-    @Test
-    @DisplayName("Sucesso: Criar dependente com dados válidos e consentimento LGPD aceito")
-    void shouldCreateDependentSuccessfully() {
-        Dependent dependent = Dependent.create(
+    @Nested
+    @DisplayName("creation")
+    class Creation {
+
+        @Test
+        void createsDependentWithNormalizedCpfPhoneAndConsentTimestamp() {
+            Dependent dependent = Dependent.create(
+                    "  João Silva  ",
+                    "123.456.789-00",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "(11) 99999-9999",
+                    true,
+                    1L,
+                    NOW
+            );
+
+            assertThat(dependent.getName()).isEqualTo("João Silva");
+            assertThat(dependent.getCpf()).isEqualTo("12345678900");
+            assertThat(dependent.getPhoneNumber()).isEqualTo("11999999999");
+            assertThat(dependent.getRelationshipType()).isEqualTo(RelationshipType.CHILD);
+            assertThat(dependent.isConsentAccepted()).isTrue();
+            assertThat(dependent.getConsentAcceptedAt()).isEqualTo(NOW);
+            assertThat(dependent.getSocioId()).isEqualTo(1L);
+            assertThat(dependent.getCreatedAt()).isEqualTo(NOW);
+            assertThat(dependent.getUpdatedAt()).isEqualTo(NOW);
+        }
+
+        @ParameterizedTest
+        @CsvSource({
+                "12345678900,12345678900",
+                "123.456.789-00,12345678900",
+                " 123.456.789-00 ,12345678900"
+        })
+        void acceptsExactlyElevenCpfDigitsAfterNormalization(String rawCpf, String expectedCpf) {
+            Dependent dependent = validDependent(rawCpf);
+
+            assertThat(dependent.getCpf()).isEqualTo(expectedCpf);
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = {" ", "1234567890", "123456789012"})
+        void rejectsEmptyShortAndLongCpf(String cpf) {
+            assertThatThrownBy(() -> validDependent(cpf))
+                    .isInstanceOf(DependentException.class)
+                    .hasMessageContaining(cpf == null || cpf.isBlank()
+                            ? "CPF é obrigatório."
+                            : "CPF deve conter exatamente 11 dígitos numéricos.");
+        }
+
+        @ParameterizedTest
+        @CsvSource(value = {
+                "null|null",
+                "' '|null",
+                "'(11) 98888-7777'|11988887777",
+                "'11988887777'|11988887777"
+        }, delimiter = '|', nullValues = "null")
+        void normalizesOptionalPhone(String rawPhone, String expectedPhone) {
+            Dependent dependent = Dependent.create(
+                    "Maria Silva",
+                    "98765432100",
+                    LocalDate.of(2018, 1, 1),
+                    RelationshipType.CHILD,
+                    rawPhone,
+                    true,
+                    1L,
+                    NOW
+            );
+
+            assertThat(dependent.getPhoneNumber()).isEqualTo(expectedPhone);
+        }
+
+        @Test
+        void rejectsFalseConsent() {
+            assertThatThrownBy(() -> Dependent.create(
+                    "João Silva",
+                    "12345678900",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "11999999999",
+                    false,
+                    1L,
+                    NOW
+            ))
+                    .isInstanceOf(DependentException.class)
+                    .hasMessage("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.");
+        }
+
+        @ParameterizedTest
+        @NullAndEmptySource
+        @ValueSource(strings = " ")
+        void rejectsBlankName(String name) {
+            assertThatThrownBy(() -> Dependent.create(
+                    name,
+                    "12345678900",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "11999999999",
+                    true,
+                    1L,
+                    NOW
+            ))
+                    .isInstanceOf(DependentException.class)
+                    .hasMessage("Nome do dependente é obrigatório.");
+        }
+
+        @Test
+        void rejectsMissingRelationshipTypeAndSocio() {
+            assertThatThrownBy(() -> Dependent.create(
+                    "João Silva",
+                    "12345678900",
+                    LocalDate.of(2015, 5, 10),
+                    null,
+                    "11999999999",
+                    true,
+                    1L,
+                    NOW
+            ))
+                    .isInstanceOf(DependentException.class)
+                    .hasMessage("Tipo de parentesco é obrigatório.");
+
+            assertThatThrownBy(() -> Dependent.create(
+                    "João Silva",
+                    "12345678900",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "11999999999",
+                    true,
+                    null,
+                    NOW
+            ))
+                    .isInstanceOf(DependentException.class)
+                    .hasMessage("ID do Sócio é obrigatório.");
+        }
+    }
+
+    @Nested
+    @DisplayName("update")
+    class Update {
+
+        @Test
+        void updatesDataAndKeepsOriginalConsentDateWhenAlreadyAccepted() {
+            Dependent dependent = validDependent("12345678900");
+            Instant updateTime = NOW.plusSeconds(3600);
+
+            dependent.update(
+                    "João Silva Ramos",
+                    "987.654.321-00",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "(11) 98888-8888",
+                    true,
+                    updateTime
+            );
+
+            assertThat(dependent.getName()).isEqualTo("João Silva Ramos");
+            assertThat(dependent.getCpf()).isEqualTo("98765432100");
+            assertThat(dependent.getPhoneNumber()).isEqualTo("11988888888");
+            assertThat(dependent.getConsentAcceptedAt()).isEqualTo(NOW);
+            assertThat(dependent.getUpdatedAt()).isEqualTo(updateTime);
+        }
+
+        @Test
+        void rejectsConsentRevocationOnUpdate() {
+            Dependent dependent = validDependent("12345678900");
+
+            assertThatThrownBy(() -> dependent.update(
+                    "João Silva",
+                    "12345678900",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "11999999999",
+                    false,
+                    NOW.plusSeconds(60)
+            ))
+                    .isInstanceOf(DependentException.class)
+                    .hasMessage("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.");
+        }
+
+        @Test
+        void acceptsRepeatedConsentWithoutChangingAcceptedAt() {
+            Dependent dependent = validDependent("12345678900");
+            Instant updateTime = NOW.plusSeconds(60);
+
+            dependent.update(
+                    "João Silva",
+                    "12345678900",
+                    LocalDate.of(2015, 5, 10),
+                    RelationshipType.CHILD,
+                    "11999999999",
+                    true,
+                    updateTime
+            );
+
+            assertThat(dependent.isConsentAccepted()).isTrue();
+            assertThat(dependent.getConsentAcceptedAt()).isEqualTo(NOW);
+            assertThat(dependent.getUpdatedAt()).isEqualTo(updateTime);
+        }
+    }
+
+    private Dependent validDependent(String cpf) {
+        return Dependent.create(
                 "João Silva",
-                "123.456.789-00",
+                cpf,
                 LocalDate.of(2015, 5, 10),
                 RelationshipType.CHILD,
                 "11999999999",
-                null,
                 true,
                 1L,
-                now
+                NOW
         );
-
-        assertNotNull(dependent);
-        assertEquals("João Silva", dependent.getName());
-        assertEquals("12345678900", dependent.getCpf()); // CPF normalizado
-        assertEquals(LocalDate.of(2015, 5, 10), dependent.getBirthDate());
-        assertEquals(RelationshipType.CHILD, dependent.getRelationshipType());
-        assertEquals("11999999999", dependent.getPhoneNumber());
-        assertTrue(dependent.isConsentAccepted());
-        assertEquals(1L, dependent.getSocioId());
-        assertEquals(now, dependent.getConsentAcceptedAt());
-    }
-
-    @Test
-    @DisplayName("Falha: Criar dependente sem consentimento LGPD deve lançar DependentException")
-    void shouldThrowExceptionWhenConsentNotAcceptedOnCreation() {
-        DependentException exception = assertThrows(DependentException.class, () ->
-                Dependent.create(
-                        "João Silva",
-                        "123.456.789-00",
-                        LocalDate.of(2015, 5, 10),
-                        RelationshipType.CHILD,
-                        "11999999999",
-                        null,
-                        false,
-                        1L,
-                        now
-                )
-        );
-
-        assertEquals("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("Falha: CPF é obrigatório")
-    void shouldThrowExceptionWhenCpfIsNullOrEmpty() {
-        DependentException exception = assertThrows(DependentException.class, () ->
-                Dependent.create(
-                        "Maria Silva",
-                        null,
-                        LocalDate.of(2018, 1, 1),
-                        RelationshipType.CHILD,
-                        "",
-                        null,
-                        true,
-                        1L,
-                        now
-                )
-        );
-        assertEquals("CPF é obrigatório.", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("Falha: CPF com número incorreto de dígitos deve lançar DependentException")
-    void shouldThrowExceptionForInvalidCpfLength() {
-        assertThrows(DependentException.class, () ->
-                Dependent.create(
-                        "João Silva",
-                        "123456",
-                        LocalDate.of(2015, 5, 10),
-                        RelationshipType.CHILD,
-                        "11999999999",
-                        null,
-                        true,
-                        1L,
-                        now
-                )
-        );
-    }
-
-    @Test
-    @DisplayName("Sucesso: Atualizar dependente mantendo consentimento")
-    void shouldUpdateDependentSuccessfully() {
-        Dependent dependent = Dependent.create(
-                "João Silva",
-                "12345678900",
-                LocalDate.of(2015, 5, 10),
-                RelationshipType.CHILD,
-                "11999999999",
-                null,
-                true,
-                1L,
-                now
-        );
-
-        Instant updateTime = Instant.now();
-        dependent.update(
-                "João Silva Ramos",
-                "98765432100",
-                LocalDate.of(2015, 5, 10),
-                RelationshipType.CHILD,
-                "11988888888",
-                null,
-                true,
-                updateTime
-        );
-
-        assertEquals("João Silva Ramos", dependent.getName());
-        assertEquals("98765432100", dependent.getCpf());
-        assertEquals("11988888888", dependent.getPhoneNumber());
-        assertEquals(updateTime, dependent.getUpdatedAt());
-    }
-
-    @Test
-    @DisplayName("Falha: Atualizar dependente negando consentimento LGPD deve lançar DependentException")
-    void shouldThrowExceptionWhenConsentRevokedOnUpdate() {
-        Dependent dependent = Dependent.create(
-                "João Silva",
-                "12345678900",
-                LocalDate.of(2015, 5, 10),
-                RelationshipType.CHILD,
-                "11999999999",
-                null,
-                true,
-                1L,
-                now
-        );
-
-        DependentException exception = assertThrows(DependentException.class, () ->
-                dependent.update(
-                        "João Silva",
-                        "12345678900",
-                        LocalDate.of(2015, 5, 10),
-                        RelationshipType.CHILD,
-                        "11999999999",
-                        null,
-                        false,
-                        Instant.now()
-                )
-        );
-
-        assertEquals("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.", exception.getMessage());
     }
 }
-

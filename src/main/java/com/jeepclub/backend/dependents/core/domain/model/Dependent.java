@@ -16,8 +16,6 @@ public class Dependent {
     private LocalDate birthDate;
     private RelationshipType relationshipType;
     private String phoneNumber;
-    // não, o medical profile vc n precisa se preocurar, tirar daqui essa logica, o kauan está fazendo.
-    private MedicalProfile medicalProfile;
     private boolean consentAccepted;
     private Instant consentAcceptedAt;
     private Long socioId;
@@ -33,7 +31,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            MedicalProfile medicalProfile,
             boolean consentAccepted,
             Instant consentAcceptedAt,
             Long socioId,
@@ -46,7 +43,6 @@ public class Dependent {
         this.birthDate = birthDate;
         this.relationshipType = validateRequired(relationshipType, "Tipo de parentesco");
         this.phoneNumber = normalizeNumber(phoneNumber);
-        this.medicalProfile = medicalProfile == null ? MedicalProfile.empty() : medicalProfile;
         this.consentAccepted = validateConsent(consentAccepted);
         this.consentAcceptedAt = consentAcceptedAt;
         this.socioId = validateRequired(socioId, "ID do Sócio");
@@ -60,7 +56,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            MedicalProfile medicalProfile,
             boolean consentAccepted,
             Long socioId,
             Instant now
@@ -73,7 +68,6 @@ public class Dependent {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                medicalProfile,
                 consentAccepted,
                 consentAt,
                 socioId,
@@ -89,7 +83,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            MedicalProfile medicalProfile,
             boolean consentAccepted,
             Instant consentAcceptedAt,
             Long socioId,
@@ -103,7 +96,6 @@ public class Dependent {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                medicalProfile,
                 consentAccepted,
                 consentAcceptedAt,
                 socioId,
@@ -118,7 +110,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            MedicalProfile medicalProfile,
             boolean consentAccepted,
             Instant now
     ) {
@@ -127,7 +118,6 @@ public class Dependent {
         this.birthDate = birthDate;
         this.relationshipType = validateRequired(relationshipType, "Tipo de parentesco");
         this.phoneNumber = normalizeNumber(phoneNumber);
-        this.medicalProfile = medicalProfile == null ? MedicalProfile.empty() : medicalProfile;
         
         if (consentAccepted && !this.consentAccepted) {
             this.consentAccepted = true;
@@ -178,4 +168,3 @@ public class Dependent {
         return raw.replaceAll("\\D", "");
     }
 }
-

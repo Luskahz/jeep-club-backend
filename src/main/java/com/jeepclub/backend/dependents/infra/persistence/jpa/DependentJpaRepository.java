@@ -11,5 +11,5 @@ public interface DependentJpaRepository extends JpaRepository<DependentEntity, L
     List<DependentEntity> findAllBySocioId(Long socioId);
     boolean existsByCpf(String cpf);
     boolean existsByCpfAndIdNot(String cpf, Long id);
+    boolean existsByIdAndSocioId(Long id, Long socioId);
 }
-

@@ -41,22 +41,6 @@ public class DependentEntity {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    // === Medical Profile (Dados médicos sensíveis - RN012) ===
-    @Column(name = "blood_type", length = 5)
-    private String bloodType;
-
-    @Column(name = "allergies", columnDefinition = "TEXT")
-    private String allergies;
-
-    @Column(name = "chronic_diseases", columnDefinition = "TEXT")
-    private String chronicDiseases;
-
-    @Column(name = "medications", columnDefinition = "TEXT")
-    private String medications;
-
-    @Column(name = "medical_notes", columnDefinition = "TEXT")
-    private String medicalNotes;
-
     // === LGPD Consent (RN013) ===
     @Column(name = "consent_accepted", nullable = false)
     private boolean consentAccepted;
@@ -76,4 +60,3 @@ public class DependentEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 }
-

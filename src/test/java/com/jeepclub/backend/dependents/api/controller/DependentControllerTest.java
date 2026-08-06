@@ -14,7 +14,15 @@ import com.jeepclub.backend.dependents.core.application.service.DeleteDependentS
 import com.jeepclub.backend.dependents.core.application.service.GetDependentService;
 import com.jeepclub.backend.dependents.core.application.service.UpdateDependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
+import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
+import com.jeepclub.backend.dependents.api.http.dto.dependent.MedicalProfileDTO;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.core.application.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
+import com.jeepclub.backend.health.core.domain.BloodType;
+import com.jeepclub.backend.health.core.domain.MedicalProfile;
+import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +48,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -66,6 +75,9 @@ class DependentControllerTest {
     private GetDependentService getDependentService;
 
     @MockitoBean
+    private MedicalProfileService medicalProfileService;
+
+    @MockitoBean
     private JwtTokenParser jwtTokenParser;
 
     @MockitoBean
@@ -90,7 +102,6 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11988887777",
-                null,
                 true,
                 Instant.now(),
                 1L, // socioId = 1
@@ -123,8 +134,10 @@ class DependentControllerTest {
 
         when(createDependentService.create(
                 anyString(), anyString(), any(LocalDate.class),
-                any(RelationshipType.class), anyString(), any(), anyBoolean(), anyLong()
+                any(RelationshipType.class), anyString(), anyBoolean(), anyLong()
         )).thenReturn(mockDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
 
         mockMvc.perform(post("/dependents")
                         .principal(mockAuth)
@@ -136,6 +149,39 @@ class DependentControllerTest {
                 .andExpect(jsonPath("$.cpf").value("12345678900"))
                 .andExpect(jsonPath("$.relationshipType").value("CHILD"))
                 .andExpect(jsonPath("$.consentAccepted").value(true));
+    }
+
+    @Test
+    @DisplayName("Sucesso: Criar dependente com perfil médico grava o perfil no módulo Health")
+    void shouldCreateDependentMedicalProfileInHealth() throws Exception {
+        CreateDependentRequestDTO request = new CreateDependentRequestDTO(
+                "Pedro Silva",
+                "12345678900",
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11988887777",
+                new MedicalProfileDTO("O+", "Dipirona", "Asma", "Aerolin", "Usar bombinha em crise"),
+                true
+        );
+
+        when(createDependentService.create(
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyBoolean(), anyLong()
+        )).thenReturn(mockDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
+
+        mockMvc.perform(post("/dependents")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        verify(medicalProfileService).upsertByOwner(
+                eq(MedicalProfileOwnerType.DEPENDENT),
+                eq(10L),
+                any(MedicalProfileRequest.class)
+        );
     }
 
     @Test
@@ -159,6 +205,53 @@ class DependentControllerTest {
     }
 
     @Test
+    @DisplayName("Falha: Tentar criar dependente sem consentimento deve retornar erro de validação")
+    void shouldReturnBadRequestWhenConsentIsMissing() throws Exception {
+        CreateDependentRequestDTO request = new CreateDependentRequestDTO(
+                "Pedro Silva",
+                "12345678900",
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11988887777",
+                null,
+                null
+        );
+
+        mockMvc.perform(post("/dependents")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @DisplayName("Falha: Tentar criar dependente com consentimento falso deve retornar erro de negócio")
+    void shouldReturnBadRequestWhenConsentIsFalse() throws Exception {
+        CreateDependentRequestDTO request = new CreateDependentRequestDTO(
+                "Pedro Silva",
+                "12345678900",
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11988887777",
+                null,
+                false
+        );
+
+        when(createDependentService.create(
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), eq(false), anyLong()
+        )).thenThrow(new DependentException("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes."));
+
+        mockMvc.perform(post("/dependents")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("DEPENDENT_BUSINESS_RULE_VIOLATION"));
+    }
+
+    @Test
     @DisplayName("Sucesso: Listar dependentes do Sócio autenticado")
     void shouldListMyDependentsSuccessfully() throws Exception {
         when(getDependentService.getBySocioId(eq(1L), eq(1L), eq(false)))
@@ -176,12 +269,33 @@ class DependentControllerTest {
     void shouldGetDependentByIdSuccessfully() throws Exception {
         when(getDependentService.getById(eq(10L), eq(1L), eq(false)))
                 .thenReturn(mockDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenReturn(MedicalProfile.reconstitute(
+                        20L,
+                        MedicalProfileOwnerType.DEPENDENT,
+                        10L,
+                        BloodType.O_POSITIVE,
+                        "Dipirona",
+                        "Asma",
+                        "Aerolin",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "Usar bombinha em crise",
+                        Instant.now(),
+                        Instant.now()
+                ));
 
         mockMvc.perform(get("/dependents/10")
                         .principal(mockAuth))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10L))
-                .andExpect(jsonPath("$.name").value("Pedro Silva"));
+                .andExpect(jsonPath("$.name").value("Pedro Silva"))
+                .andExpect(jsonPath("$.medicalProfile.bloodType").value("O_POSITIVE"))
+                .andExpect(jsonPath("$.medicalProfile.allergies").value("Dipirona"));
     }
 
     @Test
@@ -204,7 +318,6 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11999998888",
-                null,
                 true,
                 Instant.now(),
                 1L,
@@ -214,8 +327,10 @@ class DependentControllerTest {
 
         when(updateDependentService.update(
                 eq(10L), anyString(), anyString(), any(LocalDate.class),
-                any(RelationshipType.class), anyString(), any(), anyBoolean(), eq(1L), eq(false)
+                any(RelationshipType.class), anyString(), anyBoolean(), eq(1L), eq(false)
         )).thenReturn(updatedDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
 
         mockMvc.perform(put("/dependents/10")
                         .principal(mockAuth)
@@ -227,6 +342,39 @@ class DependentControllerTest {
     }
 
     @Test
+    @DisplayName("Sucesso: Atualizar dependente com perfil médico atualiza o perfil no módulo Health")
+    void shouldUpdateDependentMedicalProfileInHealth() throws Exception {
+        UpdateDependentRequestDTO request = new UpdateDependentRequestDTO(
+                "Pedro Silva Ramos",
+                "12345678900",
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11999998888",
+                new MedicalProfileDTO("O+", "Dipirona", "Asma", "Aerolin", "Usar bombinha em crise"),
+                true
+        );
+
+        when(updateDependentService.update(
+                eq(10L), anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyBoolean(), eq(1L), eq(false)
+        )).thenReturn(mockDependent);
+        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
+                .thenThrow(new MedicalProfileNotFoundException());
+
+        mockMvc.perform(put("/dependents/10")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(medicalProfileService).upsertByOwner(
+                eq(MedicalProfileOwnerType.DEPENDENT),
+                eq(10L),
+                any(MedicalProfileRequest.class)
+        );
+    }
+
+    @Test
     @DisplayName("Sucesso: Remover dependente")
     void shouldDeleteDependentSuccessfully() throws Exception {
         doNothing().when(deleteDependentService).delete(eq(10L), eq(1L), eq(false));
@@ -234,6 +382,8 @@ class DependentControllerTest {
         mockMvc.perform(delete("/dependents/10")
                         .principal(mockAuth))
                 .andExpect(status().isNoContent());
+
+        verify(deleteDependentService).delete(10L, 1L, false);
     }
 
     @Test
@@ -257,7 +407,6 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11988887777",
-                null,
                 true,
                 Instant.now(),
                 5L, // Pertence ao socioId = 5
@@ -282,6 +431,56 @@ class DependentControllerTest {
 
         mockMvc.perform(get("/socios/5/dependents/10"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Falha: Dependente nao encontrado retorna 404")
+    void shouldReturnNotFoundWhenDependentDoesNotExist() throws Exception {
+        when(getDependentService.getById(eq(10L), eq(1L), eq(false)))
+                .thenThrow(new DependentException("Dependente não encontrado com o ID fornecido."));
+
+        mockMvc.perform(get("/dependents/10")
+                        .principal(mockAuth))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("DEPENDENT_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("Falha: Dependente sem permissao retorna 403")
+    void shouldReturnForbiddenWhenUserCannotAccessDependent() throws Exception {
+        when(getDependentService.getById(eq(10L), eq(1L), eq(false)))
+                .thenThrow(new DependentException("Você não tem permissão para visualizar este dependente."));
+
+        mockMvc.perform(get("/dependents/10")
+                        .principal(mockAuth))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("DEPENDENT_ACCESS_DENIED"));
+    }
+
+    @Test
+    @DisplayName("Falha: CPF duplicado retorna 409")
+    void shouldReturnConflictWhenCpfAlreadyExists() throws Exception {
+        CreateDependentRequestDTO request = new CreateDependentRequestDTO(
+                "Pedro Silva",
+                "12345678900",
+                LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD,
+                "11988887777",
+                null,
+                true
+        );
+
+        when(createDependentService.create(
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyBoolean(), anyLong()
+        )).thenThrow(new DependentException("Já existe um dependente cadastrado com este CPF."));
+
+        mockMvc.perform(post("/dependents")
+                        .principal(mockAuth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DEPENDENT_CONFLICT"));
     }
 
     @TestConfiguration
