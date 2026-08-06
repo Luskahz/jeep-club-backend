@@ -42,11 +42,11 @@ public class UpdateDependentService {
 
         // 1. Buscar o dependente existente
         Dependent dependent = dependentRepository.findById(id)
-                .orElseThrow(() -> new DependentException("Dependente não encontrado com o ID fornecido."));
+                .orElseThrow(DependentException::notFound);
 
         // 2. Validar permissão (Apenas o Sócio titular dono ou um Diretor/Admin pode alterar)
         if (!isDirector && !dependent.getSocioId().equals(requestingUserId)) {
-            throw new DependentException("Você não tem permissão para alterar os dados deste dependente.");
+            throw DependentException.accessDenied();
         }
 
         // 3. Normalizar CPF e validar unicidade
@@ -57,11 +57,11 @@ public class UpdateDependentService {
             // Se o CPF mudou, validar unicidade
             if (!cleanCpf.equals(dependent.getCpf())) {
                 if (userRepository.existsByCpf(cleanCpf)) {
-                    throw new DependentException("Já existe um sócio cadastrado com este CPF.");
+                    throw DependentException.conflict();
                 }
 
                 if (dependentRepository.existsByCpfAndIdNot(cleanCpf, id)) {
-                    throw new DependentException("Já existe outro dependente cadastrado com este CPF.");
+                    throw DependentException.conflict();
                 }
             }
         }

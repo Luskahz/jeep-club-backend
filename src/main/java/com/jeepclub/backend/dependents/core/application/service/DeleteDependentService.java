@@ -19,11 +19,11 @@ public class DeleteDependentService {
     public void delete(Long id, Long requestingUserId, boolean isDirector) {
         // 1. Buscar dependente
         Dependent dependent = dependentRepository.findById(id)
-                .orElseThrow(() -> new DependentException("Dependente não encontrado com o ID fornecido."));
+                .orElseThrow(DependentException::notFound);
 
         // 2. Validar permissão (Apenas o Sócio titular dono ou um Diretor pode deletar)
         if (!isDirector && !dependent.getSocioId().equals(requestingUserId)) {
-            throw new DependentException("Você não tem permissão para remover este dependente.");
+            throw DependentException.accessDenied();
         }
 
         // 3. Excluir dependente

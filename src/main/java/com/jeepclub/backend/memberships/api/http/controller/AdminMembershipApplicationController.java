@@ -1,7 +1,9 @@
 package com.jeepclub.backend.memberships.api.http.controller;
 
+import com.jeepclub.backend.memberships.api.http.dto.AccessLinkApprovalResponseDTO;
 import com.jeepclub.backend.memberships.api.http.dto.MembershipApplicationResponseDTO;
 import com.jeepclub.backend.memberships.api.http.dto.RejectMembershipRequestDTO;
+import com.jeepclub.backend.memberships.api.http.dto.TemporaryPasswordApprovalResponseDTO;
 import com.jeepclub.backend.memberships.core.application.service.membershipactivationtoken.AdminMembershipActivationTokenService;
 import com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
@@ -52,15 +54,40 @@ public class AdminMembershipApplicationController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PostMapping("/{id}/approve")
+    @PostMapping("/{id}/approve/temporary-password")
     @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE')")
-    @Operation(summary = "Aprovar solicitação", description = "Cria usuário com PENDING_FIRST_ACCESS e envia link por e-mail.")
-    public ResponseEntity<Void> approve(
+    @Operation(
+            summary = "Aprovar solicitação com senha temporária",
+            description = "Cria o usuário com PENDING_FIRST_ACCESS e retorna a senha temporária uma única vez para o administrador."
+    )
+    public ResponseEntity<TemporaryPasswordApprovalResponseDTO> approveWithTemporaryPassword(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        adminMembershipService.approve(id, principal.getUserId());
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+        var result = adminMembershipService.approveWithTemporaryPassword(
+                id,
+                principal.getUserId()
+        );
+
+        return ResponseEntity.ok(TemporaryPasswordApprovalResponseDTO.from(result));
+    }
+
+    @PostMapping("/{id}/approve/access-link")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE')")
+    @Operation(
+            summary = "Aprovar solicitação com link de acesso",
+            description = "Cria o usuário com PENDING_FIRST_ACCESS e retorna um link com token para definição da senha."
+    )
+    public ResponseEntity<AccessLinkApprovalResponseDTO> approveWithAccessLink(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        var result = adminMembershipActivationTokenService.approveWithAccessLink(
+                id,
+                principal.getUserId()
+        );
+
+        return ResponseEntity.ok(AccessLinkApprovalResponseDTO.from(result));
     }
 
     @PostMapping("/{id}/reject")
@@ -76,11 +103,4 @@ public class AdminMembershipApplicationController {
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    @PostMapping("/{id}/resend-invite")
-    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND')")
-    @Operation(summary = "Reenviar convite de ativação", description = "Invalida o token anterior e envia um novo link de ativação por e-mail.")
-    public ResponseEntity<Void> resendInvite(@PathVariable Long id) {
-        adminMembershipActivationTokenService.resend(id);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
 }

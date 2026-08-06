@@ -10,16 +10,19 @@ import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvi
 import com.jeepclub.backend.platform.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.exception.ApiProblemResponseWriter;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -33,6 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokenParser tokenParser;
     private final UserAuthoritiesProvider userAuthoritiesProvider;
     private final AccessTokenAuthenticationService accessTokenAuthenticationService;
+    private final ObjectProvider<ApiProblemResponseWriter> problemWriterProvider;
 
     @Override
     protected void doFilterInternal(
@@ -90,7 +94,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                  | UserDisabledException
                  | UserIdNotFoundException exception) {
             SecurityContextHolder.clearContext();
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            ApiProblemResponseWriter problemWriter = problemWriterProvider.getIfAvailable();
+            if (problemWriter == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            } else {
+                problemWriter.write(
+                        request,
+                        response,
+                        HttpStatus.UNAUTHORIZED,
+                        "INVALID_ACCESS_TOKEN"
+                );
+            }
             return;
         }
 

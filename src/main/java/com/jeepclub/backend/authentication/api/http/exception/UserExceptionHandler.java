@@ -5,6 +5,10 @@ import com.jeepclub.backend.authentication.core.application.exceptions.user.Regi
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserCpfNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidCredentialsException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserInvalidPasswordException;
+import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserAlreadyDisabledException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserBlockedForLoginException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserCannotChangePasswordException;
@@ -163,6 +167,30 @@ public class UserExceptionHandler extends ApiExceptionHandler {
     ) {
         return buildErrorResponse(
                 "REGISTRATION_CONFLICT",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(UserCpfNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserCpfNotFound(UserCpfNotFoundException exception) {
+        return buildErrorResponse("USER_CPF_NOT_FOUND", exception.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler({
+            UserInvalidCredentialsException.class,
+            UserInvalidPasswordException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleUserInvalidCredentials(RuntimeException exception) {
+        return buildErrorResponse("INVALID_CREDENTIALS", exception.getMessage(), HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(UserPasswordChangeNotRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserPasswordChangeNotRequired(
+            UserPasswordChangeNotRequiredException exception
+    ) {
+        return buildErrorResponse(
+                "USER_PASSWORD_CHANGE_NOT_REQUIRED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
         );

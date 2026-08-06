@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -49,13 +50,28 @@ class AuthenticationSecurityIntegrationTest {
     @Test
     void authenticatedAndAdministrativeRoutesRemainProtected() throws Exception {
         mockMvc.perform(get("/authentication/me"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(post("/authentication/logout"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/authentication/admin/users"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/authentication/admin/password-recovery/requests"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    void invalidBearerTokenUsesLocalizedProblemDetail() throws Exception {
+        mockMvc.perform(get("/authentication/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-token")
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "en"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_ACCESS_TOKEN"))
+                .andExpect(jsonPath("$.detail").value("The access token is invalid or has expired."))
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 
     @Test

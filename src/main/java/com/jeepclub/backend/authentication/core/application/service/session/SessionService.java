@@ -94,25 +94,32 @@ public class SessionService {
             throw new UserPasswordChangeNotRequiredException();
         }
 
-        PasswordRecoveryRequest request = recoveryRequestRepository
-                .findOpenByUserIdAndMethodForUpdate(
-                        user.getId(),
-                        PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD,
-                        now
-                )
-                .orElseThrow(() -> new PasswordRecoveryRequestNotFoundException(
-                        "Open temporary password recovery request not found."
-                ));
+        PasswordRecoveryRequest request = null;
+        if (!user.isPendingFirstAccess()) {
+            request = recoveryRequestRepository
+                    .findOpenByUserIdAndMethodForUpdate(
+                            user.getId(),
+                            PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD,
+                            now
+                    )
+                    .orElseThrow(() -> new PasswordRecoveryRequestNotFoundException(
+                            "Open temporary password recovery request not found."
+                    ));
+        }
 
         user.changePassword(passwordHasher.hash(newPassword), now);
-        request.resolve(now);
+        if (request != null) {
+            request.resolve(now);
+        }
         challenge.markAsUsed(now);
         credentialRevocationService.revokeAllForUser(user.getId(), now);
 
         AuthTokens tokens = tokenIssuanceService.issue(user, now);
         user.recordSuccessfulLogin(now);
         userRepository.save(user);
-        recoveryRequestRepository.save(request);
+        if (request != null) {
+            recoveryRequestRepository.save(request);
+        }
         challengeRepository.save(challenge);
         return tokens;
     }

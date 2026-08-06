@@ -1,14 +1,11 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipactivationtoken;
 
-import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
-import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyProcessedException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.memberships.core.domain.model.MemberActivationToken;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
-import com.jeepclub.backend.memberships.core.port.MemberActivationMailSender;
-import com.jeepclub.backend.memberships.core.port.MembershipTimeProperties;
-import com.jeepclub.backend.memberships.core.repository.MemberActivationTokenRepository;
+import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
+import com.jeepclub.backend.memberships.core.port.PendingFirstAccessLink;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,41 +19,37 @@ import java.time.Instant;
 public class AdminMembershipActivationTokenService {
 
     private final MembershipApplicationRepository membershipApplicationRepository;
-    private final MemberActivationTokenRepository memberActivationTokenRepository;
-    private final RefreshTokenGenerator tokenGenerator;
-    private final RefreshTokenHashService tokenHashService;
-    private final MemberActivationMailSender mailSender;
-    private final MembershipTimeProperties membershipTimeProperties;
+    private final CreateUserWithPendingFirstAccessPort createUserPort;
     private final Clock clock;
 
     @Transactional
-    public void resend(Long applicationId) {
+    public PendingFirstAccessLink approveWithAccessLink(
+            Long applicationId,
+            Long reviewedByUserId
+    ) {
         Instant now = Instant.now(clock);
 
         MembershipApplication application = membershipApplicationRepository
                 .findById(applicationId)
                 .orElseThrow(() -> new MembershipApplicationNotFoundException(applicationId));
 
-        if (application.getStatus() != MembershipApplicationStatus.APPROVED) {
-            throw new IllegalStateException(
-                    "Reenvio de convite não permitido para solicitações com status: "
-                            + application.getStatus().name()
+        if (application.getStatus() != MembershipApplicationStatus.PENDING) {
+            throw new MembershipApplicationAlreadyProcessedException(
+                    applicationId,
+                    application.getStatus().name()
             );
         }
 
-        memberActivationTokenRepository.invalidateAllByApplicationId(applicationId, now);
-
-        String rawToken = tokenGenerator.generate();
-        String tokenHash = tokenHashService.hash(rawToken);
-
-        MemberActivationToken activationToken = MemberActivationToken.create(
-                applicationId,
-                tokenHash,
-                membershipTimeProperties.activationTokenTtl(),
-                now
+        PendingFirstAccessLink pendingUser = createUserPort.createPendingUserWithAccessLink(
+                application.getName(),
+                application.getEmail(),
+                application.getCpf(),
+                application.getPhoneNumber()
         );
-        memberActivationTokenRepository.save(activationToken);
 
-        mailSender.sendActivationLink(application.getEmail(), application.getName(), rawToken);
+        application.approve(reviewedByUserId, pendingUser.userId(), now);
+        membershipApplicationRepository.save(application);
+
+        return pendingUser;
     }
 }

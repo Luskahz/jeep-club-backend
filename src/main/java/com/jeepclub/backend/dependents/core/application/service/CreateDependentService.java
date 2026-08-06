@@ -38,7 +38,7 @@ public class CreateDependentService {
 
         // 1. Validar se o Sócio existe na base de dados
         if (!userRepository.existsById(socioId)) {
-            throw new DependentException("Sócio titular não encontrado com o ID fornecido.");
+            throw DependentException.notFound();
         }
 
         // 2. Normalizar e validar unicidade de CPF se fornecido
@@ -53,12 +53,12 @@ public class CreateDependentService {
             // faça um port lá em dependents.core.port e um adapter lá no infra do authentication para implementar oque seu port precisa
             // pesquise sobre como fazer
             if (userRepository.existsByCpf(cleanCpf)) {
-                throw new DependentException("Já existe um sócio cadastrado com este CPF.");
+                throw DependentException.conflict();
             }
 
             // Validar se CPF existe na tabela de Dependentes
             if (dependentRepository.existsByCpf(cleanCpf)) {
-                throw new DependentException("Já existe um dependente cadastrado com este CPF.");
+                throw DependentException.conflict();
             }
         }
 

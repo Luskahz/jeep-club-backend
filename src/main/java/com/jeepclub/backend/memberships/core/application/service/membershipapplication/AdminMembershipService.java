@@ -1,16 +1,12 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipapplication;
 
-import com.jeepclub.backend.authentication.core.port.RefreshTokenGenerator;
-import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyProcessedException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
-import com.jeepclub.backend.memberships.core.domain.model.MemberActivationToken;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
 import com.jeepclub.backend.memberships.core.port.MemberActivationMailSender;
-import com.jeepclub.backend.memberships.core.port.MembershipTimeProperties;
-import com.jeepclub.backend.memberships.core.repository.MemberActivationTokenRepository;
+import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,12 +23,8 @@ import java.util.Optional;
 public class AdminMembershipService {
 
     private final MembershipApplicationRepository membershipApplicationRepository;
-    private final MemberActivationTokenRepository memberActivationTokenRepository;
     private final CreateUserWithPendingFirstAccessPort createUserPort;
-    private final RefreshTokenGenerator tokenGenerator;
-    private final RefreshTokenHashService tokenHashService;
     private final MemberActivationMailSender mailSender;
-    private final MembershipTimeProperties membershipTimeProperties;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -54,34 +46,25 @@ public class AdminMembershipService {
     }
 
     @Transactional
-    public void approve(Long applicationId, Long reviewedByUserId) {
+    public PendingFirstAccessUser approveWithTemporaryPassword(
+            Long applicationId,
+            Long reviewedByUserId
+    ) {
         Instant now = Instant.now(clock);
         MembershipApplication application = findPendingApplication(applicationId);
 
-        Long createdUserId = createUserPort.createPendingUser(
+        PendingFirstAccessUser pendingUser =
+                createUserPort.createPendingUserWithTemporaryPassword(
                 application.getName(),
                 application.getEmail(),
                 application.getCpf(),
                 application.getPhoneNumber()
         );
 
-        memberActivationTokenRepository.invalidateAllByApplicationId(applicationId, now);
-
-        String rawToken = tokenGenerator.generate();
-        String tokenHash = tokenHashService.hash(rawToken);
-
-        MemberActivationToken activationToken = MemberActivationToken.create(
-                applicationId,
-                tokenHash,
-                membershipTimeProperties.activationTokenTtl(),
-                now
-        );
-        memberActivationTokenRepository.save(activationToken);
-
-        application.approve(reviewedByUserId, createdUserId, now);
+        application.approve(reviewedByUserId, pendingUser.userId(), now);
         membershipApplicationRepository.save(application);
 
-        mailSender.sendActivationLink(application.getEmail(), application.getName(), rawToken);
+        return pendingUser;
     }
 
     @Transactional

@@ -249,7 +249,12 @@ public class User {
     }
 
     public boolean isChangePasswordRequired() {
-        return credentialStatus == CredentialStatus.CHANGE_REQUIRED;
+        return credentialStatus == CredentialStatus.CHANGE_REQUIRED
+                || credentialStatus == CredentialStatus.PENDING_FIRST_ACCESS;
+    }
+
+    public boolean isPendingFirstAccess() {
+        return credentialStatus == CredentialStatus.PENDING_FIRST_ACCESS;
     }
 
     public void unlock() {

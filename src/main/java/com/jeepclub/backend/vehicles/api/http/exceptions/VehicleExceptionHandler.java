@@ -5,14 +5,14 @@ import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFou
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
-import com.jeepclub.backend.shared.exception.BuilderExceptionHandler;
+import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.vehicles")
-public class VehicleExceptionHandler extends BuilderExceptionHandler {
+public class VehicleExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(VehiclePlateAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleVehiclePlateAlreadyExists(VehiclePlateAlreadyExistsException exception) {
