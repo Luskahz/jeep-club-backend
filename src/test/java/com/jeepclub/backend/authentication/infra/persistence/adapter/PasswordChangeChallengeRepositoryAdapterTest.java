@@ -22,7 +22,7 @@ class PasswordChangeChallengeRepositoryAdapterTest {
     private PasswordChangeChallengeRepositoryAdapter adapter;
 
     @Test
-    @DisplayName("invalidateActiveByUserId delega para o update em lote do repositório JPA")
+    @DisplayName("invalidateActiveByUserId delega para o update em lote do repositÃ³rio JPA")
     void shouldDelegateInvalidationToBulkUpdate() {
         Instant now = Instant.parse("2026-05-21T18:00:00Z");
 

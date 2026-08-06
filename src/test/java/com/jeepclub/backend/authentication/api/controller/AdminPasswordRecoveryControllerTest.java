@@ -48,7 +48,7 @@ class AdminPasswordRecoveryControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: administrador gera senha provisória")
+    @DisplayName("Sucesso: administrador gera senha provisÃ³ria")
     void shouldReturnOkWhenAdminGeneratesTemporaryPassword() throws Exception {
         Instant createdAt = Instant.parse("2026-05-21T18:00:00Z");
         Instant expiresAt = Instant.parse("2026-05-28T18:00:00Z");
@@ -80,7 +80,7 @@ class AdminPasswordRecoveryControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: administrador gera link de redefinição")
+    @DisplayName("Sucesso: administrador gera link de redefiniÃ§Ã£o")
     void shouldReturnOkWhenAdminGeneratesResetLink() throws Exception {
         Instant createdAt = Instant.parse("2026-05-21T18:00:00Z");
         Instant expiresAt = Instant.parse("2026-05-28T18:00:00Z");

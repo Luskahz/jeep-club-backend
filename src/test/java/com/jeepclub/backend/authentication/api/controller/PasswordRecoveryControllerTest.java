@@ -71,7 +71,7 @@ class PasswordRecoveryControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: cria ou consulta solicitação aberta de recuperação")
+    @DisplayName("Sucesso: cria ou consulta solicitaÃ§Ã£o aberta de recuperaÃ§Ã£o")
     void shouldCreateOrGetOpenRecoveryRequest() throws Exception {
         PasswordRecoveryRequest recoveryRequest =
                 createOpenRecoveryRequest();
@@ -103,7 +103,7 @@ class PasswordRecoveryControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: envia token de recuperação por e-mail")
+    @DisplayName("Sucesso: envia token de recuperaÃ§Ã£o por e-mail")
     void shouldSendRecoveryEmailToken() throws Exception {
         PasswordRecoveryRequest recoveryRequest =
                 createOpenRecoveryRequest();
