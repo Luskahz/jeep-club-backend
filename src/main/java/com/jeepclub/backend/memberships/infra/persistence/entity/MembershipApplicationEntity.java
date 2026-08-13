@@ -22,7 +22,7 @@ public class MembershipApplicationEntity {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @Column(nullable = false, unique = true, length = 11)
+    @Column(nullable = false, length = 11)
     private String cpf;
 
     @Column(nullable = false, length = 200)

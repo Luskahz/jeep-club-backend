@@ -71,4 +71,26 @@ public class MembershipApplicationRepositoryAdapter implements MembershipApplica
     public boolean existsByCpf(String cpf) {
         return jpaRepository.existsByCpf(cpf);
     }
+
+    @Override
+    public boolean existsByEmail(String email){ return jpaRepository.existsByEmail(email); }
+
+
+
+    @Override
+    public Optional<MembershipApplication> findByCpfAndStatus(
+            String cpf,
+            MembershipApplicationStatus status
+    ) {
+        return jpaRepository.findByCpfAndStatus(cpf, status)
+                .map(MembershipApplicationMapper::toDomain);
+    }
+
+    @Override
+    public boolean existsByEmailAndStatus(
+            String email,
+            MembershipApplicationStatus status
+    ) {
+        return jpaRepository.existsByEmailAndStatus(email, status);
+    }
 }

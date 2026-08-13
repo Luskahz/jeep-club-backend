@@ -1,6 +1,13 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipapplication;
 
+import com.jeepclub.backend.authentication.api.module.user.UserQuery;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicantBlockedException;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipCpfAlreadyRegisteredException;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipEmailAlreadyInUseException;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipEmailAlreadyRegisteredException;
 import com.jeepclub.backend.memberships.core.application.result.EnsureMembershipRequestResult;
+import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.MembershipApplicantBlockService;
+import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +22,8 @@ import java.time.Instant;
 public class MembershipApplicationService {
 
     private final MembershipApplicationRepository repository;
+    private final MembershipApplicantBlockService membershipApplicantBlockService;
+    private final UserQuery userQuery;
     private final Clock clock;
 
     @Transactional
@@ -26,16 +35,48 @@ public class MembershipApplicationService {
             String message
     ) {
         String normalizedCpf = cpf.replaceAll("\\D", "");
+        String normalizedEmail = normalizeEmail(email);
 
-        return repository.findByCpf(normalizedCpf)
-                .map(EnsureMembershipRequestResult::existing)
-                .orElseGet(() -> create(
-                        name,
+        if (membershipApplicantBlockService.isBlocked(normalizedCpf)) {
+            throw new MembershipApplicantBlockedException();
+        }
+
+        return repository.findByCpfAndStatus(
                         normalizedCpf,
-                        email,
-                        phoneNumber,
-                        message
-                ));
+                        MembershipApplicationStatus.PENDING
+                )
+                .map(EnsureMembershipRequestResult::existing)
+                .orElseGet(() -> {
+                    validateAvailability(
+                            normalizedCpf,
+                            normalizedEmail
+                    );
+
+                    return create(
+                            name,
+                            normalizedCpf,
+                            normalizedEmail,
+                            phoneNumber,
+                            message
+                    );
+                });
+    }
+
+    private void validateAvailability(String cpf, String email) {
+        if (userQuery.existsByCpf(cpf)) {
+            throw new MembershipCpfAlreadyRegisteredException(cpf);
+        }
+
+        if (repository.existsByEmailAndStatus(
+                email,
+                MembershipApplicationStatus.PENDING
+        )) {
+            throw new MembershipEmailAlreadyInUseException(email);
+        }
+
+        if (userQuery.existsByEmail(email)) {
+            throw new MembershipEmailAlreadyRegisteredException(email);
+        }
     }
 
     private EnsureMembershipRequestResult create(
@@ -50,8 +91,8 @@ public class MembershipApplicationService {
         MembershipApplication application = MembershipApplication.create(
                 name,
                 cpf,
-                normalizeEmail(email),
-                phoneNumber.replaceAll("\\D", ""),
+                email,
+                normalizePhoneNumber(phoneNumber),
                 normalizeNullable(message),
                 now
         );
@@ -65,6 +106,12 @@ public class MembershipApplicationService {
         return email == null || email.isBlank()
                 ? null
                 : email.trim().toLowerCase();
+    }
+
+    private static String normalizePhoneNumber(String phoneNumber) {
+        return phoneNumber == null || phoneNumber.isBlank()
+                ? null
+                : phoneNumber.replaceAll("\\D", "");
     }
 
     private static String normalizeNullable(String value) {

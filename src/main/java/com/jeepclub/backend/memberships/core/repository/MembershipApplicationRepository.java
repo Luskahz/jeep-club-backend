@@ -25,4 +25,17 @@ public interface MembershipApplicationRepository {
     Page<MembershipApplication> findAllByStatus(MembershipApplicationStatus status, Pageable pageable);
 
     boolean existsByCpf(String cpf);
+
+    boolean existsByEmail(String email);
+
+    Optional<MembershipApplication> findByCpfAndStatus(
+            String cpf,
+            MembershipApplicationStatus status
+    );
+
+    boolean existsByEmailAndStatus(
+            String email,
+            MembershipApplicationStatus status
+    );
+
 }

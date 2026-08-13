@@ -1,13 +1,8 @@
 package com.jeepclub.backend.memberships.api.http.exception;
 
+import com.jeepclub.backend.memberships.core.application.exception.*;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
-import com.jeepclub.backend.memberships.core.application.exception.MemberActivationTokenAlreadyUsedException;
-import com.jeepclub.backend.memberships.core.application.exception.MemberActivationTokenExpiredException;
-import com.jeepclub.backend.memberships.core.application.exception.MemberActivationTokenNotFoundException;
-import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyExistsException;
-import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyProcessedException;
-import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -31,6 +26,25 @@ public class MembershipExceptionHandler extends ApiExceptionHandler {
         return buildErrorResponse("MEMBERSHIP_APPLICATION_ALREADY_PROCESSED", ex.getMessage(), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(MembershipApplicantBlockedException.class)
+    public ResponseEntity<ApiErrorResponse> handleApplicantBlocked(MembershipApplicantBlockedException ex) {
+        return buildErrorResponse("MEMBERSHIP_APPLICATION_NOT_ALLOWED", ex.getMessage(), HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(MembershipApplicantAlreadyBlockedException.class)
+    public ResponseEntity<ApiErrorResponse> handleApplicantAlreadyBlocked(
+            MembershipApplicantAlreadyBlockedException ex
+    ) {
+        return buildErrorResponse("MEMBERSHIP_APPLICANT_ALREADY_BLOCKED", ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MembershipApplicantBlockNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleApplicantBlockNotFound(
+            MembershipApplicantBlockNotFoundException ex
+    ) {
+        return buildErrorResponse("MEMBERSHIP_APPLICANT_BLOCK_NOT_FOUND", ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(MemberActivationTokenNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleTokenNotFound(MemberActivationTokenNotFoundException ex) {
         return buildErrorResponse("ACTIVATION_TOKEN_NOT_FOUND", ex.getMessage(), HttpStatus.NOT_FOUND);
@@ -49,5 +63,38 @@ public class MembershipExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalState(IllegalStateException ex) {
         return buildErrorResponse("INVALID_OPERATION", ex.getMessage(), HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @ExceptionHandler(MembershipCpfAlreadyRegisteredException.class)
+    public ResponseEntity<ApiErrorResponse> handleCpfAlreadyRegistered(
+            MembershipCpfAlreadyRegisteredException ex
+    ) {
+        return buildErrorResponse(
+                "MEMBERSHIP_CPF_ALREADY_REGISTERED",
+                ex.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MembershipEmailAlreadyInUseException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailAlreadyInUse(
+            MembershipEmailAlreadyInUseException ex
+    ) {
+        return buildErrorResponse(
+                "MEMBERSHIP_EMAIL_ALREADY_IN_USE",
+                ex.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MembershipEmailAlreadyRegisteredException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailAlreadyRegistered(
+            MembershipEmailAlreadyRegisteredException ex
+    ) {
+        return buildErrorResponse(
+                "MEMBERSHIP_EMAIL_ALREADY_REGISTERED",
+                ex.getMessage(),
+                HttpStatus.CONFLICT
+        );
     }
 }

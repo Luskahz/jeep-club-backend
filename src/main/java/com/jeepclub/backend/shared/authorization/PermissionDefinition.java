@@ -155,6 +155,18 @@ public enum PermissionDefinition {
             "Permite rejeitar solicitações de adesão"
     ),
 
+    MEMBERSHIP_MEMBERSHIP_APPLICANT_BLOCK(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_APPLICANT_BLOCK,
+            ModuleCode.MEMBERSHIP,
+            "Permite rejeitar solicitações e bloquear solicitantes"
+    ),
+
+    MEMBERSHIP_MEMBERSHIP_APPLICANT_UNBLOCK(
+            PermissionCode.MEMBERSHIP_MEMBERSHIP_APPLICANT_UNBLOCK,
+            ModuleCode.MEMBERSHIP,
+            "Permite desbloquear solicitantes"
+    ),
+
     MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND(
             PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND,
             ModuleCode.MEMBERSHIP,

@@ -9,4 +9,8 @@ public interface UserQuery {
     List<Long> findActiveUserIds();
 
     boolean existsActiveUserById(Long userId);
+
+    boolean existsByCpf(String cpf);
+
+    boolean existsByEmail(String email);
 }

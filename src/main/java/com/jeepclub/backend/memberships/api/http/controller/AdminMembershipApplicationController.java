@@ -1,6 +1,7 @@
 package com.jeepclub.backend.memberships.api.http.controller;
 
 import com.jeepclub.backend.memberships.api.http.dto.AccessLinkApprovalResponseDTO;
+import com.jeepclub.backend.memberships.api.http.dto.BlockMembershipApplicantRequestDTO;
 import com.jeepclub.backend.memberships.api.http.dto.MembershipApplicationResponseDTO;
 import com.jeepclub.backend.memberships.api.http.dto.RejectMembershipRequestDTO;
 import com.jeepclub.backend.memberships.api.http.dto.TemporaryPasswordApprovalResponseDTO;
@@ -10,9 +11,11 @@ import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationS
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,15 +34,26 @@ public class AdminMembershipApplicationController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBERSHIP_REQUEST_READ')")
-    @Operation(summary = "Listar solicitações", description = "Lista todas ou filtra por status. Suporta paginação.")
+    @Operation(
+            summary = "Listar solicitações",
+            description = "Lista todas ou filtra por status. Suporta paginação."
+    )
     public ResponseEntity<Page<MembershipApplicationResponseDTO>> list(
-            @RequestParam(required = false) MembershipApplicationStatus status,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable
+            @RequestParam(required = false)
+            MembershipApplicationStatus status,
+
+            @PageableDefault(
+                    size = 20,
+                    sort = "requestedAt",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
     ) {
-        Page<MembershipApplicationResponseDTO> response = (status != null
-                ? adminMembershipService.listByStatus(status, pageable)
-                : adminMembershipService.listAll(pageable))
-                .map(MembershipApplicationResponseDTO::fromDomain);
+        Page<MembershipApplicationResponseDTO> response =
+                (status != null
+                        ? adminMembershipService.listByStatus(status, pageable)
+                        : adminMembershipService.listAll(pageable))
+                        .map(MembershipApplicationResponseDTO::fromDomain);
 
         return ResponseEntity.ok(response);
     }
@@ -101,6 +115,21 @@ public class AdminMembershipApplicationController {
         String reason = request != null ? request.reason() : null;
         adminMembershipService.reject(id, principal.getUserId(), reason);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
+
+    @PostMapping("/{id}/reject-and-block")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBERSHIP_APPLICANT_BLOCK')")
+    @Operation(
+            summary = "Rejeitar solicitação e bloquear CPF",
+            description = "Rejeita uma solicitação pendente e impede novas solicitações para o CPF na mesma transação."
+    )
+    public ResponseEntity<Void> rejectAndBlock(
+            @PathVariable Long id,
+            @Valid @RequestBody BlockMembershipApplicantRequestDTO request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        adminMembershipService.rejectAndBlock(id, principal.getUserId(), request.reason());
+        return ResponseEntity.noContent().build();
     }
 
 }

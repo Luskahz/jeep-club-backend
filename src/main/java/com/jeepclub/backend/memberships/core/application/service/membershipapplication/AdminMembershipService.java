@@ -2,6 +2,7 @@ package com.jeepclub.backend.memberships.core.application.service.membershipappl
 
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyProcessedException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
+import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.MembershipApplicantBlockService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
@@ -23,6 +24,7 @@ import java.util.Optional;
 public class AdminMembershipService {
 
     private final MembershipApplicationRepository membershipApplicationRepository;
+    private final MembershipApplicantBlockService membershipApplicantBlockService;
     private final CreateUserWithPendingFirstAccessPort createUserPort;
     private final MemberActivationMailSender mailSender;
     private final Clock clock;
@@ -70,8 +72,40 @@ public class AdminMembershipService {
     @Transactional
     public void reject(Long applicationId, Long reviewedByUserId, String reason) {
         Instant now = Instant.now(clock);
+        rejectApplication(applicationId, reviewedByUserId, reason, now);
+    }
+
+    @Transactional
+    public void rejectAndBlock(Long applicationId, Long reviewedByUserId, String reason) {
+        Instant now = Instant.now(clock);
         MembershipApplication application = findPendingApplication(applicationId);
 
+        membershipApplicantBlockService.block(
+                application.getCpf(),
+                reason,
+                reviewedByUserId,
+                now
+        );
+        rejectApplication(application, reviewedByUserId, reason, now);
+    }
+
+    private MembershipApplication rejectApplication(
+            Long applicationId,
+            Long reviewedByUserId,
+            String reason,
+            Instant now
+    ) {
+        MembershipApplication application = findPendingApplication(applicationId);
+        rejectApplication(application, reviewedByUserId, reason, now);
+        return application;
+    }
+
+    private void rejectApplication(
+            MembershipApplication application,
+            Long reviewedByUserId,
+            String reason,
+            Instant now
+    ) {
         application.reject(reviewedByUserId, reason, now);
         membershipApplicationRepository.save(application);
 

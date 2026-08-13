@@ -34,4 +34,14 @@ class AuthenticationUserQueryService implements UserQuery {
 
         return userRepository.existsActiveById(userId);
     }
+
+    @Override
+    public boolean existsByCpf(String cpf) {
+        return userRepository.existsByCpf(cpf);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
 }

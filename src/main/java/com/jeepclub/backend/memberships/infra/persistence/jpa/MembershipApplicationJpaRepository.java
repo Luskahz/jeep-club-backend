@@ -21,4 +21,14 @@ public interface MembershipApplicationJpaRepository
     Page<MembershipApplicationEntity> findAllByStatus(MembershipApplicationStatus status, Pageable pageable);
 
     boolean existsByCpf(String cpf);
+    boolean existsByEmail(String email);
+    Optional<MembershipApplicationEntity> findByCpfAndStatus(
+            String cpf,
+            MembershipApplicationStatus status
+    );
+
+    boolean existsByEmailAndStatus(
+            String email,
+            MembershipApplicationStatus status
+    );
 }
