@@ -1,0 +1,21 @@
+# Copie este arquivo para application-local.properties
+# e configure os valores da sua máquina.
+
+# ========= DATABASE =========
+spring.datasource.url=jdbc:mysql://localhost:3306/jeep_club_database?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America%2FSao_Paulo
+spring.datasource.username=root
+spring.datasource.password=CHANGE_ME
+
+# ========= SECURITY / JWT =========
+security.jwt.secret=CHANGE_ME
+
+# ========= BOOTSTRAP / ADMINISTRADOR LOCAL =========
+security.bootstrap.admin.enabled=true
+security.bootstrap.admin.name=Administrador Local
+security.bootstrap.admin.birth-date=2000-01-01
+security.bootstrap.admin.email=admin@localhost.com
+security.bootstrap.admin.cpf=12345678909
+security.bootstrap.admin.rg=123456789
+security.bootstrap.admin.password=CHANGE_ME
+security.bootstrap.admin.phone-number=12999999999
+security.bootstrap.admin.role-name=ADMIN
