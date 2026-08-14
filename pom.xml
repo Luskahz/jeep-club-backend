@@ -25,7 +25,11 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.5</jjwt.version>
         <jetbrains.annotations.version>26.1.0</jetbrains.annotations.version>
+        <mockito.version>5.20.0</mockito.version>
         <jacoco.version>0.8.15</jacoco.version>
+        <pitest.version>1.19.0</pitest.version>
+        <pitest.junit5.plugin.version>1.2.3</pitest.junit5.plugin.version>
+        <surefireArgLine></surefireArgLine>
     </properties>
 
     <dependencies>
@@ -190,57 +194,6 @@
             </plugin>
 
             <!-- ========================= -->
-            <!-- COBERTURA DE TESTES       -->
-            <!-- ========================= -->
-
-            <plugin>
-                <groupId>org.jacoco</groupId>
-                <artifactId>jacoco-maven-plugin</artifactId>
-                <version>${jacoco.version}</version>
-
-                <executions>
-
-                    <!-- Conecta o agente JaCoCo à execução dos testes -->
-                    <execution>
-                        <id>prepare-jacoco-agent</id>
-
-                        <goals>
-                            <goal>prepare-agent</goal>
-                        </goals>
-                    </execution>
-
-                    <!-- Gera o relatório ao executar a fase verify -->
-                    <execution>
-                        <id>generate-authentication-coverage-report</id>
-                        <phase>verify</phase>
-
-                        <goals>
-                            <goal>report</goal>
-                        </goals>
-
-                        <configuration>
-
-                            <!--
-                                Nesta primeira entrega, o relatório considera
-                                exclusivamente o módulo authentication.
-                            -->
-                            <includes>
-                                <include>com/jeepclub/backend/authentication/**</include>
-                            </includes>
-
-                            <formats>
-                                <format>HTML</format>
-                                <format>XML</format>
-                                <format>CSV</format>
-                            </formats>
-
-                        </configuration>
-                    </execution>
-
-                </executions>
-            </plugin>
-
-            <!-- ========================= -->
             <!-- SPRING BOOT               -->
             <!-- ========================= -->
 
@@ -262,7 +215,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>${surefireArgLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
+                    <argLine>@{surefireArgLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                 </configuration>
             </plugin>
 
@@ -286,6 +239,24 @@
                         <goals>
                             <goal>report</goal>
                         </goals>
+                    </execution>
+                    <execution>
+                        <id>authentication-report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>com/jeepclub/backend/authentication/**</include>
+                            </includes>
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-authentication</outputDirectory>
+                            <formats>
+                                <format>HTML</format>
+                                <format>XML</format>
+                                <format>CSV</format>
+                            </formats>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

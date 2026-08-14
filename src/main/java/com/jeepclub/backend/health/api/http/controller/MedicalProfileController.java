@@ -3,7 +3,7 @@ package com.jeepclub.backend.health.api.http.controller;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileResponse;
-import com.jeepclub.backend.health.core.application.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.MedicalProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -48,7 +48,7 @@ public class MedicalProfileController {
     ) {
         var profile = medicalProfileService.upsertMyMedicalProfile(
                 principal.getUserId(),
-                request
+                request.toApplicationData()
         );
 
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
@@ -78,7 +78,7 @@ public class MedicalProfileController {
         var profile = medicalProfileService.upsertDependentMedicalProfile(
                 principal.getUserId(),
                 dependentId,
-                request
+                request.toApplicationData()
         );
 
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));

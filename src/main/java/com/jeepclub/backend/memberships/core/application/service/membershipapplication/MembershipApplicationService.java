@@ -1,6 +1,5 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipapplication;
 
-import com.jeepclub.backend.authentication.api.module.user.UserQuery;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicantBlockedException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipCpfAlreadyRegisteredException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipEmailAlreadyInUseException;
@@ -9,6 +8,7 @@ import com.jeepclub.backend.memberships.core.application.result.EnsureMembership
 import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.MembershipApplicantBlockService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.memberships.core.port.UserExistencePort;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class MembershipApplicationService {
 
     private final MembershipApplicationRepository repository;
     private final MembershipApplicantBlockService membershipApplicantBlockService;
-    private final UserQuery userQuery;
+    private final UserExistencePort userExistencePort;
     private final Clock clock;
 
     @Transactional
@@ -63,7 +63,7 @@ public class MembershipApplicationService {
     }
 
     private void validateAvailability(String cpf, String email) {
-        if (userQuery.existsByCpf(cpf)) {
+        if (userExistencePort.existsByCpf(cpf)) {
             throw new MembershipCpfAlreadyRegisteredException(cpf);
         }
 
@@ -74,7 +74,7 @@ public class MembershipApplicationService {
             throw new MembershipEmailAlreadyInUseException(email);
         }
 
-        if (userQuery.existsByEmail(email)) {
+        if (userExistencePort.existsByEmail(email)) {
             throw new MembershipEmailAlreadyRegisteredException(email);
         }
     }

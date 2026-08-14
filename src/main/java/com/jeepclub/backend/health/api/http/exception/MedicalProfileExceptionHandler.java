@@ -4,7 +4,7 @@ import com.jeepclub.backend.health.core.application.exceptions.DependentOwnershi
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
-import com.jeepclub.backend.health.core.domain.exceptions.InvalidMedicalProfileException;
+import com.jeepclub.backend.health.core.domain.exception.InvalidMedicalProfileException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;

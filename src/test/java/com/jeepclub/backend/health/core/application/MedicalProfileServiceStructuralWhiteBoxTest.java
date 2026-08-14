@@ -3,10 +3,12 @@ package com.jeepclub.backend.health.core.application;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
-import com.jeepclub.backend.health.core.ports.DependentOwnershipChecker;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.internal.MedicalProfileManager;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,9 +42,8 @@ class MedicalProfileServiceStructuralWhiteBoxTest {
     @BeforeEach
     void setUp() {
         service = new MedicalProfileService(
-                medicalProfileRepository,
-                Optional.<DependentOwnershipChecker>empty(),
-                FIXED_CLOCK
+                new MedicalProfileManager(medicalProfileRepository, FIXED_CLOCK),
+                Optional.<DependentOwnershipChecker>empty()
         );
     }
 
@@ -55,7 +56,7 @@ class MedicalProfileServiceStructuralWhiteBoxTest {
         when(medicalProfileRepository.save(any(MedicalProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request);
+        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request.toApplicationData());
 
         assertEquals(MedicalProfileOwnerType.USER, profile.getOwnerType());
         assertEquals(10L, profile.getOwnerId());
@@ -91,7 +92,7 @@ class MedicalProfileServiceStructuralWhiteBoxTest {
         when(medicalProfileRepository.save(any(MedicalProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        MedicalProfile updated = service.upsertMyMedicalProfile(10L, request);
+        MedicalProfile updated = service.upsertMyMedicalProfile(10L, request.toApplicationData());
 
         assertEquals(BloodType.O_POSITIVE, updated.getBloodType());
         assertEquals("12988887777", updated.getEmergencyContactPhone());
@@ -117,7 +118,7 @@ class MedicalProfileServiceStructuralWhiteBoxTest {
 
         assertThrows(
                 InvalidMedicalProfileDataException.class,
-                () -> service.upsertMyMedicalProfile(null, request)
+                () -> service.upsertMyMedicalProfile(null, request.toApplicationData())
         );
 
         verify(medicalProfileRepository, never()).save(any(MedicalProfile.class));

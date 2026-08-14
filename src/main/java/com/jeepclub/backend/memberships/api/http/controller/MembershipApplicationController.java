@@ -3,18 +3,14 @@ package com.jeepclub.backend.memberships.api.http.controller;
 import com.jeepclub.backend.memberships.api.http.dto.CreateMembershipApplicationRequestDTO;
 import com.jeepclub.backend.memberships.api.http.dto.MembershipApplicationResponseDTO;
 import com.jeepclub.backend.memberships.core.application.result.EnsureMembershipRequestResult;
-import com.jeepclub.backend.memberships.core.application.service.membershipactivationtoken.MembershipActivationTokenService;
 import com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipApplicationService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/membership-applications")
@@ -23,7 +19,6 @@ import java.util.Map;
 public class MembershipApplicationController {
 
     private final MembershipApplicationService membershipApplicationService;
-    private final MembershipActivationTokenService membershipActivationTokenService;
 
     @PostMapping
     @Operation(
@@ -54,24 +49,4 @@ public class MembershipApplicationController {
                 .body(response);
     }
 
-    @GetMapping("/activate")
-    @Operation(
-            summary = "Validar token de ativação",
-            description = """
-                    Rota pública. Chamada quando o candidato clica no link recebido por e-mail.
-                    Valida o token, marca como utilizado e retorna o ID da solicitação confirmada.
-                    A partir deste ponto o frontend pode redirecionar para o fluxo de criação de senha.
-                    """
-    )
-    public ResponseEntity<Map<String, Object>> activate(
-            @Parameter(description = "Token de ativação recebido por e-mail.", required = true)
-            @RequestParam String token
-    ) {
-        Long applicationId = membershipActivationTokenService.validate(token);
-
-        return ResponseEntity.ok(Map.of(
-                "message", "Token validado com sucesso.",
-                "applicationId", applicationId
-        ));
-    }
 }

@@ -1,6 +1,9 @@
 package com.jeepclub.backend.health.core.domain;
 
-import com.jeepclub.backend.health.core.domain.exceptions.InvalidMedicalProfileException;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.exception.InvalidMedicalProfileException;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

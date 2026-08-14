@@ -1,8 +1,6 @@
 package com.jeepclub.backend.dependents.api.http.dto.dependent;
 
-import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
+import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Perfil médico do dependente contendo dados sensíveis.")
@@ -22,57 +20,26 @@ public record MedicalProfileDTO(
         @Schema(description = "Notas médicas gerais e recomendações.", example = "Usar óculos de grau")
         String medicalNotes
 ) {
-    public static MedicalProfileDTO from(MedicalProfile profile) {
-        if (profile == null) {
+    public static MedicalProfileDTO from(DependentMedicalProfileData medicalProfile) {
+        if (medicalProfile == null) {
             return new MedicalProfileDTO(null, null, null, null, null);
         }
         return new MedicalProfileDTO(
-                profile.getBloodType() == null ? null : profile.getBloodType().name(),
-                profile.getAllergies(),
-                profile.getChronicConditions(),
-                profile.getContinuousMedications(),
-                profile.getObservations()
+                medicalProfile.bloodType(),
+                medicalProfile.allergies(),
+                medicalProfile.chronicDiseases(),
+                medicalProfile.medications(),
+                medicalProfile.medicalNotes()
         );
     }
 
-    public MedicalProfileRequest toHealthRequest() {
-        return new MedicalProfileRequest(
-                parseBloodType(bloodType),
+    public DependentMedicalProfileData toData() {
+        return new DependentMedicalProfileData(
+                bloodType,
                 allergies,
                 chronicDiseases,
                 medications,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
                 medicalNotes
         );
-    }
-
-    public boolean hasAnyValue() {
-        return hasText(bloodType)
-                || hasText(allergies)
-                || hasText(chronicDiseases)
-                || hasText(medications)
-                || hasText(medicalNotes);
-    }
-
-    private BloodType parseBloodType(String value) {
-        if (!hasText(value)) {
-            return BloodType.UNKNOWN;
-        }
-
-        String normalized = value.trim()
-                .toUpperCase()
-                .replace("+", "_POSITIVE")
-                .replace("-", "_NEGATIVE");
-
-        return BloodType.valueOf(normalized);
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 }

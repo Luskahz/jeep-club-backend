@@ -2,10 +2,12 @@ package com.jeepclub.backend.health.core.application;
 
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
-import com.jeepclub.backend.health.core.ports.DependentOwnershipChecker;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.internal.MedicalProfileManager;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,10 +33,10 @@ class MedicalProfileFunctionalBlackBoxTest {
 
     @BeforeEach
     void setUp() {
+        MedicalProfileRepository repository = new InMemoryMedicalProfileRepository();
         service = new MedicalProfileService(
-                new InMemoryMedicalProfileRepository(),
-                Optional.<DependentOwnershipChecker>empty(),
-                FIXED_CLOCK
+                new MedicalProfileManager(repository, FIXED_CLOCK),
+                Optional.<DependentOwnershipChecker>empty()
         );
     }
 
@@ -48,7 +50,7 @@ class MedicalProfileFunctionalBlackBoxTest {
     void deveAceitarTelefonesValidosPorClasseDeEquivalencia(String validPhone) {
         MedicalProfileRequest request = requestWithPhone(validPhone);
 
-        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request);
+        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request.toApplicationData());
 
         assertEquals(validPhone.replaceAll("\\D", ""), profile.getEmergencyContactPhone());
     }
@@ -64,7 +66,7 @@ class MedicalProfileFunctionalBlackBoxTest {
 
         assertThrows(
                 InvalidMedicalProfileDataException.class,
-                () -> service.upsertMyMedicalProfile(10L, request)
+                () -> service.upsertMyMedicalProfile(10L, request.toApplicationData())
         );
     }
 
@@ -72,7 +74,7 @@ class MedicalProfileFunctionalBlackBoxTest {
     void deveTratarTelefoneSemDigitosComoNaoInformado() {
         MedicalProfileRequest request = requestWithPhone("telefone-invalido");
 
-        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request);
+        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request.toApplicationData());
 
         assertNull(profile.getEmergencyContactPhone());
     }
@@ -93,7 +95,7 @@ class MedicalProfileFunctionalBlackBoxTest {
                 "Observação"
         );
 
-        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request);
+        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request.toApplicationData());
 
         assertEquals(BloodType.UNKNOWN, profile.getBloodType());
     }

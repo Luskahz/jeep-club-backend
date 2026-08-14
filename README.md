@@ -30,6 +30,9 @@ O projeto segue uma arquitetura inspirada em **Arquitetura Hexagonal (Ports & Ad
 
 Essa divisão facilita manutenção, testes e evolução do sistema.
 
+O padrão adotado para controllers, services e limites entre módulos está
+detalhado em [docs/architecture/module-organization.md](docs/architecture/module-organization.md).
+
 ---
 
 # Requisitos

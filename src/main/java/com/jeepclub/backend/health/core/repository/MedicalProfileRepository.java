@@ -1,7 +1,7 @@
 package com.jeepclub.backend.health.core.repository;
 
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 
 import java.util.List;
 import java.util.Optional;

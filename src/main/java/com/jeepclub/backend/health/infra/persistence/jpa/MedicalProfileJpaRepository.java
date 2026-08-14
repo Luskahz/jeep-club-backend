@@ -1,6 +1,6 @@
 package com.jeepclub.backend.health.infra.persistence.jpa;
 
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.infra.persistence.entity.MedicalProfileEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 

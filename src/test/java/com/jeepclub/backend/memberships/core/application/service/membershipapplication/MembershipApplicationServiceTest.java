@@ -1,11 +1,11 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipapplication;
 
-import com.jeepclub.backend.authentication.api.module.user.UserQuery;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicantBlockedException;
 import com.jeepclub.backend.memberships.core.application.result.EnsureMembershipRequestResult;
 import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.MembershipApplicantBlockService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
+import com.jeepclub.backend.memberships.core.port.UserExistencePort;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class MembershipApplicationServiceTest {
     @Mock
     private MembershipApplicantBlockService membershipApplicantBlockService;
     @Mock
-    private UserQuery userQuery;
+    private UserExistencePort userExistencePort;
 
     private MembershipApplicationService service;
 
@@ -44,7 +44,7 @@ class MembershipApplicationServiceTest {
         service = new MembershipApplicationService(
                 applicationRepository,
                 membershipApplicantBlockService,
-                userQuery,
+                userExistencePort,
                 Clock.fixed(NOW, ZoneOffset.UTC)
         );
     }
@@ -59,7 +59,7 @@ class MembershipApplicationServiceTest {
                 .hasMessageNotContaining("fraude");
 
         verify(membershipApplicantBlockService).isBlocked(CPF);
-        verifyNoInteractions(applicationRepository, userQuery);
+        verifyNoInteractions(applicationRepository, userExistencePort);
     }
 
     @Test
@@ -73,7 +73,7 @@ class MembershipApplicationServiceTest {
         assertThat(result.created()).isFalse();
         assertThat(result.application()).isSameAs(pending);
         verify(applicationRepository, never()).save(any());
-        verifyNoInteractions(userQuery);
+        verifyNoInteractions(userExistencePort);
     }
 
     @Test

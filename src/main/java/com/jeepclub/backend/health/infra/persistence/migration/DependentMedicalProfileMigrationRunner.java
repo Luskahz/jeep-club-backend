@@ -1,6 +1,6 @@
 package com.jeepclub.backend.health.infra.persistence.migration;
 
-import com.jeepclub.backend.health.core.domain.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

@@ -1,15 +1,11 @@
 package com.jeepclub.backend.dependents.api.controller;
 
 import com.jeepclub.backend.authentication.core.application.service.security.AccessTokenAuthenticationService;
-import com.jeepclub.backend.dependents.core.application.service.CreateDependentService;
-import com.jeepclub.backend.dependents.core.application.service.DeleteDependentService;
-import com.jeepclub.backend.dependents.core.application.service.GetDependentService;
-import com.jeepclub.backend.dependents.core.application.service.UpdateDependentService;
+import com.jeepclub.backend.dependents.core.application.result.DependentResult;
+import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
+import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.health.core.application.MedicalProfileService;
-import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
@@ -25,7 +21,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -40,15 +35,9 @@ class DependentSecurityIntegrationTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private CreateDependentService createDependentService;
+    private DependentService dependentService;
     @MockitoBean
-    private UpdateDependentService updateDependentService;
-    @MockitoBean
-    private DeleteDependentService deleteDependentService;
-    @MockitoBean
-    private GetDependentService getDependentService;
-    @MockitoBean
-    private MedicalProfileService medicalProfileService;
+    private AdminDependentService adminDependentService;
     @MockitoBean
     private JwtTokenParser jwtTokenParser;
     @MockitoBean
@@ -59,16 +48,14 @@ class DependentSecurityIntegrationTest {
     @Test
     void unauthenticatedRequestIsRejectedBySecurityFilterChain() throws Exception {
         mockMvc.perform(get("/dependents"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void authenticatedTitularCanListOwnDependents() throws Exception {
         authenticate("titular-token", 1L, List.of());
-        when(getDependentService.getBySocioId(1L, 1L, false))
-                .thenReturn(List.of(dependent(10L, 1L)));
-        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
-                .thenThrow(new MedicalProfileNotFoundException());
+        when(dependentService.findAllBySocioId(1L))
+                .thenReturn(List.of(new DependentResult(dependent(10L, 1L), null)));
 
         mockMvc.perform(get("/dependents")
                         .header("Authorization", "Bearer titular-token"))
@@ -79,10 +66,8 @@ class DependentSecurityIntegrationTest {
     @Test
     void adminAuthorityCanListDependentsBySocio() throws Exception {
         authenticate("admin-token", 99L, List.of("DEPENDENTS_DEPENDENT_READ"));
-        when(getDependentService.getBySocioId(1L, null, true))
-                .thenReturn(List.of(dependent(10L, 1L)));
-        when(medicalProfileService.getByOwner(eq(MedicalProfileOwnerType.DEPENDENT), eq(10L)))
-                .thenThrow(new MedicalProfileNotFoundException());
+        when(adminDependentService.findAllBySocioId(1L))
+                .thenReturn(List.of(new DependentResult(dependent(10L, 1L), null)));
 
         mockMvc.perform(get("/socios/1/dependents")
                         .header("Authorization", "Bearer admin-token"))

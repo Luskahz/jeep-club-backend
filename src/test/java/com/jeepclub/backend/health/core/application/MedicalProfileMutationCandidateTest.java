@@ -2,10 +2,12 @@ package com.jeepclub.backend.health.core.application;
 
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
-import com.jeepclub.backend.health.core.ports.DependentOwnershipChecker;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.internal.MedicalProfileManager;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,20 +30,20 @@ class MedicalProfileMutationCandidateTest {
 
     @BeforeEach
     void setUp() {
+        MedicalProfileRepository repository = new SingleSlotRepository();
         service = new MedicalProfileService(
-                new SingleSlotRepository(),
-                Optional.<DependentOwnershipChecker>empty(),
-                FIXED_CLOCK
+                new MedicalProfileManager(repository, FIXED_CLOCK),
+                Optional.<DependentOwnershipChecker>empty()
         );
     }
 
     @Test
     void deveMatarMutantesNasRegrasDeTamanhoDoTelefone() {
-        assertEquals("1233334444", service.upsertMyMedicalProfile(10L, request("1233334444")).getEmergencyContactPhone());
-        assertEquals("12999999999", service.upsertMyMedicalProfile(10L, request("12999999999")).getEmergencyContactPhone());
+        assertEquals("1233334444", service.upsertMyMedicalProfile(10L, request("1233334444").toApplicationData()).getEmergencyContactPhone());
+        assertEquals("12999999999", service.upsertMyMedicalProfile(10L, request("12999999999").toApplicationData()).getEmergencyContactPhone());
 
-        assertThrows(InvalidMedicalProfileDataException.class, () -> service.upsertMyMedicalProfile(10L, request("123456789")));
-        assertThrows(InvalidMedicalProfileDataException.class, () -> service.upsertMyMedicalProfile(10L, request("123456789012")));
+        assertThrows(InvalidMedicalProfileDataException.class, () -> service.upsertMyMedicalProfile(10L, request("123456789").toApplicationData()));
+        assertThrows(InvalidMedicalProfileDataException.class, () -> service.upsertMyMedicalProfile(10L, request("123456789012").toApplicationData()));
     }
 
     @Test
@@ -60,7 +62,7 @@ class MedicalProfileMutationCandidateTest {
                 null
         );
 
-        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request);
+        MedicalProfile profile = service.upsertMyMedicalProfile(10L, request.toApplicationData());
 
         assertEquals(BloodType.UNKNOWN, profile.getBloodType());
     }

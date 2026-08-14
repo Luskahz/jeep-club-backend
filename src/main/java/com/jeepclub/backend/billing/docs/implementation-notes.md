@@ -476,12 +476,15 @@ Criar testes para os services de aplicação.
 Services prioritários:
 
 ```text id="qcnbb4"
-ChargeDefinitionService
-ChargeAssignmentService
-ChargeCycleService
+AdminChargeDefinitionService
+AdminChargeAssignmentService
+AdminChargeCycleService
 MemberChargeService
+AdminMemberChargeService
 MemberPaymentService
+AdminMemberPaymentService
 MemberRefundService
+AdminMemberRefundService
 ```
 
 Cenários importantes:
@@ -541,7 +544,7 @@ Esses estados são calculados em runtime.
 
 ## Pendência 18 — Geração automática de ciclos
 
-A geração automática de ciclos deve usar o mesmo fluxo de `ChargeCycleService.generate`.
+A geração automática de ciclos deve usar o mesmo fluxo de `AdminChargeCycleService.generate`.
 
 Não deve existir uma regra paralela para scheduler.
 

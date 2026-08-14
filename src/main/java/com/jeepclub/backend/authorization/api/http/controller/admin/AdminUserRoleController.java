@@ -1,0 +1,149 @@
+package com.jeepclub.backend.authorization.api.http.controller.admin;
+
+import com.jeepclub.backend.authorization.api.http.dto.role.RoleResponseDTO;
+import com.jeepclub.backend.authorization.api.http.dto.userrole.ReplaceUserRolesRequestDTO;
+import com.jeepclub.backend.authorization.core.application.result.RolesResult;
+import com.jeepclub.backend.authorization.core.application.service.userrole.AdminUserRoleService;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Positive;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/authorization/users")
+@RequiredArgsConstructor
+@Validated
+@Tag(
+        name = "Authorization - User Roles",
+        description = "Gerenciamento de roles vinculadas a usuários."
+)
+public class AdminUserRoleController {
+
+    private final AdminUserRoleService adminUserRoleService;
+
+    @GetMapping("/{userId}/roles")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_READ')")
+    @RequiredPermission("AUTHORIZATION_USER_ROLE_READ")
+    @Operation(
+            summary = "Listar roles de um usuário",
+            description = "Retorna todas as roles vinculadas a um usuário."
+    )
+    public ResponseEntity<List<RoleResponseDTO>> findRolesByUser(
+            @Parameter(
+                    description = "ID do usuário.",
+                    example = "1",
+                    required = true
+            )
+            @PathVariable
+            @Positive(message = "ID do usuário deve ser positivo.")
+            Long userId
+    ) {
+        RolesResult result = adminUserRoleService.findRolesByUserId(userId);
+
+        return ResponseEntity.ok(
+                RoleResponseDTO.from(result.roles())
+        );
+    }
+
+    @PutMapping("/{userId}/roles")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_ASSIGN') and hasAuthority('AUTHORIZATION_USER_ROLE_REVOKE')")
+    @RequiredPermission({
+            "AUTHORIZATION_USER_ROLE_ASSIGN",
+            "AUTHORIZATION_USER_ROLE_REVOKE"
+    })
+    @Operation(
+            summary = "Substituir roles de um usuário",
+            description = "Substitui completamente o conjunto de roles vinculadas ao usuário. Uma lista vazia remove todas as roles."
+    )
+    public ResponseEntity<Void> replaceUserRoles(
+            @Parameter(
+                    description = "ID do usuário.",
+                    example = "1",
+                    required = true
+            )
+            @PathVariable
+            @Positive(message = "ID do usuário deve ser positivo.")
+            Long userId,
+
+            @RequestBody @Valid ReplaceUserRolesRequestDTO request
+    ) {
+        adminUserRoleService.replaceUserRoles(
+                userId,
+                request.roleIds()
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{userId}/roles/{roleId}")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_ASSIGN')")
+    @RequiredPermission("AUTHORIZATION_USER_ROLE_ASSIGN")
+    @Operation(
+            summary = "Atribuir role a um usuário",
+            description = "Cria o vínculo entre um usuário e uma role ativa."
+    )
+    public ResponseEntity<Void> assignRoleToUser(
+            @Parameter(
+                    description = "ID do usuário.",
+                    example = "1",
+                    required = true
+            )
+            @PathVariable
+            @Positive(message = "ID do usuário deve ser positivo.")
+            Long userId,
+
+            @Parameter(
+                    description = "ID da role.",
+                    example = "10",
+                    required = true
+            )
+            @PathVariable
+            @Positive(message = "ID da role deve ser positivo.")
+            Long roleId
+    ) {
+        adminUserRoleService.assignRoleToUser(userId, roleId);
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @DeleteMapping("/{userId}/roles/{roleId}")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_USER_ROLE_REVOKE')")
+    @RequiredPermission("AUTHORIZATION_USER_ROLE_REVOKE")
+    @Operation(
+            summary = "Remover role de um usuário",
+            description = "Remove o vínculo entre um usuário e uma role."
+    )
+    public ResponseEntity<Void> revokeRoleFromUser(
+            @Parameter(
+                    description = "ID do usuário.",
+                    example = "1",
+                    required = true
+            )
+            @PathVariable
+            @Positive(message = "ID do usuário deve ser positivo.")
+            Long userId,
+
+            @Parameter(
+                    description = "ID da role.",
+                    example = "10",
+                    required = true
+            )
+            @PathVariable
+            @Positive(message = "ID da role deve ser positivo.")
+            Long roleId
+    ) {
+        adminUserRoleService.revokeRoleFromUser(userId, roleId);
+
+        return ResponseEntity.noContent().build();
+    }
+}

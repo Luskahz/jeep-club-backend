@@ -1,6 +1,6 @@
 package com.jeepclub.backend.health.infra.persistence.mapper;
 
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.infra.persistence.entity.MedicalProfileEntity;
 import org.springframework.stereotype.Component;
 

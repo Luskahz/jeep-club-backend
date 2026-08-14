@@ -1,8 +1,8 @@
 package com.jeepclub.backend.health.api.http.dto;
 
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;

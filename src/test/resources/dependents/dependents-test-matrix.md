@@ -14,12 +14,10 @@ New tests must not depend on the removed `dependents.core.domain.model.MedicalPr
 | Domain | CPF empty, less than 11, exactly 11, more than 11 and masked | Unit | `DependentTest` |
 | Domain | Phone null, blank, masked and numeric normalization | Unit | `DependentTest` |
 | Domain | Update keeps original consent date when already accepted | Unit | `DependentTest` |
-| Create service | Rejects missing socio, duplicate user CPF and duplicate dependent CPF | Unit | `CreateDependentServiceTest` |
-| Create service | Saves normalized dependent for valid titular | Unit | `CreateDependentServiceTest` |
-| Get service | Titular can query/list own dependents; other user is forbidden; director allowed | Unit | `GetDependentServiceTest` |
-| Update service | Titular/director can update; other user forbidden; duplicate CPF rejected | Unit | `UpdateDependentServiceTest` |
-| Delete service | Titular/director can delete; other user forbidden; missing dependent not found | Unit | `DeleteDependentServiceTest` |
-| Persistence | Save/find/list/delete and ownership query use `membership_dependents` only | JPA slice | `DependentRepositoryJpaTest` |
+| Normal service | Creates, queries, lists, updates and deletes within titular ownership | Unit | `DependentServiceTest` |
+| Normal service | Rejects missing socio, duplicate CPF and access by another titular | Unit | `DependentServiceTest` |
+| Admin service | Lists and queries dependents for the specified socio | Unit | `AdminDependentServiceTest` |
+| Persistence | Save/find/list/delete and ownership query use `membership_dependents` only | JPA slice | `DependentRepositoryAdapterTest` |
 | HTTP validation | Required CPF and consent validation returns 400 | MVC | `DependentControllerTest` |
 | HTTP exceptions | Not found, conflict and forbidden map to expected status/code | MVC | `DependentControllerTest` |
 | Security | Unauthenticated request is 401; titular token can access own route | Spring Boot + MockMvc | `DependentSecurityIntegrationTest` |

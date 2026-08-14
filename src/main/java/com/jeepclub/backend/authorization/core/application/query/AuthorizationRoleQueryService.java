@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.core.application.query;
 
+import com.jeepclub.backend.authorization.api.module.role.RoleQuery;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.repository.RoleRepository;
 import com.jeepclub.backend.authorization.core.repository.UserRoleRepository;
@@ -12,11 +13,12 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class AuthorizationRoleQueryService {
+class AuthorizationRoleQueryService implements RoleQuery {
 
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
 
+    @Override
     @Transactional(readOnly = true)
     public boolean existsActiveRoleById(Long roleId) {
         Objects.requireNonNull(roleId, "roleId cannot be null");
@@ -26,6 +28,7 @@ public class AuthorizationRoleQueryService {
                 .orElse(false);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public List<Long> findUserIdsByRoleId(Long roleId) {
         Objects.requireNonNull(roleId, "roleId cannot be null");

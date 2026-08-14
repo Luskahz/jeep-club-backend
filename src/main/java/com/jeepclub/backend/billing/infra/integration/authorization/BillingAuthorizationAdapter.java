@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.infra.integration.authorization;
 
-import com.jeepclub.backend.authorization.core.application.query.AuthorizationRoleQueryService;
+import com.jeepclub.backend.authorization.api.module.role.RoleQuery;
 import com.jeepclub.backend.billing.core.port.BillingAuthorizationPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,19 +12,19 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class BillingAuthorizationAdapter implements BillingAuthorizationPort {
 
-    private final AuthorizationRoleQueryService authorizationRoleQueryService;
+    private final RoleQuery roleQuery;
 
     @Override
     public List<Long> findUserIdsByRoleId(Long roleId) {
         Objects.requireNonNull(roleId, "roleId cannot be null");
 
-        return authorizationRoleQueryService.findUserIdsByRoleId(roleId);
+        return roleQuery.findUserIdsByRoleId(roleId);
     }
 
     @Override
     public boolean existsActiveRoleById(Long roleId) {
         Objects.requireNonNull(roleId, "roleId cannot be null");
 
-        return authorizationRoleQueryService.existsActiveRoleById(roleId);
+        return roleQuery.existsActiveRoleById(roleId);
     }
 }

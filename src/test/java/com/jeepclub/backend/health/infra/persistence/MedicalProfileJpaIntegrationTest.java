@@ -1,7 +1,7 @@
 package com.jeepclub.backend.health.infra.persistence;
 
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.infra.persistence.entity.MedicalProfileEntity;
 import com.jeepclub.backend.health.infra.persistence.jpa.MedicalProfileJpaRepository;
 import org.junit.jupiter.api.Test;

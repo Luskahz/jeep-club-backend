@@ -1,11 +1,10 @@
 package com.jeepclub.backend.vehicles.infra.persistence.adapter;
 
-import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
 import com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleEntity;
-import com.jeepclub.backend.vehicles.infra.persistence.jpa.VechileJpaRepository;
+import com.jeepclub.backend.vehicles.infra.persistence.jpa.VehicleJpaRepository;
 import com.jeepclub.backend.vehicles.infra.persistence.mapper.VehicleMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,7 +17,7 @@ import java.util.Optional;
 @Repository
 public class VehicleRepositoryAdapter implements VehicleRepository {
 
-    private final VechileJpaRepository jpaRepository;
+    private final VehicleJpaRepository jpaRepository;
 
     @Override
     public Vehicle save(Vehicle vehicle) {

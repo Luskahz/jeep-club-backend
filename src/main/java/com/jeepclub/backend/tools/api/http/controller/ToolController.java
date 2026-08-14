@@ -5,7 +5,7 @@ import com.jeepclub.backend.tools.api.http.dto.ToolCreateRequestDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolResponseDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolSummaryResponseDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolUpdateRequestDTO;
-import com.jeepclub.backend.tools.core.application.service.ToolService;
+import com.jeepclub.backend.tools.core.application.service.tool.ToolService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -50,7 +50,11 @@ public class ToolController {
     public ResponseEntity<ToolResponseDTO> createTool(
             @RequestBody ToolCreateRequestDTO request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        ToolResponseDTO createdTool = new ToolResponseDTO(toolService.createTool(request, userPrincipal.getUserId()));
+        ToolResponseDTO createdTool = new ToolResponseDTO(toolService.createTool(
+                request.name(),
+                request.description(),
+                userPrincipal.getUserId()
+        ));
         return ResponseEntity.status(HttpStatus.CREATED).body(createdTool);
     }
 
@@ -60,7 +64,12 @@ public class ToolController {
             @PathVariable Long id,
             @RequestBody ToolUpdateRequestDTO request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        ToolResponseDTO updatedTool = new ToolResponseDTO(toolService.updateTool(id, request, userPrincipal.getUserId()));
+        ToolResponseDTO updatedTool = new ToolResponseDTO(toolService.updateTool(
+                id,
+                request.name(),
+                request.description(),
+                userPrincipal.getUserId()
+        ));
         return ResponseEntity.ok(updatedTool);
     }
 

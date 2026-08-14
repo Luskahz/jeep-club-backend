@@ -5,10 +5,8 @@ import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatu
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
-import com.jeepclub.backend.dependents.core.application.service.CreateDependentService;
-import com.jeepclub.backend.dependents.core.application.service.DeleteDependentService;
-import com.jeepclub.backend.dependents.core.application.service.GetDependentService;
-import com.jeepclub.backend.dependents.core.application.service.UpdateDependentService;
+import com.jeepclub.backend.dependents.core.application.result.DependentResult;
+import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.infra.persistence.jpa.DependentJpaRepository;
@@ -31,13 +29,7 @@ class DependentSystemFlowTest {
     private static final Instant NOW = Instant.parse("2026-06-30T12:00:00Z");
 
     @Autowired
-    private CreateDependentService createDependentService;
-    @Autowired
-    private GetDependentService getDependentService;
-    @Autowired
-    private UpdateDependentService updateDependentService;
-    @Autowired
-    private DeleteDependentService deleteDependentService;
+    private DependentService dependentService;
     @Autowired
     private UserJpaRepository userJpaRepository;
     @Autowired
@@ -60,27 +52,28 @@ class DependentSystemFlowTest {
 
     @Test
     void createConsultListUpdateAndRemoveDependent() {
-        Dependent created = createDependentService.create(
+        Dependent created = dependentService.create(
                 "Pedro Silva",
                 "123.456.789-00",
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "(11) 98888-7777",
                 true,
+                null,
                 socio.getId()
-        );
+        ).dependent();
 
         assertThat(created.getId()).isNotNull();
         assertThat(created.getCpf()).isEqualTo("12345678900");
 
-        Dependent found = getDependentService.getById(created.getId(), socio.getId(), false);
+        Dependent found = dependentService.findById(created.getId(), socio.getId()).dependent();
         assertThat(found.getName()).isEqualTo("Pedro Silva");
 
-        assertThat(getDependentService.getBySocioId(socio.getId(), socio.getId(), false))
-                .extracting(Dependent::getId)
+        assertThat(dependentService.findAllBySocioId(socio.getId()))
+                .extracting(result -> result.dependent().getId())
                 .containsExactly(created.getId());
 
-        Dependent updated = updateDependentService.update(
+        Dependent updated = dependentService.update(
                 created.getId(),
                 "Pedro Silva Ramos",
                 "987.654.321-00",
@@ -88,15 +81,15 @@ class DependentSystemFlowTest {
                 RelationshipType.CHILD,
                 "(11) 97777-6666",
                 true,
-                socio.getId(),
-                false
-        );
+                null,
+                socio.getId()
+        ).dependent();
 
         assertThat(updated.getName()).isEqualTo("Pedro Silva Ramos");
         assertThat(updated.getCpf()).isEqualTo("98765432100");
         assertThat(updated.getPhoneNumber()).isEqualTo("11977776666");
 
-        deleteDependentService.delete(created.getId(), socio.getId(), false);
+        dependentService.delete(created.getId(), socio.getId());
 
         assertThat(dependentJpaRepository.findById(created.getId())).isEmpty();
     }

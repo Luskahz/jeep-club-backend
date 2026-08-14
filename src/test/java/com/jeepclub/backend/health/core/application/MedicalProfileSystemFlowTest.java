@@ -2,10 +2,12 @@ package com.jeepclub.backend.health.core.application;
 
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
-import com.jeepclub.backend.health.core.ports.DependentOwnershipChecker;
-import com.jeepclub.backend.health.core.domain.BloodType;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
-import com.jeepclub.backend.health.core.domain.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.MedicalProfileService;
+import com.jeepclub.backend.health.core.application.service.medicalprofile.internal.MedicalProfileManager;
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.Test;
 
@@ -32,14 +34,13 @@ class MedicalProfileSystemFlowTest {
                 userId.equals(10L) && dependentId.equals(300L);
 
         MedicalProfileService service = new MedicalProfileService(
-                repository,
-                Optional.of(ownershipChecker),
-                FIXED_CLOCK
+                new MedicalProfileManager(repository, FIXED_CLOCK),
+                Optional.of(ownershipChecker)
         );
 
         MedicalProfile userProfile = service.upsertMyMedicalProfile(
                 10L,
-                request(BloodType.O_POSITIVE, "Dipirona", "(12) 99999-9999")
+                request(BloodType.O_POSITIVE, "Dipirona", "(12) 99999-9999").toApplicationData()
         );
 
         MedicalProfile loadedUserProfile = service.getMyMedicalProfile(10L);
@@ -51,7 +52,7 @@ class MedicalProfileSystemFlowTest {
         MedicalProfile dependentProfile = service.upsertDependentMedicalProfile(
                 10L,
                 300L,
-                request(BloodType.A_POSITIVE, "Amendoim", "(12) 98888-7777")
+                request(BloodType.A_POSITIVE, "Amendoim", "(12) 98888-7777").toApplicationData()
         );
 
         MedicalProfile loadedDependentProfile = service.getDependentMedicalProfile(10L, 300L);
@@ -65,7 +66,7 @@ class MedicalProfileSystemFlowTest {
                 () -> service.upsertDependentMedicalProfile(
                         10L,
                         999L,
-                        request(BloodType.B_POSITIVE, "Látex", "(12) 97777-6666")
+                        request(BloodType.B_POSITIVE, "Látex", "(12) 97777-6666").toApplicationData()
                 )
         );
     }

@@ -1,7 +1,8 @@
 package com.jeepclub.backend.dependents.api.http.dto.dependent;
 
+import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.health.core.domain.MedicalProfile;
+import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -51,7 +52,15 @@ public record DependentResponseDTO(
         return from(domain, null);
     }
 
-    public static DependentResponseDTO from(Dependent domain, MedicalProfile medicalProfile) {
+    public static DependentResponseDTO from(DependentResult result) {
+        Objects.requireNonNull(result, "Dependent result cannot be null");
+        return from(result.dependent(), result.medicalProfile());
+    }
+
+    public static DependentResponseDTO from(
+            Dependent domain,
+            DependentMedicalProfileData medicalProfile
+    ) {
         Objects.requireNonNull(domain, "Domain model Dependent cannot be null");
 
         return new DependentResponseDTO(

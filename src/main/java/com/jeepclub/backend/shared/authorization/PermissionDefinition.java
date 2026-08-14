@@ -86,6 +86,42 @@ public enum PermissionDefinition {
             "Permite gerar senhas provisórias para usuários"
     ),
 
+    AUTHENTICATION_PASSWORD_RECOVERY_READ(
+            PermissionCode.AUTHENTICATION_PASSWORD_RECOVERY_READ,
+            ModuleCode.AUTHENTICATION,
+            "Permite consultar solicitações de recuperação de senha"
+    ),
+
+    AUTHENTICATION_PASSWORD_RECOVERY_CANCEL(
+            PermissionCode.AUTHENTICATION_PASSWORD_RECOVERY_CANCEL,
+            ModuleCode.AUTHENTICATION,
+            "Permite cancelar solicitações de recuperação de senha"
+    ),
+
+    AUTHENTICATION_REFRESH_TOKEN_READ(
+            PermissionCode.AUTHENTICATION_REFRESH_TOKEN_READ,
+            ModuleCode.AUTHENTICATION,
+            "Permite consultar tokens de renovação"
+    ),
+
+    AUTHENTICATION_REFRESH_TOKEN_REVOKE(
+            PermissionCode.AUTHENTICATION_REFRESH_TOKEN_REVOKE,
+            ModuleCode.AUTHENTICATION,
+            "Permite revogar tokens de renovação"
+    ),
+
+    AUTHENTICATION_SESSION_READ(
+            PermissionCode.AUTHENTICATION_SESSION_READ,
+            ModuleCode.AUTHENTICATION,
+            "Permite consultar sessões de usuários"
+    ),
+
+    AUTHENTICATION_SESSION_LOGOUT(
+            PermissionCode.AUTHENTICATION_SESSION_LOGOUT,
+            ModuleCode.AUTHENTICATION,
+            "Permite encerrar sessões de usuários"
+    ),
+
     // AUTHORIZATION / PERMISSIONS
     AUTHORIZATION_PERMISSION_READ(
             PermissionCode.AUTHORIZATION_PERMISSION_READ,
@@ -122,6 +158,157 @@ public enum PermissionDefinition {
             PermissionCode.AUTHORIZATION_USER_ROLE_REVOKE,
             ModuleCode.AUTHORIZATION,
             "Permite remover papéis de usuários"
+    ),
+
+    // BILLING / CHARGE ASSIGNMENTS
+    BILLING_CHARGE_ASSIGNMENT_CREATE(
+            PermissionCode.BILLING_CHARGE_ASSIGNMENT_CREATE,
+            ModuleCode.BILLING,
+            "Permite criar atribuições de cobrança"
+    ),
+
+    BILLING_CHARGE_ASSIGNMENT_READ(
+            PermissionCode.BILLING_CHARGE_ASSIGNMENT_READ,
+            ModuleCode.BILLING,
+            "Permite consultar atribuições de cobrança"
+    ),
+
+    BILLING_CHARGE_ASSIGNMENT_UPDATE(
+            PermissionCode.BILLING_CHARGE_ASSIGNMENT_UPDATE,
+            ModuleCode.BILLING,
+            "Permite atualizar atribuições de cobrança"
+    ),
+
+    // BILLING / CHARGE CYCLES
+    BILLING_CHARGE_CYCLE_GENERATE(
+            PermissionCode.BILLING_CHARGE_CYCLE_GENERATE,
+            ModuleCode.BILLING,
+            "Permite gerar ciclos de cobrança"
+    ),
+
+    BILLING_CHARGE_CYCLE_READ(
+            PermissionCode.BILLING_CHARGE_CYCLE_READ,
+            ModuleCode.BILLING,
+            "Permite consultar ciclos de cobrança"
+    ),
+
+    BILLING_CHARGE_CYCLE_CANCEL(
+            PermissionCode.BILLING_CHARGE_CYCLE_CANCEL,
+            ModuleCode.BILLING,
+            "Permite cancelar ciclos de cobrança"
+    ),
+
+    BILLING_CHARGE_CYCLE_FINISH(
+            PermissionCode.BILLING_CHARGE_CYCLE_FINISH,
+            ModuleCode.BILLING,
+            "Permite finalizar ciclos de cobrança"
+    ),
+
+    BILLING_CHARGE_CYCLE_ARCHIVE(
+            PermissionCode.BILLING_CHARGE_CYCLE_ARCHIVE,
+            ModuleCode.BILLING,
+            "Permite arquivar ciclos de cobrança"
+    ),
+
+    // BILLING / CHARGE DEFINITIONS
+    BILLING_CHARGE_DEFINITION_CREATE(
+            PermissionCode.BILLING_CHARGE_DEFINITION_CREATE,
+            ModuleCode.BILLING,
+            "Permite criar definições de cobrança"
+    ),
+
+    BILLING_CHARGE_DEFINITION_READ(
+            PermissionCode.BILLING_CHARGE_DEFINITION_READ,
+            ModuleCode.BILLING,
+            "Permite consultar definições de cobrança"
+    ),
+
+    BILLING_CHARGE_DEFINITION_UPDATE(
+            PermissionCode.BILLING_CHARGE_DEFINITION_UPDATE,
+            ModuleCode.BILLING,
+            "Permite atualizar definições de cobrança"
+    ),
+
+    // BILLING / MEMBER CHARGES
+    BILLING_MEMBER_CHARGE_READ(
+            PermissionCode.BILLING_MEMBER_CHARGE_READ,
+            ModuleCode.BILLING,
+            "Permite consultar cobranças de membros"
+    ),
+
+    BILLING_MEMBER_CHARGE_UPDATE(
+            PermissionCode.BILLING_MEMBER_CHARGE_UPDATE,
+            ModuleCode.BILLING,
+            "Permite atualizar cobranças de membros"
+    ),
+
+    BILLING_MEMBER_CHARGE_CANCEL(
+            PermissionCode.BILLING_MEMBER_CHARGE_CANCEL,
+            ModuleCode.BILLING,
+            "Permite cancelar cobranças de membros"
+    ),
+
+    // BILLING / PAYMENTS
+    BILLING_PAYMENT_READ(
+            PermissionCode.BILLING_PAYMENT_READ,
+            ModuleCode.BILLING,
+            "Permite consultar pagamentos"
+    ),
+
+    BILLING_PAYMENT_CONFIRM(
+            PermissionCode.BILLING_PAYMENT_CONFIRM,
+            ModuleCode.BILLING,
+            "Permite confirmar pagamentos"
+    ),
+
+    BILLING_PAYMENT_REJECT(
+            PermissionCode.BILLING_PAYMENT_REJECT,
+            ModuleCode.BILLING,
+            "Permite rejeitar pagamentos"
+    ),
+
+    // BILLING / REFUNDS
+    BILLING_REFUND_READ(
+            PermissionCode.BILLING_REFUND_READ,
+            ModuleCode.BILLING,
+            "Permite consultar reembolsos"
+    ),
+
+    BILLING_REFUND_APPROVE(
+            PermissionCode.BILLING_REFUND_APPROVE,
+            ModuleCode.BILLING,
+            "Permite aprovar reembolsos"
+    ),
+
+    BILLING_REFUND_REJECT(
+            PermissionCode.BILLING_REFUND_REJECT,
+            ModuleCode.BILLING,
+            "Permite rejeitar reembolsos"
+    ),
+
+    BILLING_REFUND_MARK_AS_REFUNDED(
+            PermissionCode.BILLING_REFUND_MARK_AS_REFUNDED,
+            ModuleCode.BILLING,
+            "Permite marcar reembolsos como realizados"
+    ),
+
+    BILLING_REFUND_EXPIRE(
+            PermissionCode.BILLING_REFUND_EXPIRE,
+            ModuleCode.BILLING,
+            "Permite expirar reembolsos"
+    ),
+
+    BILLING_REFUND_CANCEL(
+            PermissionCode.BILLING_REFUND_CANCEL,
+            ModuleCode.BILLING,
+            "Permite cancelar reembolsos"
+    ),
+
+    // DEPENDENTS
+    DEPENDENTS_DEPENDENT_READ(
+            PermissionCode.DEPENDENTS_DEPENDENT_READ,
+            ModuleCode.DEPENDENTS,
+            "Permite consultar dependentes"
     ),
 
     HEALTH_MEDICAL_PROFILE_UPDATE(
@@ -171,6 +358,31 @@ public enum PermissionDefinition {
             PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND,
             ModuleCode.MEMBERSHIP,
             "Permite reenviar o convite de ativação para um solicitante aprovado"
+    ),
+
+    // VEHICLES
+    VEHICLES_VEHICLE_INCLUDE(
+            PermissionCode.VEHICLES_VEHICLE_INCLUDE,
+            ModuleCode.VEHICLES,
+            "Permite cadastrar veículos"
+    ),
+
+    VEHICLES_VEHICLE_READ(
+            PermissionCode.VEHICLES_VEHICLE_READ,
+            ModuleCode.VEHICLES,
+            "Permite consultar veículos"
+    ),
+
+    VEHICLES_VEHICLE_UPDATE(
+            PermissionCode.VEHICLES_VEHICLE_UPDATE,
+            ModuleCode.VEHICLES,
+            "Permite atualizar veículos"
+    ),
+
+    VEHICLES_VEHICLE_DELETE(
+            PermissionCode.VEHICLES_VEHICLE_DELETE,
+            ModuleCode.VEHICLES,
+            "Permite remover veículos"
     );
 
     private final PermissionCode code;
