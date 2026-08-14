@@ -362,7 +362,7 @@ public enum PermissionDefinition {
 
     // VEHICLES
     VEHICLES_VEHICLE_INCLUDE(
-            PermissionCode.VEHICLES_VEHICLE_INCLUDE,
+            PermissionCode.VEHICLES_VEHICLE_CREATE,
             ModuleCode.VEHICLES,
             "Permite cadastrar veículos"
     ),

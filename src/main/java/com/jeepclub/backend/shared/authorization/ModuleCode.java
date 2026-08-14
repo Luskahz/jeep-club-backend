@@ -6,7 +6,7 @@ public enum ModuleCode {
     BILLING,
     DEPENDENTS,
     MEMBERSHIP,
-    TOOL,
+    TOOLS,
     HEALTH,
     VEHICLES
 }

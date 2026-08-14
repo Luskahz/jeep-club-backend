@@ -38,7 +38,7 @@ public class AdminVehicleController {
     private final AdminVehicleService adminVehicleService;
 
     @PostMapping("/include/admin/{memberId}")
-    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_INCLUDE')")
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_CREATE')")
     @RequiredPermission("VEHICLES_VEHICLE_INCLUDE")
     @Operation(
             summary = "Registrar veículo para um membro cadastrado",
