@@ -3,6 +3,7 @@ package com.jeepclub.backend.authentication.api.http.dto.admin.user;
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
@@ -126,5 +127,19 @@ public record AdminUserFilterDTO(
         return normalized.isEmpty()
                 ? null
                 : normalized;
+    }
+
+    @AssertTrue(message = "createdFrom must be before or equal to createdTo")
+    public boolean isCreatedRangeValid() {
+        return createdFrom == null
+                || createdTo == null
+                || !createdFrom.isAfter(createdTo);
+    }
+
+    @AssertTrue(message = "updatedFrom must be before or equal to updatedTo")
+    public boolean isUpdatedRangeValid() {
+        return updatedFrom == null
+                || updatedTo == null
+                || !updatedFrom.isAfter(updatedTo);
     }
 }
