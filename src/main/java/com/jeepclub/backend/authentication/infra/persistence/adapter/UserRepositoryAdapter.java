@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
+import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
@@ -9,8 +10,12 @@ import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.UserMapper;
+import com.jeepclub.backend.authentication.infra.persistence.specification.UserSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -112,11 +117,16 @@ public class UserRepositoryAdapter
     }
 
     @Override
-    public List<User> findAll() {
-        return jpaRepository.findAll()
-                .stream()
-                .map(UserMapper::toDomain)
-                .toList();
+    public Page<User> findAll(
+            AdminUserFilter filter,
+            Pageable pageable
+    ) {
+        return jpaRepository
+                .findAll(
+                        UserSpecification.from(filter),
+                        pageable
+                )
+                .map(UserMapper::toDomain);
     }
 
     private boolean isRegistrationUniqueConflict(DataIntegrityViolationException exception) {

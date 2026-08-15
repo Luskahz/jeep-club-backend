@@ -1,9 +1,9 @@
 package com.jeepclub.backend.authentication.core.application.result.admin.user;
 
+import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Objects;
 
 public record AdminUserResult(
@@ -12,7 +12,7 @@ public record AdminUserResult(
         String cpf,
         String email,
         String phone,
-        String status,
+        UserStatus status,
         Boolean passwordChangeRequired,
         Instant createdAt,
         Instant updatedAt
@@ -27,18 +27,10 @@ public record AdminUserResult(
                 user.getCpf(),
                 user.getEmail(),
                 user.getPhoneNumber(),
-                user.getStatus().name(),
+                user.getStatus(),
                 user.isChangePasswordRequired(),
                 user.getCreatedAt(),
                 user.getUpdatedAt()
         );
-    }
-
-    public static List<AdminUserResult> from(List<User> users) {
-        Objects.requireNonNull(users, "users cannot be null");
-
-        return users.stream()
-                .map(AdminUserResult::from)
-                .toList();
     }
 }

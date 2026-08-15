@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authentication.api.http.controller.admin;
 
+import com.jeepclub.backend.authentication.api.http.dto.admin.user.AdminUserFilterDTO;
 import com.jeepclub.backend.authentication.api.http.dto.admin.user.AdminUserResponseDTO;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.application.service.user.AdminUserService;
@@ -11,17 +12,18 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -39,21 +41,27 @@ import java.util.List;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
-
     @GetMapping
     @PreAuthorize("hasAuthority('AUTHENTICATION_USER_READ')")
     @RequiredPermission("AUTHENTICATION_USER_READ")
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Listar usuários",
-            description = "Retorna os usuários cadastrados no módulo de autenticação.",
+            description = """
+                Retorna os usuários cadastrados no módulo de autenticação,
+                com suporte a paginação, ordenação e filtros.
+                """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Usuários retornados com sucesso.",
+                            description = "Usuários retornados com sucesso."
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Parâmetros de consulta inválidos.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = AdminUserResponseDTO.class)
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
@@ -66,7 +74,7 @@ public class AdminUserController {
                     ),
                     @ApiResponse(
                             responseCode = "403",
-                            description = "Usuário autenticado sem permissão para consultar usuários.",
+                            description = "Usuário sem permissão para consultar usuários.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -74,10 +82,22 @@ public class AdminUserController {
                     )
             }
     )
-    public ResponseEntity<List<AdminUserResponseDTO>> findAll() {
-        List<AdminUserResult> results = adminUserService.findAll();
+    public ResponseEntity<Page<AdminUserResponseDTO>> findAll(
+            @Valid @ModelAttribute AdminUserFilterDTO filters,
+            @PageableDefault(
+                    page = 0,
+                    size = 20,
+                    sort = "id",
+                    direction = Sort.Direction.ASC
+            )
+            Pageable pageable
+    ) {
+        Page<AdminUserResult> results =
+                adminUserService.findAll(filters.toFilter(), pageable);
 
-        return ResponseEntity.ok(AdminUserResponseDTO.from(results));
+        return ResponseEntity.ok(
+                results.map(AdminUserResponseDTO::from)
+        );
     }
 
     @GetMapping("/{userId}")
