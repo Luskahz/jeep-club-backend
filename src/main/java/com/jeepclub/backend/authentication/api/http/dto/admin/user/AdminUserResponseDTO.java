@@ -1,5 +1,7 @@
 package com.jeepclub.backend.authentication.api.http.dto.admin.user;
 
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
@@ -14,6 +16,7 @@ import java.util.Objects;
         name = "AdminUserResponse",
         description = "Resposta administrativa com dados seguros de um usuário."
 )
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public record AdminUserResponseDTO(
 
         @Schema(
