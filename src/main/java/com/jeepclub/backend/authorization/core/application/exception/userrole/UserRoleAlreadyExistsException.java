@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.core.application.exception;
+package com.jeepclub.backend.authorization.core.application.exception.userrole;
 
 public class UserRoleAlreadyExistsException extends RuntimeException {
 

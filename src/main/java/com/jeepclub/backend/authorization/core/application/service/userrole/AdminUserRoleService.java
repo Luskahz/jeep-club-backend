@@ -1,10 +1,10 @@
 package com.jeepclub.backend.authorization.core.application.service.userrole;
 
-import com.jeepclub.backend.authorization.core.application.exception.AuthorizationUserNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.RootRoleCannotBeManagedManuallyException;
-import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.AuthorizationUserNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RootRoleCannotBeManagedManuallyException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.domain.model.UserRole;

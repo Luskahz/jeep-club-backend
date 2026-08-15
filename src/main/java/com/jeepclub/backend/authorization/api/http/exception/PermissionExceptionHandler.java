@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.api.http.exception;
 
-import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.permission.PermissionNotFoundException;
 import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionCodeMismatchException;
 import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionDescriptionCannotBeBlankException;
 import com.jeepclub.backend.authorization.core.domain.exception.permission.PermissionDescriptionTooLongException;

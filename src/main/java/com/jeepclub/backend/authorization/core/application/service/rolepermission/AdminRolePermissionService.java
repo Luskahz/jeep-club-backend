@@ -1,9 +1,9 @@
 package com.jeepclub.backend.authorization.core.application.service.rolepermission;
 
-import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.RolePermissionAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.RolePermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.permission.PermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.rolepermission.RolePermissionAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.rolepermission.RolePermissionNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
