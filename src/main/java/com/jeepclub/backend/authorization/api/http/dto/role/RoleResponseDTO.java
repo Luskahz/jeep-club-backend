@@ -1,5 +1,7 @@
 package com.jeepclub.backend.authorization.api.http.dto.role;
 
+import com.jeepclub.backend.authorization.core.domain.enums.RoleKind;
+import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -32,12 +34,20 @@ public record RoleResponseDTO(
         String description,
 
         @Schema(
+                description = "Tipo estrutural da role.",
+                example = "CUSTOM",
+                allowableValues = {"ROOT", "CUSTOM"},
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        RoleKind kind,
+
+        @Schema(
                 description = "Status atual da role.",
                 example = "ACTIVE",
                 allowableValues = {"ACTIVE", "INACTIVE", "DELETED"},
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
-        String status,
+        RoleStatus status,
 
         @Schema(
                 description = "Data de criação da role.",
@@ -60,6 +70,7 @@ public record RoleResponseDTO(
         )
         Instant deletedAt
 ) {
+
     public static RoleResponseDTO from(Role role) {
         Objects.requireNonNull(role, "Role cannot be null");
 
@@ -67,7 +78,8 @@ public record RoleResponseDTO(
                 role.getId(),
                 role.getName(),
                 role.getDescription(),
-                role.getStatus().name(),
+                role.getKind(),
+                role.getStatus(),
                 role.getCreatedAt(),
                 role.getUpdatedAt(),
                 role.getDeletedAt()
