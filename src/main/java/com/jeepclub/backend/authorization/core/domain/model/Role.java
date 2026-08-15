@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.core.domain.model;
 
+import com.jeepclub.backend.authorization.core.domain.enums.RoleKind;
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import com.jeepclub.backend.authorization.core.domain.exception.role.*;
 import lombok.AccessLevel;
@@ -16,6 +17,7 @@ public class Role {
     private Long id;
     private String name;
     private String description;
+    private RoleKind kind;
     private RoleStatus status;
     private Instant createdAt;
     private Instant updatedAt;
@@ -28,6 +30,7 @@ public class Role {
             Long id,
             String name,
             String description,
+            RoleKind kind,
             RoleStatus status,
             Instant createdAt,
             Instant updatedAt,
@@ -36,6 +39,7 @@ public class Role {
         this.id = id;
         this.name = validateName(name);
         this.description = normalizeDescription(description);
+        this.kind = Objects.requireNonNull(kind, "Role kind cannot be null");
         this.status = Objects.requireNonNull(status, "Role status cannot be null");
         this.createdAt = Objects.requireNonNull(createdAt, "Role createdAt cannot be null");
         this.updatedAt = updatedAt;
@@ -55,6 +59,26 @@ public class Role {
                 null,
                 name,
                 description,
+                RoleKind.CUSTOM,
+                RoleStatus.ACTIVE,
+                now,
+                now,
+                null
+        );
+    }
+
+    public static Role createRoot(
+            String name,
+            String description,
+            Instant now
+    ) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        return new Role(
+                null,
+                name,
+                description,
+                RoleKind.ROOT,
                 RoleStatus.ACTIVE,
                 now,
                 now,
@@ -66,6 +90,7 @@ public class Role {
             Long id,
             String name,
             String description,
+            RoleKind kind,
             RoleStatus status,
             Instant createdAt,
             Instant updatedAt,
@@ -78,13 +103,13 @@ public class Role {
                 id,
                 name,
                 description,
+                kind,
                 status,
                 createdAt,
                 updatedAt,
                 deletedAt
         );
     }
-
     public boolean update(
             String name,
             String description,
@@ -145,6 +170,14 @@ public class Role {
         this.status = RoleStatus.DELETED;
         this.deletedAt = deletedAt;
         this.updatedAt = deletedAt;
+    }
+
+    public boolean isRoot() {
+        return this.kind == RoleKind.ROOT;
+    }
+
+    public boolean isCustom() {
+        return this.kind == RoleKind.CUSTOM;
     }
 
     public boolean isActive() {
