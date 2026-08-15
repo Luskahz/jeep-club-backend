@@ -22,17 +22,23 @@ public final class UserSpecification {
     private UserSpecification() {
     }
 
-    public static Specification<UserEntity> from(AdminUserFilter filter) {
-        Objects.requireNonNull(filter, "filter cannot be null");
+    public static Specification<UserEntity> from(
+            AdminUserFilter filter
+    ) {
+        Objects.requireNonNull(
+                filter,
+                "filter cannot be null"
+        );
 
         return (root, query, criteriaBuilder) -> {
 
-            List<Predicate> predicates = new ArrayList<>();
+            List<Predicate> predicates =
+                    new ArrayList<>();
 
             if (filter.id() != null) {
                 predicates.add(
                         criteriaBuilder.equal(
-                                root.get("id"),
+                                root.get(UserEntity_.id),
                                 filter.id()
                         )
                 );
@@ -41,7 +47,9 @@ public final class UserSpecification {
             if (filter.name() != null) {
                 predicates.add(
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("name")),
+                                criteriaBuilder.lower(
+                                        root.get(UserEntity_.name)
+                                ),
                                 like(filter.name())
                         )
                 );
@@ -50,7 +58,7 @@ public final class UserSpecification {
             if (filter.cpf() != null) {
                 predicates.add(
                         criteriaBuilder.equal(
-                                root.get("cpf"),
+                                root.get(UserEntity_.cpf),
                                 filter.cpf()
                         )
                 );
@@ -59,7 +67,9 @@ public final class UserSpecification {
             if (filter.email() != null) {
                 predicates.add(
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("email")),
+                                criteriaBuilder.lower(
+                                        root.get(UserEntity_.email)
+                                ),
                                 like(filter.email())
                         )
                 );
@@ -68,7 +78,7 @@ public final class UserSpecification {
             if (filter.phoneNumber() != null) {
                 predicates.add(
                         criteriaBuilder.like(
-                                root.get("phoneNumber"),
+                                root.get(UserEntity_.phoneNumber),
                                 "%" + filter.phoneNumber() + "%"
                         )
                 );
@@ -97,7 +107,7 @@ public final class UserSpecification {
             if (filter.createdFrom() != null) {
                 predicates.add(
                         criteriaBuilder.greaterThanOrEqualTo(
-                                root.get("createdAt"),
+                                root.get(UserEntity_.createdAt),
                                 filter.createdFrom()
                         )
                 );
@@ -106,7 +116,7 @@ public final class UserSpecification {
             if (filter.createdTo() != null) {
                 predicates.add(
                         criteriaBuilder.lessThanOrEqualTo(
-                                root.get("createdAt"),
+                                root.get(UserEntity_.createdAt),
                                 filter.createdTo()
                         )
                 );
@@ -115,7 +125,7 @@ public final class UserSpecification {
             if (filter.updatedFrom() != null) {
                 predicates.add(
                         criteriaBuilder.greaterThanOrEqualTo(
-                                root.get("updatedAt"),
+                                root.get(UserEntity_.updatedAt),
                                 filter.updatedFrom()
                         )
                 );
@@ -124,31 +134,36 @@ public final class UserSpecification {
             if (filter.updatedTo() != null) {
                 predicates.add(
                         criteriaBuilder.lessThanOrEqualTo(
-                                root.get("updatedAt"),
+                                root.get(UserEntity_.updatedAt),
                                 filter.updatedTo()
                         )
                 );
             }
 
             if (filter.query() != null) {
-                String search = like(filter.query());
+                String search =
+                        like(filter.query());
 
                 predicates.add(
                         criteriaBuilder.or(
                                 criteriaBuilder.like(
-                                        criteriaBuilder.lower(root.get("name")),
+                                        criteriaBuilder.lower(
+                                                root.get(UserEntity_.name)
+                                        ),
                                         search
                                 ),
                                 criteriaBuilder.like(
-                                        criteriaBuilder.lower(root.get("email")),
+                                        criteriaBuilder.lower(
+                                                root.get(UserEntity_.email)
+                                        ),
                                         search
                                 ),
                                 criteriaBuilder.like(
-                                        root.get("cpf"),
+                                        root.get(UserEntity_.cpf),
                                         search
                                 ),
                                 criteriaBuilder.like(
-                                        root.get("phoneNumber"),
+                                        root.get(UserEntity_.phoneNumber),
                                         search
                                 )
                         )
@@ -170,18 +185,18 @@ public final class UserSpecification {
 
             case DISABLED ->
                     criteriaBuilder.equal(
-                            root.get("accountStatus"),
+                            root.get(UserEntity_.accountStatus),
                             AccountStatus.DISABLED
                     );
 
             case LOCKED ->
                     criteriaBuilder.and(
                             criteriaBuilder.notEqual(
-                                    root.get("accountStatus"),
+                                    root.get(UserEntity_.accountStatus),
                                     AccountStatus.DISABLED
                             ),
                             criteriaBuilder.equal(
-                                    root.get("authenticationStatus"),
+                                    root.get(UserEntity_.authenticationStatus),
                                     AuthenticationStatus.LOCKED
                             )
                     );
@@ -189,15 +204,15 @@ public final class UserSpecification {
             case CHANGE_PASSWORD_REQUIRED ->
                     criteriaBuilder.and(
                             criteriaBuilder.notEqual(
-                                    root.get("accountStatus"),
+                                    root.get(UserEntity_.accountStatus),
                                     AccountStatus.DISABLED
                             ),
                             criteriaBuilder.notEqual(
-                                    root.get("authenticationStatus"),
+                                    root.get(UserEntity_.authenticationStatus),
                                     AuthenticationStatus.LOCKED
                             ),
                             criteriaBuilder.equal(
-                                    root.get("credentialStatus"),
+                                    root.get(UserEntity_.credentialStatus),
                                     CredentialStatus.CHANGE_REQUIRED
                             )
                     );
@@ -205,15 +220,15 @@ public final class UserSpecification {
             case PENDING_FIRST_ACCESS ->
                     criteriaBuilder.and(
                             criteriaBuilder.notEqual(
-                                    root.get("accountStatus"),
+                                    root.get(UserEntity_.accountStatus),
                                     AccountStatus.DISABLED
                             ),
                             criteriaBuilder.notEqual(
-                                    root.get("authenticationStatus"),
+                                    root.get(UserEntity_.authenticationStatus),
                                     AuthenticationStatus.LOCKED
                             ),
                             criteriaBuilder.equal(
-                                    root.get("credentialStatus"),
+                                    root.get(UserEntity_.credentialStatus),
                                     CredentialStatus.PENDING_FIRST_ACCESS
                             )
                     );
@@ -221,15 +236,15 @@ public final class UserSpecification {
             case ACTIVE ->
                     criteriaBuilder.and(
                             criteriaBuilder.equal(
-                                    root.get("accountStatus"),
+                                    root.get(UserEntity_.accountStatus),
                                     AccountStatus.ACTIVE
                             ),
                             criteriaBuilder.equal(
-                                    root.get("authenticationStatus"),
+                                    root.get(UserEntity_.authenticationStatus),
                                     AuthenticationStatus.ENABLED
                             ),
                             criteriaBuilder.equal(
-                                    root.get("credentialStatus"),
+                                    root.get(UserEntity_.credentialStatus),
                                     CredentialStatus.PERMANENT
                             )
                     );
@@ -242,17 +257,22 @@ public final class UserSpecification {
             boolean required
     ) {
         Predicate requiresPasswordChange =
-                root.get("credentialStatus").in(
-                        CredentialStatus.CHANGE_REQUIRED,
-                        CredentialStatus.PENDING_FIRST_ACCESS
-                );
+                root.get(UserEntity_.credentialStatus)
+                        .in(
+                                CredentialStatus.CHANGE_REQUIRED,
+                                CredentialStatus.PENDING_FIRST_ACCESS
+                        );
 
         return required
                 ? requiresPasswordChange
-                : criteriaBuilder.not(requiresPasswordChange);
+                : criteriaBuilder.not(
+                requiresPasswordChange
+        );
     }
 
     private static String like(String value) {
-        return "%" + value.toLowerCase(Locale.ROOT) + "%";
+        return "%" +
+                value.toLowerCase(Locale.ROOT) +
+                "%";
     }
 }

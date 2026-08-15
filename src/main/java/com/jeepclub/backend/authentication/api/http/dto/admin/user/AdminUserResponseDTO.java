@@ -1,6 +1,9 @@
 package com.jeepclub.backend.authentication.api.http.dto.admin.user;
 
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
+import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -49,23 +52,39 @@ public record AdminUserResponseDTO(
         String phone,
 
         @Schema(
-                description = "Status administrativo do usuário.",
+                description = "Status da conta do usuário.",
                 example = "ACTIVE",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                allowableValues = {"ACTIVE", "DISABLED"}
         )
-        String status,
+        AccountStatus accountStatus,
+
+        @Schema(
+                description = "Status de autenticação do usuário.",
+                example = "ENABLED",
+                allowableValues = {"ENABLED", "LOCKED"}
+        )
+        AuthenticationStatus authenticationStatus,
+
+        @Schema(
+                description = "Status das credenciais do usuário.",
+                example = "PERMANENT",
+                allowableValues = {
+                        "PERMANENT",
+                        "PENDING_FIRST_ACCESS",
+                        "CHANGE_REQUIRED"
+                }
+        )
+        CredentialStatus credentialStatus,
 
         @Schema(
                 description = "Indica se o usuário precisa trocar a senha no próximo acesso.",
-                example = "false",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                example = "false"
         )
         Boolean passwordChangeRequired,
 
         @Schema(
                 description = "Data de criação do usuário.",
-                example = "2026-06-04T17:44:38Z",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                example = "2026-06-04T17:44:38Z"
         )
         Instant createdAt,
 
@@ -86,15 +105,22 @@ public record AdminUserResponseDTO(
                 result.cpf(),
                 result.email(),
                 result.phone(),
-                result.status(),
+                result.accountStatus(),
+                result.authenticationStatus(),
+                result.credentialStatus(),
                 result.passwordChangeRequired(),
                 result.createdAt(),
                 result.updatedAt()
         );
     }
 
-    public static List<AdminUserResponseDTO> from(List<AdminUserResult> results) {
-        Objects.requireNonNull(results, "results cannot be null");
+    public static List<AdminUserResponseDTO> from(
+            List<AdminUserResult> results
+    ) {
+        Objects.requireNonNull(
+                results,
+                "results cannot be null"
+        );
 
         return results.stream()
                 .map(AdminUserResponseDTO::from)

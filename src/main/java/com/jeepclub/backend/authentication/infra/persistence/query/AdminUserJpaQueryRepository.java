@@ -6,8 +6,8 @@ import com.jeepclub.backend.authentication.core.application.result.admin.user.Ad
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity_;
 import com.jeepclub.backend.authentication.infra.persistence.specification.UserSpecification;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -117,40 +117,50 @@ public class AdminUserJpaQueryRepository {
 
                 case ID ->
                         selections.add(
-                                root.get("id")
+                                root.get(UserEntity_.id)
                                         .alias("id")
                         );
 
                 case NAME ->
                         selections.add(
-                                root.get("name")
+                                root.get(UserEntity_.name)
                                         .alias("name")
                         );
 
                 case CPF ->
                         selections.add(
-                                root.get("cpf")
+                                root.get(UserEntity_.cpf)
                                         .alias("cpf")
                         );
 
                 case EMAIL ->
                         selections.add(
-                                root.get("email")
+                                root.get(UserEntity_.email)
                                         .alias("email")
                         );
 
                 case PHONE_NUMBER ->
                         selections.add(
-                                root.get("phoneNumber")
+                                root.get(UserEntity_.phoneNumber)
                                         .alias("phoneNumber")
                         );
 
-                case STATUS ->
+                case ACCOUNT_STATUS ->
                         selections.add(
-                                statusExpression(
-                                        root,
-                                        criteriaBuilder
-                                ).alias("status")
+                                root.get(UserEntity_.accountStatus)
+                                        .alias("accountStatus")
+                        );
+
+                case AUTHENTICATION_STATUS ->
+                        selections.add(
+                                root.get(UserEntity_.authenticationStatus)
+                                        .alias("authenticationStatus")
+                        );
+
+                case CREDENTIAL_STATUS ->
+                        selections.add(
+                                root.get(UserEntity_.credentialStatus)
+                                        .alias("credentialStatus")
                         );
 
                 case PASSWORD_CHANGE_REQUIRED ->
@@ -163,13 +173,13 @@ public class AdminUserJpaQueryRepository {
 
                 case CREATED_AT ->
                         selections.add(
-                                root.get("createdAt")
+                                root.get(UserEntity_.createdAt)
                                         .alias("createdAt")
                         );
 
                 case UPDATED_AT ->
                         selections.add(
-                                root.get("updatedAt")
+                                root.get(UserEntity_.updatedAt)
                                         .alias("updatedAt")
                         );
             }
@@ -221,9 +231,23 @@ public class AdminUserJpaQueryRepository {
                 get(
                         tuple,
                         fields,
-                        AdminUserField.STATUS,
-                        "status",
-                        String.class
+                        AdminUserField.ACCOUNT_STATUS,
+                        "accountStatus",
+                        AccountStatus.class
+                ),
+                get(
+                        tuple,
+                        fields,
+                        AdminUserField.AUTHENTICATION_STATUS,
+                        "authenticationStatus",
+                        AuthenticationStatus.class
+                ),
+                get(
+                        tuple,
+                        fields,
+                        AdminUserField.CREDENTIAL_STATUS,
+                        "credentialStatus",
+                        CredentialStatus.class
                 ),
                 get(
                         tuple,
@@ -263,64 +287,22 @@ public class AdminUserJpaQueryRepository {
         return tuple.get(alias, type);
     }
 
-    private Expression<String> statusExpression(
-            Root<UserEntity> root,
-            CriteriaBuilder criteriaBuilder
-    ) {
-        return criteriaBuilder.<String>selectCase()
-
-                .when(
-                        criteriaBuilder.equal(
-                                root.get("accountStatus"),
-                                AccountStatus.DISABLED
-                        ),
-                        UserStatus.DISABLED.name()
-                )
-
-                .when(
-                        criteriaBuilder.equal(
-                                root.get("authenticationStatus"),
-                                AuthenticationStatus.LOCKED
-                        ),
-                        UserStatus.LOCKED.name()
-                )
-
-                .when(
-                        criteriaBuilder.equal(
-                                root.get("credentialStatus"),
-                                CredentialStatus.CHANGE_REQUIRED
-                        ),
-                        UserStatus.CHANGE_PASSWORD_REQUIRED.name()
-                )
-
-                .when(
-                        criteriaBuilder.equal(
-                                root.get("credentialStatus"),
-                                CredentialStatus.PENDING_FIRST_ACCESS
-                        ),
-                        UserStatus.PENDING_FIRST_ACCESS.name()
-                )
-
-                .otherwise(
-                        UserStatus.ACTIVE.name()
-                );
-    }
-
     private Expression<Boolean> passwordChangeRequiredExpression(
             Root<UserEntity> root,
             CriteriaBuilder criteriaBuilder
     ) {
-        return criteriaBuilder.<Boolean>selectCase()
+        CriteriaBuilder.Case<Boolean> expression =
+                criteriaBuilder.selectCase();
 
+        return expression
                 .when(
-                        root.get("credentialStatus").in(
+                        root.get(UserEntity_.credentialStatus).in(
                                 CredentialStatus.CHANGE_REQUIRED,
                                 CredentialStatus.PENDING_FIRST_ACCESS
                         ),
-                        true
+                        Boolean.TRUE
                 )
-
-                .otherwise(false);
+                .otherwise(Boolean.FALSE);
     }
 
     private void applySort(
@@ -332,20 +314,56 @@ public class AdminUserJpaQueryRepository {
         List<Order> orders =
                 pageable.getSort()
                         .stream()
-                        .map(order ->
-                                order.isAscending()
-                                        ? criteriaBuilder.asc(
-                                        root.get(order.getProperty())
-                                )
-                                        : criteriaBuilder.desc(
-                                        root.get(order.getProperty())
-                                )
-                        )
+                        .map(order -> {
+                            Expression<?> expression =
+                                    sortExpression(
+                                            root,
+                                            order.getProperty()
+                                    );
+
+                            return order.isAscending()
+                                    ? criteriaBuilder.asc(expression)
+                                    : criteriaBuilder.desc(expression);
+                        })
                         .toList();
 
         if (!orders.isEmpty()) {
             criteriaQuery.orderBy(orders);
         }
+    }
+
+    private Expression<?> sortExpression(
+            Root<UserEntity> root,
+            String property
+    ) {
+        return switch (property) {
+
+            case "id" ->
+                    root.get(UserEntity_.id);
+
+            case "name" ->
+                    root.get(UserEntity_.name);
+
+            case "cpf" ->
+                    root.get(UserEntity_.cpf);
+
+            case "email" ->
+                    root.get(UserEntity_.email);
+
+            case "phoneNumber" ->
+                    root.get(UserEntity_.phoneNumber);
+
+            case "createdAt" ->
+                    root.get(UserEntity_.createdAt);
+
+            case "updatedAt" ->
+                    root.get(UserEntity_.updatedAt);
+
+            default ->
+                    throw new IllegalArgumentException(
+                            "Unsupported user sort field: " + property
+                    );
+        };
     }
 
     private long count(
