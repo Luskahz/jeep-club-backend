@@ -15,8 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserJpaRepository
-        extends JpaRepository<UserEntity, Long>,
-        JpaSpecificationExecutor<UserEntity> {
+        extends JpaRepository<UserEntity, Long>{
 
     Optional<UserEntity> findByCpf(String cpf);
 

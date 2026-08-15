@@ -1,10 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.specification;
 
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity_;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -84,12 +81,29 @@ public final class UserSpecification {
                 );
             }
 
-            if (filter.status() != null) {
+            if (filter.accountStatus() != null) {
                 predicates.add(
-                        statusPredicate(
-                                root,
-                                criteriaBuilder,
-                                filter.status()
+                        criteriaBuilder.equal(
+                                root.get(UserEntity_.accountStatus),
+                                filter.accountStatus()
+                        )
+                );
+            }
+
+            if (filter.authenticationStatus() != null) {
+                predicates.add(
+                        criteriaBuilder.equal(
+                                root.get(UserEntity_.authenticationStatus),
+                                filter.authenticationStatus()
+                        )
+                );
+            }
+
+            if (filter.credentialStatus() != null) {
+                predicates.add(
+                        criteriaBuilder.equal(
+                                root.get(UserEntity_.credentialStatus),
+                                filter.credentialStatus()
                         )
                 );
             }
@@ -173,81 +187,6 @@ public final class UserSpecification {
             return criteriaBuilder.and(
                     predicates.toArray(Predicate[]::new)
             );
-        };
-    }
-
-    private static Predicate statusPredicate(
-            Root<UserEntity> root,
-            CriteriaBuilder criteriaBuilder,
-            UserStatus status
-    ) {
-        return switch (status) {
-
-            case DISABLED ->
-                    criteriaBuilder.equal(
-                            root.get(UserEntity_.accountStatus),
-                            AccountStatus.DISABLED
-                    );
-
-            case LOCKED ->
-                    criteriaBuilder.and(
-                            criteriaBuilder.notEqual(
-                                    root.get(UserEntity_.accountStatus),
-                                    AccountStatus.DISABLED
-                            ),
-                            criteriaBuilder.equal(
-                                    root.get(UserEntity_.authenticationStatus),
-                                    AuthenticationStatus.LOCKED
-                            )
-                    );
-
-            case CHANGE_PASSWORD_REQUIRED ->
-                    criteriaBuilder.and(
-                            criteriaBuilder.notEqual(
-                                    root.get(UserEntity_.accountStatus),
-                                    AccountStatus.DISABLED
-                            ),
-                            criteriaBuilder.notEqual(
-                                    root.get(UserEntity_.authenticationStatus),
-                                    AuthenticationStatus.LOCKED
-                            ),
-                            criteriaBuilder.equal(
-                                    root.get(UserEntity_.credentialStatus),
-                                    CredentialStatus.CHANGE_REQUIRED
-                            )
-                    );
-
-            case PENDING_FIRST_ACCESS ->
-                    criteriaBuilder.and(
-                            criteriaBuilder.notEqual(
-                                    root.get(UserEntity_.accountStatus),
-                                    AccountStatus.DISABLED
-                            ),
-                            criteriaBuilder.notEqual(
-                                    root.get(UserEntity_.authenticationStatus),
-                                    AuthenticationStatus.LOCKED
-                            ),
-                            criteriaBuilder.equal(
-                                    root.get(UserEntity_.credentialStatus),
-                                    CredentialStatus.PENDING_FIRST_ACCESS
-                            )
-                    );
-
-            case ACTIVE ->
-                    criteriaBuilder.and(
-                            criteriaBuilder.equal(
-                                    root.get(UserEntity_.accountStatus),
-                                    AccountStatus.ACTIVE
-                            ),
-                            criteriaBuilder.equal(
-                                    root.get(UserEntity_.authenticationStatus),
-                                    AuthenticationStatus.ENABLED
-                            ),
-                            criteriaBuilder.equal(
-                                    root.get(UserEntity_.credentialStatus),
-                                    CredentialStatus.PERMANENT
-                            )
-                    );
         };
     }
 

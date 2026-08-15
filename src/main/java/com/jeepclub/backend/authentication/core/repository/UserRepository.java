@@ -14,11 +14,6 @@ public interface UserRepository {
 
     User save(User user);
 
-    Page<User> findAll(
-            AdminUserFilter filter,
-            Pageable pageable
-    );
-
     Optional<User> findById(Long id);
 
     Optional<User> findByIdForUpdate(Long id);

@@ -3,7 +3,6 @@ package com.jeepclub.backend.authentication.core.domain.model;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserAlreadyDisabledException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserBlockedForLoginException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserCannotChangePasswordException;
@@ -185,26 +184,6 @@ public class User {
         user.passwordChangedAt = passwordChangedAt;
         user.failedLoginAttempts = failedLoginAttempts;
         return user;
-    }
-
-    /**
-     * Compatibility projection priority: disabled, locked, required change,
-     * pending first access, active.
-     */
-    public UserStatus getStatus() {
-        if (isDisabled()) {
-            return UserStatus.DISABLED;
-        }
-        if (isLocked()) {
-            return UserStatus.LOCKED;
-        }
-        if (credentialStatus == CredentialStatus.CHANGE_REQUIRED) {
-            return UserStatus.CHANGE_PASSWORD_REQUIRED;
-        }
-        if (credentialStatus == CredentialStatus.PENDING_FIRST_ACCESS) {
-            return UserStatus.PENDING_FIRST_ACCESS;
-        }
-        return UserStatus.ACTIVE;
     }
 
     public void registerFailedLogin() {

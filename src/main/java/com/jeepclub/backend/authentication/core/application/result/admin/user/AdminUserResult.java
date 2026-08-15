@@ -3,7 +3,6 @@ package com.jeepclub.backend.authentication.core.application.result.admin.user;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.core.domain.model.User;
 
 import java.time.Instant;

@@ -1,7 +1,9 @@
 package com.jeepclub.backend.authentication.api.http.dto.admin.user;
 
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Pattern;
@@ -11,7 +13,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.Instant;
 
-@Schema(description = "Filtros disponíveis para consulta administrativa de usuários.")
+@Schema(
+        description = "Filtros disponíveis para consulta administrativa de usuários."
+)
 public record AdminUserFilterDTO(
 
         @Schema(
@@ -53,10 +57,35 @@ public record AdminUserFilterDTO(
         String phoneNumber,
 
         @Schema(
-                description = "Status administrativo do usuário.",
-                example = "ACTIVE"
+                description = "Status administrativo da conta do usuário.",
+                example = "ACTIVE",
+                allowableValues = {
+                        "ACTIVE",
+                        "DISABLED"
+                }
         )
-        UserStatus status,
+        AccountStatus accountStatus,
+
+        @Schema(
+                description = "Status de autenticação do usuário.",
+                example = "ENABLED",
+                allowableValues = {
+                        "ENABLED",
+                        "LOCKED"
+                }
+        )
+        AuthenticationStatus authenticationStatus,
+
+        @Schema(
+                description = "Status atual das credenciais do usuário.",
+                example = "PERMANENT",
+                allowableValues = {
+                        "PERMANENT",
+                        "PENDING_FIRST_ACCESS",
+                        "CHANGE_REQUIRED"
+                }
+        )
+        CredentialStatus credentialStatus,
 
         @Schema(
                 description = "Filtra usuários que precisam ou não alterar a senha.",
@@ -107,7 +136,9 @@ public record AdminUserFilterDTO(
                 normalize(cpf),
                 normalize(email),
                 normalize(phoneNumber),
-                status,
+                accountStatus,
+                authenticationStatus,
+                credentialStatus,
                 passwordChangeRequired,
                 createdFrom,
                 createdTo,
@@ -129,14 +160,18 @@ public record AdminUserFilterDTO(
                 : normalized;
     }
 
-    @AssertTrue(message = "createdFrom must be before or equal to createdTo")
+    @AssertTrue(
+            message = "createdFrom must be before or equal to createdTo"
+    )
     public boolean isCreatedRangeValid() {
         return createdFrom == null
                 || createdTo == null
                 || !createdFrom.isAfter(createdTo);
     }
 
-    @AssertTrue(message = "updatedFrom must be before or equal to updatedTo")
+    @AssertTrue(
+            message = "updatedFrom must be before or equal to updatedTo"
+    )
     public boolean isUpdatedRangeValid() {
         return updatedFrom == null
                 || updatedTo == null

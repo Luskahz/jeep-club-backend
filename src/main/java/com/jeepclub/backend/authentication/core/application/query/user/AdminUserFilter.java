@@ -1,7 +1,8 @@
 package com.jeepclub.backend.authentication.core.application.query.user;
 
-import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
-
+import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import java.time.Instant;
 
 public record AdminUserFilter(
@@ -10,12 +11,13 @@ public record AdminUserFilter(
         String cpf,
         String email,
         String phoneNumber,
-        UserStatus status,
+        AccountStatus accountStatus,
+        AuthenticationStatus authenticationStatus,
+        CredentialStatus credentialStatus,
         Boolean passwordChangeRequired,
         Instant createdFrom,
         Instant createdTo,
         Instant updatedFrom,
         Instant updatedTo,
         String query
-) {
-}
+) {}
