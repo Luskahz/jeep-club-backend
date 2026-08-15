@@ -3,7 +3,6 @@ package com.jeepclub.backend.authentication.api.http.controller.admin;
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserField;
 import com.jeepclub.backend.authentication.api.http.dto.admin.user.AdminUserFilterDTO;
 import com.jeepclub.backend.authentication.api.http.dto.admin.user.AdminUserResponseDTO;
-import com.jeepclub.backend.authentication.core.application.query.user.AdminUserProjectionField;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.application.service.user.AdminUserService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
@@ -27,6 +26,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -97,12 +97,10 @@ public class AdminUserController {
             )
             Pageable pageable
     ) {
-        Set<AdminUserProjectionField> selectedFields =
-                fields == null
-                        ? Set.of()
-                        : fields.stream()
-                        .map(AdminUserField::toProjectionField)
-                        .collect(Collectors.toSet());
+        Set<AdminUserField> selectedFields =
+                fields == null || fields.isEmpty()
+                        ? EnumSet.allOf(AdminUserField.class)
+                        : EnumSet.copyOf(fields);
 
         Page<AdminUserResult> results =
                 adminUserService.findAll(

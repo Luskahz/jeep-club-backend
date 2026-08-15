@@ -11,8 +11,4 @@ public enum AdminUserField {
     PASSWORD_CHANGE_REQUIRED,
     CREATED_AT,
     UPDATED_AT;
-
-    public AdminUserProjectionField toProjectionField() {
-        return AdminUserProjectionField.valueOf(name());
-    }
 }
