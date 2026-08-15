@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authorization.core.application.service.permission;
 
-import com.jeepclub.backend.authorization.core.application.exception.PermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.permission.PermissionNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.PermissionResult;
 import com.jeepclub.backend.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;

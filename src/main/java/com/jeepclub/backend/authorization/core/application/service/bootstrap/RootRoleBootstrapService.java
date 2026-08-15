@@ -17,50 +17,50 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class AdminRoleBootstrapService {
+public class RootRoleBootstrapService {
+    private static final String ROOT_ROLE_DESCRIPTION =
+            "Role raiz do sistema";
 
-    private static final String ADMIN_ROLE_DESCRIPTION = "Role administrativa padrão do sistema";
-
+    private final AdminBootstrapConfig adminBootstrapConfig;
     private final RoleRepository roleRepository;
     private final PermissionRepository permissionRepository;
     private final RolePermissionRepository rolePermissionRepository;
-    private final AdminBootstrapConfig adminBootstrapConfig;
     private final Clock clock;
 
     @Transactional
-    public Long createAdminRoleIfMissing() {
-        return roleRepository.findByName(adminBootstrapConfig.roleName())
-                .map(Role::getId)
-                .orElseGet(this::createAdminRole);
+    public Long ensureRootRole() {
+        Role root = roleRepository.findRoot()
+                .orElseGet(this::createRootRole);
+
+        assignAllPermissions(root.getId());
+
+        return root.getId();
     }
 
-    @Transactional
-    public void assignAllPermissionsToRole(Long roleId) {
+    private Role createRootRole() {
+        Instant now = Instant.now(clock);
+
+        Role root = Role.createRoot(
+                adminBootstrapConfig.roleName(),
+                ROOT_ROLE_DESCRIPTION,
+                now
+        );
+
+        return roleRepository.save(root);
+    }
+
+    private void assignAllPermissions(Long rootRoleId) {
         Instant now = Instant.now(clock);
 
         List<Permission> permissions = permissionRepository.findAll();
 
         for (Permission permission : permissions) {
             assignPermissionIfMissing(
-                    roleId,
+                    rootRoleId,
                     permission.getId(),
                     now
             );
         }
-    }
-
-    private Long createAdminRole() {
-        Instant now = Instant.now(clock);
-
-        Role role = Role.create(
-                adminBootstrapConfig.roleName(),
-                ADMIN_ROLE_DESCRIPTION,
-                now
-        );
-
-        Role savedRole = roleRepository.save(role);
-
-        return savedRole.getId();
     }
 
     private void assignPermissionIfMissing(
@@ -68,10 +68,11 @@ public class AdminRoleBootstrapService {
             Long permissionId,
             Instant now
     ) {
-        boolean alreadyAssigned = rolePermissionRepository.existsByRoleIdAndPermissionId(
-                roleId,
-                permissionId
-        );
+        boolean alreadyAssigned =
+                rolePermissionRepository.existsByRoleIdAndPermissionId(
+                        roleId,
+                        permissionId
+                );
 
         if (alreadyAssigned) {
             return;

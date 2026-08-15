@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.api.http.exception;
 
-import com.jeepclub.backend.authorization.core.application.exception.RoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleNotFoundException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.InactiveRoleCannotBeUsedException;
 import com.jeepclub.backend.authorization.core.domain.exception.role.RoleDescriptionTooLongException;

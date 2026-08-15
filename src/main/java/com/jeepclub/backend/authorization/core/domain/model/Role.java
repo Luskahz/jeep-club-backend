@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.core.domain.model;
 
+import com.jeepclub.backend.authorization.core.domain.enums.RoleKind;
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import com.jeepclub.backend.authorization.core.domain.exception.role.*;
 import lombok.AccessLevel;
@@ -13,21 +14,23 @@ import java.util.Objects;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Role {
 
+    private static final int MAX_NAME_LENGTH = 100;
+    private static final int MAX_DESCRIPTION_LENGTH = 255;
+
     private Long id;
     private String name;
     private String description;
+    private RoleKind kind;
     private RoleStatus status;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant deletedAt;
 
-    private static final int MAX_NAME_LENGTH = 100;
-    private static final int MAX_DESCRIPTION_LENGTH = 255;
-
     private Role(
             Long id,
             String name,
             String description,
+            RoleKind kind,
             RoleStatus status,
             Instant createdAt,
             Instant updatedAt,
@@ -36,12 +39,17 @@ public class Role {
         this.id = id;
         this.name = validateName(name);
         this.description = normalizeDescription(description);
+        this.kind = Objects.requireNonNull(kind, "Role kind cannot be null");
         this.status = Objects.requireNonNull(status, "Role status cannot be null");
-        this.createdAt = Objects.requireNonNull(createdAt, "Role createdAt cannot be null");
+        this.createdAt = Objects.requireNonNull(
+                createdAt,
+                "Role createdAt cannot be null"
+        );
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
 
         validateDeletionConsistency();
+        validateRootConsistency();
     }
 
     public static Role create(
@@ -55,6 +63,26 @@ public class Role {
                 null,
                 name,
                 description,
+                RoleKind.CUSTOM,
+                RoleStatus.ACTIVE,
+                now,
+                now,
+                null
+        );
+    }
+
+    public static Role createRoot(
+            String name,
+            String description,
+            Instant now
+    ) {
+        Objects.requireNonNull(now, "now cannot be null");
+
+        return new Role(
+                null,
+                name,
+                description,
+                RoleKind.ROOT,
                 RoleStatus.ACTIVE,
                 now,
                 now,
@@ -66,18 +94,22 @@ public class Role {
             Long id,
             String name,
             String description,
+            RoleKind kind,
             RoleStatus status,
             Instant createdAt,
             Instant updatedAt,
             Instant deletedAt
     ) {
-        Objects.requireNonNull(id, "Role id cannot be null when reconstituting");
-        Objects.requireNonNull(createdAt, "Role createdAt cannot be null when reconstituting");
+        Objects.requireNonNull(
+                id,
+                "Role id cannot be null when reconstituting"
+        );
 
         return new Role(
                 id,
                 name,
                 description,
+                kind,
                 status,
                 createdAt,
                 updatedAt,
@@ -90,7 +122,7 @@ public class Role {
             String description,
             Instant updatedAt
     ) {
-        ensureNotDeleted();
+        ensureCanBeChanged();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
 
         String normalizedName = validateName(name);
@@ -98,7 +130,10 @@ public class Role {
 
         boolean unchanged =
                 Objects.equals(this.name, normalizedName)
-                        && Objects.equals(this.description, normalizedDescription);
+                        && Objects.equals(
+                        this.description,
+                        normalizedDescription
+                );
 
         if (unchanged) {
             return false;
@@ -112,7 +147,7 @@ public class Role {
     }
 
     public boolean activate(Instant updatedAt) {
-        ensureNotDeleted();
+        ensureCanBeChanged();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
 
         if (this.status == RoleStatus.ACTIVE) {
@@ -121,11 +156,12 @@ public class Role {
 
         this.status = RoleStatus.ACTIVE;
         this.updatedAt = updatedAt;
+
         return true;
     }
 
     public boolean deactivate(Instant updatedAt) {
-        ensureNotDeleted();
+        ensureCanBeChanged();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
 
         if (this.status == RoleStatus.INACTIVE) {
@@ -139,7 +175,7 @@ public class Role {
     }
 
     public void delete(Instant deletedAt) {
-        ensureNotDeleted();
+        ensureCanBeChanged();
         Objects.requireNonNull(deletedAt, "deletedAt cannot be null");
 
         this.status = RoleStatus.DELETED;
@@ -147,24 +183,47 @@ public class Role {
         this.updatedAt = deletedAt;
     }
 
-    public boolean isActive() {
-        return this.status == RoleStatus.ACTIVE && this.deletedAt == null;
-    }
+    public void ensureCanBeChanged() {
+        ensureNotDeleted();
 
-    public boolean isDeleted() {
-        return this.status == RoleStatus.DELETED || this.deletedAt != null;
-    }
-
-    private void ensureNotDeleted() {
-        if (isDeleted()) {
-            throw new DeletedRoleCannotBeChangedException(this.id);
+        if (isRoot()) {
+            throw new RootRoleCannotBeChangedException(this.id);
         }
     }
+
     public void ensureActive() {
         ensureNotDeleted();
 
         if (this.status != RoleStatus.ACTIVE) {
             throw new InactiveRoleCannotBeUsedException(this.id);
+        }
+    }
+
+    public boolean isRoot() {
+        return this.kind == RoleKind.ROOT;
+    }
+
+    public boolean isCustom() {
+        return this.kind == RoleKind.CUSTOM;
+    }
+
+    public boolean isActive() {
+        return this.status == RoleStatus.ACTIVE
+                && this.deletedAt == null;
+    }
+
+    public boolean isDeleted() {
+        return this.status == RoleStatus.DELETED
+                || this.deletedAt != null;
+    }
+
+    public static String normalizeName(String name) {
+        return validateName(name);
+    }
+
+    private void ensureNotDeleted() {
+        if (isDeleted()) {
+            throw new DeletedRoleCannotBeChangedException(this.id);
         }
     }
 
@@ -182,14 +241,6 @@ public class Role {
         return normalizedName;
     }
 
-    public void ensureCanBeChanged() {
-        ensureNotDeleted();
-    }
-
-    public static String normalizeName(String name) {
-        return validateName(name);
-    }
-
     private static String normalizeDescription(String description) {
         if (description == null || description.isBlank()) {
             return null;
@@ -198,7 +249,9 @@ public class Role {
         String normalizedDescription = description.trim();
 
         if (normalizedDescription.length() > MAX_DESCRIPTION_LENGTH) {
-            throw new RoleDescriptionTooLongException(MAX_DESCRIPTION_LENGTH);
+            throw new RoleDescriptionTooLongException(
+                    MAX_DESCRIPTION_LENGTH
+            );
         }
 
         return normalizedDescription;
@@ -206,11 +259,33 @@ public class Role {
 
     private void validateDeletionConsistency() {
         if (this.status == RoleStatus.DELETED && this.deletedAt == null) {
-            throw new IllegalStateException("Deleted role must have deletedAt.");
+            throw new IllegalStateException(
+                    "Deleted role must have deletedAt."
+            );
         }
 
         if (this.deletedAt != null && this.status != RoleStatus.DELETED) {
-            throw new IllegalStateException("Role with deletedAt must have DELETED status.");
+            throw new IllegalStateException(
+                    "Role with deletedAt must have DELETED status."
+            );
+        }
+    }
+
+    private void validateRootConsistency() {
+        if (!isRoot()) {
+            return;
+        }
+
+        if (this.status != RoleStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "ROOT role must always be ACTIVE."
+            );
+        }
+
+        if (this.deletedAt != null) {
+            throw new IllegalStateException(
+                    "ROOT role cannot be deleted."
+            );
         }
     }
 }

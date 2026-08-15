@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.api.http.exception;
 
-import com.jeepclub.backend.authorization.core.application.exception.RolePermissionAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.RolePermissionNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.rolepermission.RolePermissionAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.rolepermission.RolePermissionNotFoundException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;

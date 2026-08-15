@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authorization.core.application.exception;
+package com.jeepclub.backend.authorization.core.application.exception.permission;
 
 public class PermissionNotFoundException extends RuntimeException {
 

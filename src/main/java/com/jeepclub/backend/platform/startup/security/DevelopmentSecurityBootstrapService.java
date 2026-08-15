@@ -1,7 +1,7 @@
 package com.jeepclub.backend.platform.startup.security;
 
 import com.jeepclub.backend.authentication.core.application.service.bootstrap.DevelopmentAdminUserBootstrapService;
-import com.jeepclub.backend.authorization.core.application.service.bootstrap.AdminRoleBootstrapService;
+import com.jeepclub.backend.authorization.core.application.service.bootstrap.RootRoleBootstrapService;
 import com.jeepclub.backend.authorization.core.application.service.bootstrap.PermissionSynchronizationService;
 import com.jeepclub.backend.authorization.core.application.service.bootstrap.UserRoleAssignmentService;
 import lombok.RequiredArgsConstructor;
@@ -14,18 +14,24 @@ public class DevelopmentSecurityBootstrapService {
 
     private final PermissionSynchronizationService permissionSynchronizationService;
     private final DevelopmentAdminUserBootstrapService developmentAdminUserBootstrapService;
-    private final AdminRoleBootstrapService adminRoleBootstrapService;
+    private final RootRoleBootstrapService rootRoleBootstrapService;
     private final UserRoleAssignmentService userRoleAssignmentService;
 
     @Transactional
     public void bootstrap() {
 
-        Long adminUserId = developmentAdminUserBootstrapService.createAdminUserIfMissing();
+        Long adminUserId =
+                developmentAdminUserBootstrapService
+                        .createAdminUserIfMissing();
 
-        Long adminRoleId = adminRoleBootstrapService.createAdminRoleIfMissing();
+        Long rootRoleId =
+                rootRoleBootstrapService
+                        .ensureRootRole();
 
-        adminRoleBootstrapService.assignAllPermissionsToRole(adminRoleId);
 
-        userRoleAssignmentService.assignRoleToUserIfMissing(adminUserId, adminRoleId);
+        userRoleAssignmentService.assignRoleToUserIfMissing(
+                adminUserId,
+                rootRoleId
+        );
     }
 }

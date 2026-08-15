@@ -1,9 +1,10 @@
 package com.jeepclub.backend.authorization.core.application.service.userrole;
 
-import com.jeepclub.backend.authorization.core.application.exception.AuthorizationUserNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.AuthorizationUserNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RootRoleCannotBeManagedManuallyException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.domain.model.UserRole;
@@ -46,18 +47,22 @@ public class AdminUserRoleService {
     ) {
         ensureUserExists(userId);
 
-        Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RoleNotFoundException(roleId));
+        Role role = findRole(roleId);
 
+        ensureRoleCanBeManagedManually(role);
         role.ensureActive();
 
-        boolean alreadyAssigned = userRoleRepository.existsByUserIdAndRoleId(
-                userId,
-                role.getId()
-        );
+        boolean alreadyAssigned =
+                userRoleRepository.existsByUserIdAndRoleId(
+                        userId,
+                        role.getId()
+                );
 
         if (alreadyAssigned) {
-            throw new UserRoleAlreadyExistsException(userId, role.getId());
+            throw new UserRoleAlreadyExistsException(
+                    userId,
+                    role.getId()
+            );
         }
 
         Instant now = Instant.now(clock);
@@ -78,13 +83,15 @@ public class AdminUserRoleService {
     ) {
         ensureUserExists(userId);
 
-        Role role = roleRepository.findById(roleId)
-                .orElseThrow(() -> new RoleNotFoundException(roleId));
+        Role role = findRole(roleId);
 
-        boolean assigned = userRoleRepository.existsByUserIdAndRoleId(
-                userId,
-                role.getId()
-        );
+        ensureRoleCanBeManagedManually(role);
+
+        boolean assigned =
+                userRoleRepository.existsByUserIdAndRoleId(
+                        userId,
+                        role.getId()
+                );
 
         if (!assigned) {
             throw new UserRoleNotFoundException(
@@ -109,18 +116,32 @@ public class AdminUserRoleService {
 
         Set<Long> uniqueRoleIds = new HashSet<>(roleIds);
 
-        List<Role> roles = uniqueRoleIds.stream()
-                .map(roleId -> roleRepository.findById(roleId)
-                        .orElseThrow(() -> new RoleNotFoundException(roleId)))
+        List<Role> requestedRoles = uniqueRoleIds.stream()
+                .map(this::findRole)
                 .toList();
 
-        roles.forEach(Role::ensureActive);
+        requestedRoles.forEach(this::ensureRoleCanBeManagedManually);
+        requestedRoles.forEach(Role::ensureActive);
 
-        userRoleRepository.deleteByUserId(userId);
+        List<Role> currentRoles =
+                userRoleRepository.findRolesByUserId(userId);
+
+        currentRoles.stream()
+                .filter(Role::isCustom)
+                .forEach(role ->
+                        userRoleRepository.deleteByUserIdAndRoleId(
+                                userId,
+                                role.getId()
+                        )
+                );
+
+        if (requestedRoles.isEmpty()) {
+            return;
+        }
 
         Instant now = Instant.now(clock);
 
-        List<UserRole> userRoles = roles.stream()
+        List<UserRole> userRoles = requestedRoles.stream()
                 .map(role -> UserRole.create(
                         userId,
                         role.getId(),
@@ -129,6 +150,19 @@ public class AdminUserRoleService {
                 .toList();
 
         userRoleRepository.saveAll(userRoles);
+    }
+
+    private Role findRole(Long roleId) {
+        return roleRepository.findById(roleId)
+                .orElseThrow(() -> new RoleNotFoundException(roleId));
+    }
+
+    private void ensureRoleCanBeManagedManually(Role role) {
+        if (role.isRoot()) {
+            throw new RootRoleCannotBeManagedManuallyException(
+                    role.getId()
+            );
+        }
     }
 
     private void ensureUserExists(Long userId) {

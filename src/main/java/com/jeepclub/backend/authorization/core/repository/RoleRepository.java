@@ -18,4 +18,6 @@ public interface RoleRepository {
     boolean existsByNameAndIdNot(String name, Long id);
 
     Role save(Role role);
+
+    Optional<Role> findRoot();
 }

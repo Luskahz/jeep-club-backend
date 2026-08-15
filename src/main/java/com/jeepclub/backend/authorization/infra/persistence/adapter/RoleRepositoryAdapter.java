@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.infra.persistence.adapter;
 
+import com.jeepclub.backend.authorization.core.domain.enums.RoleKind;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
 import com.jeepclub.backend.authorization.core.repository.RoleRepository;
 import com.jeepclub.backend.authorization.infra.persistence.entity.RoleEntity;
@@ -55,5 +56,11 @@ public class RoleRepositoryAdapter implements RoleRepository {
         RoleEntity savedEntity = jpa.save(entity);
 
         return mapper.toDomain(savedEntity);
+    }
+
+    @Override
+    public Optional<Role> findRoot() {
+        return jpa.findByKind(RoleKind.ROOT)
+                .map(mapper::toDomain);
     }
 }

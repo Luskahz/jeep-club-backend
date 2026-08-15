@@ -111,14 +111,6 @@ public class UserRepositoryAdapter
         );
     }
 
-    @Override
-    public List<User> findAll() {
-        return jpaRepository.findAll()
-                .stream()
-                .map(UserMapper::toDomain)
-                .toList();
-    }
-
     private boolean isRegistrationUniqueConflict(DataIntegrityViolationException exception) {
         String message = exception.getMostSpecificCause().getMessage();
         if (message == null) {

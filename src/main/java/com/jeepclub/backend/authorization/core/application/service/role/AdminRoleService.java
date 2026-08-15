@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.core.application.service.role;
 
-import com.jeepclub.backend.authorization.core.application.exception.RoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.RoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.role.RoleNotFoundException;
 import com.jeepclub.backend.authorization.core.application.result.RoleResult;
 import com.jeepclub.backend.authorization.core.application.result.RolesResult;
 import com.jeepclub.backend.authorization.core.domain.model.Role;

@@ -1,8 +1,8 @@
 package com.jeepclub.backend.authorization.api.http.exception;
 
-import com.jeepclub.backend.authorization.core.application.exception.AuthorizationUserNotFoundException;
-import com.jeepclub.backend.authorization.core.application.exception.UserRoleAlreadyExistsException;
-import com.jeepclub.backend.authorization.core.application.exception.UserRoleNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.AuthorizationUserNotFoundException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleAlreadyExistsException;
+import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleNotFoundException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;

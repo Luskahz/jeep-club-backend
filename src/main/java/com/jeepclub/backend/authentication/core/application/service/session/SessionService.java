@@ -140,6 +140,15 @@ public class SessionService {
         return new MeResult(
                 user.getId(),
                 user.getName(),
+                user.getBirthDate(),
+                user.getEmail(),
+                user.getCpf(),
+                user.getRg(),
+                user.getPhoneNumber(),
+                user.getProfilePhotoUrl(),
+                user.getAccountStatus(),
+                user.getCreatedAt(),
+                user.getUpdatedAt(),
                 session.getId(),
                 session.isValid(now),
                 Math.max(Duration.between(now, accessTokenExpiresAt).getSeconds(), 0)

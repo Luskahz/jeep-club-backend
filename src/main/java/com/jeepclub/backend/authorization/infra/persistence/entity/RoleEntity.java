@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.infra.persistence.entity;
 
+import com.jeepclub.backend.authorization.core.domain.enums.RoleKind;
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -46,6 +47,14 @@ public class RoleEntity {
             length = 255
     )
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(
+            name = "kind",
+            nullable = false,
+            length = 30
+    )
+    private RoleKind kind;
 
     @Enumerated(EnumType.STRING)
     @Column(
