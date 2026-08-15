@@ -15,8 +15,8 @@ import java.util.Objects;
         name = "AdminUserResponse",
         description = """
                 Dados administrativos seguros de um usuário.
-                Na listagem administrativa, propriedades podem ser omitidas
-                quando não forem solicitadas por meio do parâmetro fields.
+                Na listagem administrativa, propriedades não solicitadas por meio
+                do parâmetro fields ou propriedades sem valor podem ser omitidas.
                 """
 )
 @JsonInclude(JsonInclude.Include.NON_NULL)
