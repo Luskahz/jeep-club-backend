@@ -4,7 +4,7 @@ import com.jeepclub.backend.authentication.core.application.query.user.AdminUser
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.repository.AdminUserQueryRepository;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.AdminUserJpaQueryRepository;
+import com.jeepclub.backend.authentication.infra.persistence.query.AdminUserJpaQueryRepository;
 import com.jeepclub.backend.authentication.infra.persistence.sort.UserSortMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;

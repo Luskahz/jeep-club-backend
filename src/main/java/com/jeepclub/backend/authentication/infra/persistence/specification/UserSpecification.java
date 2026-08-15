@@ -6,6 +6,7 @@ import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatu
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.UserStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity_;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;

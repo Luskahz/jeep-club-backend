@@ -7,6 +7,7 @@ import com.jeepclub.backend.authentication.core.application.query.user.AdminUser
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
 import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.repository.AdminUserQueryRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -39,13 +40,6 @@ public class AdminUserService {
                 fields,
                 pageable
         );
-    } public Page<AdminUserResult> findAll(
-            AdminUserFilter filter,
-            Pageable pageable
-    ) {
-        return userRepository
-                .findAll(filter, pageable)
-                .map(AdminUserResult::from);
     }
 
     @Transactional(readOnly = true)
