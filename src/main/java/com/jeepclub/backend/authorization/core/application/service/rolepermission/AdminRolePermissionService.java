@@ -49,12 +49,14 @@ public class AdminRolePermissionService {
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new PermissionNotFoundException(permissionId));
 
+        role.ensureCanBeChanged();
         role.ensureActive();
 
-        boolean alreadyAssigned = rolePermissionRepository.existsByRoleIdAndPermissionId(
-                role.getId(),
-                permission.getId()
-        );
+        boolean alreadyAssigned =
+                rolePermissionRepository.existsByRoleIdAndPermissionId(
+                        role.getId(),
+                        permission.getId()
+                );
 
         if (alreadyAssigned) {
             throw new RolePermissionAlreadyExistsException(
