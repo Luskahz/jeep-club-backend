@@ -85,8 +85,6 @@ public class AdminUserController {
     public ResponseEntity<Page<AdminUserResponseDTO>> findAll(
             @Valid @ModelAttribute AdminUserFilterDTO filters,
             @PageableDefault(
-                    page = 0,
-                    size = 20,
                     sort = "id",
                     direction = Sort.Direction.ASC
             )

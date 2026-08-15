@@ -10,12 +10,12 @@ import com.jeepclub.backend.authentication.core.repository.UserRepository;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.UserMapper;
+import com.jeepclub.backend.authentication.infra.persistence.sort.UserSortMapper;
 import com.jeepclub.backend.authentication.infra.persistence.specification.UserSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -121,10 +121,13 @@ public class UserRepositoryAdapter
             AdminUserFilter filter,
             Pageable pageable
     ) {
+        Pageable mappedPageable =
+                UserSortMapper.map(pageable);
+
         return jpaRepository
                 .findAll(
                         UserSpecification.from(filter),
-                        pageable
+                        mappedPageable
                 )
                 .map(UserMapper::toDomain);
     }

@@ -49,7 +49,7 @@ public record AdminUserFilterDTO(
                 example = "12999999999"
         )
         @Size(max = 20)
-        String phone,
+        String phoneNumber,
 
         @Schema(
                 description = "Status administrativo do usuário.",
@@ -105,7 +105,7 @@ public record AdminUserFilterDTO(
                 normalize(name),
                 normalize(cpf),
                 normalize(email),
-                normalize(phone),
+                normalize(phoneNumber),
                 status,
                 passwordChangeRequired,
                 createdFrom,

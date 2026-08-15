@@ -64,11 +64,11 @@ public final class UserSpecification {
                 );
             }
 
-            if (filter.phone() != null) {
+            if (filter.phoneNumber() != null) {
                 predicates.add(
                         criteriaBuilder.like(
                                 root.get("phoneNumber"),
-                                "%" + filter.phone() + "%"
+                                "%" + filter.phoneNumber() + "%"
                         )
                 );
             }
@@ -219,19 +219,17 @@ public final class UserSpecification {
 
             case ACTIVE ->
                     criteriaBuilder.and(
-                            criteriaBuilder.notEqual(
+                            criteriaBuilder.equal(
                                     root.get("accountStatus"),
-                                    AccountStatus.DISABLED
+                                    AccountStatus.ACTIVE
                             ),
-                            criteriaBuilder.notEqual(
+                            criteriaBuilder.equal(
                                     root.get("authenticationStatus"),
-                                    AuthenticationStatus.LOCKED
+                                    AuthenticationStatus.ENABLED
                             ),
-                            criteriaBuilder.not(
-                                    root.get("credentialStatus").in(
-                                            CredentialStatus.CHANGE_REQUIRED,
-                                            CredentialStatus.PENDING_FIRST_ACCESS
-                                    )
+                            criteriaBuilder.equal(
+                                    root.get("credentialStatus"),
+                                    CredentialStatus.PERMANENT
                             )
                     );
         };

@@ -9,7 +9,7 @@ public record AdminUserFilter(
         String name,
         String cpf,
         String email,
-        String phone,
+        String phoneNumber,
         UserStatus status,
         Boolean passwordChangeRequired,
         Instant createdFrom,
