@@ -1,6 +1,5 @@
 package com.jeepclub.backend.authentication.api.http.dto.admin.user;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
@@ -14,29 +13,30 @@ import java.util.Objects;
 
 @Schema(
         name = "AdminUserResponse",
-        description = "Resposta administrativa com dados seguros de um usuário."
+        description = """
+                Dados administrativos seguros de um usuário.
+                Na listagem administrativa, propriedades podem ser omitidas
+                quando não forem solicitadas por meio do parâmetro fields.
+                """
 )
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AdminUserResponseDTO(
 
         @Schema(
                 description = "Identificador único do usuário.",
-                example = "1",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                example = "1"
         )
         Long id,
 
         @Schema(
                 description = "Nome completo do usuário.",
-                example = "Lucas Alves",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                example = "Lucas Alves"
         )
         String name,
 
         @Schema(
                 description = "CPF do usuário.",
-                example = "12345678909",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                example = "52998224725"
         )
         String cpf,
 
@@ -55,32 +55,25 @@ public record AdminUserResponseDTO(
         String phone,
 
         @Schema(
-                description = "Status da conta do usuário.",
-                example = "ACTIVE",
-                allowableValues = {"ACTIVE", "DISABLED"}
+                description = "Status administrativo da conta do usuário.",
+                example = "ACTIVE"
         )
         AccountStatus accountStatus,
 
         @Schema(
                 description = "Status de autenticação do usuário.",
-                example = "ENABLED",
-                allowableValues = {"ENABLED", "LOCKED"}
+                example = "ENABLED"
         )
         AuthenticationStatus authenticationStatus,
 
         @Schema(
-                description = "Status das credenciais do usuário.",
-                example = "PERMANENT",
-                allowableValues = {
-                        "PERMANENT",
-                        "PENDING_FIRST_ACCESS",
-                        "CHANGE_REQUIRED"
-                }
+                description = "Status atual das credenciais do usuário.",
+                example = "PERMANENT"
         )
         CredentialStatus credentialStatus,
 
         @Schema(
-                description = "Indica se o usuário precisa trocar a senha no próximo acesso.",
+                description = "Indica se o usuário precisa alterar a senha antes da autenticação normal.",
                 example = "false"
         )
         Boolean passwordChangeRequired,
@@ -99,8 +92,13 @@ public record AdminUserResponseDTO(
         Instant updatedAt
 ) {
 
-    public static AdminUserResponseDTO from(AdminUserResult result) {
-        Objects.requireNonNull(result, "result cannot be null");
+    public static AdminUserResponseDTO from(
+            AdminUserResult result
+    ) {
+        Objects.requireNonNull(
+                result,
+                "result cannot be null"
+        );
 
         return new AdminUserResponseDTO(
                 result.id(),

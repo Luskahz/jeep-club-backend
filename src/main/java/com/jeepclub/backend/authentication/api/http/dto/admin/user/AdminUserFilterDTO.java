@@ -14,6 +14,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.Instant;
 
 @Schema(
+        name = "AdminUserFilter",
         description = "Filtros disponíveis para consulta administrativa de usuários."
 )
 public record AdminUserFilterDTO(
@@ -58,32 +59,19 @@ public record AdminUserFilterDTO(
 
         @Schema(
                 description = "Status administrativo da conta do usuário.",
-                example = "ACTIVE",
-                allowableValues = {
-                        "ACTIVE",
-                        "DISABLED"
-                }
+                example = "ACTIVE"
         )
         AccountStatus accountStatus,
 
         @Schema(
                 description = "Status de autenticação do usuário.",
-                example = "ENABLED",
-                allowableValues = {
-                        "ENABLED",
-                        "LOCKED"
-                }
+                example = "ENABLED"
         )
         AuthenticationStatus authenticationStatus,
 
         @Schema(
                 description = "Status atual das credenciais do usuário.",
-                example = "PERMANENT",
-                allowableValues = {
-                        "PERMANENT",
-                        "PENDING_FIRST_ACCESS",
-                        "CHANGE_REQUIRED"
-                }
+                example = "PERMANENT"
         )
         CredentialStatus credentialStatus,
 
@@ -160,6 +148,7 @@ public record AdminUserFilterDTO(
                 : normalized;
     }
 
+    @Schema(hidden = true)
     @AssertTrue(
             message = "createdFrom must be before or equal to createdTo"
     )
@@ -169,6 +158,7 @@ public record AdminUserFilterDTO(
                 || !createdFrom.isAfter(createdTo);
     }
 
+    @Schema(hidden = true)
     @AssertTrue(
             message = "updatedFrom must be before or equal to updatedTo"
     )

@@ -9,6 +9,7 @@ import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -16,6 +17,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -43,6 +45,7 @@ import java.util.Set;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+
     @GetMapping
     @PreAuthorize("hasAuthority('AUTHENTICATION_USER_READ')")
     @RequiredPermission("AUTHENTICATION_USER_READ")
@@ -50,20 +53,34 @@ public class AdminUserController {
     @Operation(
             summary = "Listar usuários",
             description = """
-                Retorna os usuários cadastrados no módulo de autenticação,
-                com suporte a paginação, ordenação e filtros.
+                Retorna os usuários cadastrados no módulo de autenticação.
+
+                A consulta suporta:
+                - paginação por `page` e `size`;
+                - ordenação por `sort`;
+                - filtros administrativos combináveis;
+                - busca textual por `q`;
+                - seleção dos campos retornados por `fields`.
+
+                Quando `fields` não é informado, todos os campos disponíveis
+                em AdminUserResponse são considerados no retorno.
+
+                Os filtros, paginação, ordenação e seleção de campos são
+                aplicados na consulta de persistência.
                 """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
-                            description = "Usuários retornados com sucesso."
+                            description = "Página de usuários retornada com sucesso."
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Parâmetros de consulta inválidos.",
+                            description = "Filtros, paginação, ordenação ou campos solicitados são inválidos.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                                    schema = @Schema(
+                                            implementation = ApiErrorResponse.class
+                                    )
                             )
                     ),
                     @ApiResponse(
@@ -71,7 +88,9 @@ public class AdminUserController {
                             description = "Usuário não autenticado.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                                    schema = @Schema(
+                                            implementation = ApiErrorResponse.class
+                                    )
                             )
                     ),
                     @ApiResponse(
@@ -79,17 +98,30 @@ public class AdminUserController {
                             description = "Usuário sem permissão para consultar usuários.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                                    schema = @Schema(
+                                            implementation = ApiErrorResponse.class
+                                    )
                             )
                     )
             }
     )
-    public ResponseEntity<?> findAll(
-            @Valid @ModelAttribute AdminUserFilterDTO filters,
+    public ResponseEntity<Page<AdminUserResponseDTO>> findAll(
+            @Valid
+            @ParameterObject
+            @ModelAttribute
+            AdminUserFilterDTO filters,
 
+            @Parameter(
+                    description = """
+                        Campos que devem ser retornados para cada usuário.
+                        Quando omitido, todos os campos disponíveis são considerados.
+                        """,
+                    example = "ID,NAME,EMAIL,ACCOUNT_STATUS"
+            )
             @RequestParam(required = false)
             Set<AdminUserField> fields,
 
+            @ParameterObject
             @PageableDefault(
                     sort = "id",
                     direction = Sort.Direction.ASC
@@ -101,16 +133,15 @@ public class AdminUserController {
                         ? EnumSet.allOf(AdminUserField.class)
                         : EnumSet.copyOf(fields);
 
-        Page<AdminUserResult> results =
+        Page<AdminUserResponseDTO> response =
                 adminUserService.findAll(
-                        filters.toFilter(),
-                        selectedFields,
-                        pageable
-                );
+                                filters.toFilter(),
+                                selectedFields,
+                                pageable
+                        )
+                        .map(AdminUserResponseDTO::from);
 
-        return ResponseEntity.ok(
-                results.map(AdminUserResponseDTO::from)
-        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{userId}")
