@@ -7,8 +7,6 @@ import com.jeepclub.backend.dependents.core.application.exception.SocioNotFoundE
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfilePort;
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +24,6 @@ public class DependentService {
 
     private final DependentRepository dependentRepository;
     private final DependentUserPort dependentUserPort;
-    private final DependentMedicalProfilePort medicalProfilePort;
     private final Clock clock;
 
     @Transactional
@@ -36,7 +33,6 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            DependentMedicalProfileData medicalProfile,
             Long socioId
     ) {
         assertSocioExists(socioId);
@@ -45,8 +41,6 @@ public class DependentService {
 
         assertCpfAvailable(normalizedCpf);
 
-        Instant now = Instant.now(clock);
-
         Dependent dependent = Dependent.create(
                 name,
                 normalizedCpf,
@@ -54,17 +48,12 @@ public class DependentService {
                 relationshipType,
                 phoneNumber,
                 socioId,
-                now
+                Instant.now(clock)
         );
 
-        Dependent savedDependent = dependentRepository.save(dependent);
-
-        upsertMedicalProfileIfPresent(
-                savedDependent.getId(),
-                medicalProfile
+        return toResult(
+                dependentRepository.save(dependent)
         );
-
-        return toResult(savedDependent);
     }
 
     @Transactional(readOnly = true)
@@ -98,7 +87,6 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            DependentMedicalProfileData medicalProfile,
             Long requestingUserId
     ) {
         Dependent dependent = findActiveDependentById(id);
@@ -126,14 +114,9 @@ public class DependentService {
                 Instant.now(clock)
         );
 
-        Dependent savedDependent = dependentRepository.save(dependent);
-
-        upsertMedicalProfileIfPresent(
-                savedDependent.getId(),
-                medicalProfile
+        return toResult(
+                dependentRepository.save(dependent)
         );
-
-        return toResult(savedDependent);
     }
 
     @Transactional
@@ -180,13 +163,9 @@ public class DependentService {
     }
 
     private void assertCpfAvailable(String cpf) {
-        boolean userAlreadyUsesCpf =
-                dependentUserPort.existsByCpf(cpf);
+        if (dependentUserPort.existsByCpf(cpf)
+                || dependentRepository.existsActiveByCpf(cpf)) {
 
-        boolean activeDependentAlreadyUsesCpf =
-                dependentRepository.existsActiveByCpf(cpf);
-
-        if (userAlreadyUsesCpf || activeDependentAlreadyUsesCpf) {
             throw new DependentCpfAlreadyInUseException(cpf);
         }
     }
@@ -195,44 +174,18 @@ public class DependentService {
             String cpf,
             Long dependentId
     ) {
-        boolean userAlreadyUsesCpf =
-                dependentUserPort.existsByCpf(cpf);
+        if (dependentUserPort.existsByCpf(cpf)
+                || dependentRepository.existsActiveByCpfAndIdNot(
+                cpf,
+                dependentId
+        )) {
 
-        boolean anotherActiveDependentUsesCpf =
-                dependentRepository.existsActiveByCpfAndIdNot(
-                        cpf,
-                        dependentId
-                );
-
-        if (userAlreadyUsesCpf || anotherActiveDependentUsesCpf) {
             throw new DependentCpfAlreadyInUseException(cpf);
         }
     }
 
-    private void upsertMedicalProfileIfPresent(
-            Long dependentId,
-            DependentMedicalProfileData medicalProfile
-    ) {
-        if (medicalProfile == null
-                || !medicalProfile.hasAnyValue()) {
-            return;
-        }
-
-        medicalProfilePort.upsert(
-                dependentId,
-                medicalProfile
-        );
-    }
-
-    private DependentResult toResult(
-            Dependent dependent
-    ) {
-        return new DependentResult(
-                dependent,
-                medicalProfilePort.findByDependentId(
-                        dependent.getId()
-                )
-        );
+    private DependentResult toResult(Dependent dependent) {
+        return new DependentResult(dependent);
     }
 
     private String normalizeCpf(String cpf) {

@@ -3,7 +3,6 @@ package com.jeepclub.backend.dependents.core.application.service.dependent;
 import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfilePort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,7 +15,6 @@ import java.util.List;
 public class AdminDependentService {
 
     private final DependentRepository dependentRepository;
-    private final DependentMedicalProfilePort medicalProfilePort;
 
     @Transactional(readOnly = true)
     public List<DependentResult> findAllBySocioId(Long socioId) {
@@ -43,14 +41,7 @@ public class AdminDependentService {
         return toResult(dependent);
     }
 
-    private DependentResult toResult(
-            Dependent dependent
-    ) {
-        return new DependentResult(
-                dependent,
-                medicalProfilePort.findByDependentId(
-                        dependent.getId()
-                )
-        );
+    private DependentResult toResult(Dependent dependent) {
+        return new DependentResult(dependent);
     }
 }

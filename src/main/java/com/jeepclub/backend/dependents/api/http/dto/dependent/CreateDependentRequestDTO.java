@@ -25,10 +25,7 @@ public record CreateDependentRequestDTO(
         RelationshipType relationshipType,
 
         @Schema(description = "Telefone de contato (opcional).", example = "11988887777")
-        String phoneNumber,
-
-        @Schema(description = "Perfil médico do dependente.")
-        MedicalProfileDTO medicalProfile
+        String phoneNumber
 ) {
 }
 

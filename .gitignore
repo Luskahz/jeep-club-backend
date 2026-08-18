@@ -36,6 +36,7 @@ build/
 jwt-secrets.properties
 
 # Local Spring configuration
+/src/main/resources/application-dev.properties
 /src/main/resources/application-local.properties
 
 # Local JWT signing secret (machine-specific)

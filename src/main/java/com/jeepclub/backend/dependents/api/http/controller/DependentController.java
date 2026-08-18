@@ -52,7 +52,6 @@ public class DependentController {
                 request.birthDate(),
                 request.relationshipType(),
                 request.phoneNumber(),
-                toMedicalProfileData(request.medicalProfile()),
                 principal.getUserId()
         );
 
