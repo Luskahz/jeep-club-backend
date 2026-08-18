@@ -9,21 +9,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/socios/{socioId}/dependents")
 @RequiredArgsConstructor
-@Validated
 @Tag(
-        name = "Dependents - Dependent",
-        description = "Gerenciamento de dependentes dos Sócios do Jeep Club."
+        name = "Dependents - Admin",
+        description = "Consulta administrativa dos dependentes vinculados aos sócios."
 )
 public class AdminDependentController {
 
@@ -33,11 +28,14 @@ public class AdminDependentController {
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_READ')")
     @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
     @Operation(
-            summary = "Listar dependentes de um sócio (Diretor)",
-            description = "Permite a um Diretor listar os dependentes de qualquer Sócio informando seu ID."
+            summary = "Listar dependentes de um sócio",
+            description = "Lista os dependentes vinculados ao sócio informado, incluindo registros excluídos logicamente."
     )
     public ResponseEntity<List<DependentResponseDTO>> getDependentsBySocioId(
-            @Parameter(description = "ID do Sócio titular", required = true)
+            @Parameter(
+                    description = "Identificador do sócio titular.",
+                    required = true
+            )
             @PathVariable Long socioId
     ) {
         List<DependentResponseDTO> response = adminDependentService
@@ -50,18 +48,32 @@ public class AdminDependentController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_READ')")
-    @RequiredPermission("AUTHENTICATION_USER_READ")
+    @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_READ')")
+    @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
     @Operation(
-            summary = "Consultar dependente de um sócio (Diretor)",
-            description = "Permite a um Diretor consultar os dados de um dependente específico de qualquer Sócio."
+            summary = "Consultar dependente de um sócio",
+            description = "Consulta um dependente específico vinculado ao sócio informado, inclusive se estiver excluído logicamente."
     )
     public ResponseEntity<DependentResponseDTO> getDependentBySocioAndId(
+            @Parameter(
+                    description = "Identificador do sócio titular.",
+                    required = true
+            )
             @PathVariable Long socioId,
+
+            @Parameter(
+                    description = "Identificador do dependente.",
+                    required = true
+            )
             @PathVariable Long id
     ) {
-        return ResponseEntity.ok(DependentResponseDTO.from(
-                adminDependentService.findBySocioIdAndId(socioId, id)
-        ));
+        return ResponseEntity.ok(
+                DependentResponseDTO.from(
+                        adminDependentService.findBySocioIdAndId(
+                                socioId,
+                                id
+                        )
+                )
+        );
     }
 }

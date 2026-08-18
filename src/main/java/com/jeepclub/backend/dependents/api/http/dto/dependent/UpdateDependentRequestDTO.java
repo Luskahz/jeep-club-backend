@@ -4,39 +4,54 @@ import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
-@Schema(description = "Solicitação de atualização de dados de um dependente.")
+@Schema(description = "Solicitação de atualização dos dados de um dependente.")
 public record UpdateDependentRequestDTO(
-        @Schema(description = "Nome completo do dependente.", example = "Mariana Silva", requiredMode = Schema.RequiredMode.REQUIRED)
+
+        @Schema(
+                description = "Nome completo do dependente.",
+                example = "Mariana Silva",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         @NotBlank(message = "Nome do dependente é obrigatório.")
         String name,
 
-        @Schema(description = "CPF do dependente.", example = "98765432109", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(
+                description = "CPF do dependente.",
+                example = "98765432109",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         @NotBlank(message = "CPF do dependente é obrigatório.")
+        @CPF(message = "CPF do dependente é inválido.")
         String cpf,
 
-        @Schema(description = "Data de nascimento.", example = "2015-08-25")
+        @Schema(
+                description = "Data de nascimento do dependente.",
+                example = "2015-08-25",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        @NotNull(message = "Data de nascimento do dependente é obrigatória.")
+        @PastOrPresent(message = "Data de nascimento não pode estar no futuro.")
         LocalDate birthDate,
 
-        @Schema(description = "Tipo de relacionamento.", example = "CHILD", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(
+                description = "Tipo de relacionamento com o sócio titular.",
+                example = "CHILD",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         @NotNull(message = "Tipo de parentesco é obrigatório.")
         RelationshipType relationshipType,
 
-        @Schema(description = "Telefone de contato.", example = "11988887777")
-        String phoneNumber,
-
-        @Schema(description = "Perfil médico do dependente.")
-        MedicalProfileDTO medicalProfile,
-
         @Schema(
-                description = "Confirmação explícita de aceite do termo de LGPD para armazenamento de dados do dependente.",
-                example = "true",
-                requiredMode = Schema.RequiredMode.REQUIRED
+                description = "Telefone de contato do dependente.",
+                example = "11988887777",
+                nullable = true
         )
-        @NotNull(message = "O aceite de consentimento LGPD é obrigatório para alterar um dependente.")
-        Boolean consentAccepted
+        String phoneNumber
+
 ) {
 }
-

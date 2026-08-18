@@ -1,8 +1,9 @@
 package com.jeepclub.backend.dependents.api.http.dto.dependent;
 
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
+import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
@@ -10,78 +11,128 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
-@Schema(description = "Detalhamento completo de um dependente cadastrado no Jeep Club.")
+@Schema(description = "Dados de um dependente cadastrado no Jeep Club.")
 public record DependentResponseDTO(
-        @Schema(description = "Identificador único do dependente.", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+
+        @Schema(
+                description = "Identificador único do dependente.",
+                example = "1",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         Long id,
 
-        @Schema(description = "Nome completo do dependente.", example = "Mariana Silva", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(
+                description = "Nome completo do dependente.",
+                example = "Mariana Silva",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         String name,
 
-        @Schema(description = "CPF do dependente.", example = "98765432109")
+        @Schema(
+                description = "CPF do dependente.",
+                example = "98765432109",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         String cpf,
 
-        @Schema(description = "Data de nascimento do dependente.", example = "2015-08-25")
+        @Schema(
+                description = "Data de nascimento do dependente.",
+                example = "2015-08-25",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         LocalDate birthDate,
 
-        @Schema(description = "Tipo de relacionamento.", example = "CHILD", requiredMode = Schema.RequiredMode.REQUIRED)
-        String relationshipType,
+        @Schema(
+                description = "Tipo de relacionamento com o sócio titular.",
+                example = "CHILD",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        RelationshipType relationshipType,
 
-        @Schema(description = "Telefone de contato.", example = "11988887777")
+        @Schema(
+                description = "Telefone de contato do dependente.",
+                example = "11988887777",
+                nullable = true
+        )
         String phoneNumber,
 
-        @Schema(description = "Perfil médico do dependente.")
-        MedicalProfileDTO medicalProfile,
-
-        @Schema(description = "Indica se o termo de consentimento LGPD está aceito.", example = "true", requiredMode = Schema.RequiredMode.REQUIRED)
-        boolean consentAccepted,
-
-        @Schema(description = "Data/hora em que o termo de consentimento foi aceito.", example = "2026-05-22T21:30:00Z")
-        Instant consentAcceptedAt,
-
-        @Schema(description = "Identificador do Sócio titular dono deste dependente.", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(
+                description = "Identificador do sócio titular.",
+                example = "5",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         Long socioId,
 
-        @Schema(description = "Data de criação do registro.", example = "2026-05-22T21:30:00Z", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(
+                description = "Status atual do dependente.",
+                example = "ACTIVE",
+                allowableValues = {"ACTIVE", "DELETED"},
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
+        DependentStatus status,
+
+        @Schema(
+                description = "Data de criação do dependente.",
+                example = "2026-05-22T21:30:00Z",
+                requiredMode = Schema.RequiredMode.REQUIRED
+        )
         Instant createdAt,
 
-        @Schema(description = "Data da última atualização.", example = "2026-05-22T21:30:00Z", requiredMode = Schema.RequiredMode.REQUIRED)
-        Instant updatedAt
+        @Schema(
+                description = "Data da última atualização.",
+                example = "2026-05-23T14:20:00Z",
+                nullable = true
+        )
+        Instant updatedAt,
+
+        @Schema(
+                description = "Data da exclusão lógica do dependente.",
+                example = "2026-08-18T20:30:00Z",
+                nullable = true
+        )
+        Instant deletedAt
+
 ) {
-    public static DependentResponseDTO from(Dependent domain) {
-        return from(domain, null);
-    }
 
     public static DependentResponseDTO from(DependentResult result) {
-        Objects.requireNonNull(result, "Dependent result cannot be null");
-        return from(result.dependent(), result.medicalProfile());
+        Objects.requireNonNull(
+                result,
+                "Dependent result cannot be null"
+        );
+
+        return from(result.dependent());
     }
 
-    public static DependentResponseDTO from(
-            Dependent domain,
-            DependentMedicalProfileData medicalProfile
-    ) {
-        Objects.requireNonNull(domain, "Domain model Dependent cannot be null");
+    public static DependentResponseDTO from(Dependent domain) {
+        Objects.requireNonNull(
+                domain,
+                "Domain model Dependent cannot be null"
+        );
 
         return new DependentResponseDTO(
                 domain.getId(),
                 domain.getName(),
                 domain.getCpf(),
                 domain.getBirthDate(),
-                domain.getRelationshipType().name(),
+                domain.getRelationshipType(),
                 domain.getPhoneNumber(),
-                MedicalProfileDTO.from(medicalProfile),
-                domain.isConsentAccepted(),
-                domain.getConsentAcceptedAt(),
                 domain.getSocioId(),
+                domain.getStatus(),
                 domain.getCreatedAt(),
-                domain.getUpdatedAt()
+                domain.getUpdatedAt(),
+                domain.getDeletedAt()
         );
     }
 
-    public static List<DependentResponseDTO> from(List<Dependent> list) {
-        Objects.requireNonNull(list, "Dependents list cannot be null");
-        return list.stream()
+    public static List<DependentResponseDTO> from(
+            List<Dependent> dependents
+    ) {
+        Objects.requireNonNull(
+                dependents,
+                "Dependents list cannot be null"
+        );
+
+        return dependents.stream()
                 .map(DependentResponseDTO::from)
                 .toList();
     }

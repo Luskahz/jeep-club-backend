@@ -5,7 +5,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.jeepclub.backend.authentication.core.application.service.security.AccessTokenAuthenticationService;
 import com.jeepclub.backend.dependents.api.http.controller.DependentController;
 import com.jeepclub.backend.dependents.api.http.dto.dependent.CreateDependentRequestDTO;
-import com.jeepclub.backend.dependents.api.http.dto.dependent.MedicalProfileDTO;
 import com.jeepclub.backend.dependents.api.http.dto.dependent.UpdateDependentRequestDTO;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
