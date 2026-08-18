@@ -33,7 +33,6 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            boolean consentAccepted,
             DependentMedicalProfileData medicalProfile,
             Long socioId
     ) {
@@ -56,7 +55,6 @@ public class DependentService {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                consentAccepted,
                 socioId,
                 now
         );

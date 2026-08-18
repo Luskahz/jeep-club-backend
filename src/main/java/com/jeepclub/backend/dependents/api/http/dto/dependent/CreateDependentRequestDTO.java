@@ -28,15 +28,7 @@ public record CreateDependentRequestDTO(
         String phoneNumber,
 
         @Schema(description = "Perfil médico do dependente.")
-        MedicalProfileDTO medicalProfile,
-
-        @Schema(
-                description = "Confirmação explícita de aceite do termo de LGPD para armazenamento de dados do dependente.",
-                example = "true",
-                requiredMode = Schema.RequiredMode.REQUIRED
-        )
-        @NotNull(message = "O aceite de consentimento LGPD é obrigatório para cadastrar um dependente.")
-        Boolean consentAccepted
+        MedicalProfileDTO medicalProfile
 ) {
 }
 

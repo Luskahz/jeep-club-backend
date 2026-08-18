@@ -16,13 +16,9 @@ public class Dependent {
     private LocalDate birthDate;
     private RelationshipType relationshipType;
     private String phoneNumber;
-    private boolean consentAccepted;
-    private Instant consentAcceptedAt;
     private Long socioId;
     private Instant createdAt;
     private Instant updatedAt;
-    // implementar logica de selfDelete criar campos status com ennum para active e deleted, criar deletedAt e implementar no fluxo
-    // deleted deve ser implementado via entoint.
 
     private Dependent(
             Long id,
@@ -31,8 +27,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            boolean consentAccepted,
-            Instant consentAcceptedAt,
             Long socioId,
             Instant createdAt,
             Instant updatedAt
@@ -43,8 +37,6 @@ public class Dependent {
         this.birthDate = birthDate;
         this.relationshipType = validateRequired(relationshipType, "Tipo de parentesco");
         this.phoneNumber = normalizeNumber(phoneNumber);
-        this.consentAccepted = validateConsent(consentAccepted);
-        this.consentAcceptedAt = consentAcceptedAt;
         this.socioId = validateRequired(socioId, "ID do Sócio");
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -56,11 +48,9 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            boolean consentAccepted,
             Long socioId,
             Instant now
     ) {
-        Instant consentAt = consentAccepted ? now : null;
         return new Dependent(
                 null,
                 name,
@@ -68,8 +58,6 @@ public class Dependent {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                consentAccepted,
-                consentAt,
                 socioId,
                 now,
                 now
@@ -83,8 +71,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            boolean consentAccepted,
-            Instant consentAcceptedAt,
             Long socioId,
             Instant createdAt,
             Instant updatedAt
@@ -96,8 +82,6 @@ public class Dependent {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                consentAccepted,
-                consentAcceptedAt,
                 socioId,
                 createdAt,
                 updatedAt
@@ -110,7 +94,6 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            boolean consentAccepted,
             Instant now
     ) {
         this.name = validateRequiredText(name, "Nome do dependente");
@@ -118,14 +101,6 @@ public class Dependent {
         this.birthDate = birthDate;
         this.relationshipType = validateRequired(relationshipType, "Tipo de parentesco");
         this.phoneNumber = normalizeNumber(phoneNumber);
-        
-        if (consentAccepted && !this.consentAccepted) {
-            this.consentAccepted = true;
-            this.consentAcceptedAt = now;
-        } else if (!consentAccepted) {
-            throw new DependentException("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.");
-        }
-        
         this.updatedAt = now;
     }
 
