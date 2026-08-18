@@ -1,13 +1,19 @@
 package com.jeepclub.backend.dependents.core.domain.model;
 
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
+import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 
 @Getter
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Dependent {
 
     private Long id;
@@ -17,30 +23,12 @@ public class Dependent {
     private RelationshipType relationshipType;
     private String phoneNumber;
     private Long socioId;
+
+    private DependentStatus status;
+
     private Instant createdAt;
     private Instant updatedAt;
-
-    private Dependent(
-            Long id,
-            String name,
-            String cpf,
-            LocalDate birthDate,
-            RelationshipType relationshipType,
-            String phoneNumber,
-            Long socioId,
-            Instant createdAt,
-            Instant updatedAt
-    ) {
-        this.id = id;
-        this.name = validateRequiredText(name, "Nome do dependente");
-        this.cpf = validateCpf(cpf);
-        this.birthDate = birthDate;
-        this.relationshipType = validateRequired(relationshipType, "Tipo de parentesco");
-        this.phoneNumber = normalizeNumber(phoneNumber);
-        this.socioId = validateRequired(socioId, "ID do Sócio");
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
+    private Instant deletedAt;
 
     public static Dependent create(
             String name,
@@ -51,17 +39,36 @@ public class Dependent {
             Long socioId,
             Instant now
     ) {
-        return new Dependent(
-                null,
-                name,
-                cpf,
+        requireText(name, "name");
+        String normalizedCpf = normalizeCpf(cpf);
+
+        Objects.requireNonNull(
                 birthDate,
-                relationshipType,
-                phoneNumber,
-                socioId,
-                now,
-                now
+                "birthDate cannot be null"
         );
+
+        Objects.requireNonNull(
+                relationshipType,
+                "relationshipType cannot be null"
+        );
+
+        validateSocioId(socioId);
+        validateNow(now);
+
+        Dependent dependent = new Dependent();
+
+        dependent.name = name.trim();
+        dependent.cpf = normalizedCpf;
+        dependent.birthDate = birthDate;
+        dependent.relationshipType = relationshipType;
+        dependent.phoneNumber = normalizePhoneNumber(phoneNumber);
+        dependent.socioId = socioId;
+
+        dependent.status = DependentStatus.ACTIVE;
+
+        dependent.createdAt = now;
+
+        return dependent;
     }
 
     public static Dependent reconstitute(
@@ -72,20 +79,62 @@ public class Dependent {
             RelationshipType relationshipType,
             String phoneNumber,
             Long socioId,
+            DependentStatus status,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            Instant deletedAt
     ) {
-        return new Dependent(
-                id,
-                name,
-                cpf,
+        validateId(id);
+
+        requireText(name, "name");
+        String normalizedCpf = normalizeCpf(cpf);
+
+        Objects.requireNonNull(
                 birthDate,
-                relationshipType,
-                phoneNumber,
-                socioId,
-                createdAt,
-                updatedAt
+                "birthDate cannot be null"
         );
+
+        Objects.requireNonNull(
+                relationshipType,
+                "relationshipType cannot be null"
+        );
+
+        validateSocioId(socioId);
+
+        Objects.requireNonNull(
+                status,
+                "status cannot be null"
+        );
+
+        Objects.requireNonNull(
+                createdAt,
+                "createdAt cannot be null"
+        );
+
+        validateReconstitutedState(
+                status,
+                createdAt,
+                updatedAt,
+                deletedAt
+        );
+
+        Dependent dependent = new Dependent();
+
+        dependent.id = id;
+        dependent.name = name.trim();
+        dependent.cpf = normalizedCpf;
+        dependent.birthDate = birthDate;
+        dependent.relationshipType = relationshipType;
+        dependent.phoneNumber = normalizePhoneNumber(phoneNumber);
+        dependent.socioId = socioId;
+
+        dependent.status = status;
+
+        dependent.createdAt = createdAt;
+        dependent.updatedAt = updatedAt;
+        dependent.deletedAt = deletedAt;
+
+        return dependent;
     }
 
     public void update(
@@ -96,50 +145,160 @@ public class Dependent {
             String phoneNumber,
             Instant now
     ) {
-        this.name = validateRequiredText(name, "Nome do dependente");
-        this.cpf = validateCpf(cpf);
+        assertActive();
+        validateNow(now);
+
+        requireText(name, "name");
+
+        Objects.requireNonNull(
+                birthDate,
+                "birthDate cannot be null"
+        );
+
+        Objects.requireNonNull(
+                relationshipType,
+                "relationshipType cannot be null"
+        );
+
+        this.name = name.trim();
+        this.cpf = normalizeCpf(cpf);
         this.birthDate = birthDate;
-        this.relationshipType = validateRequired(relationshipType, "Tipo de parentesco");
-        this.phoneNumber = normalizeNumber(phoneNumber);
+        this.relationshipType = relationshipType;
+        this.phoneNumber = normalizePhoneNumber(phoneNumber);
         this.updatedAt = now;
     }
 
-    private String validateRequiredText(String text, String fieldName) {
-        if (text == null || text.isBlank()) {
-            throw new DependentException(fieldName + " é obrigatório.");
+    public void selfDelete(Instant now) {
+        validateNow(now);
+
+        if (isDeleted()) {
+            throw new DependentAlreadyDeletedException(id);
         }
-        return text.trim();
+
+        this.status = DependentStatus.DELETED;
+        this.deletedAt = now;
+        this.updatedAt = now;
     }
 
-    private <T> T validateRequired(T value, String fieldName) {
-        if (value == null) {
-            throw new DependentException(fieldName + " é obrigatório.");
-        }
-        return value;
+    public boolean isActive() {
+        return status == DependentStatus.ACTIVE;
     }
 
-    private String validateCpf(String rawCpf) {
-        if (rawCpf == null || rawCpf.isBlank()) {
-            throw new DependentException("CPF é obrigatório.");
-        }
-        String cleanCpf = rawCpf.replaceAll("\\D", "");
-        if (cleanCpf.length() != 11) {
-            throw new DependentException("CPF deve conter exatamente 11 dígitos numéricos.");
-        }
-        return cleanCpf;
+    public boolean isDeleted() {
+        return status == DependentStatus.DELETED;
     }
 
-    private boolean validateConsent(boolean consent) {
-        if (!consent) {
-            throw new DependentException("O consentimento de LGPD deve ser obrigatório para cadastro e manutenção de dependentes.");
+    private void assertActive() {
+        if (!isActive()) {
+            throw new DependentException(
+                    "Deleted dependent cannot be modified."
+            );
         }
-        return true;
     }
 
-    private String normalizeNumber(String raw) {
-        if (raw == null || raw.isBlank()) {
+    private static void validateReconstitutedState(
+            DependentStatus status,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant deletedAt
+    ) {
+        if (updatedAt != null && updatedAt.isBefore(createdAt)) {
+            throw new DependentException(
+                    "updatedAt cannot be before createdAt."
+            );
+        }
+
+        if (status == DependentStatus.ACTIVE && deletedAt != null) {
+            throw new DependentException(
+                    "Active dependent cannot have deletedAt."
+            );
+        }
+
+        if (status == DependentStatus.DELETED && deletedAt == null) {
+            throw new DependentException(
+                    "Deleted dependent must have deletedAt."
+            );
+        }
+
+        if (deletedAt != null && deletedAt.isBefore(createdAt)) {
+            throw new DependentException(
+                    "deletedAt cannot be before createdAt."
+            );
+        }
+
+        if (status == DependentStatus.DELETED
+                && updatedAt == null) {
+            throw new DependentException(
+                    "Deleted dependent must have updatedAt."
+            );
+        }
+
+        if (deletedAt != null
+                && updatedAt != null
+                && updatedAt.isBefore(deletedAt)) {
+
+            throw new DependentException(
+                    "updatedAt cannot be before deletedAt."
+            );
+        }
+    }
+
+    private static void validateId(Long id) {
+        if (id == null || id <= 0) {
+            throw new DependentException(
+                    "id must be positive."
+            );
+        }
+    }
+
+    private static void validateSocioId(Long socioId) {
+        if (socioId == null || socioId <= 0) {
+            throw new DependentException(
+                    "socioId must be positive."
+            );
+        }
+    }
+
+    private static void requireText(
+            String value,
+            String field
+    ) {
+        if (value == null || value.isBlank()) {
+            throw new DependentException(
+                    field + " is required."
+            );
+        }
+    }
+
+    private static String normalizeCpf(String rawCpf) {
+        requireText(rawCpf, "cpf");
+
+        String cpf = rawCpf.replaceAll("\\D", "");
+
+        if (cpf.length() != 11) {
+            throw new DependentException(
+                    "cpf must contain exactly 11 digits."
+            );
+        }
+
+        return cpf;
+    }
+
+    private static String normalizePhoneNumber(
+            String rawPhoneNumber
+    ) {
+        if (rawPhoneNumber == null || rawPhoneNumber.isBlank()) {
             return null;
         }
-        return raw.replaceAll("\\D", "");
+
+        return rawPhoneNumber.replaceAll("\\D", "");
+    }
+
+    private static void validateNow(Instant now) {
+        if (now == null) {
+            throw new DependentException(
+                    "now is required."
+            );
+        }
     }
 }

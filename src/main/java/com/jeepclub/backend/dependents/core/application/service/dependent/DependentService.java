@@ -1,8 +1,11 @@
 package com.jeepclub.backend.dependents.core.application.service.dependent;
 
+import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
+import com.jeepclub.backend.dependents.core.application.exception.SocioNotFoundException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
 import com.jeepclub.backend.dependents.core.port.DependentMedicalProfilePort;
@@ -36,22 +39,17 @@ public class DependentService {
             DependentMedicalProfileData medicalProfile,
             Long socioId
     ) {
+        assertSocioExists(socioId);
+
+        String normalizedCpf = normalizeCpf(cpf);
+
+        assertCpfAvailable(normalizedCpf);
+
         Instant now = Instant.now(clock);
-
-        if (!dependentUserPort.existsById(socioId)) {
-            throw DependentException.notFound();
-        }
-
-        String cleanCpf = normalizeCpf(cpf);
-        if (cleanCpf != null
-                && (dependentUserPort.existsByCpf(cleanCpf)
-                || dependentRepository.existsByCpf(cleanCpf))) {
-            throw DependentException.conflict();
-        }
 
         Dependent dependent = Dependent.create(
                 name,
-                cleanCpf,
+                normalizedCpf,
                 birthDate,
                 relationshipType,
                 phoneNumber,
@@ -60,21 +58,35 @@ public class DependentService {
         );
 
         Dependent savedDependent = dependentRepository.save(dependent);
-        upsertMedicalProfileIfPresent(savedDependent.getId(), medicalProfile);
+
+        upsertMedicalProfileIfPresent(
+                savedDependent.getId(),
+                medicalProfile
+        );
+
         return toResult(savedDependent);
     }
 
     @Transactional(readOnly = true)
     public List<DependentResult> findAllBySocioId(Long socioId) {
-        return dependentRepository.findAllBySocioId(socioId).stream()
+        return dependentRepository.findAllActiveBySocioId(socioId)
+                .stream()
                 .map(this::toResult)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public DependentResult findById(Long id, Long requestingUserId) {
-        Dependent dependent = findDependentById(id);
-        assertBelongsTo(dependent, requestingUserId);
+    public DependentResult findById(
+            Long id,
+            Long requestingUserId
+    ) {
+        Dependent dependent = findActiveDependentById(id);
+
+        assertBelongsTo(
+                dependent,
+                requestingUserId
+        );
+
         return toResult(dependent);
     }
 
@@ -86,51 +98,114 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            boolean consentAccepted,
             DependentMedicalProfileData medicalProfile,
             Long requestingUserId
     ) {
-        Dependent dependent = findDependentById(id);
-        assertBelongsTo(dependent, requestingUserId);
+        Dependent dependent = findActiveDependentById(id);
 
-        String cleanCpf = normalizeCpf(cpf);
-        if (cleanCpf != null && !cleanCpf.equals(dependent.getCpf())) {
-            if (dependentUserPort.existsByCpf(cleanCpf)
-                    || dependentRepository.existsByCpfAndIdNot(cleanCpf, id)) {
-                throw DependentException.conflict();
-            }
+        assertBelongsTo(
+                dependent,
+                requestingUserId
+        );
+
+        String normalizedCpf = normalizeCpf(cpf);
+
+        if (!normalizedCpf.equals(dependent.getCpf())) {
+            assertCpfAvailableForUpdate(
+                    normalizedCpf,
+                    dependent.getId()
+            );
         }
 
         dependent.update(
                 name,
-                cleanCpf,
+                normalizedCpf,
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                consentAccepted,
                 Instant.now(clock)
         );
 
         Dependent savedDependent = dependentRepository.save(dependent);
-        upsertMedicalProfileIfPresent(savedDependent.getId(), medicalProfile);
+
+        upsertMedicalProfileIfPresent(
+                savedDependent.getId(),
+                medicalProfile
+        );
+
         return toResult(savedDependent);
     }
 
     @Transactional
-    public void delete(Long id, Long requestingUserId) {
-        Dependent dependent = findDependentById(id);
-        assertBelongsTo(dependent, requestingUserId);
-        dependentRepository.deleteById(id);
+    public void delete(
+            Long id,
+            Long requestingUserId
+    ) {
+        Dependent dependent = findActiveDependentById(id);
+
+        assertBelongsTo(
+                dependent,
+                requestingUserId
+        );
+
+        dependent.selfDelete(
+                Instant.now(clock)
+        );
+
+        dependentRepository.save(dependent);
     }
 
-    private Dependent findDependentById(Long id) {
-        return dependentRepository.findById(id)
-                .orElseThrow(DependentException::notFound);
+    private Dependent findActiveDependentById(Long id) {
+        return dependentRepository.findActiveById(id)
+                .orElseThrow(
+                        () -> new DependentNotFoundException(id)
+                );
     }
 
-    private void assertBelongsTo(Dependent dependent, Long requestingUserId) {
+    private void assertSocioExists(Long socioId) {
+        if (!dependentUserPort.existsById(socioId)) {
+            throw new SocioNotFoundException(socioId);
+        }
+    }
+
+    private void assertBelongsTo(
+            Dependent dependent,
+            Long requestingUserId
+    ) {
         if (!dependent.getSocioId().equals(requestingUserId)) {
-            throw DependentException.accessDenied();
+            throw new DependentAccessDeniedException(
+                    dependent.getId()
+            );
+        }
+    }
+
+    private void assertCpfAvailable(String cpf) {
+        boolean userAlreadyUsesCpf =
+                dependentUserPort.existsByCpf(cpf);
+
+        boolean activeDependentAlreadyUsesCpf =
+                dependentRepository.existsActiveByCpf(cpf);
+
+        if (userAlreadyUsesCpf || activeDependentAlreadyUsesCpf) {
+            throw new DependentCpfAlreadyInUseException(cpf);
+        }
+    }
+
+    private void assertCpfAvailableForUpdate(
+            String cpf,
+            Long dependentId
+    ) {
+        boolean userAlreadyUsesCpf =
+                dependentUserPort.existsByCpf(cpf);
+
+        boolean anotherActiveDependentUsesCpf =
+                dependentRepository.existsActiveByCpfAndIdNot(
+                        cpf,
+                        dependentId
+                );
+
+        if (userAlreadyUsesCpf || anotherActiveDependentUsesCpf) {
+            throw new DependentCpfAlreadyInUseException(cpf);
         }
     }
 
@@ -138,22 +213,35 @@ public class DependentService {
             Long dependentId,
             DependentMedicalProfileData medicalProfile
     ) {
-        if (medicalProfile != null && medicalProfile.hasAnyValue()) {
-            medicalProfilePort.upsert(dependentId, medicalProfile);
+        if (medicalProfile == null
+                || !medicalProfile.hasAnyValue()) {
+            return;
         }
+
+        medicalProfilePort.upsert(
+                dependentId,
+                medicalProfile
+        );
     }
 
-    private DependentResult toResult(Dependent dependent) {
+    private DependentResult toResult(
+            Dependent dependent
+    ) {
         return new DependentResult(
                 dependent,
-                medicalProfilePort.findByDependentId(dependent.getId())
+                medicalProfilePort.findByDependentId(
+                        dependent.getId()
+                )
         );
     }
 
     private String normalizeCpf(String cpf) {
         if (cpf == null || cpf.isBlank()) {
-            return null;
+            throw new IllegalArgumentException(
+                    "cpf is required"
+            );
         }
+
         return cpf.replaceAll("\\D", "");
     }
 }

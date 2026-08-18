@@ -3,10 +3,15 @@ package com.jeepclub.backend.dependents.infra.persistence.mapper;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
+import jakarta.persistence.EntityManager;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class DependentMapper {
+
+    private final EntityManager entityManager;
 
     public DependentEntity toEntity(Dependent domain) {
         if (domain == null) {
@@ -14,6 +19,7 @@ public class DependentMapper {
         }
 
         DependentEntity entity = new DependentEntity();
+
         entity.setId(domain.getId());
         entity.setName(domain.getName());
         entity.setCpf(domain.getCpf());
@@ -21,18 +27,18 @@ public class DependentMapper {
         entity.setRelationshipType(domain.getRelationshipType());
         entity.setPhoneNumber(domain.getPhoneNumber());
 
-        entity.setConsentAccepted(domain.isConsentAccepted());
-        entity.setConsentAcceptedAt(domain.getConsentAcceptedAt());
+        entity.setSocio(
+                entityManager.getReference(
+                        UserEntity.class,
+                        domain.getSocioId()
+                )
+        );
 
-        // Setting lazy-loaded User reference
-        if (domain.getSocioId() != null) {
-            UserEntity socio = new UserEntity();
-            socio.setId(domain.getSocioId());
-            entity.setSocio(socio);
-        }
+        entity.setStatus(domain.getStatus());
 
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
+        entity.setDeletedAt(domain.getDeletedAt());
 
         return entity;
     }
@@ -42,8 +48,6 @@ public class DependentMapper {
             return null;
         }
 
-        Long socioId = (entity.getSocio() != null) ? entity.getSocio().getId() : null;
-
         return Dependent.reconstitute(
                 entity.getId(),
                 entity.getName(),
@@ -51,11 +55,11 @@ public class DependentMapper {
                 entity.getBirthDate(),
                 entity.getRelationshipType(),
                 entity.getPhoneNumber(),
-                entity.isConsentAccepted(),
-                entity.getConsentAcceptedAt(),
-                socioId,
+                entity.getSocio().getId(),
+                entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getDeletedAt()
         );
     }
 }

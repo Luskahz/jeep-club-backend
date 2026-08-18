@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,10 +29,9 @@ import java.util.List;
 @RestController
 @RequestMapping("/dependents")
 @RequiredArgsConstructor
-@Validated
 @Tag(
         name = "Dependents - Dependent",
-        description = "Gerenciamento de dependentes dos Sócios do Jeep Club."
+        description = "Gerenciamento dos dependentes do usuário autenticado."
 )
 public class DependentController {
 
@@ -42,7 +40,7 @@ public class DependentController {
     @PostMapping
     @Operation(
             summary = "Adicionar dependente",
-            description = "Cadastra um novo dependente associado ao Sócio autenticado. Exige a flag de consentimento LGPD aceita."
+            description = "Cadastra um novo dependente associado ao usuário autenticado."
     )
     public ResponseEntity<DependentResponseDTO> create(
             @RequestBody @Valid CreateDependentRequestDTO request,
@@ -58,14 +56,15 @@ public class DependentController {
                 principal.getUserId()
         );
 
-        return ResponseEntity.status(HttpStatus.CREATED)
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
                 .body(DependentResponseDTO.from(result));
     }
 
     @GetMapping
     @Operation(
             summary = "Listar meus dependentes",
-            description = "Retorna a lista de dependentes cadastrados pelo Sócio autenticado."
+            description = "Retorna os dependentes ativos associados ao usuário autenticado."
     )
     public ResponseEntity<List<DependentResponseDTO>> getMyDependents(
             @AuthenticationPrincipal UserPrincipal principal
@@ -82,21 +81,26 @@ public class DependentController {
     @GetMapping("/{id}")
     @Operation(
             summary = "Consultar dependente",
-            description = "Consulta os dados detalhados de um dependente específico do Sócio autenticado."
+            description = "Retorna um dependente ativo pertencente ao usuário autenticado."
     )
     public ResponseEntity<DependentResponseDTO> getMyDependentById(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(DependentResponseDTO.from(
-                dependentService.findById(id, principal.getUserId())
-        ));
+        DependentResult result = dependentService.findById(
+                id,
+                principal.getUserId()
+        );
+
+        return ResponseEntity.ok(
+                DependentResponseDTO.from(result)
+        );
     }
 
     @PutMapping("/{id}")
     @Operation(
             summary = "Atualizar dependente",
-            description = "Atualiza os dados de um dependente do Sócio autenticado. Exige confirmação de LGPD."
+            description = "Atualiza um dependente ativo pertencente ao usuário autenticado."
     )
     public ResponseEntity<DependentResponseDTO> update(
             @PathVariable Long id,
@@ -110,28 +114,37 @@ public class DependentController {
                 request.birthDate(),
                 request.relationshipType(),
                 request.phoneNumber(),
-                request.consentAccepted(),
                 toMedicalProfileData(request.medicalProfile()),
                 principal.getUserId()
         );
 
-        return ResponseEntity.ok(DependentResponseDTO.from(result));
+        return ResponseEntity.ok(
+                DependentResponseDTO.from(result)
+        );
     }
 
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Remover dependente",
-            description = "Exclui permanentemente um dependente do Sócio autenticado."
+            description = "Realiza a exclusão lógica de um dependente pertencente ao usuário autenticado."
     )
     public ResponseEntity<Void> delete(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        dependentService.delete(id, principal.getUserId());
+        dependentService.delete(
+                id,
+                principal.getUserId()
+        );
+
         return ResponseEntity.noContent().build();
     }
 
-    private DependentMedicalProfileData toMedicalProfileData(MedicalProfileDTO medicalProfile) {
-        return medicalProfile == null ? null : medicalProfile.toData();
+    private DependentMedicalProfileData toMedicalProfileData(
+            MedicalProfileDTO medicalProfile
+    ) {
+        return medicalProfile == null
+                ? null
+                : medicalProfile.toData();
     }
 }

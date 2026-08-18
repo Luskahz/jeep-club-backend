@@ -1,7 +1,7 @@
 package com.jeepclub.backend.dependents.core.application.service.dependent;
 
+import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
-import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.port.DependentMedicalProfilePort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
@@ -20,29 +20,37 @@ public class AdminDependentService {
 
     @Transactional(readOnly = true)
     public List<DependentResult> findAllBySocioId(Long socioId) {
-        return dependentRepository.findAllBySocioId(socioId).stream()
+        return dependentRepository.findAllBySocioId(socioId)
+                .stream()
                 .map(this::toResult)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public DependentResult findBySocioIdAndId(Long socioId, Long id) {
+    public DependentResult findBySocioIdAndId(
+            Long socioId,
+            Long id
+    ) {
         Dependent dependent = dependentRepository.findById(id)
-                .orElseThrow(DependentException::notFound);
+                .orElseThrow(
+                        () -> new DependentNotFoundException(id)
+                );
 
         if (!dependent.getSocioId().equals(socioId)) {
-            throw new IllegalArgumentException(
-                    "O dependente informado não pertence ao sócio especificado."
-            );
+            throw new DependentNotFoundException(id);
         }
 
         return toResult(dependent);
     }
 
-    private DependentResult toResult(Dependent dependent) {
+    private DependentResult toResult(
+            Dependent dependent
+    ) {
         return new DependentResult(
                 dependent,
-                medicalProfilePort.findByDependentId(dependent.getId())
+                medicalProfilePort.findByDependentId(
+                        dependent.getId()
+                )
         );
     }
 }
