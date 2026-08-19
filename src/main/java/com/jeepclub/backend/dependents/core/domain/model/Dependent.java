@@ -3,7 +3,6 @@ package com.jeepclub.backend.dependents.core.domain.model;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
-import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;

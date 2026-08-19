@@ -3,7 +3,7 @@ package com.jeepclub.backend.dependents.core.application.service.dependent;
 import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
-import com.jeepclub.backend.dependents.core.application.exception.UserNotFoundException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerNotFoundException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
@@ -147,7 +147,7 @@ public class DependentService {
 
     private void assertUserExists(Long userId) {
         if (!dependentUserPort.existsById(userId)) {
-            throw new UserNotFoundException(userId);
+            throw new DependentOwnerNotFoundException(userId);
         }
     }
 

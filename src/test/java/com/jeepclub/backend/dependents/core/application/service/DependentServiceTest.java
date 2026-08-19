@@ -3,7 +3,6 @@ package com.jeepclub.backend.dependents.core.application.service;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
