@@ -36,4 +36,15 @@ public interface DependentJpaRepository
             Long id,
             DependentStatus status
     );
+
+    boolean existsByIdAndStatus(
+            Long id,
+            DependentStatus status
+    );
+
+    boolean existsByIdAndUserIdAndStatus(
+            Long id,
+            Long userId,
+            DependentStatus status
+    );
 }

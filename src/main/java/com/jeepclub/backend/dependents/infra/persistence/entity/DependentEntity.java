@@ -1,6 +1,5 @@
 package com.jeepclub.backend.dependents.infra.persistence.entity;
 
-import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import jakarta.persistence.*;

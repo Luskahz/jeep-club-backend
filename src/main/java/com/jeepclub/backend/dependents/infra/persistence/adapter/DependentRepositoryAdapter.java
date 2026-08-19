@@ -11,11 +11,10 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+
 @Repository
 @RequiredArgsConstructor
-
-public class DependentRepositoryAdapter
-        implements DependentRepository {
+public class DependentRepositoryAdapter implements DependentRepository {
 
     private final DependentJpaRepository jpaRepository;
     private final DependentMapper mapper;
@@ -60,6 +59,26 @@ public class DependentRepositoryAdapter
                 .stream()
                 .map(mapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public boolean existsActiveById(Long id) {
+        return jpaRepository.existsByIdAndStatus(
+                id,
+                DependentStatus.ACTIVE
+        );
+    }
+
+    @Override
+    public boolean existsActiveByIdAndUserId(
+            Long id,
+            Long userId
+    ) {
+        return jpaRepository.existsByIdAndUserIdAndStatus(
+                id,
+                userId,
+                DependentStatus.ACTIVE
+        );
     }
 
     @Override

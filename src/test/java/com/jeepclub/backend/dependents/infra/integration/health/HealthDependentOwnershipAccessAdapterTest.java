@@ -33,7 +33,7 @@ class HealthDependentOwnershipAccessAdapterTest {
         HealthDependentOwnershipAccessAdapter adapter =
                 new HealthDependentOwnershipAccessAdapter(dependentJpaRepository);
 
-        when(dependentJpaRepository.existsByIdAndSocioId(10L, 1L)).thenReturn(true);
+        when(dependentJpaRepository.existsByIdAndUserId(10L, 1L)).thenReturn(true);
         when(dependentJpaRepository.existsByIdAndSocioId(10L, 2L)).thenReturn(false);
 
         assertThat(adapter.belongsToUser(10L, 1L)).isTrue();

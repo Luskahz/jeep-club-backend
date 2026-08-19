@@ -17,4 +17,9 @@ public interface DependentRepository {
             String cpf,
             Long id
     );
+    boolean existsActiveById(Long id);
+    boolean existsActiveByIdAndUserId(
+            Long id,
+            Long userId
+    );
 }
