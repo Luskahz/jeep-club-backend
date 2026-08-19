@@ -166,7 +166,7 @@ public class DependentService {
         if (dependentUserPort.existsByCpf(cpf)
                 || dependentRepository.existsActiveByCpf(cpf)) {
 
-            throw new DependentCpfAlreadyInUseException(cpf);
+            throw new DependentCpfAlreadyInUseException();
         }
     }
 
@@ -180,7 +180,7 @@ public class DependentService {
                 dependentId
         )) {
 
-            throw new DependentCpfAlreadyInUseException(cpf);
+            throw new DependentCpfAlreadyInUseException();
         }
     }
 

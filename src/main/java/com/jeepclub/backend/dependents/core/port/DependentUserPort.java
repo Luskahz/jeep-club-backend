@@ -6,3 +6,4 @@ public interface DependentUserPort {
 
     boolean existsByCpf(String cpf);
 }
+

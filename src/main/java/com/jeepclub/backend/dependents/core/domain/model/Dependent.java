@@ -39,6 +39,7 @@ public class Dependent {
             Instant now
     ) {
         requireText(name, "name");
+
         String normalizedCpf = normalizeCpf(cpf);
 
         Objects.requireNonNull(
@@ -84,8 +85,8 @@ public class Dependent {
             Instant deletedAt
     ) {
         validateId(id);
-
         requireText(name, "name");
+
         String normalizedCpf = normalizeCpf(cpf);
 
         Objects.requireNonNull(
@@ -169,10 +170,7 @@ public class Dependent {
 
     public void selfDelete(Instant now) {
         validateNow(now);
-
-        if (isDeleted()) {
-            throw new DependentAlreadyDeletedException(id);
-        }
+        assertActive();
 
         this.status = DependentStatus.DELETED;
         this.deletedAt = now;
@@ -189,9 +187,7 @@ public class Dependent {
 
     private void assertActive() {
         if (!isActive()) {
-            throw new DependentException(
-                    "Deleted dependent cannot be modified."
-            );
+            throw new DependentAlreadyDeletedException(id);
         }
     }
 
@@ -201,33 +197,42 @@ public class Dependent {
             Instant updatedAt,
             Instant deletedAt
     ) {
-        if (updatedAt != null && updatedAt.isBefore(createdAt)) {
-            throw new DependentException(
+        if (updatedAt != null
+                && updatedAt.isBefore(createdAt)) {
+
+            throw new IllegalStateException(
                     "updatedAt cannot be before createdAt."
             );
         }
 
-        if (status == DependentStatus.ACTIVE && deletedAt != null) {
-            throw new DependentException(
+        if (status == DependentStatus.ACTIVE
+                && deletedAt != null) {
+
+            throw new IllegalStateException(
                     "Active dependent cannot have deletedAt."
             );
         }
 
-        if (status == DependentStatus.DELETED && deletedAt == null) {
-            throw new DependentException(
+        if (status == DependentStatus.DELETED
+                && deletedAt == null) {
+
+            throw new IllegalStateException(
                     "Deleted dependent must have deletedAt."
             );
         }
 
-        if (deletedAt != null && deletedAt.isBefore(createdAt)) {
-            throw new DependentException(
+        if (deletedAt != null
+                && deletedAt.isBefore(createdAt)) {
+
+            throw new IllegalStateException(
                     "deletedAt cannot be before createdAt."
             );
         }
 
         if (status == DependentStatus.DELETED
                 && updatedAt == null) {
-            throw new DependentException(
+
+            throw new IllegalStateException(
                     "Deleted dependent must have updatedAt."
             );
         }
@@ -236,7 +241,7 @@ public class Dependent {
                 && updatedAt != null
                 && updatedAt.isBefore(deletedAt)) {
 
-            throw new DependentException(
+            throw new IllegalStateException(
                     "updatedAt cannot be before deletedAt."
             );
         }
@@ -244,7 +249,7 @@ public class Dependent {
 
     private static void validateId(Long id) {
         if (id == null || id <= 0) {
-            throw new DependentException(
+            throw new IllegalArgumentException(
                     "id must be positive."
             );
         }
@@ -252,7 +257,7 @@ public class Dependent {
 
     private static void validateUserId(Long userId) {
         if (userId == null || userId <= 0) {
-            throw new DependentException(
+            throw new IllegalArgumentException(
                     "userId must be positive."
             );
         }
@@ -263,7 +268,7 @@ public class Dependent {
             String field
     ) {
         if (value == null || value.isBlank()) {
-            throw new DependentException(
+            throw new IllegalArgumentException(
                     field + " is required."
             );
         }
@@ -275,7 +280,7 @@ public class Dependent {
         String cpf = rawCpf.replaceAll("\\D", "");
 
         if (cpf.length() != 11) {
-            throw new DependentException(
+            throw new IllegalArgumentException(
                     "cpf must contain exactly 11 digits."
             );
         }
@@ -295,7 +300,7 @@ public class Dependent {
 
     private static void validateNow(Instant now) {
         if (now == null) {
-            throw new DependentException(
+            throw new IllegalArgumentException(
                     "now is required."
             );
         }
