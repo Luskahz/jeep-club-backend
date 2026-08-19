@@ -156,6 +156,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         );
     }
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ProblemDetail handleIllegalStateException(
+            IllegalStateException exception,
+            Locale locale
+    ) {
+        return problemFactory.create(
+                HttpStatus.CONFLICT,
+                "INVALID_STATE",
+                locale
+        );
+    }
+
     private ValidationFieldErrorResponse toFieldErrorResponse(
             FieldError fieldError,
             Locale locale
