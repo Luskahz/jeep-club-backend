@@ -11,7 +11,6 @@ import com.jeepclub.backend.dependents.core.application.service.dependent.Depend
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;

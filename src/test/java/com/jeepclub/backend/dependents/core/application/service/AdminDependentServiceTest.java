@@ -2,7 +2,6 @@ package com.jeepclub.backend.dependents.core.application.service;
 
 import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfilePort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -5,8 +5,6 @@ import com.jeepclub.backend.dependents.core.application.service.dependent.Depend
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfileData;
-import com.jeepclub.backend.dependents.core.port.DependentMedicalProfilePort;
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import org.junit.jupiter.api.BeforeEach;
