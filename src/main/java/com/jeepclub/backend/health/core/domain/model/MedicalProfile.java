@@ -3,14 +3,23 @@ package com.jeepclub.backend.health.core.domain.model;
 import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.exception.InvalidMedicalProfileException;
+import lombok.Getter;
 
 import java.time.Instant;
 
+@Getter
 public class MedicalProfile {
+
+    private static final int MAX_HEALTH_INSURANCE_PROVIDER_LENGTH = 120;
+    private static final int MAX_HEALTH_INSURANCE_PLAN_LENGTH = 120;
+    private static final int MAX_HEALTH_INSURANCE_NUMBER_LENGTH = 80;
+    private static final int MAX_EMERGENCY_CONTACT_NAME_LENGTH = 120;
+    private static final int MAX_EMERGENCY_CONTACT_RELATIONSHIP_LENGTH = 80;
 
     private final Long id;
     private final MedicalProfileOwnerType ownerType;
     private final Long ownerId;
+
     private BloodType bloodType;
     private String allergies;
     private String chronicConditions;
@@ -22,6 +31,7 @@ public class MedicalProfile {
     private String emergencyContactPhone;
     private String emergencyContactRelationship;
     private String observations;
+
     private final Instant createdAt;
     private Instant updatedAt;
 
@@ -43,25 +53,25 @@ public class MedicalProfile {
             Instant createdAt,
             Instant updatedAt
     ) {
-        validateOwner(ownerType, ownerId);
-        validateDates(createdAt, updatedAt);
-
         this.id = id;
         this.ownerType = ownerType;
         this.ownerId = ownerId;
-        this.bloodType = bloodType == null ? BloodType.UNKNOWN : bloodType;
-        this.allergies = allergies;
-        this.chronicConditions = chronicConditions;
-        this.continuousMedications = continuousMedications;
-        this.healthInsuranceProvider = healthInsuranceProvider;
-        this.healthInsurancePlan = healthInsurancePlan;
-        this.healthInsuranceNumber = healthInsuranceNumber;
-        this.emergencyContactName = emergencyContactName;
-        this.emergencyContactPhone = emergencyContactPhone;
-        this.emergencyContactRelationship = emergencyContactRelationship;
-        this.observations = observations;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+
+        applyMedicalData(
+                bloodType,
+                allergies,
+                chronicConditions,
+                continuousMedications,
+                healthInsuranceProvider,
+                healthInsurancePlan,
+                healthInsuranceNumber,
+                emergencyContactName,
+                emergencyContactPhone,
+                emergencyContactRelationship,
+                observations
+        );
     }
 
     public static MedicalProfile create(
@@ -80,6 +90,8 @@ public class MedicalProfile {
             String observations,
             Instant now
     ) {
+        validateOwner(ownerType, ownerId);
+        validateNow(now);
 
         return new MedicalProfile(
                 null,
@@ -119,9 +131,9 @@ public class MedicalProfile {
             Instant createdAt,
             Instant updatedAt
     ) {
-        if (id == null) {
-            throw new InvalidMedicalProfileException("O ID do perfil médico reconstituído é obrigatório.");
-        }
+        validateId(id);
+        validateOwner(ownerType, ownerId);
+        validateDates(createdAt, updatedAt);
 
         return new MedicalProfile(
                 id,
@@ -157,101 +169,197 @@ public class MedicalProfile {
             String observations,
             Instant now
     ) {
-        this.bloodType = bloodType == null ? BloodType.UNKNOWN : bloodType;
-        this.allergies = allergies;
-        this.chronicConditions = chronicConditions;
-        this.continuousMedications = continuousMedications;
-        this.healthInsuranceProvider = healthInsuranceProvider;
-        this.healthInsurancePlan = healthInsurancePlan;
-        this.healthInsuranceNumber = healthInsuranceNumber;
-        this.emergencyContactName = emergencyContactName;
-        this.emergencyContactPhone = emergencyContactPhone;
-        this.emergencyContactRelationship = emergencyContactRelationship;
-        this.observations = observations;
+        validateUpdateDate(now);
+
+        applyMedicalData(
+                bloodType,
+                allergies,
+                chronicConditions,
+                continuousMedications,
+                healthInsuranceProvider,
+                healthInsurancePlan,
+                healthInsuranceNumber,
+                emergencyContactName,
+                emergencyContactPhone,
+                emergencyContactRelationship,
+                observations
+        );
+
         this.updatedAt = now;
     }
 
-    private static void validateOwner(MedicalProfileOwnerType ownerType, Long ownerId) {
-        if (ownerType == null) {
-            throw new InvalidMedicalProfileException("O tipo do proprietário do perfil médico é obrigatório.");
-        }
+    private void applyMedicalData(
+            BloodType bloodType,
+            String allergies,
+            String chronicConditions,
+            String continuousMedications,
+            String healthInsuranceProvider,
+            String healthInsurancePlan,
+            String healthInsuranceNumber,
+            String emergencyContactName,
+            String emergencyContactPhone,
+            String emergencyContactRelationship,
+            String observations
+    ) {
+        this.bloodType = bloodType == null
+                ? BloodType.UNKNOWN
+                : bloodType;
 
-        if (ownerId == null) {
-            throw new InvalidMedicalProfileException("O identificador do proprietário do perfil médico é obrigatório.");
+        this.allergies = normalizeNullableText(allergies);
+        this.chronicConditions = normalizeNullableText(chronicConditions);
+        this.continuousMedications = normalizeNullableText(continuousMedications);
+
+        this.healthInsuranceProvider = normalizeLimitedText(
+                healthInsuranceProvider,
+                MAX_HEALTH_INSURANCE_PROVIDER_LENGTH,
+                "healthInsuranceProvider"
+        );
+
+        this.healthInsurancePlan = normalizeLimitedText(
+                healthInsurancePlan,
+                MAX_HEALTH_INSURANCE_PLAN_LENGTH,
+                "healthInsurancePlan"
+        );
+
+        this.healthInsuranceNumber = normalizeLimitedText(
+                healthInsuranceNumber,
+                MAX_HEALTH_INSURANCE_NUMBER_LENGTH,
+                "healthInsuranceNumber"
+        );
+
+        this.emergencyContactName = normalizeLimitedText(
+                emergencyContactName,
+                MAX_EMERGENCY_CONTACT_NAME_LENGTH,
+                "emergencyContactName"
+        );
+
+        this.emergencyContactPhone = normalizePhoneNumber(
+                emergencyContactPhone
+        );
+
+        this.emergencyContactRelationship = normalizeLimitedText(
+                emergencyContactRelationship,
+                MAX_EMERGENCY_CONTACT_RELATIONSHIP_LENGTH,
+                "emergencyContactRelationship"
+        );
+
+        this.observations = normalizeNullableText(observations);
+    }
+
+    private static void validateId(Long id) {
+        if (id == null || id <= 0) {
+            throw new InvalidMedicalProfileException(
+                    "O ID do perfil médico deve ser positivo."
+            );
         }
     }
 
-    private static void validateDates(Instant createdAt, Instant updatedAt) {
+    private static void validateOwner(
+            MedicalProfileOwnerType ownerType,
+            Long ownerId
+    ) {
+        if (ownerType == null) {
+            throw new InvalidMedicalProfileException(
+                    "O tipo do proprietário do perfil médico é obrigatório."
+            );
+        }
+
+        if (ownerId == null || ownerId <= 0) {
+            throw new InvalidMedicalProfileException(
+                    "O identificador do proprietário deve ser positivo."
+            );
+        }
+    }
+
+    private static void validateNow(Instant now) {
+        if (now == null) {
+            throw new InvalidMedicalProfileException(
+                    "A data da operação é obrigatória."
+            );
+        }
+    }
+
+    private static void validateDates(
+            Instant createdAt,
+            Instant updatedAt
+    ) {
         if (createdAt == null) {
-            throw new InvalidMedicalProfileException("A data de criação do perfil médico é obrigatória.");
+            throw new InvalidMedicalProfileException(
+                    "A data de criação do perfil médico é obrigatória."
+            );
         }
 
         if (updatedAt == null) {
-            throw new InvalidMedicalProfileException("A data de atualização do perfil médico é obrigatória.");
+            throw new InvalidMedicalProfileException(
+                    "A data de atualização do perfil médico é obrigatória."
+            );
+        }
+
+        if (updatedAt.isBefore(createdAt)) {
+            throw new InvalidMedicalProfileException(
+                    "A data de atualização não pode ser anterior à criação."
+            );
         }
     }
 
-    public Long getId() {
-        return id;
+    private void validateUpdateDate(Instant now) {
+        validateNow(now);
+
+        if (now.isBefore(createdAt)) {
+            throw new InvalidMedicalProfileException(
+                    "A data de atualização não pode ser anterior à criação."
+            );
+        }
+
+        if (now.isBefore(updatedAt)) {
+            throw new InvalidMedicalProfileException(
+                    "A data de atualização não pode regredir."
+            );
+        }
     }
 
-    public MedicalProfileOwnerType getOwnerType() {
-        return ownerType;
+    private static String normalizeNullableText(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+
+        return normalized.isBlank()
+                ? null
+                : normalized;
     }
 
-    public Long getOwnerId() {
-        return ownerId;
+    private static String normalizeLimitedText(
+            String value,
+            int maxLength,
+            String fieldName
+    ) {
+        String normalized = normalizeNullableText(value);
+
+        if (normalized != null && normalized.length() > maxLength) {
+            throw new InvalidMedicalProfileException(
+                    fieldName + " não pode exceder "
+                            + maxLength + " caracteres."
+            );
+        }
+
+        return normalized;
     }
 
-    public BloodType getBloodType() {
-        return bloodType;
-    }
+    private static String normalizePhoneNumber(String phoneNumber) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
+            return null;
+        }
 
-    public String getAllergies() {
-        return allergies;
-    }
+        String normalized = phoneNumber.replaceAll("\\D", "");
 
-    public String getChronicConditions() {
-        return chronicConditions;
-    }
+        if (normalized.length() < 10 || normalized.length() > 11) {
+            throw new InvalidMedicalProfileException(
+                    "O telefone de emergência deve possuir 10 ou 11 dígitos."
+            );
+        }
 
-    public String getContinuousMedications() {
-        return continuousMedications;
-    }
-
-    public String getHealthInsuranceProvider() {
-        return healthInsuranceProvider;
-    }
-
-    public String getHealthInsurancePlan() {
-        return healthInsurancePlan;
-    }
-
-    public String getHealthInsuranceNumber() {
-        return healthInsuranceNumber;
-    }
-
-    public String getEmergencyContactName() {
-        return emergencyContactName;
-    }
-
-    public String getEmergencyContactPhone() {
-        return emergencyContactPhone;
-    }
-
-    public String getEmergencyContactRelationship() {
-        return emergencyContactRelationship;
-    }
-
-    public String getObservations() {
-        return observations;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
+        return normalized;
     }
 }

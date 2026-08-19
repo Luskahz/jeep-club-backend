@@ -7,31 +7,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class MedicalProfileMapper {
 
-    public MedicalProfile toDomain(MedicalProfileEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-
-        return MedicalProfile.reconstitute(
-                entity.getId(),
-                entity.getOwnerType(),
-                entity.getOwnerId(),
-                entity.getBloodType(),
-                entity.getAllergies(),
-                entity.getChronicConditions(),
-                entity.getContinuousMedications(),
-                entity.getHealthInsuranceProvider(),
-                entity.getHealthInsurancePlan(),
-                entity.getHealthInsuranceNumber(),
-                entity.getEmergencyContactName(),
-                entity.getEmergencyContactPhone(),
-                entity.getEmergencyContactRelationship(),
-                entity.getObservations(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt()
-        );
-    }
-
     public MedicalProfileEntity toEntity(MedicalProfile domain) {
         if (domain == null) {
             return null;
@@ -57,5 +32,30 @@ public class MedicalProfileMapper {
         entity.setUpdatedAt(domain.getUpdatedAt());
 
         return entity;
+    }
+
+    public MedicalProfile toDomain(MedicalProfileEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+
+        return MedicalProfile.reconstitute(
+                entity.getId(),
+                entity.getOwnerType(),
+                entity.getOwnerId(),
+                entity.getBloodType(),
+                entity.getAllergies(),
+                entity.getChronicConditions(),
+                entity.getContinuousMedications(),
+                entity.getHealthInsuranceProvider(),
+                entity.getHealthInsurancePlan(),
+                entity.getHealthInsuranceNumber(),
+                entity.getEmergencyContactName(),
+                entity.getEmergencyContactPhone(),
+                entity.getEmergencyContactRelationship(),
+                entity.getObservations(),
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
+        );
     }
 }

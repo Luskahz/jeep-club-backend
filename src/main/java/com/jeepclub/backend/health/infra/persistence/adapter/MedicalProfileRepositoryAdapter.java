@@ -20,6 +20,14 @@ public class MedicalProfileRepositoryAdapter implements MedicalProfileRepository
     private final MedicalProfileMapper medicalProfileMapper;
 
     @Override
+    public MedicalProfile save(MedicalProfile medicalProfile) {
+        var entity = medicalProfileMapper.toEntity(medicalProfile);
+        var saved = medicalProfileJpaRepository.save(entity);
+
+        return medicalProfileMapper.toDomain(saved);
+    }
+
+    @Override
     public Optional<MedicalProfile> findById(Long id) {
         return medicalProfileJpaRepository
                 .findById(id)
@@ -32,23 +40,34 @@ public class MedicalProfileRepositoryAdapter implements MedicalProfileRepository
             Long ownerId
     ) {
         return medicalProfileJpaRepository
-                .findByOwnerTypeAndOwnerId(ownerType, ownerId)
+                .findByOwnerTypeAndOwnerId(
+                        ownerType,
+                        ownerId
+                )
                 .map(medicalProfileMapper::toDomain);
     }
 
     @Override
-    public List<MedicalProfile> findAll(int page, int size) {
+    public boolean existsByOwner(
+            MedicalProfileOwnerType ownerType,
+            Long ownerId
+    ) {
+        return medicalProfileJpaRepository
+                .existsByOwnerTypeAndOwnerId(
+                        ownerType,
+                        ownerId
+                );
+    }
+
+    @Override
+    public List<MedicalProfile> findAll(
+            int page,
+            int size
+    ) {
         return medicalProfileJpaRepository
                 .findAll(PageRequest.of(page, size))
                 .stream()
                 .map(medicalProfileMapper::toDomain)
                 .toList();
-    }
-
-    @Override
-    public MedicalProfile save(MedicalProfile medicalProfile) {
-        var entity = medicalProfileMapper.toEntity(medicalProfile);
-        var saved = medicalProfileJpaRepository.save(entity);
-        return medicalProfileMapper.toDomain(saved);
     }
 }

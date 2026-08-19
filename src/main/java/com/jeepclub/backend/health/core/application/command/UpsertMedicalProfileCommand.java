@@ -1,7 +1,9 @@
-package com.jeepclub.backend.health.api.module.medicalprofile;
+package com.jeepclub.backend.health.core.application.command;
 
-public record MedicalProfileCommand(
-        MedicalProfileBloodType bloodType,
+import com.jeepclub.backend.health.core.domain.enums.BloodType;
+
+public record UpsertMedicalProfileCommand(
+        BloodType bloodType,
         String allergies,
         String chronicConditions,
         String continuousMedications,

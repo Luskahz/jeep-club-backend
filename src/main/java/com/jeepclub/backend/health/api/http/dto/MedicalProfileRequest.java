@@ -1,7 +1,7 @@
 package com.jeepclub.backend.health.api.http.dto;
 
+import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
 import com.jeepclub.backend.health.core.domain.enums.BloodType;
-import com.jeepclub.backend.health.core.application.MedicalProfileData;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Size;
 
@@ -84,8 +84,8 @@ public record MedicalProfileRequest(
         @Size(max = 2000, message = "As observações devem ter no máximo 2000 caracteres.")
         String observations
 ) {
-    public MedicalProfileData toApplicationData() {
-        return new MedicalProfileData(
+    public UpsertMedicalProfileCommand toApplicationData() {
+        return new UpsertMedicalProfileCommand(
                 bloodType,
                 allergies,
                 chronicConditions,

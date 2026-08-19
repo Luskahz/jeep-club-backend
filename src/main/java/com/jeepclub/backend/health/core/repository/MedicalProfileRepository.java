@@ -8,6 +8,8 @@ import java.util.Optional;
 
 public interface MedicalProfileRepository {
 
+    MedicalProfile save(MedicalProfile medicalProfile);
+
     Optional<MedicalProfile> findById(Long id);
 
     Optional<MedicalProfile> findByOwner(
@@ -15,7 +17,13 @@ public interface MedicalProfileRepository {
             Long ownerId
     );
 
-    List<MedicalProfile> findAll(int page, int size);
+    boolean existsByOwner(
+            MedicalProfileOwnerType ownerType,
+            Long ownerId
+    );
 
-    MedicalProfile save(MedicalProfile medicalProfile);
+    List<MedicalProfile> findAll(
+            int page,
+            int size
+    );
 }
