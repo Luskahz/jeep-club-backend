@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Pattern;
 import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
@@ -50,6 +51,10 @@ public record CreateDependentRequestDTO(
                 description = "Telefone de contato do dependente.",
                 example = "11988887777",
                 nullable = true
+        )
+        @Pattern(
+                regexp = "^\\d{10,11}$",
+                message = "Telefone deve conter 10 ou 11 dígitos."
         )
         String phoneNumber
 

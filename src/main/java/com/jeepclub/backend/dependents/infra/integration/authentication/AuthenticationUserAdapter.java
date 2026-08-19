@@ -17,6 +17,11 @@ public class AuthenticationUserAdapter implements DependentUserPort {
     }
 
     @Override
+    public boolean existsActiveById(Long userId) {
+        return userQuery.existsActiveUserById(userId);
+    }
+
+    @Override
     public boolean existsByCpf(String cpf) {
         return userQuery.existsByCpf(cpf);
     }

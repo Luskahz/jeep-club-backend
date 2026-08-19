@@ -1,9 +1,6 @@
 package com.jeepclub.backend.dependents.core.application.service.dependent;
 
-import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
-import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
-import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
-import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerNotFoundException;
+import com.jeepclub.backend.dependents.core.application.exception.*;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
@@ -35,7 +32,7 @@ public class DependentService {
             String phoneNumber,
             Long userId
     ) {
-        assertUserExists(userId);
+        assertUserCanOwnDependent(userId);
 
         String normalizedCpf = normalizeCpf(cpf);
 
@@ -124,7 +121,7 @@ public class DependentService {
             Long id,
             Long requestingUserId
     ) {
-        Dependent dependent = findActiveDependentById(id);
+        Dependent dependent = findDependentById(id);
 
         assertBelongsTo(
                 dependent,
@@ -137,7 +134,6 @@ public class DependentService {
 
         dependentRepository.save(dependent);
     }
-
     private Dependent findActiveDependentById(Long id) {
         return dependentRepository.findActiveById(id)
                 .orElseThrow(
@@ -145,9 +141,13 @@ public class DependentService {
                 );
     }
 
-    private void assertUserExists(Long userId) {
+    private void assertUserCanOwnDependent(Long userId) {
         if (!dependentUserPort.existsById(userId)) {
             throw new DependentOwnerNotFoundException(userId);
+        }
+
+        if (!dependentUserPort.existsActiveById(userId)) {
+            throw new DependentOwnerInactiveException(userId);
         }
     }
 
@@ -196,5 +196,12 @@ public class DependentService {
         }
 
         return cpf.replaceAll("\\D", "");
+    }
+
+    private Dependent findDependentById(Long id) {
+        return dependentRepository.findById(id)
+                .orElseThrow(
+                        () -> new DependentNotFoundException(id)
+                );
     }
 }

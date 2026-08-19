@@ -56,7 +56,7 @@ class DependentServiceTest {
         DependentMedicalProfileData profile = new DependentMedicalProfileData(
                 "O+", "Dipirona", "Asma", "Aerolin", "Observação"
         );
-        when(dependentUserPort.existsById(1L)).thenReturn(true);
+        when(dependentUserPort.existsActiveById(1L)).thenReturn(true);
         when(dependentRepository.save(any(Dependent.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -75,7 +75,7 @@ class DependentServiceTest {
 
     @Test
     void rejectsMissingSocioBeforeCheckingCpf() {
-        when(dependentUserPort.existsById(99L)).thenReturn(false);
+        when(dependentUserPort.existsActiveById(99L)).thenReturn(false);
 
         assertThatThrownBy(() -> service.create(
                 "Pedro", "12345678900", LocalDate.now(), RelationshipType.CHILD,
@@ -87,7 +87,7 @@ class DependentServiceTest {
 
     @Test
     void rejectsCpfAlreadyUsedByUserOrDependent() {
-        when(dependentUserPort.existsById(1L)).thenReturn(true);
+        when(dependentUserPort.existsActiveById(1L)).thenReturn(true);
         when(dependentUserPort.existsByCpf("12345678900")).thenReturn(true);
 
         assertThatThrownBy(() -> createWithCpf("12345678900"))
