@@ -19,8 +19,8 @@ import java.time.LocalDate;
         name = "membership_dependents",
         indexes = {
                 @Index(
-                        name = "idx_dependent_socio_status",
-                        columnList = "socio_id,status"
+                        name = "idx_dependent_user_status",
+                        columnList = "user_id,status"
                 ),
                 @Index(
                         name = "idx_dependent_cpf_status",
@@ -63,12 +63,8 @@ public class DependentEntity {
     )
     private String phoneNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-            name = "socio_id",
-            nullable = false
-    )
-    private UserEntity socio;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @Enumerated(EnumType.STRING)
     @Column(

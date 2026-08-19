@@ -114,7 +114,7 @@ class DependentServiceTest {
         when(dependentRepository.findAllBySocioId(1L)).thenReturn(List.of(dependent));
 
         assertThat(service.findById(10L, 1L).dependent()).isSameAs(dependent);
-        assertThat(service.findAllBySocioId(1L))
+        assertThat(service.findAllByUserId(1L))
                 .extracting(result -> result.dependent().getId())
                 .containsExactly(10L);
 

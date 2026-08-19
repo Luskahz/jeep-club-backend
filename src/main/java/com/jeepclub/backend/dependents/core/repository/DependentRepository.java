@@ -8,20 +8,11 @@ import java.util.Optional;
 public interface DependentRepository {
 
     Dependent save(Dependent dependent);
-
-    // Admin / auditoria
     Optional<Dependent> findById(Long id);
-
-    List<Dependent> findAllBySocioId(Long socioId);
-
-    // Fluxo normal
+    List<Dependent> findAllByUserId(Long socioId);
     Optional<Dependent> findActiveById(Long id);
-
-    List<Dependent> findAllActiveBySocioId(Long socioId);
-
-    // Regras de unicidade
+    List<Dependent> findAllActiveByUserId(Long socioId);
     boolean existsActiveByCpf(String cpf);
-
     boolean existsActiveByCpfAndIdNot(
             String cpf,
             Long id

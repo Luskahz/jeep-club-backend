@@ -3,7 +3,7 @@ package com.jeepclub.backend.dependents.core.application.service.dependent;
 import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
-import com.jeepclub.backend.dependents.core.application.exception.SocioNotFoundException;
+import com.jeepclub.backend.dependents.core.application.exception.UserNotFoundException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
@@ -33,9 +33,9 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long socioId
+            Long userId
     ) {
-        assertSocioExists(socioId);
+        assertUserExists(userId);
 
         String normalizedCpf = normalizeCpf(cpf);
 
@@ -47,7 +47,7 @@ public class DependentService {
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                socioId,
+                userId,
                 Instant.now(clock)
         );
 
@@ -57,8 +57,8 @@ public class DependentService {
     }
 
     @Transactional(readOnly = true)
-    public List<DependentResult> findAllBySocioId(Long socioId) {
-        return dependentRepository.findAllActiveBySocioId(socioId)
+    public List<DependentResult> findAllByUserId(Long userId) {
+        return dependentRepository.findAllActiveByUserId(userId)
                 .stream()
                 .map(this::toResult)
                 .toList();
@@ -145,9 +145,9 @@ public class DependentService {
                 );
     }
 
-    private void assertSocioExists(Long socioId) {
-        if (!dependentUserPort.existsById(socioId)) {
-            throw new SocioNotFoundException(socioId);
+    private void assertUserExists(Long userId) {
+        if (!dependentUserPort.existsById(userId)) {
+            throw new UserNotFoundException(userId);
         }
     }
 
@@ -155,7 +155,7 @@ public class DependentService {
             Dependent dependent,
             Long requestingUserId
     ) {
-        if (!dependent.getSocioId().equals(requestingUserId)) {
+        if (!dependent.getUserId().equals(requestingUserId)) {
             throw new DependentAccessDeniedException(
                     dependent.getId()
             );

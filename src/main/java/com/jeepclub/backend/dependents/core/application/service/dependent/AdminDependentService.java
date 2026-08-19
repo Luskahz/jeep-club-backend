@@ -17,16 +17,16 @@ public class AdminDependentService {
     private final DependentRepository dependentRepository;
 
     @Transactional(readOnly = true)
-    public List<DependentResult> findAllBySocioId(Long socioId) {
-        return dependentRepository.findAllBySocioId(socioId)
+    public List<DependentResult> findAllByUserId(Long userId) {
+        return dependentRepository.findAllByUserId(userId)
                 .stream()
                 .map(this::toResult)
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public DependentResult findBySocioIdAndId(
-            Long socioId,
+    public DependentResult findByUserIdAndId(
+            Long userId,
             Long id
     ) {
         Dependent dependent = dependentRepository.findById(id)
@@ -34,7 +34,7 @@ public class AdminDependentService {
                         () -> new DependentNotFoundException(id)
                 );
 
-        if (!dependent.getSocioId().equals(socioId)) {
+        if (!dependent.getUserId().equals(userId)) {
             throw new DependentNotFoundException(id);
         }
 

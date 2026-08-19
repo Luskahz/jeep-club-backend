@@ -151,7 +151,7 @@ class DependentControllerTest {
 
     @Test
     void listsGetsUpdatesAndDeletesUsingTheExistingRoutes() throws Exception {
-        when(dependentService.findAllBySocioId(1L)).thenReturn(List.of(dependentResult));
+        when(dependentService.findAllByUserId(1L)).thenReturn(List.of(dependentResult));
         when(dependentService.findById(10L, 1L)).thenReturn(dependentResult);
         when(dependentService.update(
                 eq(10L), anyString(), anyString(), any(LocalDate.class),

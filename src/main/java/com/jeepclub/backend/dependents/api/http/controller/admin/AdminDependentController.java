@@ -14,11 +14,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/socios/{socioId}/dependents")
+@RequestMapping("/users/{userId}/dependents")
 @RequiredArgsConstructor
 @Tag(
         name = "Dependents - Admin",
-        description = "Consulta administrativa dos dependentes vinculados aos sócios."
+        description = "Consulta administrativa dos dependentes vinculados aos usuários."
 )
 public class AdminDependentController {
 
@@ -28,18 +28,18 @@ public class AdminDependentController {
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_READ')")
     @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
     @Operation(
-            summary = "Listar dependentes de um sócio",
-            description = "Lista os dependentes vinculados ao sócio informado, incluindo registros excluídos logicamente."
+            summary = "Listar dependentes de um usuário",
+            description = "Lista os dependentes vinculados ao usuário informado, incluindo registros excluídos logicamente."
     )
-    public ResponseEntity<List<DependentResponseDTO>> getDependentsBySocioId(
+    public ResponseEntity<List<DependentResponseDTO>> getDependentsByUserId(
             @Parameter(
-                    description = "Identificador do sócio titular.",
+                    description = "Identificador do usuário titular.",
                     required = true
             )
-            @PathVariable Long socioId
+            @PathVariable Long userId
     ) {
         List<DependentResponseDTO> response = adminDependentService
-                .findAllBySocioId(socioId)
+                .findAllByUserId(userId)
                 .stream()
                 .map(DependentResponseDTO::from)
                 .toList();
@@ -51,15 +51,15 @@ public class AdminDependentController {
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_READ')")
     @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
     @Operation(
-            summary = "Consultar dependente de um sócio",
-            description = "Consulta um dependente específico vinculado ao sócio informado, inclusive se estiver excluído logicamente."
+            summary = "Consultar dependente de um usuário",
+            description = "Consulta um dependente específico vinculado ao usuário informado, inclusive se estiver excluído logicamente."
     )
-    public ResponseEntity<DependentResponseDTO> getDependentBySocioAndId(
+    public ResponseEntity<DependentResponseDTO> getDependentByUserAndId(
             @Parameter(
-                    description = "Identificador do sócio titular.",
+                    description = "Identificador do usuário titular.",
                     required = true
             )
-            @PathVariable Long socioId,
+            @PathVariable Long userId,
 
             @Parameter(
                     description = "Identificador do dependente.",
@@ -69,8 +69,8 @@ public class AdminDependentController {
     ) {
         return ResponseEntity.ok(
                 DependentResponseDTO.from(
-                        adminDependentService.findBySocioIdAndId(
-                                socioId,
+                        adminDependentService.findByUserIdAndId(
+                                userId,
                                 id
                         )
                 )

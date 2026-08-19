@@ -22,24 +22,21 @@ class AdminDependentServiceTest {
 
     @Mock
     private DependentRepository dependentRepository;
-    @Mock
-    private DependentMedicalProfilePort medicalProfilePort;
-
     private AdminDependentService service;
 
     @BeforeEach
     void setUp() {
-        service = new AdminDependentService(dependentRepository, medicalProfilePort);
+        service = new AdminDependentService(dependentRepository);
     }
 
     @Test
     void listsAndFindsDependentForTheSpecifiedSocio() {
         Dependent dependent = DependentsFixture.dependent(10L, 5L);
-        when(dependentRepository.findAllBySocioId(5L)).thenReturn(List.of(dependent));
+        when(dependentRepository.findAllByUserId(5L)).thenReturn(List.of(dependent));
         when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
 
-        assertThat(service.findAllBySocioId(5L)).hasSize(1);
-        assertThat(service.findBySocioIdAndId(5L, 10L).dependent()).isSameAs(dependent);
+        assertThat(service.findAllByUserId(5L)).hasSize(1);
+        assertThat(service.findByUserIdAndId(5L, 10L).dependent()).isSameAs(dependent);
     }
 
     @Test
@@ -47,7 +44,7 @@ class AdminDependentServiceTest {
         when(dependentRepository.findById(10L))
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
-        assertThatThrownBy(() -> service.findBySocioIdAndId(5L, 10L))
+        assertThatThrownBy(() -> service.findByUserIdAndId(5L, 10L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("O dependente informado não pertence ao sócio especificado.");
     }

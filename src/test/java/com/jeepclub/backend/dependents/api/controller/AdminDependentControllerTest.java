@@ -54,8 +54,8 @@ class AdminDependentControllerTest {
 
     @Test
     void preservesAdministrativeListAndDetailRoutes() throws Exception {
-        when(adminDependentService.findAllBySocioId(5L)).thenReturn(List.of(result));
-        when(adminDependentService.findBySocioIdAndId(5L, 10L)).thenReturn(result);
+        when(adminDependentService.findAllByUserId(5L)).thenReturn(List.of(result));
+        when(adminDependentService.findByUserIdAndId(5L, 10L)).thenReturn(result);
 
         mockMvc.perform(get("/socios/5/dependents"))
                 .andExpect(status().isOk())
@@ -67,7 +67,7 @@ class AdminDependentControllerTest {
 
     @Test
     void preservesBadRequestWhenDependentDoesNotBelongToSocio() throws Exception {
-        when(adminDependentService.findBySocioIdAndId(5L, 10L))
+        when(adminDependentService.findByUserIdAndId(5L, 10L))
                 .thenThrow(new IllegalArgumentException(
                         "O dependente informado não pertence ao sócio especificado."
                 ));

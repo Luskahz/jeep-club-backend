@@ -5,7 +5,6 @@ import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatu
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
-import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
@@ -69,7 +68,7 @@ class DependentSystemFlowTest {
         Dependent found = dependentService.findById(created.getId(), socio.getId()).dependent();
         assertThat(found.getName()).isEqualTo("Pedro Silva");
 
-        assertThat(dependentService.findAllBySocioId(socio.getId()))
+        assertThat(dependentService.findAllByUserId(socio.getId()))
                 .extracting(result -> result.dependent().getId())
                 .containsExactly(created.getId());
 

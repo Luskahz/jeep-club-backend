@@ -60,7 +60,7 @@ public class DependentController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         List<DependentResponseDTO> response = dependentService
-                .findAllBySocioId(principal.getUserId())
+                .findAllByUserId(principal.getUserId())
                 .stream()
                 .map(DependentResponseDTO::from)
                 .toList();

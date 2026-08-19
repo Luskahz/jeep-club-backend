@@ -61,7 +61,7 @@ public record DependentResponseDTO(
                 example = "5",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
-        Long socioId,
+        Long userId,
 
         @Schema(
                 description = "Status atual do dependente.",
@@ -116,7 +116,7 @@ public record DependentResponseDTO(
                 domain.getBirthDate(),
                 domain.getRelationshipType(),
                 domain.getPhoneNumber(),
-                domain.getSocioId(),
+                domain.getUserId(),
                 domain.getStatus(),
                 domain.getCreatedAt(),
                 domain.getUpdatedAt(),

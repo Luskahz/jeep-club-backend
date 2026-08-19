@@ -17,6 +17,6 @@ public class HealthDependentOwnershipAccessAdapter implements DependentOwnership
             return false;
         }
 
-        return dependentJpaRepository.existsByIdAndSocioId(dependentId, userId);
+        return dependentJpaRepository.existsByIdAndUserId(dependentId, userId);
     }
 }

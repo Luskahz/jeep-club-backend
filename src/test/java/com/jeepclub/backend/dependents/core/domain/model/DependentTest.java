@@ -43,7 +43,7 @@ class DependentTest {
             assertThat(dependent.getRelationshipType()).isEqualTo(RelationshipType.CHILD);
             assertThat(dependent.isConsentAccepted()).isTrue();
             assertThat(dependent.getConsentAcceptedAt()).isEqualTo(NOW);
-            assertThat(dependent.getSocioId()).isEqualTo(1L);
+            assertThat(dependent.getUserId()).isEqualTo(1L);
             assertThat(dependent.getCreatedAt()).isEqualTo(NOW);
             assertThat(dependent.getUpdatedAt()).isEqualTo(NOW);
         }

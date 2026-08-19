@@ -1,34 +1,30 @@
 package com.jeepclub.backend.dependents.infra.persistence.adapter;
 
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
 import com.jeepclub.backend.dependents.infra.persistence.jpa.DependentJpaRepository;
 import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentMapper;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
-
 @Repository
-public class DependentRepositoryAdapter implements DependentRepository {
+@RequiredArgsConstructor
+
+public class DependentRepositoryAdapter
+        implements DependentRepository {
 
     private final DependentJpaRepository jpaRepository;
     private final DependentMapper mapper;
-
-    public DependentRepositoryAdapter(
-            DependentJpaRepository jpaRepository,
-            DependentMapper mapper
-    ) {
-        this.jpaRepository = jpaRepository;
-        this.mapper = mapper;
-    }
 
     @Override
     public Dependent save(Dependent dependent) {
         DependentEntity entity = mapper.toEntity(dependent);
         DependentEntity savedEntity = jpaRepository.save(entity);
+
         return mapper.toDomain(savedEntity);
     }
 
@@ -39,25 +35,50 @@ public class DependentRepositoryAdapter implements DependentRepository {
     }
 
     @Override
-    public List<Dependent> findAllBySocioId(Long socioId) {
-        return jpaRepository.findAllBySocioId(socioId)
+    public Optional<Dependent> findActiveById(Long id) {
+        return jpaRepository.findByIdAndStatus(
+                        id,
+                        DependentStatus.ACTIVE
+                )
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Dependent> findAllByUserId(Long userId) {
+        return jpaRepository.findAllByUserId(userId)
                 .stream()
                 .map(mapper::toDomain)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
-    public void deleteById(Long id) {
-        jpaRepository.deleteById(id);
+    public List<Dependent> findAllActiveByUserId(Long userId) {
+        return jpaRepository.findAllByUserIdAndStatus(
+                        userId,
+                        DependentStatus.ACTIVE
+                )
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override
-    public boolean existsByCpf(String cpf) {
-        return jpaRepository.existsByCpf(cpf);
+    public boolean existsActiveByCpf(String cpf) {
+        return jpaRepository.existsByCpfAndStatus(
+                cpf,
+                DependentStatus.ACTIVE
+        );
     }
 
     @Override
-    public boolean existsByCpfAndIdNot(String cpf, Long id) {
-        return jpaRepository.existsByCpfAndIdNot(cpf, id);
+    public boolean existsActiveByCpfAndIdNot(
+            String cpf,
+            Long id
+    ) {
+        return jpaRepository.existsByCpfAndIdNotAndStatus(
+                cpf,
+                id,
+                DependentStatus.ACTIVE
+        );
     }
 }

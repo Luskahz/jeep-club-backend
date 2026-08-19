@@ -62,7 +62,7 @@ class DependentRepositoryAdapterTest {
         assertThat(repository.findById(saved.getId())).get()
                 .satisfies(found -> {
                     assertThat(found.getCpf()).isEqualTo("12345678900");
-                    assertThat(found.getSocioId()).isEqualTo(socio.getId());
+                    assertThat(found.getUserId()).isEqualTo(socio.getId());
                     assertThat(found.getPhoneNumber()).isEqualTo("11988887777");
                 });
         assertThat(repository.findAllBySocioId(socio.getId()))

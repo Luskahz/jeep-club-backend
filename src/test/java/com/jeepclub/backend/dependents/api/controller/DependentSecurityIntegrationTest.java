@@ -54,7 +54,7 @@ class DependentSecurityIntegrationTest {
     @Test
     void authenticatedTitularCanListOwnDependents() throws Exception {
         authenticate("titular-token", 1L, List.of());
-        when(dependentService.findAllBySocioId(1L))
+        when(dependentService.findAllByUserId(1L))
                 .thenReturn(List.of(new DependentResult(dependent(10L, 1L), null)));
 
         mockMvc.perform(get("/dependents")
@@ -66,7 +66,7 @@ class DependentSecurityIntegrationTest {
     @Test
     void adminAuthorityCanListDependentsBySocio() throws Exception {
         authenticate("admin-token", 99L, List.of("DEPENDENTS_DEPENDENT_READ"));
-        when(adminDependentService.findAllBySocioId(1L))
+        when(adminDependentService.findAllByUserId(1L))
                 .thenReturn(List.of(new DependentResult(dependent(10L, 1L), null)));
 
         mockMvc.perform(get("/socios/1/dependents")

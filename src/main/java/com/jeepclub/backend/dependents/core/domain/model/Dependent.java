@@ -22,7 +22,7 @@ public class Dependent {
     private LocalDate birthDate;
     private RelationshipType relationshipType;
     private String phoneNumber;
-    private Long socioId;
+    private Long userId;
 
     private DependentStatus status;
 
@@ -36,7 +36,7 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long socioId,
+            Long userId,
             Instant now
     ) {
         requireText(name, "name");
@@ -52,7 +52,7 @@ public class Dependent {
                 "relationshipType cannot be null"
         );
 
-        validateSocioId(socioId);
+        validateUserId(userId);
         validateNow(now);
 
         Dependent dependent = new Dependent();
@@ -62,7 +62,7 @@ public class Dependent {
         dependent.birthDate = birthDate;
         dependent.relationshipType = relationshipType;
         dependent.phoneNumber = normalizePhoneNumber(phoneNumber);
-        dependent.socioId = socioId;
+        dependent.userId = userId;
 
         dependent.status = DependentStatus.ACTIVE;
 
@@ -78,7 +78,7 @@ public class Dependent {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long socioId,
+            Long userId,
             DependentStatus status,
             Instant createdAt,
             Instant updatedAt,
@@ -99,7 +99,7 @@ public class Dependent {
                 "relationshipType cannot be null"
         );
 
-        validateSocioId(socioId);
+        validateUserId(userId);
 
         Objects.requireNonNull(
                 status,
@@ -126,7 +126,7 @@ public class Dependent {
         dependent.birthDate = birthDate;
         dependent.relationshipType = relationshipType;
         dependent.phoneNumber = normalizePhoneNumber(phoneNumber);
-        dependent.socioId = socioId;
+        dependent.userId = userId;
 
         dependent.status = status;
 
@@ -251,10 +251,10 @@ public class Dependent {
         }
     }
 
-    private static void validateSocioId(Long socioId) {
-        if (socioId == null || socioId <= 0) {
+    private static void validateUserId(Long userId) {
+        if (userId == null || userId <= 0) {
             throw new DependentException(
-                    "socioId must be positive."
+                    "userId must be positive."
             );
         }
     }
