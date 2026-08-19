@@ -1,4 +1,4 @@
-package com.jeepclub.backend.authentication.infra.integration.dependents;
+package com.jeepclub.backend.dependents.infra.integration.authentication;
 
 import com.jeepclub.backend.authentication.api.module.user.UserQuery;
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class DependentUserPortAdapter implements DependentUserPort {
+public class AuthenticationUserAdapter implements DependentUserPort {
 
     private final UserQuery userQuery;
 
