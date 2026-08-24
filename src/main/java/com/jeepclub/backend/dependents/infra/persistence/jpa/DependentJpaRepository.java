@@ -3,22 +3,20 @@ package com.jeepclub.backend.dependents.infra.persistence.jpa;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface DependentJpaRepository
         extends JpaRepository<DependentEntity, Long> {
-
-    List<DependentEntity> findAllByUserId(
-            Long userId
-    );
 
     Optional<DependentEntity> findByIdAndStatus(
             Long id,
             DependentStatus status
+    );
+
+    List<DependentEntity> findAllByUserId(
+            Long userId
     );
 
     List<DependentEntity> findAllByUserIdAndStatus(
@@ -26,15 +24,13 @@ public interface DependentJpaRepository
             DependentStatus status
     );
 
-    boolean existsByCpfAndStatus(
-            String cpf,
-            DependentStatus status
+    boolean existsByCpf(
+            String cpf
     );
 
-    boolean existsByCpfAndIdNotAndStatus(
+    boolean existsByCpfAndIdNot(
             String cpf,
-            Long id,
-            DependentStatus status
+            Long id
     );
 
     boolean existsByIdAndStatus(

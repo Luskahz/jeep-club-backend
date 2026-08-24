@@ -2,7 +2,6 @@ package com.jeepclub.backend.dependents.core.domain.model;
 
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,7 +26,6 @@ public class Dependent {
 
     private Instant createdAt;
     private Instant updatedAt;
-    private Instant deletedAt;
 
     public static Dependent create(
             String name,
@@ -81,8 +79,7 @@ public class Dependent {
             Long userId,
             DependentStatus status,
             Instant createdAt,
-            Instant updatedAt,
-            Instant deletedAt
+            Instant updatedAt
     ) {
         validateId(id);
         requireText(name, "name");
@@ -112,10 +109,8 @@ public class Dependent {
         );
 
         validateReconstitutedState(
-                status,
                 createdAt,
-                updatedAt,
-                deletedAt
+                updatedAt
         );
 
         Dependent dependent = new Dependent();
@@ -132,7 +127,6 @@ public class Dependent {
 
         dependent.createdAt = createdAt;
         dependent.updatedAt = updatedAt;
-        dependent.deletedAt = deletedAt;
 
         return dependent;
     }
@@ -168,12 +162,25 @@ public class Dependent {
         this.updatedAt = now;
     }
 
-    public void selfDelete(Instant now) {
+    public void disable(Instant now) {
         validateNow(now);
-        assertActive();
 
-        this.status = DependentStatus.DELETED;
-        this.deletedAt = now;
+        if (isDisabled()) {
+            return;
+        }
+
+        this.status = DependentStatus.DISABLED;
+        this.updatedAt = now;
+    }
+
+    public void enable(Instant now) {
+        validateNow(now);
+
+        if (isActive()) {
+            return;
+        }
+
+        this.status = DependentStatus.ACTIVE;
         this.updatedAt = now;
     }
 
@@ -181,68 +188,27 @@ public class Dependent {
         return status == DependentStatus.ACTIVE;
     }
 
-    public boolean isDeleted() {
-        return status == DependentStatus.DELETED;
+    public boolean isDisabled() {
+        return status == DependentStatus.DISABLED;
     }
 
     private void assertActive() {
         if (!isActive()) {
-            throw new DependentAlreadyDeletedException(id);
+            throw new IllegalStateException(
+                    "Dependent must be active."
+            );
         }
     }
 
     private static void validateReconstitutedState(
-            DependentStatus status,
             Instant createdAt,
-            Instant updatedAt,
-            Instant deletedAt
+            Instant updatedAt
     ) {
         if (updatedAt != null
                 && updatedAt.isBefore(createdAt)) {
 
             throw new IllegalStateException(
                     "updatedAt cannot be before createdAt."
-            );
-        }
-
-        if (status == DependentStatus.ACTIVE
-                && deletedAt != null) {
-
-            throw new IllegalStateException(
-                    "Active dependent cannot have deletedAt."
-            );
-        }
-
-        if (status == DependentStatus.DELETED
-                && deletedAt == null) {
-
-            throw new IllegalStateException(
-                    "Deleted dependent must have deletedAt."
-            );
-        }
-
-        if (deletedAt != null
-                && deletedAt.isBefore(createdAt)) {
-
-            throw new IllegalStateException(
-                    "deletedAt cannot be before createdAt."
-            );
-        }
-
-        if (status == DependentStatus.DELETED
-                && updatedAt == null) {
-
-            throw new IllegalStateException(
-                    "Deleted dependent must have updatedAt."
-            );
-        }
-
-        if (deletedAt != null
-                && updatedAt != null
-                && updatedAt.isBefore(deletedAt)) {
-
-            throw new IllegalStateException(
-                    "updatedAt cannot be before deletedAt."
             );
         }
     }

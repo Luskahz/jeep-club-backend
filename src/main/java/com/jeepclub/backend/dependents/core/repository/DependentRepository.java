@@ -2,24 +2,39 @@ package com.jeepclub.backend.dependents.core.repository;
 
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 public interface DependentRepository {
 
     Dependent save(Dependent dependent);
+
     Optional<Dependent> findById(Long id);
-    List<Dependent> findAllByUserId(Long socioId);
+
     Optional<Dependent> findActiveById(Long id);
-    List<Dependent> findAllActiveByUserId(Long socioId);
-    boolean existsActiveByCpf(String cpf);
-    boolean existsActiveByCpfAndIdNot(
+
+    List<Dependent> findAllByUserId(Long userId);
+
+    List<Dependent> findAllActiveByUserId(Long userId);
+
+    boolean existsByCpf(String cpf);
+
+    boolean existsByCpfAndIdNot(
             String cpf,
             Long id
     );
+
     boolean existsActiveById(Long id);
+
     boolean existsActiveByIdAndUserId(
             Long id,
             Long userId
+    );
+
+    void delete(
+            Dependent dependent,
+            Long deletedByUserId,
+            Instant deletedAt
     );
 }

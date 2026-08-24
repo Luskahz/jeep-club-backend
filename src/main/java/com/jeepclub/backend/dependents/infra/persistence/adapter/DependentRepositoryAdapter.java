@@ -4,11 +4,15 @@ import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
+import com.jeepclub.backend.dependents.infra.persistence.entity.DependentHistoryEntity;
+import com.jeepclub.backend.dependents.infra.persistence.jpa.DependentHistoryJpaRepository;
 import com.jeepclub.backend.dependents.infra.persistence.jpa.DependentJpaRepository;
+import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentHistoryMapper;
 import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,7 +21,10 @@ import java.util.Optional;
 public class DependentRepositoryAdapter implements DependentRepository {
 
     private final DependentJpaRepository jpaRepository;
+    private final DependentHistoryJpaRepository historyJpaRepository;
+
     private final DependentMapper mapper;
+    private final DependentHistoryMapper historyMapper;
 
     @Override
     public Dependent save(Dependent dependent) {
@@ -62,6 +69,22 @@ public class DependentRepositoryAdapter implements DependentRepository {
     }
 
     @Override
+    public boolean existsByCpf(String cpf) {
+        return jpaRepository.existsByCpf(cpf);
+    }
+
+    @Override
+    public boolean existsByCpfAndIdNot(
+            String cpf,
+            Long id
+    ) {
+        return jpaRepository.existsByCpfAndIdNot(
+                cpf,
+                id
+        );
+    }
+
+    @Override
     public boolean existsActiveById(Long id) {
         return jpaRepository.existsByIdAndStatus(
                 id,
@@ -82,22 +105,24 @@ public class DependentRepositoryAdapter implements DependentRepository {
     }
 
     @Override
-    public boolean existsActiveByCpf(String cpf) {
-        return jpaRepository.existsByCpfAndStatus(
-                cpf,
-                DependentStatus.ACTIVE
-        );
-    }
-
-    @Override
-    public boolean existsActiveByCpfAndIdNot(
-            String cpf,
-            Long id
+    public void delete(
+            Dependent dependent,
+            Long deletedByUserId,
+            Instant deletedAt
     ) {
-        return jpaRepository.existsByCpfAndIdNotAndStatus(
-                cpf,
-                id,
-                DependentStatus.ACTIVE
-        );
+        DependentEntity entity = jpaRepository
+                .findById(dependent.getId())
+                .orElseThrow();
+
+        DependentHistoryEntity history =
+                historyMapper.toHistoryEntity(
+                        entity,
+                        deletedByUserId,
+                        deletedAt
+                );
+
+        historyJpaRepository.save(history);
+
+        jpaRepository.delete(entity);
     }
 }

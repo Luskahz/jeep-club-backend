@@ -117,6 +117,48 @@ public class DependentService {
     }
 
     @Transactional
+    public DependentResult disable(
+            Long id,
+            Long requestingUserId
+    ) {
+        Dependent dependent = findDependentById(id);
+
+        assertBelongsTo(
+                dependent,
+                requestingUserId
+        );
+
+        dependent.disable(
+                Instant.now(clock)
+        );
+
+        return toResult(
+                dependentRepository.save(dependent)
+        );
+    }
+
+    @Transactional
+    public DependentResult enable(
+            Long id,
+            Long requestingUserId
+    ) {
+        Dependent dependent = findDependentById(id);
+
+        assertBelongsTo(
+                dependent,
+                requestingUserId
+        );
+
+        dependent.enable(
+                Instant.now(clock)
+        );
+
+        return toResult(
+                dependentRepository.save(dependent)
+        );
+    }
+
+    @Transactional
     public void delete(
             Long id,
             Long requestingUserId
@@ -128,14 +170,22 @@ public class DependentService {
                 requestingUserId
         );
 
-        dependent.selfDelete(
+        dependentRepository.delete(
+                dependent,
+                requestingUserId,
                 Instant.now(clock)
         );
-
-        dependentRepository.save(dependent);
     }
+
     private Dependent findActiveDependentById(Long id) {
         return dependentRepository.findActiveById(id)
+                .orElseThrow(
+                        () -> new DependentNotFoundException(id)
+                );
+    }
+
+    private Dependent findDependentById(Long id) {
+        return dependentRepository.findById(id)
                 .orElseThrow(
                         () -> new DependentNotFoundException(id)
                 );
@@ -164,7 +214,7 @@ public class DependentService {
 
     private void assertCpfAvailable(String cpf) {
         if (dependentUserPort.existsByCpf(cpf)
-                || dependentRepository.existsActiveByCpf(cpf)) {
+                || dependentRepository.existsByCpf(cpf)) {
 
             throw new DependentCpfAlreadyInUseException();
         }
@@ -175,7 +225,7 @@ public class DependentService {
             Long dependentId
     ) {
         if (dependentUserPort.existsByCpf(cpf)
-                || dependentRepository.existsActiveByCpfAndIdNot(
+                || dependentRepository.existsByCpfAndIdNot(
                 cpf,
                 dependentId
         )) {
@@ -196,12 +246,5 @@ public class DependentService {
         }
 
         return cpf.replaceAll("\\D", "");
-    }
-
-    private Dependent findDependentById(Long id) {
-        return dependentRepository.findById(id)
-                .orElseThrow(
-                        () -> new DependentNotFoundException(id)
-                );
     }
 }

@@ -11,6 +11,7 @@ public class DependentMapper {
         if (domain == null) {
             return null;
         }
+
         DependentEntity entity = new DependentEntity();
 
         entity.setId(domain.getId());
@@ -23,7 +24,6 @@ public class DependentMapper {
         entity.setStatus(domain.getStatus());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
-        entity.setDeletedAt(domain.getDeletedAt());
 
         return entity;
     }
@@ -43,8 +43,7 @@ public class DependentMapper {
                 entity.getUserId(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt(),
-                entity.getDeletedAt()
+                entity.getUpdatedAt()
         );
     }
 }

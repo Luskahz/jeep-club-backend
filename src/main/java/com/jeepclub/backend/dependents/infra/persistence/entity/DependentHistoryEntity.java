@@ -15,25 +15,37 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Entity
 @Table(
-        name = "membership_dependents",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uk_dependent_cpf",
-                        columnNames = "cpf"
-                )
-        },
+        name = "dependents_dependent_history",
         indexes = {
                 @Index(
-                        name = "idx_dependent_user_status",
-                        columnList = "user_id,status"
+                        name = "idx_dependent_history_dependent_id",
+                        columnList = "dependent_id"
+                ),
+                @Index(
+                        name = "idx_dependent_history_user_id",
+                        columnList = "user_id"
+                ),
+                @Index(
+                        name = "idx_dependent_history_cpf",
+                        columnList = "cpf"
+                ),
+                @Index(
+                        name = "idx_dependent_history_deleted_at",
+                        columnList = "deleted_at"
                 )
         }
 )
-public class DependentEntity {
+public class DependentHistoryEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(
+            name = "dependent_id",
+            nullable = false
+    )
+    private Long dependentId;
 
     @Column(
             nullable = false,
@@ -82,6 +94,12 @@ public class DependentEntity {
     private DependentStatus status;
 
     @Column(
+            name = "deleted_by_user_id",
+            nullable = false
+    )
+    private Long deletedByUserId;
+
+    @Column(
             name = "created_at",
             nullable = false,
             updatable = false
@@ -92,4 +110,11 @@ public class DependentEntity {
             name = "updated_at"
     )
     private Instant updatedAt;
+
+    @Column(
+            name = "deleted_at",
+            nullable = false,
+            updatable = false
+    )
+    private Instant deletedAt;
 }
