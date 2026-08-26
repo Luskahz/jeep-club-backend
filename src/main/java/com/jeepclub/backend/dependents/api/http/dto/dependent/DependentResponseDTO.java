@@ -3,12 +3,10 @@ package com.jeepclub.backend.dependents.api.http.dto.dependent;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Objects;
 
 @Schema(description = "Dados de um dependente cadastrado no Jeep Club.")
@@ -23,7 +21,7 @@ public record DependentResponseDTO(
 
         @Schema(
                 description = "Nome completo do dependente.",
-                example = "Mariana Silva",
+                example = "Maria Silva",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         String name,
@@ -43,7 +41,7 @@ public record DependentResponseDTO(
         LocalDate birthDate,
 
         @Schema(
-                description = "Tipo de relacionamento com o sócio titular.",
+                description = "Tipo de relacionamento com o usuário titular.",
                 example = "CHILD",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
@@ -57,7 +55,7 @@ public record DependentResponseDTO(
         String phoneNumber,
 
         @Schema(
-                description = "Identificador do sócio titular.",
+                description = "Identificador do usuário titular.",
                 example = "5",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
@@ -66,7 +64,7 @@ public record DependentResponseDTO(
         @Schema(
                 description = "Status atual do dependente.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE", "DELETED"},
+                allowableValues = {"ACTIVE", "DISABLED"},
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         DependentStatus status,
@@ -79,18 +77,11 @@ public record DependentResponseDTO(
         Instant createdAt,
 
         @Schema(
-                description = "Data da última atualização.",
+                description = "Data da última atualização do dependente.",
                 example = "2026-05-23T14:20:00Z",
                 nullable = true
         )
-        Instant updatedAt,
-
-        @Schema(
-                description = "Data da exclusão lógica do dependente.",
-                example = "2026-08-18T20:30:00Z",
-                nullable = true
-        )
-        Instant deletedAt
+        Instant updatedAt
 
 ) {
 
@@ -100,40 +91,17 @@ public record DependentResponseDTO(
                 "Dependent result cannot be null"
         );
 
-        return from(result.dependent());
-    }
-
-    public static DependentResponseDTO from(Dependent domain) {
-        Objects.requireNonNull(
-                domain,
-                "Domain model Dependent cannot be null"
-        );
-
         return new DependentResponseDTO(
-                domain.getId(),
-                domain.getName(),
-                domain.getCpf(),
-                domain.getBirthDate(),
-                domain.getRelationshipType(),
-                domain.getPhoneNumber(),
-                domain.getUserId(),
-                domain.getStatus(),
-                domain.getCreatedAt(),
-                domain.getUpdatedAt(),
-                domain.getDeletedAt()
+                result.id(),
+                result.name(),
+                result.cpf(),
+                result.birthDate(),
+                result.relationshipType(),
+                result.phoneNumber(),
+                result.userId(),
+                result.status(),
+                result.createdAt(),
+                result.updatedAt()
         );
-    }
-
-    public static List<DependentResponseDTO> from(
-            List<Dependent> dependents
-    ) {
-        Objects.requireNonNull(
-                dependents,
-                "Dependents list cannot be null"
-        );
-
-        return dependents.stream()
-                .map(DependentResponseDTO::from)
-                .toList();
     }
 }

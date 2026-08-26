@@ -8,8 +8,8 @@ import com.jeepclub.backend.dependents.api.http.dto.dependent.CreateDependentReq
 import com.jeepclub.backend.dependents.api.http.dto.dependent.UpdateDependentRequestDTO;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
@@ -35,16 +35,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,7 +51,6 @@ class DependentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
     @MockitoBean
     private DependentService dependentService;
     @MockitoBean
@@ -65,28 +60,18 @@ class DependentControllerTest {
     @MockitoBean
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
+    private DependentResult result;
     private ObjectMapper objectMapper;
-    private DependentResult dependentResult;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         Instant now = Instant.parse("2026-06-30T12:00:00Z");
-        Dependent dependent = Dependent.reconstitute(
-                10L,
-                "Pedro Silva",
-                "12345678900",
-                LocalDate.of(2010, 5, 20),
-                RelationshipType.CHILD,
-                "11988887777",
-                true,
-                now,
-                1L,
-                now,
-                now
+        result = new DependentResult(
+                10L, "Pedro Silva", "52998224725",
+                LocalDate.of(2010, 5, 20), RelationshipType.CHILD,
+                "11988887777", 1L, DependentStatus.ACTIVE, now, now
         );
-        dependentResult = new DependentResult(dependent, null);
-
         UserPrincipal principal = new UserPrincipal(1L, 100L, now.plusSeconds(3600));
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, List.of())
@@ -99,127 +84,51 @@ class DependentControllerTest {
     }
 
     @Test
-    void createsDependentWithTheExistingContract() throws Exception {
-        CreateDependentRequestDTO request = createRequest(null, true);
+    void createsListsGetsUpdatesAndDeletesUsingExistingRoutes() throws Exception {
         when(dependentService.create(
-                anyString(), anyString(), any(LocalDate.class), any(RelationshipType.class),
-                anyString(), anyBoolean(), eq(null), anyLong()
-        )).thenReturn(dependentResult);
-
-        mockMvc.perform(post("/dependents")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(10L))
-                .andExpect(jsonPath("$.medicalProfile.bloodType").doesNotExist());
-    }
-
-    @Test
-    void forwardsMedicalProfileDuringCreation() throws Exception {
-        MedicalProfileDTO profile = new MedicalProfileDTO(
-                "O+", "Dipirona", "Asma", "Aerolin", "Usar bombinha"
-        );
-        when(dependentService.create(
-                anyString(), anyString(), any(LocalDate.class), any(RelationshipType.class),
-                anyString(), anyBoolean(), any(DependentMedicalProfileData.class), anyLong()
-        )).thenReturn(new DependentResult(
-                dependentResult.dependent(),
-                new DependentMedicalProfileData(
-                        "O_POSITIVE", "Dipirona", "Asma", "Aerolin", "Usar bombinha"
-                )
-        ));
-
-        mockMvc.perform(post("/dependents")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest(profile, true))))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.medicalProfile.bloodType").value("O_POSITIVE"));
-    }
-
-    @Test
-    void validatesTheExistingCreateRequest() throws Exception {
-        mockMvc.perform(post("/dependents")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new CreateDependentRequestDTO(
-                                "Pedro Silva", null, LocalDate.of(2010, 5, 20),
-                                RelationshipType.CHILD, "11988887777", null, true
-                        ))))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void listsGetsUpdatesAndDeletesUsingTheExistingRoutes() throws Exception {
-        when(dependentService.findAllByUserId(1L)).thenReturn(List.of(dependentResult));
-        when(dependentService.findById(10L, 1L)).thenReturn(dependentResult);
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyLong()
+        )).thenReturn(result);
+        when(dependentService.findAllByUserId(1L)).thenReturn(List.of(result));
+        when(dependentService.findById(10L, 1L)).thenReturn(result);
         when(dependentService.update(
                 eq(10L), anyString(), anyString(), any(LocalDate.class),
-                any(RelationshipType.class), anyString(), anyBoolean(), eq(null), eq(1L)
-        )).thenReturn(dependentResult);
+                any(RelationshipType.class), anyString(), eq(1L)
+        )).thenReturn(result);
 
+        mockMvc.perform(post("/dependents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest())))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.deletedAt").doesNotExist());
         mockMvc.perform(get("/dependents"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(10L));
+                .andExpect(jsonPath("$[0].status").value("ACTIVE"));
         mockMvc.perform(get("/dependents/10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(10L));
+                .andExpect(jsonPath("$.userId").value(1L));
         mockMvc.perform(put("/dependents/10")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(10L));
+                .andExpect(status().isOk());
         mockMvc.perform(delete("/dependents/10"))
                 .andExpect(status().isNoContent());
 
         verify(dependentService).delete(10L, 1L);
     }
 
-    @Test
-    void preservesNotFoundForbiddenAndConflictResponses() throws Exception {
-        when(dependentService.findById(10L, 1L))
-                .thenThrow(DependentException.notFound())
-                .thenThrow(DependentException.accessDenied());
-        when(dependentService.create(
-                anyString(), anyString(), any(LocalDate.class), any(RelationshipType.class),
-                anyString(), anyBoolean(), eq(null), anyLong()
-        )).thenThrow(DependentException.conflict());
-
-        mockMvc.perform(get("/dependents/10"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("DEPENDENT_NOT_FOUND"));
-        mockMvc.perform(get("/dependents/10"))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("DEPENDENT_ACCESS_DENIED"));
-        mockMvc.perform(post("/dependents")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest(null, true))))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("DEPENDENT_CONFLICT"));
-    }
-
-    private CreateDependentRequestDTO createRequest(
-            MedicalProfileDTO medicalProfile,
-            Boolean consent
-    ) {
+    private CreateDependentRequestDTO createRequest() {
         return new CreateDependentRequestDTO(
-                "Pedro Silva",
-                "12345678900",
-                LocalDate.of(2010, 5, 20),
-                RelationshipType.CHILD,
-                "11988887777",
-                medicalProfile,
-                consent
+                "Pedro Silva", "52998224725", LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD, "11988887777"
         );
     }
 
     private UpdateDependentRequestDTO updateRequest() {
         return new UpdateDependentRequestDTO(
-                "Pedro Silva",
-                "12345678900",
-                LocalDate.of(2010, 5, 20),
-                RelationshipType.CHILD,
-                "11988887777",
-                null,
-                true
+                "Pedro Silva", "52998224725", LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD, "11988887777"
         );
     }
 

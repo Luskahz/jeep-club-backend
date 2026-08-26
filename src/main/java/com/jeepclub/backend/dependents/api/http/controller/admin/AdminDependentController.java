@@ -29,7 +29,7 @@ public class AdminDependentController {
     @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
     @Operation(
             summary = "Listar dependentes de um usuário",
-            description = "Lista os dependentes vinculados ao usuário informado, incluindo registros excluídos logicamente."
+            description = "Lista os dependentes operacionais vinculados ao usuário informado, incluindo ativos e desabilitados."
     )
     public ResponseEntity<List<DependentResponseDTO>> getDependentsByUserId(
             @Parameter(
@@ -52,7 +52,7 @@ public class AdminDependentController {
     @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
     @Operation(
             summary = "Consultar dependente de um usuário",
-            description = "Consulta um dependente específico vinculado ao usuário informado, inclusive se estiver excluído logicamente."
+            description = "Consulta um dependente operacional específico vinculado ao usuário informado, ativo ou desabilitado."
     )
     public ResponseEntity<DependentResponseDTO> getDependentByUserAndId(
             @Parameter(

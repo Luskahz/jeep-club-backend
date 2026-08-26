@@ -42,6 +42,6 @@ public class AdminDependentService {
     }
 
     private DependentResult toResult(Dependent dependent) {
-        return new DependentResult(dependent);
+        return DependentResult.from(dependent);
     }
 }

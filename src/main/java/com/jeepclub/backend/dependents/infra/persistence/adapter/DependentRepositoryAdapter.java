@@ -1,6 +1,7 @@
 package com.jeepclub.backend.dependents.infra.persistence.adapter;
 
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
+import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
@@ -111,8 +112,12 @@ public class DependentRepositoryAdapter implements DependentRepository {
             Instant deletedAt
     ) {
         DependentEntity entity = jpaRepository
-                .findById(dependent.getId())
-                .orElseThrow();
+                .findByIdForUpdate(dependent.getId())
+                .orElseThrow(
+                        () -> new DependentAlreadyDeletedException(
+                                dependent.getId()
+                        )
+                );
 
         DependentHistoryEntity history =
                 historyMapper.toHistoryEntity(

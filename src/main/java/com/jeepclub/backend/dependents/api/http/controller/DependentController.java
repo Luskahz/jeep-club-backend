@@ -115,7 +115,7 @@ public class DependentController {
     @DeleteMapping("/{id}")
     @Operation(
             summary = "Remover dependente",
-            description = "Realiza a exclusão lógica de um dependente pertencente ao usuário autenticado."
+            description = "Remove o dependente do cadastro operacional, preservando seu registro histórico para auditoria."
     )
     public ResponseEntity<Void> delete(
             @PathVariable Long id,

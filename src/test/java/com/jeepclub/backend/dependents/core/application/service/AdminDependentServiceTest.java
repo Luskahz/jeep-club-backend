@@ -35,7 +35,7 @@ class AdminDependentServiceTest {
         when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
 
         assertThat(service.findAllByUserId(5L)).hasSize(1);
-        assertThat(service.findByUserIdAndId(5L, 10L).dependent()).isSameAs(dependent);
+        assertThat(service.findByUserIdAndId(5L, 10L).id()).isEqualTo(dependent.getId());
     }
 
     @Test
@@ -44,7 +44,6 @@ class AdminDependentServiceTest {
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
         assertThatThrownBy(() -> service.findByUserIdAndId(5L, 10L))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("O dependente informado não pertence ao sócio especificado.");
+                .isInstanceOf(com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException.class);
     }
 }

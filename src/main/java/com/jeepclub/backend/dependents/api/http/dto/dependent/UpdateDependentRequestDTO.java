@@ -39,7 +39,7 @@ public record UpdateDependentRequestDTO(
         LocalDate birthDate,
 
         @Schema(
-                description = "Tipo de relacionamento com o sócio titular.",
+                description = "Tipo de relacionamento com o usuário titular.",
                 example = "CHILD",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )

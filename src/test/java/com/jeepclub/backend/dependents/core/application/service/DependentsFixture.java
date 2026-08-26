@@ -1,5 +1,6 @@
 package com.jeepclub.backend.dependents.core.application.service;
 
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 
@@ -14,6 +15,14 @@ final class DependentsFixture {
     }
 
     static Dependent dependent(Long id, Long socioId) {
+        return dependent(id, socioId, DependentStatus.ACTIVE);
+    }
+
+    static Dependent dependent(
+            Long id,
+            Long userId,
+            DependentStatus status
+    ) {
         return Dependent.reconstitute(
                 id,
                 "Pedro Silva",
@@ -21,9 +30,8 @@ final class DependentsFixture {
                 LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD,
                 "11988887777",
-                true,
-                CREATED_AT,
-                socioId,
+                userId,
+                status,
                 CREATED_AT,
                 CREATED_AT
         );

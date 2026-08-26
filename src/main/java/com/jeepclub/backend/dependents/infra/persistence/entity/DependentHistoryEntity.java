@@ -16,6 +16,12 @@ import java.time.LocalDate;
 @Entity
 @Table(
         name = "dependents_dependent_history",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_dependent_history_dependent_id",
+                        columnNames = "dependent_id"
+                )
+        },
         indexes = {
                 @Index(
                         name = "idx_dependent_history_dependent_id",

@@ -235,7 +235,7 @@ public class DependentService {
     }
 
     private DependentResult toResult(Dependent dependent) {
-        return new DependentResult(dependent);
+        return DependentResult.from(dependent);
     }
 
     private String normalizeCpf(String cpf) {

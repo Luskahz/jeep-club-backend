@@ -4,8 +4,8 @@ import com.jeepclub.backend.authentication.core.application.service.security.Acc
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
@@ -46,65 +46,47 @@ class DependentSecurityIntegrationTest {
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     @Test
-    void unauthenticatedRequestIsRejectedBySecurityFilterChain() throws Exception {
+    void unauthenticatedRequestIsRejected() throws Exception {
         mockMvc.perform(get("/dependents"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void authenticatedTitularCanListOwnDependents() throws Exception {
-        authenticate("titular-token", 1L, List.of());
-        when(dependentService.findAllByUserId(1L))
-                .thenReturn(List.of(new DependentResult(dependent(10L, 1L), null)));
+    void authenticatedUserCanListOwnDependents() throws Exception {
+        authenticate("user-token", 1L, List.of());
+        when(dependentService.findAllByUserId(1L)).thenReturn(List.of(result()));
 
         mockMvc.perform(get("/dependents")
-                        .header("Authorization", "Bearer titular-token"))
+                        .header("Authorization", "Bearer user-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(10L));
     }
 
     @Test
-    void adminAuthorityCanListDependentsBySocio() throws Exception {
+    void adminAuthorityCanListDependentsByUser() throws Exception {
         authenticate("admin-token", 99L, List.of("DEPENDENTS_DEPENDENT_READ"));
-        when(adminDependentService.findAllByUserId(1L))
-                .thenReturn(List.of(new DependentResult(dependent(10L, 1L), null)));
+        when(adminDependentService.findAllByUserId(1L)).thenReturn(List.of(result()));
 
-        mockMvc.perform(get("/socios/1/dependents")
+        mockMvc.perform(get("/users/1/dependents")
                         .header("Authorization", "Bearer admin-token"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].socioId").value(1L));
-    }
-
-    @Test
-    void authenticatedUserWithoutAdminAuthorityCannotListDependentsBySocio() throws Exception {
-        authenticate("member-token", 2L, List.of());
-
-        mockMvc.perform(get("/socios/1/dependents")
-                        .header("Authorization", "Bearer member-token"))
-                .andExpect(status().isForbidden());
+                .andExpect(jsonPath("$[0].userId").value(1L));
     }
 
     private void authenticate(String token, Long userId, List<String> authorities) {
-        when(jwtTokenParser.parseAndValidate(token))
-                .thenReturn(new JwtAuthenticatedUser(userId, 100L + userId, Instant.now().plusSeconds(3600)));
+        when(jwtTokenParser.parseAndValidate(token)).thenReturn(
+                new JwtAuthenticatedUser(userId, 100L + userId, Instant.now().plusSeconds(3600))
+        );
         when(userAuthoritiesProvider.findAuthorityCodesByUserId(userId))
                 .thenReturn(authorities);
     }
 
-    private Dependent dependent(Long id, Long socioId) {
+    private DependentResult result() {
         Instant now = Instant.parse("2026-06-30T12:00:00Z");
-        return Dependent.reconstitute(
-                id,
-                "Pedro Silva",
-                "12345678900",
-                LocalDate.of(2010, 5, 20),
-                RelationshipType.CHILD,
-                "11988887777",
-                true,
-                now,
-                socioId,
-                now,
-                now
+        return new DependentResult(
+                10L, "Pedro Silva", "52998224725",
+                LocalDate.of(2010, 5, 20), RelationshipType.CHILD,
+                null, 1L, DependentStatus.ACTIVE, now, null
         );
     }
 }

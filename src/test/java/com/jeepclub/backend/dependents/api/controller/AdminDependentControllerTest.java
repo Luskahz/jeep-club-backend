@@ -4,8 +4,8 @@ import com.jeepclub.backend.authentication.core.application.service.security.Acc
 import com.jeepclub.backend.dependents.api.http.controller.admin.AdminDependentController;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
-import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,34 +46,23 @@ class AdminDependentControllerTest {
     @BeforeEach
     void setUp() {
         Instant now = Instant.parse("2026-06-30T12:00:00Z");
-        result = new DependentResult(Dependent.reconstitute(
-                10L, "Pedro Silva", "12345678900", LocalDate.of(2010, 5, 20),
-                RelationshipType.CHILD, "11988887777", true, now, 5L, now, now
-        ), null);
+        result = new DependentResult(
+                10L, "Pedro Silva", "52998224725",
+                LocalDate.of(2010, 5, 20), RelationshipType.CHILD,
+                null, 5L, DependentStatus.DISABLED, now, now
+        );
     }
 
     @Test
-    void preservesAdministrativeListAndDetailRoutes() throws Exception {
+    void listsAndGetsOperationalDependents() throws Exception {
         when(adminDependentService.findAllByUserId(5L)).thenReturn(List.of(result));
         when(adminDependentService.findByUserIdAndId(5L, 10L)).thenReturn(result);
 
-        mockMvc.perform(get("/socios/5/dependents"))
+        mockMvc.perform(get("/users/5/dependents"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(10L));
-        mockMvc.perform(get("/socios/5/dependents/10"))
+                .andExpect(jsonPath("$[0].status").value("DISABLED"));
+        mockMvc.perform(get("/users/5/dependents/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10L));
-    }
-
-    @Test
-    void preservesBadRequestWhenDependentDoesNotBelongToSocio() throws Exception {
-        when(adminDependentService.findByUserIdAndId(5L, 10L))
-                .thenThrow(new IllegalArgumentException(
-                        "O dependente informado não pertence ao sócio especificado."
-                ));
-
-        mockMvc.perform(get("/socios/5/dependents/10"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_ARGUMENT"));
     }
 }
