@@ -3,6 +3,9 @@ package com.jeepclub.backend.dependents.core.domain.model;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -24,6 +27,64 @@ class DependentTest {
         assertThat(dependent.getStatus()).isEqualTo(DependentStatus.ACTIVE);
         assertThat(dependent.getCreatedAt()).isEqualTo(NOW);
         assertThat(dependent.getUpdatedAt()).isNull();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = " ")
+    void rejectsMissingName(String name) {
+        assertThatThrownBy(() -> Dependent.create(
+                name, "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 1L, NOW
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("name is required.");
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "1234567890", "123456789012"})
+    void rejectsMissingOrInvalidCpf(String cpf) {
+        assertThatThrownBy(() -> Dependent.create(
+                "João Silva", cpf, LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 1L, NOW
+        )).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void rejectsMissingBirthDate() {
+        assertThatThrownBy(() -> Dependent.create(
+                "João Silva", "12345678900", null,
+                RelationshipType.CHILD, null, 1L, NOW
+        )).isInstanceOf(NullPointerException.class)
+                .hasMessage("birthDate cannot be null");
+    }
+
+    @Test
+    void rejectsMissingRelationshipType() {
+        assertThatThrownBy(() -> Dependent.create(
+                "João Silva", "12345678900", LocalDate.of(2015, 5, 10),
+                null, null, 1L, NOW
+        )).isInstanceOf(NullPointerException.class)
+                .hasMessage("relationshipType cannot be null");
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {-1L, 0L})
+    void rejectsNonPositiveUserId(long userId) {
+        assertThatThrownBy(() -> Dependent.create(
+                "João Silva", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, userId, NOW
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("userId must be positive.");
+    }
+
+    @Test
+    void rejectsNullUserId() {
+        assertThatThrownBy(() -> Dependent.create(
+                "João Silva", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, null, NOW
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("userId must be positive.");
     }
 
     @Test

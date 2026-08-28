@@ -73,6 +73,19 @@ class DependentSecurityIntegrationTest {
                 .andExpect(jsonPath("$[0].userId").value(1L));
     }
 
+    @Test
+    void authenticatedUserWithoutReadAuthorityCannotAccessAdministrativeEndpoints() throws Exception {
+        authenticate("user-token", 2L, List.of());
+
+        mockMvc.perform(get("/users/1/dependents")
+                        .header("Authorization", "Bearer user-token"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/users/1/dependents/10")
+                        .header("Authorization", "Bearer user-token"))
+                .andExpect(status().isForbidden());
+    }
+
     private void authenticate(String token, Long userId, List<String> authorities) {
         when(jwtTokenParser.parseAndValidate(token)).thenReturn(
                 new JwtAuthenticatedUser(userId, 100L + userId, Instant.now().plusSeconds(3600))

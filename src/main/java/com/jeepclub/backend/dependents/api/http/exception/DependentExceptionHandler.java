@@ -9,11 +9,23 @@ import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.dependents")
 public class DependentExceptionHandler extends ApiExceptionHandler {
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthorizationDenied(
+            AuthorizationDeniedException exception
+    ) {
+        return buildErrorResponse(
+                "ACCESS_DENIED",
+                exception.getMessage(),
+                HttpStatus.FORBIDDEN
+        );
+    }
 
     @ExceptionHandler(DependentNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleDependentNotFound(

@@ -1,7 +1,10 @@
 package com.jeepclub.backend.dependents.core.application.service;
 
 import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerInactiveException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerNotFoundException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
@@ -27,6 +30,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -70,6 +74,85 @@ class DependentServiceTest {
     @Test
     void createBlocksCpfUsedByDisabledDependent() {
         assertCreateBlocksReservedCpf();
+    }
+
+    @Test
+    void createIsBlockedWhenOwnerDoesNotExist() {
+        when(dependentUserPort.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> create("12345678900", 99L))
+                .isInstanceOf(DependentOwnerNotFoundException.class);
+
+        verifyNoInteractions(dependentRepository);
+    }
+
+    @Test
+    void createIsBlockedWhenOwnerIsInactive() {
+        when(dependentUserPort.existsById(99L)).thenReturn(true);
+        when(dependentUserPort.existsActiveById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> create("12345678900", 99L))
+                .isInstanceOf(DependentOwnerInactiveException.class);
+
+        verifyNoInteractions(dependentRepository);
+    }
+
+    @Test
+    void createBlocksCpfAlreadyUsedByUser() {
+        allowOwner();
+        when(dependentUserPort.existsByCpf("12345678900")).thenReturn(true);
+
+        assertThatThrownBy(() -> create("123.456.789-00"))
+                .isInstanceOf(DependentCpfAlreadyInUseException.class);
+    }
+
+    @Test
+    void anotherUserCannotReadDependent() {
+        when(dependentRepository.findActiveById(10L))
+                .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
+
+        assertThatThrownBy(() -> service.findById(10L, 2L))
+                .isInstanceOf(DependentAccessDeniedException.class);
+    }
+
+    @Test
+    void anotherUserCannotUpdateDependent() {
+        when(dependentRepository.findActiveById(10L))
+                .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
+
+        assertThatThrownBy(() -> service.update(
+                10L, "Pedro Ramos", "98765432100",
+                LocalDate.of(2010, 5, 20), RelationshipType.CHILD,
+                null, 2L
+        )).isInstanceOf(DependentAccessDeniedException.class);
+    }
+
+    @Test
+    void anotherUserCannotDisableDependent() {
+        when(dependentRepository.findById(10L))
+                .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
+
+        assertThatThrownBy(() -> service.disable(10L, 2L))
+                .isInstanceOf(DependentAccessDeniedException.class);
+    }
+
+    @Test
+    void anotherUserCannotEnableDependent() {
+        when(dependentRepository.findById(10L)).thenReturn(Optional.of(
+                DependentsFixture.dependent(10L, 1L, DependentStatus.DISABLED)
+        ));
+
+        assertThatThrownBy(() -> service.enable(10L, 2L))
+                .isInstanceOf(DependentAccessDeniedException.class);
+    }
+
+    @Test
+    void anotherUserCannotDeleteDependent() {
+        when(dependentRepository.findById(10L))
+                .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
+
+        assertThatThrownBy(() -> service.delete(10L, 2L))
+                .isInstanceOf(DependentAccessDeniedException.class);
     }
 
     @Test
@@ -157,9 +240,13 @@ class DependentServiceTest {
     }
 
     private DependentResult create(String cpf) {
+        return create(cpf, 1L);
+    }
+
+    private DependentResult create(String cpf, Long userId) {
         return service.create(
                 "Pedro", cpf, LocalDate.of(2010, 5, 20),
-                RelationshipType.CHILD, null, 1L
+                RelationshipType.CHILD, null, userId
         );
     }
 }

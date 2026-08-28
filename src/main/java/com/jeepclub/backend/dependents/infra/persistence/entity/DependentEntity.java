@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @Entity
 @Table(
-        name = "membership_dependents",
+        name = "dependents_dependent",
         uniqueConstraints = {
                 @UniqueConstraint(
                         name = "uk_dependent_cpf",

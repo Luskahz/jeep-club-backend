@@ -24,10 +24,6 @@ import java.time.LocalDate;
         },
         indexes = {
                 @Index(
-                        name = "idx_dependent_history_dependent_id",
-                        columnList = "dependent_id"
-                ),
-                @Index(
                         name = "idx_dependent_history_user_id",
                         columnList = "user_id"
                 ),
