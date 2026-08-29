@@ -79,11 +79,13 @@ class DependentSecurityIntegrationTest {
 
         mockMvc.perform(get("/users/1/dependents")
                         .header("Authorization", "Bearer user-token"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
         mockMvc.perform(get("/users/1/dependents/10")
                         .header("Authorization", "Bearer user-token"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
 
     private void authenticate(String token, Long userId, List<String> authorities) {

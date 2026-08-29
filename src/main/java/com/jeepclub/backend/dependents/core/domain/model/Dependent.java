@@ -261,7 +261,15 @@ public class Dependent {
             return null;
         }
 
-        return rawPhoneNumber.replaceAll("\\D", "");
+        String phoneNumber = rawPhoneNumber.replaceAll("\\D", "");
+
+        if (phoneNumber.length() < 10 || phoneNumber.length() > 11) {
+            throw new IllegalArgumentException(
+                    "phoneNumber must contain 10 or 11 digits."
+            );
+        }
+
+        return phoneNumber;
     }
 
     private static void validateNow(Instant now) {

@@ -1,5 +1,6 @@
 package com.jeepclub.backend.dependents.infra.persistence.adapter;
 
+import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
@@ -11,10 +12,13 @@ import com.jeepclub.backend.dependents.infra.persistence.jpa.DependentJpaReposit
 import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentHistoryMapper;
 import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentMapper;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Repository
@@ -30,9 +34,15 @@ public class DependentRepositoryAdapter implements DependentRepository {
     @Override
     public Dependent save(Dependent dependent) {
         DependentEntity entity = mapper.toEntity(dependent);
-        DependentEntity savedEntity = jpaRepository.save(entity);
-
-        return mapper.toDomain(savedEntity);
+        try {
+            DependentEntity savedEntity = jpaRepository.saveAndFlush(entity);
+            return mapper.toDomain(savedEntity);
+        } catch (DataIntegrityViolationException exception) {
+            if (isDependentCpfConstraintViolation(exception)) {
+                throw new DependentCpfAlreadyInUseException(exception);
+            }
+            throw exception;
+        }
     }
 
     @Override
@@ -129,5 +139,21 @@ public class DependentRepositoryAdapter implements DependentRepository {
         historyJpaRepository.save(history);
 
         jpaRepository.delete(entity);
+    }
+
+    private boolean isDependentCpfConstraintViolation(Throwable exception) {
+        Throwable cause = exception;
+
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException violation) {
+                String constraintName = violation.getConstraintName();
+                return constraintName != null
+                        && constraintName.toLowerCase(Locale.ROOT)
+                        .contains("uk_dependent_cpf");
+            }
+            cause = cause.getCause();
+        }
+
+        return false;
     }
 }

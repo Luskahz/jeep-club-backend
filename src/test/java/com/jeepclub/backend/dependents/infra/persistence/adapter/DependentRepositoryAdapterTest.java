@@ -1,5 +1,6 @@
 package com.jeepclub.backend.dependents.infra.persistence.adapter;
 
+import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
@@ -84,6 +85,15 @@ class DependentRepositoryAdapterTest {
 
         assertThatThrownBy(() -> historyJpaRepository.saveAndFlush(history(42L)))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void translatesOperationalCpfUniqueConstraintViolation() {
+        repository.save(dependent(DependentStatus.ACTIVE));
+
+        assertThatThrownBy(() -> repository.save(dependent(DependentStatus.DISABLED)))
+                .isInstanceOf(DependentCpfAlreadyInUseException.class)
+                .hasCauseInstanceOf(DataIntegrityViolationException.class);
     }
 
     private Dependent dependent(DependentStatus status) {

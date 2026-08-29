@@ -6,6 +6,9 @@ import com.jeepclub.backend.authentication.core.application.service.security.Acc
 import com.jeepclub.backend.dependents.api.http.controller.DependentController;
 import com.jeepclub.backend.dependents.api.http.dto.dependent.CreateDependentRequestDTO;
 import com.jeepclub.backend.dependents.api.http.dto.dependent.UpdateDependentRequestDTO;
+import com.jeepclub.backend.dependents.api.http.exception.DependentExceptionHandler;
+import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerInactiveException;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
@@ -46,7 +49,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(DependentController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(DependentControllerTest.AuthenticationPrincipalTestConfiguration.class)
+@Import({
+        DependentControllerTest.AuthenticationPrincipalTestConfiguration.class,
+        DependentExceptionHandler.class
+})
 class DependentControllerTest {
 
     @Autowired
@@ -116,6 +122,47 @@ class DependentControllerTest {
                 .andExpect(status().isNoContent());
 
         verify(dependentService).delete(10L, 1L);
+    }
+
+    @Test
+    void mapsInactiveOwnerToConflict() throws Exception {
+        when(dependentService.create(
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyLong()
+        )).thenThrow(new DependentOwnerInactiveException(1L));
+
+        mockMvc.perform(post("/dependents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DEPENDENT_OWNER_INACTIVE"));
+    }
+
+    @Test
+    void mapsCpfConflictToConflict() throws Exception {
+        when(dependentService.create(
+                anyString(), anyString(), any(LocalDate.class),
+                any(RelationshipType.class), anyString(), anyLong()
+        )).thenThrow(new DependentCpfAlreadyInUseException());
+
+        mockMvc.perform(post("/dependents")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createRequest())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DEPENDENT_CPF_ALREADY_IN_USE"));
+    }
+
+    @Test
+    void rejectsInvalidPhoneNumberOnUpdate() throws Exception {
+        UpdateDependentRequestDTO request = new UpdateDependentRequestDTO(
+                "Pedro Silva", "52998224725", LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD, "123456789"
+        );
+
+        mockMvc.perform(put("/dependents/10")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 
     private CreateDependentRequestDTO createRequest() {

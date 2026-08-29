@@ -3,29 +3,18 @@ package com.jeepclub.backend.dependents.api.http.exception;
 import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerInactiveException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerNotFoundException;
 import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.dependents")
 public class DependentExceptionHandler extends ApiExceptionHandler {
-
-    @ExceptionHandler(AuthorizationDeniedException.class)
-    public ResponseEntity<ApiErrorResponse> handleAuthorizationDenied(
-            AuthorizationDeniedException exception
-    ) {
-        return buildErrorResponse(
-                "ACCESS_DENIED",
-                exception.getMessage(),
-                HttpStatus.FORBIDDEN
-        );
-    }
 
     @ExceptionHandler(DependentNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleDependentNotFound(
@@ -46,6 +35,17 @@ public class DependentExceptionHandler extends ApiExceptionHandler {
                 "DEPENDENT_OWNER_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(DependentOwnerInactiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleDependentOwnerInactive(
+            DependentOwnerInactiveException exception
+    ) {
+        return buildErrorResponse(
+                "DEPENDENT_OWNER_INACTIVE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 

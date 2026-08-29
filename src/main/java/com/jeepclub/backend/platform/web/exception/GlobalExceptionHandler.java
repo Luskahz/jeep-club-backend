@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -164,6 +165,18 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return problemFactory.create(
                 HttpStatus.CONFLICT,
                 "INVALID_STATE",
+                locale
+        );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDeniedException(
+            AccessDeniedException exception,
+            Locale locale
+    ) {
+        return problemFactory.create(
+                HttpStatus.FORBIDDEN,
+                "ACCESS_DENIED",
                 locale
         );
     }

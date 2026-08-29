@@ -50,6 +50,28 @@ class DependentTest {
         )).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"123456789", "123456789012", "phone"})
+    void rejectsInvalidPhoneNumber(String phoneNumber) {
+        assertThatThrownBy(() -> Dependent.create(
+                "João Silva", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, phoneNumber, 1L, NOW
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("phoneNumber must contain 10 or 11 digits.");
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = " ")
+    void acceptsMissingPhoneNumber(String phoneNumber) {
+        Dependent dependent = Dependent.create(
+                "João Silva", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, phoneNumber, 1L, NOW
+        );
+
+        assertThat(dependent.getPhoneNumber()).isNull();
+    }
+
     @Test
     void rejectsMissingBirthDate() {
         assertThatThrownBy(() -> Dependent.create(

@@ -1,43 +1,45 @@
 # Dependents Test Matrix
 
-## Context
+## Current model
 
-BACK-262 is the baseline for this suite: medical data is owned by the Health module and linked by `ownerType=DEPENDENT` and `ownerId=dependentId`.
-New tests must not depend on the removed `dependents.core.domain.model.MedicalProfile` class.
+Operational dependents are stored in `dependents_dependent` with status `ACTIVE` or `DISABLED`.
+CPF remains reserved in both statuses through `UNIQUE(cpf)`. Deletion archives one immutable snapshot in
+`dependents_dependent_history` and then hard-deletes the operational row. The history table keeps
+`UNIQUE(dependent_id)` and does not reserve CPF.
+
+Medical profiles use `ownerType` and `ownerId` without a physical foreign key to the dependent. Their
+retention after dependent deletion is intentionally outside the scope of this test matrix.
 
 ## Matrix
 
 | Area | Case | Layer | Evidence |
 | --- | --- | --- | --- |
-| Domain | Valid dependent creation normalizes CPF, phone and consent date | Unit | `DependentTest` |
-| Domain | Name, relationship type, socio id and consent are required | Unit | `DependentTest` |
-| Domain | CPF empty, less than 11, exactly 11, more than 11 and masked | Unit | `DependentTest` |
-| Domain | Phone null, blank, masked and numeric normalization | Unit | `DependentTest` |
-| Domain | Update keeps original consent date when already accepted | Unit | `DependentTest` |
-| Normal service | Creates, queries, lists, updates and deletes within titular ownership | Unit | `DependentServiceTest` |
-| Normal service | Rejects missing socio, duplicate CPF and access by another titular | Unit | `DependentServiceTest` |
-| Admin service | Lists and queries dependents for the specified socio | Unit | `AdminDependentServiceTest` |
-| Persistence | Save/find/list/delete and ownership query use `membership_dependents` only | JPA slice | `DependentRepositoryAdapterTest` |
-| HTTP validation | Required CPF and consent validation returns 400 | MVC | `DependentControllerTest` |
-| HTTP exceptions | Not found, conflict and forbidden map to expected status/code | MVC | `DependentControllerTest` |
-| Security | Unauthenticated request is 401; titular token can access own route | Spring Boot + MockMvc | `DependentSecurityIntegrationTest` |
-| Authorization | Admin authority can list dependents by socio; missing authority is forbidden | Spring Boot + MockMvc | `DependentSecurityIntegrationTest` |
-| Health contract | Dependent endpoint calls Health by `DEPENDENT`/dependent id only | MVC | `DependentControllerTest` |
-| System flow | Create, consult, list, update and remove dependent end-to-end through services/persistence | Spring Boot | `DependentSystemFlowTest` |
+| Domain | Creation normalizes CPF and phone and starts in `ACTIVE` | Unit | `DependentTest` |
+| Domain | Phone accepts null/blank, normalizes formatting and rejects values outside 10 or 11 digits | Unit | `DependentTest` |
+| Domain | `ACTIVE -> DISABLED` and `DISABLED -> ACTIVE` | Unit | `DependentTest`, `DependentServiceTest` |
+| Domain | Disabled dependent cannot be updated | Unit | `DependentTest` |
+| Normal service | Create rejects missing or inactive owner | Unit | `DependentServiceTest` |
+| Normal service | CPF already used by User or another active/disabled dependent is rejected | Unit | `DependentServiceTest` |
+| Normal service | Ownership is enforced for read, update, disable, enable and delete | Unit | `DependentServiceTest` |
+| Admin service | Lists and queries active and disabled dependents for the specified owner | Unit | `AdminDependentServiceTest` |
+| Persistence | `dependents_dependent` stores active and disabled dependents and keeps CPF reserved | JPA slice | `DependentRepositoryAdapterTest` |
+| Persistence | `uk_dependent_cpf` is translated to `DependentCpfAlreadyInUseException` | JPA slice | `DependentRepositoryAdapterTest` |
+| Persistence | Delete locks with `PESSIMISTIC_WRITE`, snapshots history and hard-deletes the operational row | JPA slice/system | `DependentRepositoryAdapterTest`, `DependentSystemFlowTest` |
+| Persistence | History permits repeated CPF but enforces one row per `dependent_id` | JPA slice | `DependentRepositoryAdapterTest` |
+| Transaction | Failure during archive/delete rolls the operation back | Unit/system | `DependentServiceTest`, `DependentSystemFlowTest` |
+| HTTP validation | Invalid update phone returns HTTP 400 | MVC | `DependentControllerTest` |
+| HTTP exceptions | Inactive owner and CPF conflict return HTTP 409 with their dependent error codes | MVC | `DependentControllerTest` |
+| Security | Unauthenticated requests return 401 | Spring Boot + MockMvc | `DependentSecurityIntegrationTest` |
+| Method security | Denied `@PreAuthorize` returns HTTP 403 / `ACCESS_DENIED` through the global handler | Spring Boot + MockMvc | `DependentSecurityIntegrationTest` |
+| System flow | Create, query, update, status changes, archive and hard delete use the current tables | Spring Boot | `DependentSystemFlowTest` |
 
-## Commands
+## Validation commands
 
 ```bash
 ./mvnw test
 ./mvnw verify
-./mvnw org.pitest:pitest-maven:mutationCoverage -DtargetClasses=com.jeepclub.backend.dependents.* -DtargetTests=com.jeepclub.backend.dependents.*
+rg "DependentStatus\\.DELETED|membership_dependents|getDeletedAt\\(|setDeletedAt\\(|selfDelete\\(" src
 ```
 
-## Reports
-
-| Report | Path |
-| --- | --- |
-| JaCoCo HTML | `target/site/jacoco/index.html` |
-| JaCoCo XML | `target/site/jacoco/jacoco.xml` |
-| PIT HTML | `target/pit-reports/index.html` |
-| PIT XML | `target/pit-reports/mutations.xml` |
+JaCoCo reports, when generated by `verify`, are available under `target/site`. No historical coverage or
+mutation-testing result is treated as evidence for the current version.
