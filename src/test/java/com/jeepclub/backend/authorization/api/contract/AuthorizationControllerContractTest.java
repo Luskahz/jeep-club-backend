@@ -12,6 +12,7 @@ import com.jeepclub.backend.authorization.core.application.service.permission.Ad
 import com.jeepclub.backend.authorization.core.application.service.role.AdminRoleService;
 import com.jeepclub.backend.authorization.core.application.service.rolepermission.AdminRolePermissionService;
 import com.jeepclub.backend.authorization.core.application.service.userrole.AdminUserRoleService;
+import com.jeepclub.backend.authorization.core.domain.enums.RoleKind;
 import com.jeepclub.backend.authorization.core.domain.enums.RoleStatus;
 import com.jeepclub.backend.authorization.core.domain.model.Permission;
 import com.jeepclub.backend.authorization.core.domain.model.Role;
@@ -66,6 +67,7 @@ class AuthorizationControllerContractTest {
                 1L,
                 "ADMIN",
                 "Administrador",
+                RoleKind.ROOT,
                 RoleStatus.ACTIVE,
                 now,
                 now,

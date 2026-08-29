@@ -23,8 +23,13 @@ Disabled dependents continue reserving CPF; history reserves `dependent_id`, not
 
 ## Execution log
 
-Final command results for this branch are recorded only after executing the commands against the final
-integrated source. Historical JaCoCo and PIT numbers were removed because they do not describe this version.
+| Command | Result | Evidence obtained on 2026-08-28 |
+| --- | --- | --- |
+| `./mvnw test` | Passed | 132 tests, 0 failures, 0 errors, 0 skipped |
+| `./mvnw verify` | Passed | 132 tests, 0 failures, 0 errors, 0 skipped; package and JaCoCo reports generated |
+
+Historical coverage percentages and PIT numbers were removed because they do not describe this version.
+No new percentage or mutation score is claimed by this evidence file.
 
 ## Deliberate exclusions
 

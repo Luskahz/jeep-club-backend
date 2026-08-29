@@ -20,11 +20,12 @@ class UserTest {
         User user = user(CredentialStatus.CHANGE_REQUIRED);
 
         user.disable(NOW);
-        assertThat(user.getStatus()).isEqualTo(UserStatus.DISABLED);
+        assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.DISABLED);
         assertThat(user.getCredentialStatus()).isEqualTo(CredentialStatus.CHANGE_REQUIRED);
 
         user.enable(NOW.plusSeconds(1));
-        assertThat(user.getStatus()).isEqualTo(UserStatus.CHANGE_PASSWORD_REQUIRED);
+        assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(user.getCredentialStatus()).isEqualTo(CredentialStatus.CHANGE_REQUIRED);
         assertThat(user.isChangePasswordRequired()).isTrue();
     }
 
@@ -42,7 +43,6 @@ class UserTest {
 
         assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.DISABLED);
         assertThat(user.getAuthenticationStatus()).isEqualTo(AuthenticationStatus.ENABLED);
-        assertThat(user.getStatus()).isEqualTo(UserStatus.DISABLED);
     }
 
     @Test
@@ -60,25 +60,24 @@ class UserTest {
         assertThat(user.getAccountStatus()).isEqualTo(AccountStatus.DISABLED);
         assertThat(user.getAuthenticationStatus()).isEqualTo(AuthenticationStatus.ENABLED);
         assertThat(user.getCredentialStatus()).isEqualTo(CredentialStatus.PERMANENT);
-        assertThat(user.getStatus()).isEqualTo(UserStatus.DISABLED);
     }
 
     @Test
-    void legacyStatusUsesDocumentedPriority() {
+    void splitStatusesPreserveTheirIndependentMeaning() {
         User pendingFirstAccess = user(CredentialStatus.PENDING_FIRST_ACCESS);
 
-        assertThat(pendingFirstAccess.getStatus())
-                .isEqualTo(UserStatus.PENDING_FIRST_ACCESS);
+        assertThat(pendingFirstAccess.getCredentialStatus())
+                .isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
         assertThat(pendingFirstAccess.isChangePasswordRequired()).isTrue();
-        assertThat(user(CredentialStatus.CHANGE_REQUIRED).getStatus())
-                .isEqualTo(UserStatus.CHANGE_PASSWORD_REQUIRED);
+        assertThat(user(CredentialStatus.CHANGE_REQUIRED).getCredentialStatus())
+                .isEqualTo(CredentialStatus.CHANGE_REQUIRED);
         assertThat(user(
                 AccountStatus.ACTIVE,
                 AuthenticationStatus.LOCKED,
                 CredentialStatus.CHANGE_REQUIRED,
                 null,
                 5
-        ).getStatus()).isEqualTo(UserStatus.LOCKED);
+        ).getAuthenticationStatus()).isEqualTo(AuthenticationStatus.LOCKED);
     }
 
     @Test

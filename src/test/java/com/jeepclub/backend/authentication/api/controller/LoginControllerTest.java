@@ -12,6 +12,7 @@ import com.jeepclub.backend.authentication.core.application.result.MeResult;
 import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
+import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -170,6 +171,15 @@ class LoginControllerTest {
         )).thenReturn(new MeResult(
                 1L,
                 "Lucas Alves",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                AccountStatus.ACTIVE,
+                null,
+                null,
                 10L,
                 true,
                 900L
