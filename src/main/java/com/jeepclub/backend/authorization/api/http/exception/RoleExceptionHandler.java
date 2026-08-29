@@ -2,11 +2,7 @@ package com.jeepclub.backend.authorization.api.http.exception;
 
 import com.jeepclub.backend.authorization.core.application.exception.role.RoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.role.RoleNotFoundException;
-import com.jeepclub.backend.authorization.core.domain.exception.role.DeletedRoleCannotBeChangedException;
-import com.jeepclub.backend.authorization.core.domain.exception.role.InactiveRoleCannotBeUsedException;
-import com.jeepclub.backend.authorization.core.domain.exception.role.RoleDescriptionTooLongException;
-import com.jeepclub.backend.authorization.core.domain.exception.role.RoleNameCannotBeBlankException;
-import com.jeepclub.backend.authorization.core.domain.exception.role.RoleNameTooLongException;
+import com.jeepclub.backend.authorization.core.domain.exception.role.*;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -73,4 +69,17 @@ public class RoleExceptionHandler extends ApiExceptionHandler {
                 HttpStatus.BAD_REQUEST
         );
     }
+
+    @ExceptionHandler(RootRoleCannotBeChangedException.class)
+    public ResponseEntity<ApiErrorResponse> handleRootRoleCannotBeChanged(
+            RootRoleCannotBeChangedException exception
+    ) {
+        return buildErrorResponse(
+                "ROOT_ROLE_CANNOT_BE_CHANGED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+
 }

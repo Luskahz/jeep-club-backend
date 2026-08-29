@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.api.http.exception;
 
+import com.jeepclub.backend.authorization.core.application.exception.role.RootRoleCannotBeManagedManuallyException;
 import com.jeepclub.backend.authorization.core.application.exception.userrole.AuthorizationUserNotFoundException;
 import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleAlreadyExistsException;
 import com.jeepclub.backend.authorization.core.application.exception.userrole.UserRoleNotFoundException;
@@ -43,6 +44,17 @@ public class UserRoleExceptionHandler extends ApiExceptionHandler {
                 "USER_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(RootRoleCannotBeManagedManuallyException.class)
+    public ResponseEntity<ApiErrorResponse> handleRootRoleCannotBeManagedManually(
+            RootRoleCannotBeManagedManuallyException exception
+    ) {
+        return buildErrorResponse(
+                "ROOT_ROLE_CANNOT_BE_MANAGED_MANUALLY",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }
