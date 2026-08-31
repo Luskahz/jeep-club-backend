@@ -145,7 +145,7 @@ public class VehicleController {
     @DeleteMapping("/delete/member/{vehicleId}")
     @Operation(
             summary = "Deletar veículo do membro logado",
-            description = "Realiza soft delete do veículo pertencente ao membro autenticado"
+            description = "Arquiva o histórico e remove o veículo pertencente ao membro autenticado"
     )
     public ResponseEntity<Void> deleteMemberVehicle(
             @PathVariable Long vehicleId,

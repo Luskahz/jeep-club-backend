@@ -1,16 +1,21 @@
 package com.jeepclub.backend.vehicles.infra.persistence.adapter;
 
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
+import com.jeepclub.backend.vehicles.core.domain.exception.VehicleAlreadyDeletedException;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
 import com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleEntity;
+import com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleHistoryEntity;
+import com.jeepclub.backend.vehicles.infra.persistence.jpa.VehicleHistoryJpaRepository;
 import com.jeepclub.backend.vehicles.infra.persistence.jpa.VehicleJpaRepository;
+import com.jeepclub.backend.vehicles.infra.persistence.mapper.VehicleHistoryMapper;
 import com.jeepclub.backend.vehicles.infra.persistence.mapper.VehicleMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -18,12 +23,38 @@ import java.util.Optional;
 public class VehicleRepositoryAdapter implements VehicleRepository {
 
     private final VehicleJpaRepository jpaRepository;
+    private final VehicleHistoryJpaRepository historyJpaRepository;
+    private final VehicleHistoryMapper historyMapper;
 
     @Override
     public Vehicle save(Vehicle vehicle) {
         VehicleEntity entity = VehicleMapper.toEntity(vehicle);
         VehicleEntity saved = jpaRepository.save(entity);
         return VehicleMapper.toDomain(saved);
+    }
+
+    @Override
+    public void delete(
+            Vehicle vehicle,
+            Long deletedByUserId,
+            Instant deletedAt
+    ) {
+        VehicleEntity entity = jpaRepository
+                .findByIdForUpdate(vehicle.getId())
+                .orElseThrow(
+                        () -> new VehicleAlreadyDeletedException(
+                                vehicle.getId()
+                        )
+                );
+
+        VehicleHistoryEntity history = historyMapper.toHistoryEntity(
+                entity,
+                deletedByUserId,
+                deletedAt
+        );
+
+        historyJpaRepository.save(history);
+        jpaRepository.delete(entity);
     }
 
     @Override

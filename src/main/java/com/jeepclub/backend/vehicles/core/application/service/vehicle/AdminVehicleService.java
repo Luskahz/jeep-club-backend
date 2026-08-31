@@ -121,9 +121,16 @@ public class AdminVehicleService {
     }
 
     @Transactional
-    public void delete(Long vehicleId) {
+    public void delete(
+            Long vehicleId,
+            Long deletedByUserId
+    ) {
         Vehicle vehicle = findActiveVehicle(vehicleId);
-        vehicleRepository.save(vehicle.softDelete(Instant.now(clock)));
+        vehicleRepository.delete(
+                vehicle,
+                deletedByUserId,
+                Instant.now(clock)
+        );
     }
 
     private Vehicle findActiveVehicle(Long vehicleId) {

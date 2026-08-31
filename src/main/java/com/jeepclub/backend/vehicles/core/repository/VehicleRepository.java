@@ -5,6 +5,7 @@ import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.Optional;
 
 public interface VehicleRepository {
@@ -16,6 +17,12 @@ public interface VehicleRepository {
     boolean existsById(Long id);
 
     Vehicle save(Vehicle vehicle);
+
+    void delete(
+            Vehicle vehicle,
+            Long deletedByUserId,
+            Instant deletedAt
+    );
 
     Optional<Vehicle> findByIdAndOwnerId(Long id, Long memberId);
 

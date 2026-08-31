@@ -4,6 +4,7 @@ import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundExc
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
+import com.jeepclub.backend.vehicles.core.domain.exception.VehicleAlreadyDeletedException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -47,6 +48,17 @@ public class VehicleExceptionHandler extends ApiExceptionHandler {
                 "USER_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(VehicleAlreadyDeletedException.class)
+    public ResponseEntity<ApiErrorResponse> handleVehicleAlreadyDeleted(
+            VehicleAlreadyDeletedException exception
+    ) {
+        return buildErrorResponse(
+                "VEHICLE_ALREADY_DELETED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }

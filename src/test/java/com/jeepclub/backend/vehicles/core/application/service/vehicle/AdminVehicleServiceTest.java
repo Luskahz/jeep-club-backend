@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,8 +86,8 @@ class AdminVehicleServiceTest {
         );
         assertThat(vehicle.getModel()).isEqualTo("Renegade");
 
-        service.delete(1L);
-        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.SOFT_DELETED);
+        service.delete(1L, 99L);
+        verify(vehicleRepository).delete(vehicle, 99L, NOW);
     }
 
     private Vehicle createVehicle() {

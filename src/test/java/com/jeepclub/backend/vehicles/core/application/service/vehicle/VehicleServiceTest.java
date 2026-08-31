@@ -90,7 +90,7 @@ class VehicleServiceTest {
     }
 
     @Test
-    void updatesAndSoftDeletesOwnedVehicle() {
+    void updatesAndDeletesOwnedVehicleWithAuditData() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
         when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
                 .thenReturn(Optional.of(vehicle));
@@ -106,8 +106,7 @@ class VehicleServiceTest {
         verify(vehicleRepository).save(vehicle);
 
         service.delete(1L, 7L);
-        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.SOFT_DELETED);
-        assertThat(vehicle.getDeletedAt()).isEqualTo(NOW);
+        verify(vehicleRepository).delete(vehicle, 7L, NOW);
     }
 
     private Vehicle createVehicle() {

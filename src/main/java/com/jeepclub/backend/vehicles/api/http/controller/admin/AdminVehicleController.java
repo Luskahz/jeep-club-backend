@@ -1,6 +1,7 @@
 package com.jeepclub.backend.vehicles.api.http.controller.admin;
 
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestDTO;
@@ -18,6 +19,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -151,10 +153,16 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_DELETE")
     @Operation(
             summary = "Deletar qualquer veículo",
-            description = "Realiza soft delete de qualquer veículo pelo ID"
+            description = "Arquiva o histórico e remove qualquer veículo pelo ID"
     )
-    public ResponseEntity<Void> deleteVehicle(@PathVariable Long vehicleId) {
-        adminVehicleService.delete(vehicleId);
+    public ResponseEntity<Void> deleteVehicle(
+            @PathVariable Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        adminVehicleService.delete(
+                vehicleId,
+                principal.getUserId()
+        );
         return ResponseEntity.noContent().build();
     }
 }
