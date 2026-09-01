@@ -18,9 +18,8 @@ public class Tool {
     // Novos campos de auditoria
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private LocalDateTime deletedAt;
 
-    private Tool(Long id, String name, String description, ToolStatus status, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
+    private Tool(Long id, String name, String description, ToolStatus status, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -28,17 +27,17 @@ public class Tool {
         this.userId = userId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.deletedAt = deletedAt;
     }
 
     // CREATE: Nasce automaticamente como ACTIVE e ganha a data de criação
     public static Tool create(String name, String description, Long userId) {
-        return new Tool(null, name, description, ToolStatus.ACTIVE, userId, LocalDateTime.now(), LocalDateTime.now(), null);
+        LocalDateTime now = LocalDateTime.now();
+        return new Tool(null, name, description, ToolStatus.ACTIVE, userId, now, now);
     }
 
     // RECONSTITUTE: Usado pelo Mapper para reconstruir o objeto vindo do banco
-    public static Tool reconstitute(Long id, String name, String description, ToolStatus status, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime deletedAt) {
-        return new Tool(id, name, description, status, userId, createdAt, updatedAt, deletedAt);
+    public static Tool reconstitute(Long id, String name, String description, ToolStatus status, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        return new Tool(id, name, description, status, userId, createdAt, updatedAt);
     }
 
     public void updateDetails(String name, String description) {
@@ -57,11 +56,6 @@ public class Tool {
     public void deactivate() {
         this.status = ToolStatus.INACTIVE;
         this.updatedAt = LocalDateTime.now();
-    }
-
-    public void softDelete() {
-        this.status = ToolStatus.DELETED;
-        this.deletedAt = LocalDateTime.now();
     }
 
     public void assertBelongsTo(Long currentUserId) {

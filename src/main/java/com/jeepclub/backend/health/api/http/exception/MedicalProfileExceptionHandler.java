@@ -5,6 +5,7 @@ import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalPro
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
 import com.jeepclub.backend.health.core.domain.exception.InvalidMedicalProfileException;
+import com.jeepclub.backend.health.core.domain.exception.MedicalProfileAlreadyDeletedException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -59,6 +60,17 @@ public class MedicalProfileExceptionHandler extends ApiExceptionHandler {
                 "DEPENDENT_OWNERSHIP_VALIDATION_UNAVAILABLE",
                 exception.getMessage(),
                 HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+
+    @ExceptionHandler(MedicalProfileAlreadyDeletedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMedicalProfileAlreadyDeleted(
+            MedicalProfileAlreadyDeletedException exception
+    ) {
+        return buildErrorResponse(
+                "MEDICAL_PROFILE_ALREADY_DELETED",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 }

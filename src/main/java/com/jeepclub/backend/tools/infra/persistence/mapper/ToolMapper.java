@@ -17,8 +17,7 @@ public class ToolMapper {
                 entity.getStatus(),
                 entity.getUserId(),
                 entity.getCreatedAt(), // <-- Datas adicionadas!
-                entity.getUpdatedAt(), // <-- Datas adicionadas!
-                entity.getDeletedAt()  // <-- Datas adicionadas!
+                entity.getUpdatedAt() // <-- Datas adicionadas!
         );
     }
 
@@ -33,7 +32,6 @@ public class ToolMapper {
         entity.setUserId(domain.getUserId());
         entity.setCreatedAt(domain.getCreatedAt()); // <-- Datas adicionadas!
         entity.setUpdatedAt(domain.getUpdatedAt()); // <-- Datas adicionadas!
-        entity.setDeletedAt(domain.getDeletedAt()); // <-- Datas adicionadas!
 
         return entity;
     }

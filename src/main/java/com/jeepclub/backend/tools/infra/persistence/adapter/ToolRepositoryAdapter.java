@@ -1,15 +1,20 @@
 package com.jeepclub.backend.tools.infra.persistence.adapter;
 
-import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.domain.exception.ToolAlreadyDeletedException;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
+import com.jeepclub.backend.tools.infra.persistence.entity.ToolEntity;
+import com.jeepclub.backend.tools.infra.persistence.entity.ToolHistoryEntity;
+import com.jeepclub.backend.tools.infra.persistence.jpa.ToolHistoryJpaRepository;
 import com.jeepclub.backend.tools.infra.persistence.jpa.ToolJpaRepository;
+import com.jeepclub.backend.tools.infra.persistence.mapper.ToolHistoryMapper;
 import com.jeepclub.backend.tools.infra.persistence.mapper.ToolMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -17,12 +22,13 @@ import java.util.Optional;
 public class ToolRepositoryAdapter implements ToolRepository {
 
     private final ToolJpaRepository jpaRepository;
+    private final ToolHistoryJpaRepository historyJpaRepository;
     private final ToolMapper mapper;
+    private final ToolHistoryMapper historyMapper;
 
     @Override
     public Page<Tool> findByUserId(Long userId, Pageable pageable) {
-        // Chamando o método NOVO com "AndStatusNot"
-        return jpaRepository.findByUserIdAndStatusNot(userId, ToolStatus.DELETED, pageable)
+        return jpaRepository.findByUserId(userId, pageable)
                 .map(mapper::toDomain);
     }
 
@@ -47,8 +53,26 @@ public class ToolRepositoryAdapter implements ToolRepository {
     }
 
     @Override
-    public void delete(Tool tool) {
-        var entity = mapper.toEntity(tool);
+    public void delete(
+            Tool tool,
+            Long deletedByUserId,
+            LocalDateTime deletedAt
+    ) {
+        ToolEntity entity = jpaRepository
+                .findByIdForUpdate(tool.getId())
+                .orElseThrow(
+                        () -> new ToolAlreadyDeletedException(
+                                tool.getId()
+                        )
+                );
+
+        ToolHistoryEntity history = historyMapper.toHistoryEntity(
+                entity,
+                deletedByUserId,
+                deletedAt
+        );
+
+        historyJpaRepository.save(history);
         jpaRepository.delete(entity);
     }
 }

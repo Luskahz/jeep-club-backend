@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -82,5 +83,37 @@ public class MedicalProfileController {
         );
 
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+    }
+
+    @DeleteMapping("/me")
+    @Operation(
+            summary = "Exclui o perfil médico do usuário autenticado.",
+            description = "Arquiva o histórico e remove o perfil médico operacional."
+    )
+    public ResponseEntity<Void> deleteMyMedicalProfile(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        medicalProfileService.deleteMyMedicalProfile(
+                principal.getUserId()
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/dependents/{dependentId}")
+    @Operation(
+            summary = "Exclui o perfil médico de um dependente.",
+            description = "Valida o vínculo, arquiva o histórico e remove o perfil operacional."
+    )
+    public ResponseEntity<Void> deleteDependentMedicalProfile(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable Long dependentId
+    ) {
+        medicalProfileService.deleteDependentMedicalProfile(
+                principal.getUserId(),
+                dependentId
+        );
+
+        return ResponseEntity.noContent().build();
     }
 }

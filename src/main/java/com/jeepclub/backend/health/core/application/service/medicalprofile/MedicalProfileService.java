@@ -77,6 +77,42 @@ public class MedicalProfileService {
         );
     }
 
+    @Transactional
+    public void deleteMyMedicalProfile(Long userId) {
+        MedicalProfile profile = findByOwner(
+                MedicalProfileOwnerType.USER,
+                userId
+        );
+
+        medicalProfileRepository.delete(
+                profile,
+                userId,
+                Instant.now(clock)
+        );
+    }
+
+    @Transactional
+    public void deleteDependentMedicalProfile(
+            Long userId,
+            Long dependentId
+    ) {
+        validateDependentBelongsToUser(
+                dependentId,
+                userId
+        );
+
+        MedicalProfile profile = findByOwner(
+                MedicalProfileOwnerType.DEPENDENT,
+                dependentId
+        );
+
+        medicalProfileRepository.delete(
+                profile,
+                userId,
+                Instant.now(clock)
+        );
+    }
+
     private MedicalProfile findByOwner(
             MedicalProfileOwnerType ownerType,
             Long ownerId

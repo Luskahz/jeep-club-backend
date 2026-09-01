@@ -80,6 +80,26 @@ public class AdminMedicalProfileService {
                 ));
     }
 
+    @Transactional
+    public void deleteById(
+            Long profileId,
+            Long deletedByUserId
+    ) {
+        if (deletedByUserId == null) {
+            throw new InvalidMedicalProfileDataException(
+                    "O ID do usuário responsável pela exclusão é obrigatório."
+            );
+        }
+
+        MedicalProfile profile = getById(profileId);
+
+        medicalProfileRepository.delete(
+                profile,
+                deletedByUserId,
+                Instant.now(clock)
+        );
+    }
+
     private MedicalProfile updateExisting(
             MedicalProfile existing,
             UpsertMedicalProfileCommand data

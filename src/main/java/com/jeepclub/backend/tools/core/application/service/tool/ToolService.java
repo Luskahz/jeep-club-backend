@@ -9,11 +9,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class ToolService {
 
     private final ToolRepository toolRepository;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public Page<Tool> listUserTools(Long userId, Pageable pageable) {
@@ -66,7 +70,10 @@ public class ToolService {
     @Transactional
     public void deleteTool(Long id, Long userId) {
         Tool tool = getToolDetails(id, userId);
-        tool.softDelete();
-        toolRepository.save(tool);
+        toolRepository.delete(
+                tool,
+                userId,
+                LocalDateTime.now(clock)
+        );
     }
 }

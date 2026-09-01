@@ -92,7 +92,10 @@ public class ToolController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Deletar uma ferramenta (Soft Delete)", description = "Marca a ferramenta como deletada. Ela não aparecerá mais nas listagens.")
+    @Operation(
+            summary = "Deletar uma ferramenta",
+            description = "Arquiva o histórico e remove a ferramenta pertencente ao usuário autenticado."
+    )
     public ResponseEntity<Void> deleteTool(
             @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {

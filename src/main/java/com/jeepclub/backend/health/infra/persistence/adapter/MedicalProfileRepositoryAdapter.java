@@ -1,14 +1,20 @@
 package com.jeepclub.backend.health.infra.persistence.adapter;
 
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.domain.exception.MedicalProfileAlreadyDeletedException;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
+import com.jeepclub.backend.health.infra.persistence.entity.MedicalProfileEntity;
+import com.jeepclub.backend.health.infra.persistence.entity.MedicalProfileHistoryEntity;
+import com.jeepclub.backend.health.infra.persistence.jpa.MedicalProfileHistoryJpaRepository;
 import com.jeepclub.backend.health.infra.persistence.jpa.MedicalProfileJpaRepository;
+import com.jeepclub.backend.health.infra.persistence.mapper.MedicalProfileHistoryMapper;
 import com.jeepclub.backend.health.infra.persistence.mapper.MedicalProfileMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,7 +23,9 @@ import java.util.Optional;
 public class MedicalProfileRepositoryAdapter implements MedicalProfileRepository {
 
     private final MedicalProfileJpaRepository medicalProfileJpaRepository;
+    private final MedicalProfileHistoryJpaRepository historyJpaRepository;
     private final MedicalProfileMapper medicalProfileMapper;
+    private final MedicalProfileHistoryMapper historyMapper;
 
     @Override
     public MedicalProfile save(MedicalProfile medicalProfile) {
@@ -69,5 +77,29 @@ public class MedicalProfileRepositoryAdapter implements MedicalProfileRepository
                 .stream()
                 .map(medicalProfileMapper::toDomain)
                 .toList();
+    }
+
+    @Override
+    public void delete(
+            MedicalProfile medicalProfile,
+            Long deletedByUserId,
+            Instant deletedAt
+    ) {
+        MedicalProfileEntity entity = medicalProfileJpaRepository
+                .findByIdForUpdate(medicalProfile.getId())
+                .orElseThrow(
+                        () -> new MedicalProfileAlreadyDeletedException(
+                                medicalProfile.getId()
+                        )
+                );
+
+        MedicalProfileHistoryEntity history = historyMapper.toHistoryEntity(
+                entity,
+                deletedByUserId,
+                deletedAt
+        );
+
+        historyJpaRepository.save(history);
+        medicalProfileJpaRepository.delete(entity);
     }
 }

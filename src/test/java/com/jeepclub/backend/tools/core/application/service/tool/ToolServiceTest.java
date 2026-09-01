@@ -12,18 +12,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ToolServiceTest {
+
+    private static final Instant NOW = Instant.parse("2026-08-13T12:00:00Z");
 
     @Mock
     private ToolRepository toolRepository;
@@ -32,7 +38,10 @@ class ToolServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ToolService(toolRepository);
+        service = new ToolService(
+                toolRepository,
+                Clock.fixed(NOW, ZoneOffset.UTC)
+        );
     }
 
     @Test
@@ -69,7 +78,7 @@ class ToolServiceTest {
     }
 
     @Test
-    void updatesStateAndSoftDeletesOwnedTool() {
+    void updatesStateAndArchivesOwnedToolBeforeDelete() {
         Tool tool = tool(7L);
         when(toolRepository.findById(1L)).thenReturn(Optional.of(tool));
         when(toolRepository.save(tool)).thenReturn(tool);
@@ -82,15 +91,19 @@ class ToolServiceTest {
                 .isEqualTo(ToolStatus.ACTIVE);
 
         service.deleteTool(1L, 7L);
-        assertThat(tool.getStatus()).isEqualTo(ToolStatus.DELETED);
         verify(toolRepository, org.mockito.Mockito.atLeastOnce()).save(tool);
+        verify(toolRepository).delete(
+                eq(tool),
+                eq(7L),
+                eq(LocalDateTime.ofInstant(NOW, ZoneOffset.UTC))
+        );
     }
 
     private Tool tool(Long userId) {
         LocalDateTime now = LocalDateTime.of(2026, 8, 13, 12, 0);
         return Tool.reconstitute(
                 1L, "Macaco", "Hidráulico", ToolStatus.ACTIVE,
-                userId, now, now, null
+                userId, now, now
         );
     }
 }

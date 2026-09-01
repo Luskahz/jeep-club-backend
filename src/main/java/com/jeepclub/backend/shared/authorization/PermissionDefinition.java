@@ -323,6 +323,12 @@ public enum PermissionDefinition {
             "Permite consultar o perfil médico"
     ),
 
+    HEALTH_MEDICAL_PROFILE_DELETE(
+            PermissionCode.HEALTH_MEDICAL_PROFILE_DELETE,
+            ModuleCode.HEALTH,
+            "Permite excluir o perfil médico"
+    ),
+
     // MEMBERSHIP / MEMBERSHIP REQUEST
     MEMBERSHIP_MEMBERSHIP_REQUEST_READ(
             PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_READ,
