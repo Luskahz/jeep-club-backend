@@ -1,5 +1,6 @@
 package com.jeepclub.backend.tools.core.repository;
 
+import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,7 +12,8 @@ public interface ToolRepository {
 
     // Lista paginada
     Page<Tool> findByUserId(Long userId, Pageable pageable);
-
+    // Adicao Tools
+    Page<Tool> findAll(String name, ToolStatus status, Pageable pageable);
     // Busca um
     Optional<Tool> findById(Long id);
 
