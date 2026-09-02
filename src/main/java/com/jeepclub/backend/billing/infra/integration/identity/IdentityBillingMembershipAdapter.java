@@ -1,7 +1,7 @@
-package com.jeepclub.backend.billing.infra.integration.authentication;
+package com.jeepclub.backend.billing.infra.integration.identity;
 
-import com.jeepclub.backend.authentication.api.module.user.UserQuery;
 import com.jeepclub.backend.billing.core.port.BillingMembershipPort;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -10,19 +10,19 @@ import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
-public class AuthenticationBillingMembershipAdapter implements BillingMembershipPort {
+public class IdentityBillingMembershipAdapter implements BillingMembershipPort {
 
-    private final UserQuery userQuery;
+    private final IdentityQuery identityQuery;
 
     @Override
     public List<Long> findActiveMemberUserIds() {
-        return userQuery.findActiveUserIds();
+        return identityQuery.findAdministrativelyActiveIdentityIds();
     }
 
     @Override
     public boolean existsActiveMemberByUserId(Long userId) {
         Objects.requireNonNull(userId, "userId cannot be null");
 
-        return userQuery.existsActiveUserById(userId);
+        return identityQuery.isAdministrativelyActive(userId);
     }
 }

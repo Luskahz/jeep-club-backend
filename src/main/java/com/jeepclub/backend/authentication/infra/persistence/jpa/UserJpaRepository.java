@@ -44,6 +44,21 @@ public interface UserJpaRepository
 
     boolean existsByRg(String rg);
 
+    boolean existsByIdAndAccountStatus(
+            Long id,
+            AccountStatus accountStatus
+    );
+
+    @Query("""
+            SELECT user.id
+            FROM UserEntity user
+            WHERE user.accountStatus = :accountStatus
+            ORDER BY user.id
+            """)
+    List<Long> findIdsByAccountStatus(
+            @Param("accountStatus") AccountStatus accountStatus
+    );
+
     boolean existsByIdAndAccountStatusAndAuthenticationStatusAndCredentialStatus(
             Long id,
             AccountStatus accountStatus,
