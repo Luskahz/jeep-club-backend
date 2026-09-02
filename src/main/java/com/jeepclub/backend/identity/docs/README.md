@@ -55,9 +55,16 @@ Enquanto os fluxos de escrita ainda nao foram migrados, essa tabela permanece
 sem dados funcionais e nao e consultada pelos demais modulos. Ela nao constitui
 uma segunda fonte de verdade neste estado intermediario.
 
+`authentication_accounts` reutiliza `identity_users.id` como chave primaria
+atribuida, sem gerar um segundo identificador para a mesma pessoa. A ligacao e
+mantida como identificador escalar entre modulos, sem relacionamento JPA: cada
+modulo continua responsavel pelo proprio agregado e pelo proprio ciclo de vida.
+
 ## Estado transitorio
 
 O adapter legado fica em `authentication.infra.integration.identity` e
 implementa `IdentityQuery` sobre a persistencia atual. Nao existe escrita
-duplicada. O proximo cutover deve criar primeiro a identidade, reutilizar o ID
-na conta de autenticacao e somente entao substituir o adapter legado.
+duplicada. Tanto `identity_users` quanto `authentication_accounts` permanecem
+dormentes no runtime atual. O proximo cutover deve criar primeiro a identidade,
+reutilizar o ID na conta de autenticacao e somente entao substituir o adapter
+legado.
