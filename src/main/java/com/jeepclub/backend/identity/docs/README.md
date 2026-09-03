@@ -19,6 +19,10 @@ Pertencem a `identity`:
 - existencia e unicidade cadastral;
 - estado administrativo `ACTIVE` ou `DISABLED`.
 
+A API interna `IdentityQuery` oferece existencia, atividade administrativa e
+os dados cadastrais necessarios por ID ou CPF. `IdentityDetails` nao expoe hash,
+estado da credencial, bloqueio, tentativas, sessions ou autorizacao.
+
 Os dados cadastrais sao normalizados no dominio:
 
 - nome recebe `trim`, preservando capitalizacao;

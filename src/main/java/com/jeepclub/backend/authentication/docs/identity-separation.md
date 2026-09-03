@@ -67,3 +67,8 @@ refresh tokens e password recovery tambem passam pela API `IdentityQuery`.
 Durante o estado transitorio, seu adapter legado ainda consulta
 `authentication_users`, preservando o comportamento ate a troca da fonte de
 persistencia.
+
+O retorno de `/me` tambem carrega nome, documentos, contato, foto e estado
+administrativo por `IdentityQuery`. A sessao continua pertencendo a
+`authentication`, e o DTO HTTP permanece inalterado. CPF e leitura cadastral
+deixam assim de exigir o agregado legado completo nesse fluxo.

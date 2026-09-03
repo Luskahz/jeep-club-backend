@@ -92,6 +92,16 @@ class LegacyIdentityQueryAdapterTest {
         assertThat(identityQuery.existsByCpf(identity.getCpf())).isTrue();
         assertThat(identityQuery.existsByEmail(identity.getEmail())).isTrue();
         assertThat(identityQuery.existsById(identity.getId() + 1)).isFalse();
+        assertThat(identityQuery.findById(identity.getId()))
+                .hasValueSatisfying(details -> {
+                    assertThat(details.id()).isEqualTo(identity.getId());
+                    assertThat(details.name()).isEqualTo(identity.getName());
+                    assertThat(details.cpf()).isEqualTo(identity.getCpf());
+                    assertThat(details.administrativelyActive()).isTrue();
+                });
+        assertThat(identityQuery.findByCpf(identity.getCpf()))
+                .hasValueSatisfying(details -> assertThat(details.id())
+                        .isEqualTo(identity.getId()));
     }
 
     private UserEntity saveUser(

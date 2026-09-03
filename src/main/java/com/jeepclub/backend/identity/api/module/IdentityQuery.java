@@ -1,6 +1,7 @@
 package com.jeepclub.backend.identity.api.module;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Read-only contract for identity data used by other modules.
@@ -9,6 +10,10 @@ import java.util.List;
  * the administrative activity methods exposed here.</p>
  */
 public interface IdentityQuery {
+
+    Optional<IdentityDetails> findById(Long identityId);
+
+    Optional<IdentityDetails> findByCpf(String cpf);
 
     boolean existsById(Long identityId);
 
