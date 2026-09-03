@@ -3,11 +3,17 @@ package com.jeepclub.backend.authentication.infra.persistence.entity;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ForeignKey;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.MapsId;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +31,16 @@ public class AuthenticationAccountEntity {
     @Id
     @Column(name = "identity_id", nullable = false, updatable = false)
     private Long identityId;
+
+    @MapsId
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(
+            name = "identity_id",
+            nullable = false,
+            updatable = false,
+            foreignKey = @ForeignKey(name = "fk_authentication_accounts_identity")
+    )
+    private IdentityEntity identity;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.Set;
+import java.util.Optional;
 
 public interface AdminUserQueryRepository {
 
@@ -15,4 +16,6 @@ public interface AdminUserQueryRepository {
             Set<AdminUserField> fields,
             Pageable pageable
     );
+
+    Optional<AdminUserResult> findById(Long userId);
 }

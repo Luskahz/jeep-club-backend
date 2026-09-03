@@ -1,7 +1,7 @@
 package com.jeepclub.backend.identity.infra.persistence.adapter;
 
 import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
 import com.jeepclub.backend.identity.core.domain.model.Identity;
 import com.jeepclub.backend.identity.core.repository.IdentityRepository;
 import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;

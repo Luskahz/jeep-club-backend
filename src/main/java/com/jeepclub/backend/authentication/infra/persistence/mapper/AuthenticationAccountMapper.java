@@ -2,18 +2,23 @@ package com.jeepclub.backend.authentication.infra.persistence.mapper;
 
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
+import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AuthenticationAccountMapper {
 
-    public AuthenticationAccountEntity toEntity(AuthenticationAccount domain) {
+    public AuthenticationAccountEntity toEntity(
+            AuthenticationAccount domain,
+            IdentityEntity identity
+    ) {
         if (domain == null) {
             return null;
         }
 
         AuthenticationAccountEntity entity = new AuthenticationAccountEntity();
         entity.setIdentityId(domain.getIdentityId());
+        entity.setIdentity(identity);
         entity.setPasswordHash(domain.getPasswordHash());
         entity.setAccessStatus(domain.getAccessStatus());
         entity.setAuthenticationStatus(domain.getAuthenticationStatus());

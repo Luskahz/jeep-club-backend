@@ -1,4 +1,4 @@
-package com.jeepclub.backend.identity.core.domain.enums;
+package com.jeepclub.backend.identity.api.module;
 
 public enum IdentityStatus {
     ACTIVE,

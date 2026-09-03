@@ -6,6 +6,7 @@ import com.jeepclub.backend.authentication.core.repository.AuthenticationAccount
 import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.AuthenticationAccountMapper;
+import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class AuthenticationAccountRepositoryAdapter
 
     @Override
     public AuthenticationAccount create(AuthenticationAccount account) {
-        AuthenticationAccountEntity entity = mapper.toEntity(account);
+        AuthenticationAccountEntity entity = toEntity(account);
         try {
             entityManager.persist(entity);
             entityManager.flush();
@@ -36,7 +37,7 @@ public class AuthenticationAccountRepositoryAdapter
 
     @Override
     public AuthenticationAccount save(AuthenticationAccount account) {
-        AuthenticationAccountEntity entity = mapper.toEntity(account);
+        AuthenticationAccountEntity entity = toEntity(account);
         return mapper.toDomain(jpaRepository.save(entity));
     }
 
@@ -54,5 +55,13 @@ public class AuthenticationAccountRepositoryAdapter
     @Override
     public boolean existsByIdentityId(Long identityId) {
         return jpaRepository.existsById(identityId);
+    }
+
+    private AuthenticationAccountEntity toEntity(AuthenticationAccount account) {
+        IdentityEntity identity = entityManager.getReference(
+                IdentityEntity.class,
+                account.getIdentityId()
+        );
+        return mapper.toEntity(account, identity);
     }
 }

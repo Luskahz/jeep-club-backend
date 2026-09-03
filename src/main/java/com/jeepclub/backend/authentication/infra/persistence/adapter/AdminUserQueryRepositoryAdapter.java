@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Set;
+import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
@@ -34,5 +35,10 @@ public class AdminUserQueryRepositoryAdapter
                 fields,
                 mappedPageable
         );
+    }
+
+    @Override
+    public Optional<AdminUserResult> findById(Long userId) {
+        return jpaQueryRepository.findById(userId);
     }
 }

@@ -7,7 +7,7 @@ import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
 import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
@@ -16,6 +16,7 @@ import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Selection;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 @Repository
@@ -38,8 +40,8 @@ public class AdminUserJpaQueryRepository {
     public Page<AdminUserResult> findAll(AdminUserFilter filter, Set<AdminUserField> fields, Pageable pageable) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> query = cb.createTupleQuery();
-        Root<IdentityEntity> identity = query.from(IdentityEntity.class);
         Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
+        Join<AuthenticationAccountEntity, IdentityEntity> identity = account.join("identity");
         query.multiselect(selections(identity, account, cb, fields));
         query.where(predicates(filter, identity, account, cb).toArray(Predicate[]::new));
         applySort(query, identity, account, cb, pageable);
@@ -50,7 +52,22 @@ public class AdminUserJpaQueryRepository {
         return new PageImpl<>(content, pageable, count(filter));
     }
 
-    private List<Selection<?>> selections(Root<IdentityEntity> identity,
+    public Optional<AdminUserResult> findById(Long userId) {
+        Set<AdminUserField> fields = Set.of(AdminUserField.values());
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> query = cb.createTupleQuery();
+        Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
+        Join<AuthenticationAccountEntity, IdentityEntity> identity = account.join("identity");
+        query.multiselect(selections(identity, account, cb, fields));
+        query.where(cb.equal(identity.get("id"), userId));
+        return entityManager.createQuery(query)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst()
+                .map(tuple -> toResult(tuple, fields));
+    }
+
+    private List<Selection<?>> selections(Join<AuthenticationAccountEntity, IdentityEntity> identity,
                                            Root<AuthenticationAccountEntity> account,
                                            CriteriaBuilder cb, Set<AdminUserField> fields) {
         List<Selection<?>> result = new ArrayList<>();
@@ -75,10 +92,9 @@ public class AdminUserJpaQueryRepository {
         return result;
     }
 
-    private List<Predicate> predicates(AdminUserFilter filter, Root<IdentityEntity> identity,
+    private List<Predicate> predicates(AdminUserFilter filter, Join<AuthenticationAccountEntity, IdentityEntity> identity,
                                        Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
         List<Predicate> result = new ArrayList<>();
-        result.add(cb.equal(identity.get("id"), account.get("identityId")));
         if (filter.id() != null) result.add(cb.equal(identity.get("id"), filter.id()));
         if (filter.name() != null) result.add(cb.like(cb.lower(identity.get("name")), like(filter.name())));
         if (filter.cpf() != null) result.add(cb.equal(identity.get("cpf"), filter.cpf()));
@@ -106,7 +122,7 @@ public class AdminUserJpaQueryRepository {
         return result;
     }
 
-    private void applySort(CriteriaQuery<Tuple> query, Root<IdentityEntity> identity,
+    private void applySort(CriteriaQuery<Tuple> query, Join<AuthenticationAccountEntity, IdentityEntity> identity,
                            Root<AuthenticationAccountEntity> account, CriteriaBuilder cb, Pageable pageable) {
         List<Order> orders = pageable.getSort().stream().map(sort -> {
             Expression<?> expression = switch (sort.getProperty()) {
@@ -122,9 +138,9 @@ public class AdminUserJpaQueryRepository {
     private long count(AdminUserFilter filter) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
-        Root<IdentityEntity> identity = query.from(IdentityEntity.class);
         Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
-        query.select(cb.count(identity));
+        Join<AuthenticationAccountEntity, IdentityEntity> identity = account.join("identity");
+        query.select(cb.count(account));
         query.where(predicates(filter, identity, account, cb).toArray(Predicate[]::new));
         return entityManager.createQuery(query).getSingleResult();
     }
@@ -134,7 +150,7 @@ public class AdminUserJpaQueryRepository {
                 CredentialStatus.CHANGE_REQUIRED, CredentialStatus.PENDING_FIRST_ACCESS), true).otherwise(false);
     }
 
-    private Expression<Instant> updatedAt(Root<IdentityEntity> identity,
+    private Expression<Instant> updatedAt(Join<AuthenticationAccountEntity, IdentityEntity> identity,
                                           Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
         Expression<Instant> identityUpdated = identity.get("updatedAt");
         Expression<Instant> accountUpdated = account.get("updatedAt");

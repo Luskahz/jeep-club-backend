@@ -1,6 +1,6 @@
 package com.jeepclub.backend.identity.infra.persistence.jpa;
 
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
 import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,6 +1,6 @@
 package com.jeepclub.backend.identity.infra.persistence.entity;
 
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
