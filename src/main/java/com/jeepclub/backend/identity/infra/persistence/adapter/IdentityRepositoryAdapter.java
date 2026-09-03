@@ -39,6 +39,14 @@ public class IdentityRepositoryAdapter implements IdentityRepository {
     }
 
     @Override
+    public Optional<Identity> findByCpf(String cpf) {
+        if (cpf == null) {
+            return Optional.empty();
+        }
+        return jpaRepository.findByCpf(Identity.normalizeCpf(cpf)).map(mapper::toDomain);
+    }
+
+    @Override
     public Optional<Identity> findByIdForUpdate(Long id) {
         return jpaRepository.findByIdForUpdate(id).map(mapper::toDomain);
     }

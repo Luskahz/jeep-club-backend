@@ -6,12 +6,11 @@ import com.jeepclub.backend.authentication.core.application.result.admin.user.Ad
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
-import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity_;
-import com.jeepclub.backend.authentication.infra.persistence.specification.UserSpecification;
+import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
+import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
-import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Expression;
@@ -28,374 +27,151 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
 public class AdminUserJpaQueryRepository {
-
     private final EntityManager entityManager;
 
-    public Page<AdminUserResult> findAll(
-            AdminUserFilter filter,
-            Set<AdminUserField> fields,
-            Pageable pageable
-    ) {
-        CriteriaBuilder criteriaBuilder =
-                entityManager.getCriteriaBuilder();
-
-        CriteriaQuery<Tuple> criteriaQuery =
-                criteriaBuilder.createTupleQuery();
-
-        Root<UserEntity> root =
-                criteriaQuery.from(UserEntity.class);
-
-        criteriaQuery.multiselect(
-                createSelections(
-                        root,
-                        criteriaBuilder,
-                        fields
-                )
-        );
-
-        Predicate predicate =
-                UserSpecification.from(filter)
-                        .toPredicate(
-                                root,
-                                criteriaQuery,
-                                criteriaBuilder
-                        );
-
-        if (predicate != null) {
-            criteriaQuery.where(predicate);
-        }
-
-        applySort(
-                criteriaQuery,
-                root,
-                criteriaBuilder,
-                pageable
-        );
-
-        TypedQuery<Tuple> query =
-                entityManager.createQuery(criteriaQuery);
-
-        query.setFirstResult(
-                Math.toIntExact(pageable.getOffset())
-        );
-
-        query.setMaxResults(
-                pageable.getPageSize()
-        );
-
-        List<AdminUserResult> content =
-                query.getResultList()
-                        .stream()
-                        .map(tuple -> toResult(tuple, fields))
-                        .toList();
-
-        long total = count(filter);
-
-        return new PageImpl<>(
-                content,
-                pageable,
-                total
-        );
+    public Page<AdminUserResult> findAll(AdminUserFilter filter, Set<AdminUserField> fields, Pageable pageable) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> query = cb.createTupleQuery();
+        Root<IdentityEntity> identity = query.from(IdentityEntity.class);
+        Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
+        query.multiselect(selections(identity, account, cb, fields));
+        query.where(predicates(filter, identity, account, cb).toArray(Predicate[]::new));
+        applySort(query, identity, account, cb, pageable);
+        List<AdminUserResult> content = entityManager.createQuery(query)
+                .setFirstResult(Math.toIntExact(pageable.getOffset()))
+                .setMaxResults(pageable.getPageSize())
+                .getResultList().stream().map(tuple -> toResult(tuple, fields)).toList();
+        return new PageImpl<>(content, pageable, count(filter));
     }
 
-    private List<Selection<?>> createSelections(
-            Root<UserEntity> root,
-            CriteriaBuilder criteriaBuilder,
-            Set<AdminUserField> fields
-    ) {
-        List<Selection<?>> selections =
-                new ArrayList<>();
-
+    private List<Selection<?>> selections(Root<IdentityEntity> identity,
+                                           Root<AuthenticationAccountEntity> account,
+                                           CriteriaBuilder cb, Set<AdminUserField> fields) {
+        List<Selection<?>> result = new ArrayList<>();
         for (AdminUserField field : fields) {
-
             switch (field) {
-
-                case ID ->
-                        selections.add(
-                                root.get(UserEntity_.id)
-                                        .alias("id")
-                        );
-
-                case NAME ->
-                        selections.add(
-                                root.get(UserEntity_.name)
-                                        .alias("name")
-                        );
-
-                case CPF ->
-                        selections.add(
-                                root.get(UserEntity_.cpf)
-                                        .alias("cpf")
-                        );
-
-                case EMAIL ->
-                        selections.add(
-                                root.get(UserEntity_.email)
-                                        .alias("email")
-                        );
-
-                case PHONE_NUMBER ->
-                        selections.add(
-                                root.get(UserEntity_.phoneNumber)
-                                        .alias("phoneNumber")
-                        );
-
-                case ACCOUNT_STATUS ->
-                        selections.add(
-                                root.get(UserEntity_.accountStatus)
-                                        .alias("accountStatus")
-                        );
-
-                case AUTHENTICATION_STATUS ->
-                        selections.add(
-                                root.get(UserEntity_.authenticationStatus)
-                                        .alias("authenticationStatus")
-                        );
-
-                case CREDENTIAL_STATUS ->
-                        selections.add(
-                                root.get(UserEntity_.credentialStatus)
-                                        .alias("credentialStatus")
-                        );
-
-                case PASSWORD_CHANGE_REQUIRED ->
-                        selections.add(
-                                passwordChangeRequiredExpression(
-                                        root,
-                                        criteriaBuilder
-                                ).alias("passwordChangeRequired")
-                        );
-
-                case CREATED_AT ->
-                        selections.add(
-                                root.get(UserEntity_.createdAt)
-                                        .alias("createdAt")
-                        );
-
-                case UPDATED_AT ->
-                        selections.add(
-                                root.get(UserEntity_.updatedAt)
-                                        .alias("updatedAt")
-                        );
+                case ID -> result.add(identity.get("id").alias("id"));
+                case NAME -> result.add(identity.get("name").alias("name"));
+                case CPF -> result.add(identity.get("cpf").alias("cpf"));
+                case EMAIL -> result.add(identity.get("email").alias("email"));
+                case PHONE_NUMBER -> result.add(identity.get("phoneNumber").alias("phoneNumber"));
+                case ACCOUNT_STATUS -> result.add(identity.get("status").alias("identityStatus"));
+                case AUTHENTICATION_STATUS -> result.add(account.get("authenticationStatus").alias("authenticationStatus"));
+                case CREDENTIAL_STATUS -> result.add(account.get("credentialStatus").alias("credentialStatus"));
+                case PASSWORD_CHANGE_REQUIRED -> result.add(passwordChangeRequired(account, cb).alias("passwordChangeRequired"));
+                case CREATED_AT -> result.add(identity.get("createdAt").alias("createdAt"));
+                case UPDATED_AT -> {
+                    result.add(identity.get("updatedAt").alias("identityUpdatedAt"));
+                    result.add(account.get("updatedAt").alias("accountUpdatedAt"));
+                }
             }
         }
-
-        return selections;
+        return result;
     }
 
-    private AdminUserResult toResult(
-            Tuple tuple,
-            Set<AdminUserField> fields
-    ) {
-        return new AdminUserResult(
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.ID,
-                        "id",
-                        Long.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.NAME,
-                        "name",
-                        String.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.CPF,
-                        "cpf",
-                        String.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.EMAIL,
-                        "email",
-                        String.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.PHONE_NUMBER,
-                        "phoneNumber",
-                        String.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.ACCOUNT_STATUS,
-                        "accountStatus",
-                        AccountStatus.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.AUTHENTICATION_STATUS,
-                        "authenticationStatus",
-                        AuthenticationStatus.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.CREDENTIAL_STATUS,
-                        "credentialStatus",
-                        CredentialStatus.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.PASSWORD_CHANGE_REQUIRED,
-                        "passwordChangeRequired",
-                        Boolean.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.CREATED_AT,
-                        "createdAt",
-                        Instant.class
-                ),
-                get(
-                        tuple,
-                        fields,
-                        AdminUserField.UPDATED_AT,
-                        "updatedAt",
-                        Instant.class
-                )
-        );
-    }
-
-    private <T> T get(
-            Tuple tuple,
-            Set<AdminUserField> fields,
-            AdminUserField field,
-            String alias,
-            Class<T> type
-    ) {
-        if (!fields.contains(field)) {
-            return null;
+    private List<Predicate> predicates(AdminUserFilter filter, Root<IdentityEntity> identity,
+                                       Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
+        List<Predicate> result = new ArrayList<>();
+        result.add(cb.equal(identity.get("id"), account.get("identityId")));
+        if (filter.id() != null) result.add(cb.equal(identity.get("id"), filter.id()));
+        if (filter.name() != null) result.add(cb.like(cb.lower(identity.get("name")), like(filter.name())));
+        if (filter.cpf() != null) result.add(cb.equal(identity.get("cpf"), filter.cpf()));
+        if (filter.email() != null) result.add(cb.like(cb.lower(identity.get("email")), like(filter.email())));
+        if (filter.phoneNumber() != null) result.add(cb.like(identity.get("phoneNumber"), "%" + filter.phoneNumber() + "%"));
+        if (filter.accountStatus() != null) result.add(cb.equal(identity.get("status"),
+                filter.accountStatus() == AccountStatus.ACTIVE ? IdentityStatus.ACTIVE : IdentityStatus.DISABLED));
+        if (filter.authenticationStatus() != null) result.add(cb.equal(account.get("authenticationStatus"), filter.authenticationStatus()));
+        if (filter.credentialStatus() != null) result.add(cb.equal(account.get("credentialStatus"), filter.credentialStatus()));
+        if (filter.passwordChangeRequired() != null) {
+            Predicate required = account.get("credentialStatus").in(CredentialStatus.CHANGE_REQUIRED, CredentialStatus.PENDING_FIRST_ACCESS);
+            result.add(filter.passwordChangeRequired() ? required : cb.not(required));
         }
-
-        return tuple.get(alias, type);
-    }
-
-    private Expression<Boolean> passwordChangeRequiredExpression(
-            Root<UserEntity> root,
-            CriteriaBuilder criteriaBuilder
-    ) {
-        CriteriaBuilder.Case<Boolean> expression =
-                criteriaBuilder.selectCase();
-
-        return expression
-                .when(
-                        root.get(UserEntity_.credentialStatus).in(
-                                CredentialStatus.CHANGE_REQUIRED,
-                                CredentialStatus.PENDING_FIRST_ACCESS
-                        ),
-                        Boolean.TRUE
-                )
-                .otherwise(Boolean.FALSE);
-    }
-
-    private void applySort(
-            CriteriaQuery<Tuple> criteriaQuery,
-            Root<UserEntity> root,
-            CriteriaBuilder criteriaBuilder,
-            Pageable pageable
-    ) {
-        List<Order> orders =
-                pageable.getSort()
-                        .stream()
-                        .map(order -> {
-                            Expression<?> expression =
-                                    sortExpression(
-                                            root,
-                                            order.getProperty()
-                                    );
-
-                            return order.isAscending()
-                                    ? criteriaBuilder.asc(expression)
-                                    : criteriaBuilder.desc(expression);
-                        })
-                        .toList();
-
-        if (!orders.isEmpty()) {
-            criteriaQuery.orderBy(orders);
+        if (filter.createdFrom() != null) result.add(cb.greaterThanOrEqualTo(identity.get("createdAt"), filter.createdFrom()));
+        if (filter.createdTo() != null) result.add(cb.lessThanOrEqualTo(identity.get("createdAt"), filter.createdTo()));
+        Expression<Instant> updatedAt = updatedAt(identity, account, cb);
+        if (filter.updatedFrom() != null) result.add(cb.greaterThanOrEqualTo(updatedAt, filter.updatedFrom()));
+        if (filter.updatedTo() != null) result.add(cb.lessThanOrEqualTo(updatedAt, filter.updatedTo()));
+        if (filter.query() != null) {
+            String search = like(filter.query());
+            result.add(cb.or(cb.like(cb.lower(identity.get("name")), search),
+                    cb.like(cb.lower(identity.get("email")), search), cb.like(identity.get("cpf"), search),
+                    cb.like(identity.get("phoneNumber"), search)));
         }
+        return result;
     }
 
-    private Expression<?> sortExpression(
-            Root<UserEntity> root,
-            String property
-    ) {
-        return switch (property) {
-
-            case "id" ->
-                    root.get(UserEntity_.id);
-
-            case "name" ->
-                    root.get(UserEntity_.name);
-
-            case "cpf" ->
-                    root.get(UserEntity_.cpf);
-
-            case "email" ->
-                    root.get(UserEntity_.email);
-
-            case "phoneNumber" ->
-                    root.get(UserEntity_.phoneNumber);
-
-            case "createdAt" ->
-                    root.get(UserEntity_.createdAt);
-
-            case "updatedAt" ->
-                    root.get(UserEntity_.updatedAt);
-
-            default ->
-                    throw new IllegalArgumentException(
-                            "Unsupported user sort field: " + property
-                    );
-        };
+    private void applySort(CriteriaQuery<Tuple> query, Root<IdentityEntity> identity,
+                           Root<AuthenticationAccountEntity> account, CriteriaBuilder cb, Pageable pageable) {
+        List<Order> orders = pageable.getSort().stream().map(sort -> {
+            Expression<?> expression = switch (sort.getProperty()) {
+                case "id", "name", "cpf", "email", "phoneNumber", "createdAt" -> identity.get(sort.getProperty());
+                case "updatedAt" -> updatedAt(identity, account, cb);
+                default -> throw new IllegalArgumentException("Unsupported user sort field: " + sort.getProperty());
+            };
+            return sort.isAscending() ? cb.asc(expression) : cb.desc(expression);
+        }).toList();
+        if (!orders.isEmpty()) query.orderBy(orders);
     }
 
-    private long count(
-            AdminUserFilter filter
-    ) {
-        CriteriaBuilder criteriaBuilder =
-                entityManager.getCriteriaBuilder();
+    private long count(AdminUserFilter filter) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Long> query = cb.createQuery(Long.class);
+        Root<IdentityEntity> identity = query.from(IdentityEntity.class);
+        Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
+        query.select(cb.count(identity));
+        query.where(predicates(filter, identity, account, cb).toArray(Predicate[]::new));
+        return entityManager.createQuery(query).getSingleResult();
+    }
 
-        CriteriaQuery<Long> criteriaQuery =
-                criteriaBuilder.createQuery(Long.class);
+    private Expression<Boolean> passwordChangeRequired(Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
+        return cb.<Boolean>selectCase().when(account.get("credentialStatus").in(
+                CredentialStatus.CHANGE_REQUIRED, CredentialStatus.PENDING_FIRST_ACCESS), true).otherwise(false);
+    }
 
-        Root<UserEntity> root =
-                criteriaQuery.from(UserEntity.class);
+    private Expression<Instant> updatedAt(Root<IdentityEntity> identity,
+                                          Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
+        Expression<Instant> identityUpdated = identity.get("updatedAt");
+        Expression<Instant> accountUpdated = account.get("updatedAt");
+        return cb.<Instant>selectCase()
+                .when(cb.isNull(identityUpdated), accountUpdated)
+                .when(cb.isNull(accountUpdated), identityUpdated)
+                .when(cb.greaterThan(identityUpdated, accountUpdated), identityUpdated)
+                .otherwise(accountUpdated);
+    }
 
-        criteriaQuery.select(
-                criteriaBuilder.count(root)
-        );
+    private AdminUserResult toResult(Tuple tuple, Set<AdminUserField> fields) {
+        IdentityStatus status = get(tuple, fields, AdminUserField.ACCOUNT_STATUS, "identityStatus", IdentityStatus.class);
+        Instant identityUpdated = get(tuple, fields, AdminUserField.UPDATED_AT, "identityUpdatedAt", Instant.class);
+        Instant accountUpdated = get(tuple, fields, AdminUserField.UPDATED_AT, "accountUpdatedAt", Instant.class);
+        return new AdminUserResult(get(tuple, fields, AdminUserField.ID, "id", Long.class),
+                get(tuple, fields, AdminUserField.NAME, "name", String.class),
+                get(tuple, fields, AdminUserField.CPF, "cpf", String.class),
+                get(tuple, fields, AdminUserField.EMAIL, "email", String.class),
+                get(tuple, fields, AdminUserField.PHONE_NUMBER, "phoneNumber", String.class),
+                status == null ? null : (status == IdentityStatus.ACTIVE ? AccountStatus.ACTIVE : AccountStatus.DISABLED),
+                get(tuple, fields, AdminUserField.AUTHENTICATION_STATUS, "authenticationStatus", AuthenticationStatus.class),
+                get(tuple, fields, AdminUserField.CREDENTIAL_STATUS, "credentialStatus", CredentialStatus.class),
+                get(tuple, fields, AdminUserField.PASSWORD_CHANGE_REQUIRED, "passwordChangeRequired", Boolean.class),
+                get(tuple, fields, AdminUserField.CREATED_AT, "createdAt", Instant.class), latest(identityUpdated, accountUpdated));
+    }
 
-        Predicate predicate =
-                UserSpecification.from(filter)
-                        .toPredicate(
-                                root,
-                                criteriaQuery,
-                                criteriaBuilder
-                        );
+    private <T> T get(Tuple tuple, Set<AdminUserField> fields, AdminUserField field, String alias, Class<T> type) {
+        return fields.contains(field) ? tuple.get(alias, type) : null;
+    }
 
-        if (predicate != null) {
-            criteriaQuery.where(predicate);
-        }
+    private static Instant latest(Instant first, Instant second) {
+        if (first == null) return second;
+        if (second == null) return first;
+        return first.isAfter(second) ? first : second;
+    }
 
-        return entityManager
-                .createQuery(criteriaQuery)
-                .getSingleResult();
+    private static String like(String value) {
+        return "%" + value.toLowerCase(Locale.ROOT) + "%";
     }
 }

@@ -1,10 +1,8 @@
 package com.jeepclub.backend.dependents.system;
 
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
@@ -34,20 +32,20 @@ class DependentSystemFlowTest {
     @Autowired
     private DependentService dependentService;
     @Autowired
-    private UserJpaRepository userJpaRepository;
+    private IdentityJpaRepository identityJpaRepository;
     @Autowired
     private DependentJpaRepository dependentJpaRepository;
     @Autowired
     private DependentHistoryJpaRepository historyJpaRepository;
 
-    private UserEntity user;
+    private IdentityEntity user;
 
     @BeforeEach
     void setUp() {
         historyJpaRepository.deleteAll();
         dependentJpaRepository.deleteAll();
-        userJpaRepository.deleteAll();
-        user = userJpaRepository.saveAndFlush(user());
+        identityJpaRepository.deleteAll();
+        user = identityJpaRepository.saveAndFlush(user());
     }
 
     @Test
@@ -108,14 +106,11 @@ class DependentSystemFlowTest {
         return history;
     }
 
-    private UserEntity user() {
-        UserEntity entity = new UserEntity();
+    private IdentityEntity user() {
+        IdentityEntity entity = new IdentityEntity();
         entity.setName("Titular Fluxo");
         entity.setCpf("39053344705");
-        entity.setPasswordHash("{noop}Senha@123");
-        entity.setAccountStatus(AccountStatus.ACTIVE);
-        entity.setAuthenticationStatus(AuthenticationStatus.ENABLED);
-        entity.setCredentialStatus(CredentialStatus.PERMANENT);
+        entity.setStatus(IdentityStatus.ACTIVE);
         entity.setCreatedAt(NOW);
         return entity;
     }

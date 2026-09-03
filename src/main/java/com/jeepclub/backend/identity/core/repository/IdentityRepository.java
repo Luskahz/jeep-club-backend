@@ -13,6 +13,8 @@ public interface IdentityRepository {
 
     Optional<Identity> findById(Long id);
 
+    Optional<Identity> findByCpf(String cpf);
+
     Optional<Identity> findByIdForUpdate(Long id);
 
     boolean existsById(Long id);

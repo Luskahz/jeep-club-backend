@@ -12,9 +12,9 @@ import com.jeepclub.backend.authentication.core.application.service.internal.Pas
 import com.jeepclub.backend.authentication.core.application.service.internal.PasswordResetTokenIssuer;
 import com.jeepclub.backend.authentication.core.application.service.internal.TemporaryPasswordIssuer;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AdminPasswordRecoveryService {
 
-    private final UserRepository userRepository;
+    private final AuthenticationAccountRepository accountRepository;
     private final IdentityQuery identityQuery;
     private final PasswordRecoveryRequestRepository requestRepository;
     private final PasswordRecoveryRequestManager requestManager;
@@ -66,15 +66,15 @@ public class AdminPasswordRecoveryService {
     @Transactional
     public TemporaryPasswordAdminResult generateTemporaryPassword(Long userId) {
         Instant now = Instant.now(clock);
-        User user = userRepository.findByIdForUpdate(userId)
+        AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
-        user.assertCanRequestPasswordChange();
-        PasswordRecoveryRequest request = requestManager.getOrCreate(user.getId(), now);
+        account.assertCanRequestPasswordChange();
+        PasswordRecoveryRequest request = requestManager.getOrCreate(account.getIdentityId(), now);
         IssuedTemporaryPassword temporaryPassword = passwordIssuer.issue();
-        revocationService.revokeAllForUser(user.getId(), now);
+        revocationService.revokeAllForUser(account.getIdentityId(), now);
         request.changeToAdminTemporaryPasswordMethod(now);
-        user.changeToTemporaryPassword(temporaryPassword.passwordHash(), now);
-        userRepository.save(user);
+        account.changeToTemporaryPassword(temporaryPassword.passwordHash(), now);
+        accountRepository.save(account);
         return new TemporaryPasswordAdminResult(
                 temporaryPassword.rawPassword(), requestRepository.save(request)
         );
@@ -83,10 +83,10 @@ public class AdminPasswordRecoveryService {
     @Transactional
     public PasswordResetLinkAdminResult generateResetLink(Long userId) {
         Instant now = Instant.now(clock);
-        User user = userRepository.findByIdForUpdate(userId)
+        AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
-        user.assertCanRequestPasswordChange();
-        PasswordRecoveryRequest request = requestManager.getOrCreate(user.getId(), now);
+        account.assertCanRequestPasswordChange();
+        PasswordRecoveryRequest request = requestManager.getOrCreate(account.getIdentityId(), now);
         IssuedPasswordResetToken token = tokenIssuer.issue();
         request.changeToAdminResetLinkMethod(token.tokenHash(), now);
         PasswordRecoveryRequest saved = requestRepository.save(request);

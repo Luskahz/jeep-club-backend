@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.query;
 
 import com.jeepclub.backend.authentication.api.module.user.UserQuery;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,18 +13,18 @@ import java.util.Objects;
 @RequiredArgsConstructor
 class AuthenticationUserQueryService implements UserQuery {
 
-    private final UserRepository userRepository;
+    private final IdentityQuery identityQuery;
 
     @Override
     @Transactional(readOnly = true)
     public boolean existsById(Long userId) {
-        return userRepository.existsById(userId);
+        return identityQuery.existsById(userId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Long> findActiveUserIds() {
-        return userRepository.findActiveUserIds();
+        return identityQuery.findAdministrativelyActiveIdentityIds();
     }
 
     @Override
@@ -32,16 +32,16 @@ class AuthenticationUserQueryService implements UserQuery {
     public boolean existsActiveUserById(Long userId) {
         Objects.requireNonNull(userId, "userId cannot be null");
 
-        return userRepository.existsActiveById(userId);
+        return identityQuery.isAdministrativelyActive(userId);
     }
 
     @Override
     public boolean existsByCpf(String cpf) {
-        return userRepository.existsByCpf(cpf);
+        return identityQuery.existsByCpf(cpf);
     }
 
     @Override
     public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
+        return identityQuery.existsByEmail(email);
     }
 }

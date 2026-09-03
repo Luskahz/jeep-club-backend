@@ -6,9 +6,10 @@ import com.jeepclub.backend.authentication.core.application.exceptions.session.S
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +21,8 @@ import java.time.Instant;
 public class AccessTokenAuthenticationService {
 
     private final SessionRepository sessionRepository;
-    private final UserRepository userRepository;
+    private final AuthenticationAccountRepository accountRepository;
+    private final IdentityQuery identityQuery;
     private final Clock clock;
 
     public void validate(Long userId, Long sessionId) {
@@ -37,10 +39,11 @@ public class AccessTokenAuthenticationService {
             throw new SessionInvalidException("Session invalid.");
         }
 
-        User user = userRepository.findById(userId)
+        AuthenticationAccount account = accountRepository.findByIdentityId(userId)
                 .orElseThrow(() -> new UserIdNotFoundException("User not found with this cpf."));
 
-        if (!user.isActive()) {
+        if (!identityQuery.isAdministrativelyActive(userId)
+                || !account.isAuthenticationAllowed()) {
             throw new UserDisabledException("User inactive.");
         }
     }

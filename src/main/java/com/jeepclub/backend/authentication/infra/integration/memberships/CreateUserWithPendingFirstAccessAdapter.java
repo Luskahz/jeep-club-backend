@@ -1,11 +1,11 @@
 package com.jeepclub.backend.authentication.infra.integration.memberships;
 
-import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.application.result.PasswordResetLinkAdminResult;
+import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RandomPasswordGenerator;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessLink;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
@@ -20,7 +20,7 @@ import java.time.Instant;
 public class CreateUserWithPendingFirstAccessAdapter
         implements CreateUserWithPendingFirstAccessPort {
 
-    private final UserRepository userRepository;
+    private final AuthenticationAccountProvisioningService provisioningService;
     private final PasswordHasher passwordHasher;
     private final RandomPasswordGenerator passwordGenerator;
     private final AdminPasswordRecoveryService adminPasswordRecoveryService;
@@ -34,7 +34,7 @@ public class CreateUserWithPendingFirstAccessAdapter
             String phoneNumber
     ) {
         String temporaryPassword = passwordGenerator.generateSecurePassword();
-        User savedUser = createPendingUser(
+        Long identityId = createPendingUser(
                 name,
                 email,
                 cpf,
@@ -42,7 +42,7 @@ public class CreateUserWithPendingFirstAccessAdapter
                 passwordHasher.hash(temporaryPassword)
         );
 
-        return new PendingFirstAccessUser(savedUser.getId(), temporaryPassword);
+        return new PendingFirstAccessUser(identityId, temporaryPassword);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class CreateUserWithPendingFirstAccessAdapter
             String phoneNumber
     ) {
         String internalPassword = passwordGenerator.generateSecurePassword();
-        User savedUser = createPendingUser(
+        Long identityId = createPendingUser(
                 name,
                 email,
                 cpf,
@@ -62,27 +62,24 @@ public class CreateUserWithPendingFirstAccessAdapter
         );
 
         PasswordResetLinkAdminResult resetLink =
-                adminPasswordRecoveryService.generateResetLink(savedUser.getId());
+                adminPasswordRecoveryService.generateResetLink(identityId);
 
-        return new PendingFirstAccessLink(savedUser.getId(), resetLink.resetLink());
+        return new PendingFirstAccessLink(identityId, resetLink.resetLink());
     }
 
-    private User createPendingUser(
+    private Long createPendingUser(
             String name,
             String email,
             String cpf,
             String phoneNumber,
             String passwordHash
     ) {
-        User newUser = User.createPendingFirstAccess(
-                name,
-                email,
-                cpf,
-                passwordHash,
-                phoneNumber,
-                Instant.now(clock)
+        Instant now = Instant.now(clock);
+        return provisioningService.provisionPendingFirstAccess(
+                new IdentityRegistrationData(
+                        name, null, email, cpf, null, phoneNumber, null, now
+                ),
+                passwordHash
         );
-
-        return userRepository.create(newUser);
     }
 }

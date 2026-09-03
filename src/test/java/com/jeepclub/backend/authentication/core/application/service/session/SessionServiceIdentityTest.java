@@ -13,7 +13,7 @@ import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallen
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.identity.api.module.IdentityDetails;
 import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import org.junit.jupiter.api.Test;
@@ -36,7 +36,7 @@ class SessionServiceIdentityTest {
 
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
-    @Mock private UserRepository userRepository;
+    @Mock private AuthenticationAccountRepository accountRepository;
     @Mock private SessionRepository sessionRepository;
     @Mock private RefreshTokenRepository refreshTokenRepository;
     @Mock private PasswordChangeChallengeRepository challengeRepository;
@@ -92,6 +92,6 @@ class SessionServiceIdentityTest {
         assertThat(result.sessionId()).isEqualTo(7L);
         assertThat(result.sessionActive()).isTrue();
         assertThat(result.expiresInSeconds()).isEqualTo(900);
-        verifyNoInteractions(userRepository);
+        verifyNoInteractions(accountRepository);
     }
 }

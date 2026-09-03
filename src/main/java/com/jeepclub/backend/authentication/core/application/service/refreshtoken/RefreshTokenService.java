@@ -7,12 +7,13 @@ import com.jeepclub.backend.authentication.core.application.service.internal.Ref
 import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.port.JwtService;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +28,8 @@ public class RefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final SessionRepository sessionRepository;
-    private final UserRepository userRepository;
+    private final AuthenticationAccountRepository accountRepository;
+    private final IdentityQuery identityQuery;
     private final RefreshTokenHashService tokenHashService;
     private final RefreshTokenIssuanceService refreshTokenIssuanceService;
     private final JwtService jwtService;
@@ -47,8 +49,8 @@ public class RefreshTokenService {
                 .findUserIdById(sessionId)
                 .orElseThrow(RefreshTokenInvalidException::new);
 
-        User user = userRepository
-                .findByIdForUpdate(userId)
+        AuthenticationAccount account = accountRepository
+                .findByIdentityIdForUpdate(userId)
                 .orElseThrow(RefreshTokenInvalidException::new);
 
         Session session = sessionRepository
@@ -62,7 +64,8 @@ public class RefreshTokenService {
         if (!existingToken.getSession().getId().equals(session.getId())
                 || !existingToken.isValid(now)
                 || !session.isValid(now)
-                || !user.isActive()) {
+                || !identityQuery.isAdministrativelyActive(userId)
+                || !account.isAuthenticationAllowed()) {
             throw new RefreshTokenInvalidException();
         }
 
@@ -77,7 +80,7 @@ public class RefreshTokenService {
         refreshTokenRepository.save(existingToken);
 
         IssuedAccessToken issuedAccessToken =
-                jwtService.generateAccessToken(user.getId(), session);
+                jwtService.generateAccessToken(userId, session);
 
         long expiresInSeconds = Math.max(
                 Duration.between(

@@ -19,6 +19,15 @@ import com.jeepclub.backend.authentication.core.domain.exception.user.UserNotDis
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserNotLockoutException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserNowInstantRequiredException;
 import com.jeepclub.backend.authentication.core.domain.exception.user.UserPasswordChangeRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountAlreadyDisabledException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountBlockedException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountCannotChangePasswordException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountHashRequiredException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountNotDisabledException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountNotLockedException;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountPasswordChangeRequiredException;
+import com.jeepclub.backend.identity.core.domain.exception.IdentityAlreadyDisabledException;
+import com.jeepclub.backend.identity.core.domain.exception.IdentityNotDisabledException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -29,8 +38,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
 public class UserExceptionHandler extends ApiExceptionHandler {
 
-    @ExceptionHandler(UserBlockedForLoginException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserBlockedForLogin(UserBlockedForLoginException exception) {
+    @ExceptionHandler({UserBlockedForLoginException.class, AuthenticationAccountBlockedException.class})
+    public ResponseEntity<ApiErrorResponse> handleUserBlockedForLogin(RuntimeException exception) {
         return buildErrorResponse(
                 "USER_BLOCKED_FOR_LOGIN",
                 exception.getMessage(),
@@ -38,8 +47,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserCannotChangePasswordException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserCannotChangePassword(UserCannotChangePasswordException exception) {
+    @ExceptionHandler({UserCannotChangePasswordException.class, AuthenticationAccountCannotChangePasswordException.class})
+    public ResponseEntity<ApiErrorResponse> handleUserCannotChangePassword(RuntimeException exception) {
         return buildErrorResponse(
                 "USER_CANNOT_CHANGE_PASSWORD",
                 exception.getMessage(),
@@ -65,8 +74,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserNewHashRequiredException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserNewHashRequired(UserNewHashRequiredException exception) {
+    @ExceptionHandler({UserNewHashRequiredException.class, AuthenticationAccountHashRequiredException.class})
+    public ResponseEntity<ApiErrorResponse> handleUserNewHashRequired(RuntimeException exception) {
         return buildErrorResponse(
                 "USER_NEW_HASH_REQUIRED",
                 exception.getMessage(),
@@ -74,8 +83,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserNotLockoutException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserNotLockout(UserNotLockoutException exception) {
+    @ExceptionHandler({UserNotLockoutException.class, AuthenticationAccountNotLockedException.class})
+    public ResponseEntity<ApiErrorResponse> handleUserNotLockout(RuntimeException exception) {
         return buildErrorResponse(
                 "USER_NOT_LOCKOUT",
                 exception.getMessage(),
@@ -92,8 +101,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserPasswordChangeRequiredException.class)
-    public ResponseEntity<ApiErrorResponse> handleUserPasswordChangeRequired(UserPasswordChangeRequiredException exception) {
+    @ExceptionHandler({UserPasswordChangeRequiredException.class, AuthenticationAccountPasswordChangeRequiredException.class})
+    public ResponseEntity<ApiErrorResponse> handleUserPasswordChangeRequired(RuntimeException exception) {
         return buildErrorResponse(
                 "USER_PASSWORD_CHANGE_REQUIRED",
                 exception.getMessage(),
@@ -128,9 +137,10 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserAlreadyDisabledException.class)
+    @ExceptionHandler({UserAlreadyDisabledException.class, IdentityAlreadyDisabledException.class,
+            AuthenticationAccountAlreadyDisabledException.class})
     public ResponseEntity<ApiErrorResponse> handleUserAlreadyDisabled(
-            UserAlreadyDisabledException exception
+            RuntimeException exception
     ) {
         return buildErrorResponse(
                 "USER_ALREADY_DISABLED",
@@ -139,9 +149,10 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(UserNotDisabledException.class)
+    @ExceptionHandler({UserNotDisabledException.class, IdentityNotDisabledException.class,
+            AuthenticationAccountNotDisabledException.class})
     public ResponseEntity<ApiErrorResponse> handleUserNotDisabled(
-            UserNotDisabledException exception
+            RuntimeException exception
     ) {
         return buildErrorResponse(
                 "USER_NOT_DISABLED",

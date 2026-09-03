@@ -9,12 +9,14 @@ import com.jeepclub.backend.authentication.core.application.service.internal.Cre
 import com.jeepclub.backend.authentication.core.application.service.internal.PasswordRecoveryRequestManager;
 import com.jeepclub.backend.authentication.core.application.service.internal.PasswordResetTokenIssuer;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.port.NotificationPort;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.identity.api.module.IdentityDetails;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,7 +28,8 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class PasswordRecoveryService {
 
-    private final UserRepository userRepository;
+    private final AuthenticationAccountRepository accountRepository;
+    private final IdentityQuery identityQuery;
     private final PasswordRecoveryRequestRepository requestRepository;
     private final PasswordRecoveryRequestManager requestManager;
     private final NotificationPort notificationPort;
@@ -39,9 +42,10 @@ public class PasswordRecoveryService {
     @Transactional
     public PublicPasswordRecoveryResult request(String cpf) {
         Instant now = Instant.now(clock);
-        User user = userRepository.findByCpfForUpdate(cpf).orElse(null);
-        if (user != null && !user.isDisabled()) {
-            requestManager.getOrCreate(user.getId(), now);
+        IdentityDetails identity = identityQuery.findByCpf(cpf).orElse(null);
+        if (identity != null && identity.administrativelyActive()
+                && accountRepository.existsByIdentityId(identity.id())) {
+            requestManager.getOrCreate(identity.id(), now);
         }
         return requestManager.genericResult(now);
     }
@@ -49,17 +53,18 @@ public class PasswordRecoveryService {
     @Transactional
     public PublicPasswordRecoveryResult sendEmailToken(String cpf) {
         Instant now = Instant.now(clock);
-        User user = userRepository.findByCpfForUpdate(cpf).orElse(null);
-        if (user == null || user.isDisabled()
-                || user.getEmail() == null || user.getEmail().isBlank()) {
+        IdentityDetails identity = identityQuery.findByCpf(cpf).orElse(null);
+        if (identity == null || !identity.administrativelyActive()
+                || !accountRepository.existsByIdentityId(identity.id())
+                || identity.email() == null || identity.email().isBlank()) {
             return requestManager.genericEmailResult(now);
         }
-        PasswordRecoveryRequest request = requestManager.getOrCreate(user.getId(), now);
+        PasswordRecoveryRequest request = requestManager.getOrCreate(identity.id(), now);
         IssuedPasswordResetToken token = tokenIssuer.issue();
         request.changeToEmailTokenMethod(token.tokenHash(), now);
         requestRepository.save(request);
         notificationPort.sendPasswordResetLink(
-                user.getEmail(),
+                identity.email(),
                 token.resetLink()
         );
         return requestManager.genericEmailResult(now);
@@ -71,19 +76,19 @@ public class PasswordRecoveryService {
         String tokenHash = tokenHashService.hash(rawToken);
         Long userId = requestRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
-        User user = userRepository.findByIdForUpdate(userId)
+        AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new UserIdNotFoundException("User not found with this id."));
         PasswordRecoveryRequest request = requestRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
-        if (!request.getUserId().equals(user.getId())
+        if (!request.getUserId().equals(account.getIdentityId())
                 || !request.isTokenBased() || !request.isOpen(now)) {
             throw new TokenInvalidException("Token invalid or expired.");
         }
-        user.assertCanRequestPasswordChange();
-        revocationService.revokeAllForUser(user.getId(), now);
-        user.changePassword(passwordHasher.hash(newPassword), now);
+        account.assertCanRequestPasswordChange();
+        revocationService.revokeAllForUser(account.getIdentityId(), now);
+        account.changePassword(passwordHasher.hash(newPassword), now);
         request.resolve(now);
-        userRepository.save(user);
+        accountRepository.save(account);
         requestRepository.save(request);
     }
 }

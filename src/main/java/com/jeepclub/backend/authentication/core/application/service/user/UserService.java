@@ -2,11 +2,15 @@ package com.jeepclub.backend.authentication.core.application.service.user;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
 import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
 import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.service.internal.TokenIssuanceService;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
+import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
+import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,12 +23,13 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class UserService {
 
-    private final UserRepository userRepository;
+    private final AuthenticationAccountRepository accountRepository;
+    private final AuthenticationAccountProvisioningService provisioningService;
     private final PasswordHasher passwordHasher;
     private final TokenIssuanceService tokenIssuanceService;
     private final Clock clock;
 
-    public User register(
+    public Long register(
             String name,
             LocalDate birthDate,
             String email,
@@ -54,7 +59,7 @@ public class UserService {
             String rawPassword,
             String phoneNumber
     ) {
-        User user = registerUser(
+        Long identityId = registerUser(
                 name,
                 birthDate,
                 email,
@@ -64,16 +69,16 @@ public class UserService {
                 phoneNumber
         );
 
-        User lockedUser = userRepository.findByIdForUpdate(user.getId())
+        AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(identityId)
                 .orElseThrow(() -> new UserIdNotFoundException("Registered user not found."));
         Instant now = Instant.now(clock);
-        AuthTokens tokens = tokenIssuanceService.issue(lockedUser, now);
-        lockedUser.recordSuccessfulLogin(now);
-        userRepository.save(lockedUser);
+        AuthTokens tokens = tokenIssuanceService.issue(account, now);
+        account.recordSuccessfulLogin(now);
+        accountRepository.save(account);
         return tokens;
     }
 
-    private User registerUser(
+    private Long registerUser(
             String name,
             LocalDate birthDate,
             String email,
@@ -84,25 +89,16 @@ public class UserService {
     ) {
         Instant now = Instant.now(clock);
 
-        if (userRepository.existsByCpf(cpf)
-                || userRepository.existsByEmail(email)
-                || userRepository.existsByRg(rg)) {
+        String passwordHash = passwordHasher.hash(passwordRaw);
+        try {
+            return provisioningService.provision(
+                    new IdentityRegistrationData(
+                            name, birthDate, email, cpf, rg, phoneNumber, null, now
+                    ),
+                    passwordHash
+            );
+        } catch (IdentityConflictException | AuthenticationAccountConflictException exception) {
             throw new RegistrationConflictException();
         }
-
-        String passwordHash = passwordHasher.hash(passwordRaw);
-
-        User newUser = User.create(
-                name,
-                birthDate,
-                email,
-                cpf,
-                rg,
-                passwordHash,
-                phoneNumber,
-                now
-        );
-
-        return userRepository.create(newUser);
     }
 }

@@ -21,6 +21,8 @@ public interface IdentityJpaRepository extends JpaRepository<IdentityEntity, Lon
             """)
     Optional<IdentityEntity> findByIdForUpdate(@Param("id") Long id);
 
+    Optional<IdentityEntity> findByCpf(String cpf);
+
     boolean existsByCpf(String cpf);
 
     boolean existsByEmail(String email);

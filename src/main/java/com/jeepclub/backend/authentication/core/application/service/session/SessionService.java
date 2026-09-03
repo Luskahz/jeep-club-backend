@@ -19,14 +19,15 @@ import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryReq
 import com.jeepclub.backend.authentication.core.domain.model.PasswordChangeChallenge;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
+import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountBlockedException;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.identity.api.module.IdentityDetails;
 import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +43,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class SessionService {
 
-    private final UserRepository userRepository;
+    private final AuthenticationAccountRepository accountRepository;
     private final SessionRepository sessionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordChangeChallengeRepository challengeRepository;
@@ -58,23 +59,29 @@ public class SessionService {
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResult login(String cpf, String password) {
         Instant now = Instant.now(clock);
-        User user = userRepository.findByCpfForUpdate(cpf)
+        IdentityDetails identity = identityQuery.findByCpf(cpf)
+                .orElseThrow(InvalidCredentialsException::new);
+        AuthenticationAccount account = accountRepository
+                .findByIdentityIdForUpdate(identity.id())
                 .orElseThrow(InvalidCredentialsException::new);
 
-        if (!passwordHasher.matches(password, user.getPasswordHash())) {
-            user.registerFailedLogin();
-            userRepository.save(user);
+        if (!passwordHasher.matches(password, account.getPasswordHash())) {
+            account.registerFailedLogin();
+            accountRepository.save(account);
             throw new InvalidCredentialsException();
         }
 
-        user.assertCanAttemptLogin();
-        if (user.isChangePasswordRequired()) {
-            return challengeIssuer.issue(user.getId(), now);
+        account.assertCanAttemptLogin();
+        if (!identity.administrativelyActive()) {
+            throw new AuthenticationAccountBlockedException();
+        }
+        if (account.isChangePasswordRequired()) {
+            return challengeIssuer.issue(account.getIdentityId(), now);
         }
 
-        AuthTokens tokens = tokenIssuanceService.issue(user, now);
-        user.recordSuccessfulLogin(now);
-        userRepository.save(user);
+        AuthTokens tokens = tokenIssuanceService.issue(account, now);
+        account.recordSuccessfulLogin(now);
+        accountRepository.save(account);
         return new AuthenticatedLoginResult(tokens);
     }
 
@@ -84,25 +91,25 @@ public class SessionService {
         String tokenHash = tokenHashService.hash(rawToken);
         Long userId = challengeRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(this::invalidChallenge);
-        User user = userRepository.findByIdForUpdate(userId)
+        AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new UserIdNotFoundException("User not found."));
         PasswordChangeChallenge challenge = challengeRepository
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(this::invalidChallenge);
 
-        if (!challenge.getUserId().equals(user.getId()) || !challenge.isValid(now)) {
+        if (!challenge.getUserId().equals(account.getIdentityId()) || !challenge.isValid(now)) {
             throw invalidChallenge();
         }
-        user.assertCanAttemptLogin();
-        if (!user.isChangePasswordRequired()) {
+        account.assertCanAttemptLogin();
+        if (!account.isChangePasswordRequired()) {
             throw new UserPasswordChangeNotRequiredException();
         }
 
         PasswordRecoveryRequest request = null;
-        if (!user.isPendingFirstAccess()) {
+        if (!account.isPendingFirstAccess()) {
             request = recoveryRequestRepository
                     .findOpenByUserIdAndMethodForUpdate(
-                            user.getId(),
+                            account.getIdentityId(),
                             PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD,
                             now
                     )
@@ -111,16 +118,16 @@ public class SessionService {
                     ));
         }
 
-        user.changePassword(passwordHasher.hash(newPassword), now);
+        account.changePassword(passwordHasher.hash(newPassword), now);
         if (request != null) {
             request.resolve(now);
         }
         challenge.markAsUsed(now);
-        credentialRevocationService.revokeAllForUser(user.getId(), now);
+        credentialRevocationService.revokeAllForUser(account.getIdentityId(), now);
 
-        AuthTokens tokens = tokenIssuanceService.issue(user, now);
-        user.recordSuccessfulLogin(now);
-        userRepository.save(user);
+        AuthTokens tokens = tokenIssuanceService.issue(account, now);
+        account.recordSuccessfulLogin(now);
+        accountRepository.save(account);
         if (request != null) {
             recoveryRequestRepository.save(request);
         }

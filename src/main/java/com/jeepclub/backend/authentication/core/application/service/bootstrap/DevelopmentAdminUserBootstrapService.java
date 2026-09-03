@@ -1,9 +1,11 @@
 package com.jeepclub.backend.authentication.core.application.service.bootstrap;
 
-import com.jeepclub.backend.authentication.core.application.exceptions.user.RegistrationConflictException;
-import com.jeepclub.backend.authentication.core.domain.model.User;
+import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
+import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
 import com.jeepclub.backend.shared.bootstrap.AdminBootstrapConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,15 +17,16 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class DevelopmentAdminUserBootstrapService {
 
-    private final UserRepository userRepository;
+    private final IdentityQuery identityQuery;
+    private final AuthenticationAccountProvisioningService provisioningService;
     private final PasswordHasher passwordHasher;
     private final AdminBootstrapConfig adminBootstrapConfig;
     private final Clock clock;
 
     public Long createAdminUserIfMissing() {
-        return userRepository
+        return identityQuery
                 .findByCpf(adminBootstrapConfig.cpf())
-                .map(User::getId)
+                .map(identity -> identity.id())
                 .orElseGet(
                         this::createAdminUserHandlingConcurrency
                 );
@@ -32,10 +35,10 @@ public class DevelopmentAdminUserBootstrapService {
     private Long createAdminUserHandlingConcurrency() {
         try {
             return createAdminUser();
-        } catch (RegistrationConflictException exception) {
-            return userRepository
+        } catch (IdentityConflictException | AuthenticationAccountConflictException exception) {
+            return identityQuery
                     .findByCpf(adminBootstrapConfig.cpf())
-                    .map(User::getId)
+                    .map(identity -> identity.id())
                     .orElseThrow(() -> exception);
         }
     }
@@ -48,20 +51,14 @@ public class DevelopmentAdminUserBootstrapService {
                         adminBootstrapConfig.password()
                 );
 
-        User user = User.create(
-                adminBootstrapConfig.name(),
-                adminBootstrapConfig.birthDate(),
-                adminBootstrapConfig.email(),
-                adminBootstrapConfig.cpf(),
-                adminBootstrapConfig.rg(),
-                passwordHash,
-                adminBootstrapConfig.phoneNumber(),
-                now
+        return provisioningService.provision(
+                new IdentityRegistrationData(
+                        adminBootstrapConfig.name(), adminBootstrapConfig.birthDate(),
+                        adminBootstrapConfig.email(), adminBootstrapConfig.cpf(),
+                        adminBootstrapConfig.rg(), adminBootstrapConfig.phoneNumber(),
+                        null, now
+                ),
+                passwordHash
         );
-
-        User savedUser =
-                userRepository.create(user);
-
-        return savedUser.getId();
     }
 }
