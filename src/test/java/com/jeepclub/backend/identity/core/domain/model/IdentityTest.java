@@ -1,6 +1,6 @@
 package com.jeepclub.backend.identity.core.domain.model;
 
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
 import com.jeepclub.backend.identity.core.domain.exception.IdentityAlreadyDisabledException;
 import com.jeepclub.backend.identity.core.domain.exception.IdentityNotDisabledException;
 import org.junit.jupiter.api.Test;

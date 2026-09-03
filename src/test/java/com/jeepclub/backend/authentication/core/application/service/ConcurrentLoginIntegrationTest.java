@@ -1,17 +1,13 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
 import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
+import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
 import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,6 +39,8 @@ class ConcurrentLoginIntegrationTest {
     @Autowired
     private PasswordHasher passwordHasher;
     @Autowired
+    private AuthenticationAccountProvisioningService provisioningService;
+    @Autowired
     private IdentityJpaRepository identityRepository;
     @Autowired
     private AuthenticationAccountJpaRepository accountRepository;
@@ -55,20 +53,12 @@ class ConcurrentLoginIntegrationTest {
     void setUp() {
         clearAuthenticationData();
         Instant createdAt = Instant.parse("2026-06-22T12:00:00Z");
-        IdentityEntity identity = new IdentityEntity();
-        identity.setName("Concurrent User");
-        identity.setCpf(CPF);
-        identity.setStatus(IdentityStatus.ACTIVE);
-        identity.setCreatedAt(createdAt);
-        identity = identityRepository.saveAndFlush(identity);
-        AuthenticationAccountEntity account = new AuthenticationAccountEntity();
-        account.setIdentityId(identity.getId());
-        account.setPasswordHash(passwordHasher.hash(PASSWORD));
-        account.setAccessStatus(AuthenticationAccessStatus.ENABLED);
-        account.setAuthenticationStatus(AuthenticationStatus.ENABLED);
-        account.setCredentialStatus(CredentialStatus.PERMANENT);
-        account.setCreatedAt(createdAt);
-        accountRepository.saveAndFlush(account);
+        provisioningService.provision(
+                new IdentityRegistrationData(
+                        "Concurrent User", null, null, CPF, null, null, null, createdAt
+                ),
+                passwordHasher.hash(PASSWORD)
+        );
     }
 
     @AfterEach

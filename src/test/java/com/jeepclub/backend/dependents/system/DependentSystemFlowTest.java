@@ -1,6 +1,6 @@
 package com.jeepclub.backend.dependents.system;
 
-import com.jeepclub.backend.identity.core.domain.enums.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
 import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;

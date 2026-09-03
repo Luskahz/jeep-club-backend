@@ -9,6 +9,9 @@ import com.jeepclub.backend.authentication.infra.persistence.entity.Authenticati
 import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.AuthenticationAccountMapper;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceException;
+import com.jeepclub.backend.identity.api.module.IdentityStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
@@ -38,25 +41,34 @@ class AuthenticationAccountRepositoryAdapterTest {
     private EntityManager entityManager;
 
     @Test
-    void preservesIdentityIdAsAssignedPrimaryKey() {
+    void persistsAccountForExistingIdentityUsingTheSameSharedPrimaryKey() {
+        IdentityEntity identity = persistIdentity();
         AuthenticationAccount created = repository.create(
-                AuthenticationAccount.create(42L, "password-hash", CREATED_AT)
+                AuthenticationAccount.create(identity.getId(), "password-hash", CREATED_AT)
         );
 
-        assertThat(created.getIdentityId()).isEqualTo(42L);
-        assertThat(repository.existsByIdentityId(42L)).isTrue();
-        assertThat(repository.findByIdentityId(42L))
+        assertThat(created.getIdentityId()).isEqualTo(identity.getId());
+        assertThat(repository.existsByIdentityId(identity.getId())).isTrue();
+        assertThat(repository.findByIdentityId(identity.getId()))
                 .hasValueSatisfying(found -> assertThat(found.getPasswordHash())
                         .isEqualTo("password-hash"));
-        assertThat(repository.findByIdentityIdForUpdate(42L))
+        assertThat(repository.findByIdentityIdForUpdate(identity.getId()))
                 .hasValueSatisfying(found -> assertThat(found.getIdentityId())
-                        .isEqualTo(42L));
+                        .isEqualTo(identity.getId()));
+
+        AuthenticationAccountEntity entity = entityManager.find(
+                AuthenticationAccountEntity.class,
+                identity.getId()
+        );
+        assertThat(entity.getIdentityId()).isEqualTo(identity.getId());
+        assertThat(entity.getIdentity().getId()).isEqualTo(identity.getId());
     }
 
     @Test
     void persistsAuthenticationAccessIndependently() {
+        IdentityEntity identity = persistIdentity();
         AuthenticationAccount account = repository.create(
-                AuthenticationAccount.create(42L, "password-hash", CREATED_AT)
+                AuthenticationAccount.create(identity.getId(), "password-hash", CREATED_AT)
         );
         account.disableAccess(CREATED_AT.plusSeconds(60));
 
@@ -64,7 +76,7 @@ class AuthenticationAccountRepositoryAdapterTest {
         entityManager.flush();
         entityManager.clear();
 
-        assertThat(repository.findByIdentityId(42L))
+        assertThat(repository.findByIdentityId(identity.getId()))
                 .hasValueSatisfying(found -> {
                     assertThat(found.getAccessStatus())
                             .isEqualTo(AuthenticationAccessStatus.DISABLED);
@@ -75,23 +87,61 @@ class AuthenticationAccountRepositoryAdapterTest {
 
     @Test
     void createDoesNotOverwriteExistingAccountWithSameIdentityId() {
+        IdentityEntity identity = persistIdentity();
         repository.create(
-                AuthenticationAccount.create(42L, "original-hash", CREATED_AT)
+                AuthenticationAccount.create(identity.getId(), "original-hash", CREATED_AT)
         );
 
         assertThatThrownBy(() -> repository.create(
                 AuthenticationAccount.create(
-                        42L,
+                        identity.getId(),
                         "replacement-hash",
                         CREATED_AT.plusSeconds(1)
                 )
         )).isInstanceOf(AuthenticationAccountConflictException.class);
     }
 
+    @Test
+    void rejectsAuthenticationAccountForNonexistentIdentity() {
+        assertThatThrownBy(() -> repository.create(
+                AuthenticationAccount.create(999_999L, "password-hash", CREATED_AT)
+        )).isInstanceOf(PersistenceException.class);
+    }
+
+    @Test
+    void doesNotCascadeIdentityDeletionThroughTheRelationship() {
+        IdentityEntity identity = persistIdentity();
+        repository.create(AuthenticationAccount.create(
+                identity.getId(),
+                "password-hash",
+                CREATED_AT
+        ));
+        entityManager.flush();
+        entityManager.clear();
+
+        IdentityEntity managedIdentity = entityManager.find(IdentityEntity.class, identity.getId());
+        entityManager.remove(managedIdentity);
+
+        assertThatThrownBy(entityManager::flush)
+                .isInstanceOf(PersistenceException.class);
+    }
+
+    private IdentityEntity persistIdentity() {
+        IdentityEntity identity = new IdentityEntity();
+        identity.setName("Persistence Identity");
+        identity.setCpf("52998224725");
+        identity.setEmail("persistence@example.com");
+        identity.setStatus(IdentityStatus.ACTIVE);
+        identity.setCreatedAt(CREATED_AT);
+        entityManager.persist(identity);
+        entityManager.flush();
+        return identity;
+    }
+
     @SpringBootConfiguration
     @EnableAutoConfiguration
     @EnableJpaRepositories(basePackageClasses = AuthenticationAccountJpaRepository.class)
-    @EntityScan(basePackageClasses = AuthenticationAccountEntity.class)
+    @EntityScan(basePackageClasses = {AuthenticationAccountEntity.class, IdentityEntity.class})
     static class TestConfiguration {
     }
 }

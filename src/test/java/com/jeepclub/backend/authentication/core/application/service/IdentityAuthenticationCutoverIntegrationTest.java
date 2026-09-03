@@ -1,6 +1,5 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.api.module.user.UserQuery;
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserField;
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
@@ -15,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +32,6 @@ class IdentityAuthenticationCutoverIntegrationTest {
     @Autowired private AuthenticationAccountProvisioningService provisioningService;
     @Autowired private AuthenticationAccountRepository accountRepository;
     @Autowired private IdentityQuery identityQuery;
-    @Autowired private UserQuery userQuery;
     @Autowired private AdminUserService adminUserService;
 
     @Test
@@ -68,13 +67,39 @@ class IdentityAuthenticationCutoverIntegrationTest {
         );
 
         assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
-        assertThat(userQuery.existsActiveUserById(identityId)).isTrue();
-        assertThat(userQuery.findActiveUserIds()).contains(identityId);
+        assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
+        assertThat(identityQuery.findAdministrativelyActiveIdentityIds()).contains(identityId);
+    }
+
+    @Test
+    void administrativeReadModelKeepsDatabasePaginationSearchSortAndSparseFields() {
+        provision("Read Model Alpha", "12345678901", "alpha-read-model@example.com");
+        provision("Read Model Beta", "12345678902", "beta-read-model@example.com");
+
+        Page<AdminUserResult> page = adminUserService.findAll(
+                new AdminUserFilter(null, null, null, null, null, null,
+                        null, null, null, null, null, null, null, "read model"),
+                EnumSet.of(AdminUserField.ID, AdminUserField.NAME),
+                PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "name"))
+        );
+
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.getContent()).singleElement().satisfies(result -> {
+            assertThat(result.name()).isEqualTo("Read Model Beta");
+            assertThat(result.id()).isNotNull();
+            assertThat(result.email()).isNull();
+            assertThat(result.authenticationStatus()).isNull();
+        });
     }
 
     private Long provision(String cpf, String email) {
+        return provision("Cutover User", cpf, email);
+    }
+
+    private Long provision(String name, String cpf, String email) {
         return provisioningService.provision(
-                new IdentityRegistrationData("Cutover User", null, email, cpf,
+                new IdentityRegistrationData(name, null, email, cpf,
                         null, "5511999999999", null,
                         Instant.parse("2026-08-01T12:00:00Z")),
                 "hash"
