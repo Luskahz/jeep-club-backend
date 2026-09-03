@@ -15,6 +15,7 @@ import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryReq
 import com.jeepclub.backend.authentication.core.domain.model.User;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import java.util.List;
 public class AdminPasswordRecoveryService {
 
     private final UserRepository userRepository;
+    private final IdentityQuery identityQuery;
     private final PasswordRecoveryRequestRepository requestRepository;
     private final PasswordRecoveryRequestManager requestManager;
     private final TemporaryPasswordIssuer passwordIssuer;
@@ -47,7 +49,7 @@ public class AdminPasswordRecoveryService {
 
     @Transactional(readOnly = true)
     public List<AdminPasswordRecoveryRequestResult> findByUserId(Long userId) {
-        if (!userRepository.existsById(userId)) {
+        if (!identityQuery.existsById(userId)) {
             throw new UserIdNotFoundException(userId);
         }
         return AdminPasswordRecoveryRequestResult.from(requestRepository.findByUserId(userId));

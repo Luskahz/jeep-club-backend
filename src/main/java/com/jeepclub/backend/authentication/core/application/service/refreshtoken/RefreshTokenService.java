@@ -77,7 +77,7 @@ public class RefreshTokenService {
         refreshTokenRepository.save(existingToken);
 
         IssuedAccessToken issuedAccessToken =
-                jwtService.generateAccessToken(user, session);
+                jwtService.generateAccessToken(user.getId(), session);
 
         long expiresInSeconds = Math.max(
                 Duration.between(

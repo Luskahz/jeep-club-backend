@@ -35,7 +35,7 @@ public class TokenIssuanceService {
 
         IssuedRefreshToken refreshToken = refreshTokenIssuanceService.issue(session, now);
 
-        IssuedAccessToken accessToken = jwtService.generateAccessToken(user, session);
+        IssuedAccessToken accessToken = jwtService.generateAccessToken(user.getId(), session);
         long expiresInSeconds = Math.max(
                 Duration.between(now, accessToken.expiresAt()).getSeconds(),
                 0

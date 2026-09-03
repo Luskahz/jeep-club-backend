@@ -55,3 +55,15 @@ administrativas ainda dependem de `authentication_users`; isso criaria uma
 fonte funcional incompleta ou exigiria dual write. A ativacao deve ocorrer no
 mesmo cutover que mover essas leituras para `identity_users` e
 `authentication_accounts`.
+
+## Identificador no JWT e consultas auxiliares
+
+O JWT usa somente o identificador estavel como `subject`. `JwtService` recebe o
+`identityId` escalar e nao depende mais do agregado legado `User`; session ID,
+issuer, expiracao e formato do token permanecem inalterados.
+
+As validacoes de existencia usadas pelas consultas administrativas de sessions,
+refresh tokens e password recovery tambem passam pela API `IdentityQuery`.
+Durante o estado transitorio, seu adapter legado ainda consulta
+`authentication_users`, preservando o comportamento ate a troca da fonte de
+persistencia.
