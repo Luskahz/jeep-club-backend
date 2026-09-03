@@ -44,6 +44,14 @@ unica enquanto login, cadastro, recuperacao, administracao e bootstrap do root
 nao forem migrados conjuntamente.
 
 Esse estado evita dual write e permite validar o novo modelo antes da troca. A
-proxima etapa e introduzir os casos de uso transacionais que criam `Identity` e
-`AuthenticationAccount` e, depois, mover as leituras de autenticacao para a
-nova conta.
+criacao coordenada ja esta disponivel em
+`AuthenticationAccountProvisioningService`: ela cria primeiro a identidade e
+usa o ID retornado como chave da conta dentro da mesma transacao. Se a conta nao
+puder ser criada, a identidade tambem sofre rollback.
+
+O coordenador permanece dormente. Bootstrap, cadastro HTTP e memberships nao
+podem ser migrados isoladamente enquanto login, recuperacao e consultas
+administrativas ainda dependem de `authentication_users`; isso criaria uma
+fonte funcional incompleta ou exigiria dual write. A ativacao deve ocorrer no
+mesmo cutover que mover essas leituras para `identity_users` e
+`authentication_accounts`.

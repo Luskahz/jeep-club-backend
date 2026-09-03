@@ -68,3 +68,16 @@ duplicada. Tanto `identity_users` quanto `authentication_accounts` permanecem
 dormentes no runtime atual. O proximo cutover deve criar primeiro a identidade,
 reutilizar o ID na conta de autenticacao e somente entao substituir o adapter
 legado.
+
+## Criacao coordenada
+
+`IdentityRegistration` e a API de escrita minima exposta pelo modulo. Ela cria
+e normaliza a identidade dentro do proprio dominio e devolve somente o ID
+gerado.
+
+`AuthenticationAccountProvisioningService` coordena essa operacao com a criacao
+da conta de autenticacao em uma unica transacao Spring. Uma falha na segunda
+escrita desfaz a identidade, evitando registros parciais. O coordenador ainda
+nao esta conectado aos fluxos HTTP, de memberships ou de bootstrap porque eles
+continuam lendo `authentication_users`; ativa-lo isoladamente tornaria o novo
+usuario invisivel ao runtime legado.

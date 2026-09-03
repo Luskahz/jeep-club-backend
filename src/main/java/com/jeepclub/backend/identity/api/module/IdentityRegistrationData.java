@@ -1,0 +1,16 @@
+package com.jeepclub.backend.identity.api.module;
+
+import java.time.Instant;
+import java.time.LocalDate;
+
+public record IdentityRegistrationData(
+        String name,
+        LocalDate birthDate,
+        String email,
+        String cpf,
+        String rg,
+        String phoneNumber,
+        String profilePhotoUrl,
+        Instant now
+) {
+}
