@@ -5,7 +5,7 @@ import com.jeepclub.backend.authentication.core.application.exceptions.account.A
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.identity.api.module.IdentityQuery;
 import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
-import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
+import com.jeepclub.backend.identity.api.module.exception.IdentityRegistrationConflictException;
 import com.jeepclub.backend.shared.bootstrap.AdminBootstrapConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,7 +35,7 @@ public class DevelopmentAdminUserBootstrapService {
     private Long createAdminUserHandlingConcurrency() {
         try {
             return createAdminUser();
-        } catch (IdentityConflictException | AuthenticationAccountConflictException exception) {
+        } catch (IdentityRegistrationConflictException | AuthenticationAccountConflictException exception) {
             return identityQuery
                     .findByCpf(adminBootstrapConfig.cpf())
                     .map(identity -> identity.id())

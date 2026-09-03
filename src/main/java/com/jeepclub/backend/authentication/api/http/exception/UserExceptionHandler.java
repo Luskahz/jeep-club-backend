@@ -26,8 +26,9 @@ import com.jeepclub.backend.authentication.core.domain.exception.account.Authent
 import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountNotDisabledException;
 import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountNotLockedException;
 import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountPasswordChangeRequiredException;
-import com.jeepclub.backend.identity.core.domain.exception.IdentityAlreadyDisabledException;
-import com.jeepclub.backend.identity.core.domain.exception.IdentityNotDisabledException;
+import com.jeepclub.backend.identity.api.module.exception.IdentityAlreadyDisabledException;
+import com.jeepclub.backend.identity.api.module.exception.IdentityNotDisabledException;
+import com.jeepclub.backend.identity.api.module.exception.IdentityNotFoundException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -130,6 +131,15 @@ public class UserExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(UserIdNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleUserIdNotFound(UserIdNotFoundException exception) {
+        return buildErrorResponse(
+                "USER_ID_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(IdentityNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleIdentityNotFound(IdentityNotFoundException exception) {
         return buildErrorResponse(
                 "USER_ID_NOT_FOUND",
                 exception.getMessage(),

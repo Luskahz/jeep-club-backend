@@ -1,4 +1,4 @@
-package com.jeepclub.backend.identity.core.application.exception;
+package com.jeepclub.backend.identity.api.module.exception;
 
 public class IdentityNotFoundException extends RuntimeException {
 

@@ -10,7 +10,7 @@ import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
-import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
+import com.jeepclub.backend.identity.api.module.exception.IdentityRegistrationConflictException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -97,7 +97,7 @@ public class UserService {
                     ),
                     passwordHash
             );
-        } catch (IdentityConflictException | AuthenticationAccountConflictException exception) {
+        } catch (IdentityRegistrationConflictException | AuthenticationAccountConflictException exception) {
             throw new RegistrationConflictException();
         }
     }

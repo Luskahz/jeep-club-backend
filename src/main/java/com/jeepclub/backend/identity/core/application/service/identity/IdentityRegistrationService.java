@@ -2,6 +2,8 @@ package com.jeepclub.backend.identity.core.application.service.identity;
 
 import com.jeepclub.backend.identity.api.module.IdentityRegistration;
 import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
+import com.jeepclub.backend.identity.api.module.exception.IdentityRegistrationConflictException;
+import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
 import com.jeepclub.backend.identity.core.domain.model.Identity;
 import com.jeepclub.backend.identity.core.repository.IdentityRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,10 @@ class IdentityRegistrationService implements IdentityRegistration {
                 data.now()
         );
 
-        return identityRepository.create(identity).getId();
+        try {
+            return identityRepository.create(identity).getId();
+        } catch (IdentityConflictException exception) {
+            throw new IdentityRegistrationConflictException(exception);
+        }
     }
 }
