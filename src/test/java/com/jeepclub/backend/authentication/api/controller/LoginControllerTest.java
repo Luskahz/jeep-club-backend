@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
@@ -79,24 +81,25 @@ class LoginControllerTest {
         SecurityContextHolder.clearContext();
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"52998224725", "529.982.247-25"})
     @DisplayName("Sucesso: login com credenciais definitivas retorna 200 e tokens")
-    void shouldReturnTokensOnSuccessfulLogin() throws Exception {
+    void shouldReturnTokensOnSuccessfulLogin(String cpf) throws Exception {
         AuthTokens tokens = new AuthTokens(
                 "refresh-xyz",
                 "access-xyz",
                 3600L
         );
 
-        when(sessionService.login("52998224725", "senha123"))
+        when(sessionService.login(cpf, "senha123"))
                 .thenReturn(new AuthenticatedLoginResult(tokens));
 
         String payload = """
                 {
-                    "cpf": "52998224725",
+                    "cpf": "%s",
                     "senha": "senha123"
                 }
-                """;
+                """.formatted(cpf);
 
         mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,6 +109,23 @@ class LoginControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("access-xyz"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-xyz"))
                 .andExpect(jsonPath("$.expiresInSeconds").value(3600));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"529 982 247 25", "529-982-247-25", "ABC52998224725"})
+    void shouldRejectCpfFormatsOutsideTheHttpContract(String cpf) throws Exception {
+        String payload = """
+                {
+                    "cpf": "%s",
+                    "senha": "senha123"
+                }
+                """.formatted(cpf);
+
+        mockMvc.perform(post("/authentication/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
