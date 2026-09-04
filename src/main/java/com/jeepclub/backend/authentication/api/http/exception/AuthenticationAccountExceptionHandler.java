@@ -57,7 +57,7 @@ public class AuthenticationAccountExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(AuthenticationAccountNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(AuthenticationAccountNotFoundException exception) {
-        return buildErrorResponse("USER_ID_NOT_FOUND", exception.getMessage(), HttpStatus.NOT_FOUND);
+        return buildErrorResponse("AUTHENTICATION_ACCOUNT_NOT_FOUND", exception.getMessage(), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(AuthenticationAccountAlreadyDisabledException.class)

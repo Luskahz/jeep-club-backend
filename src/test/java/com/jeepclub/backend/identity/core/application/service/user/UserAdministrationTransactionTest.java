@@ -1,6 +1,7 @@
 package com.jeepclub.backend.identity.core.application.service.user;
 
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
@@ -12,6 +13,7 @@ import com.jeepclub.backend.authentication.core.repository.AuthenticationAccount
 import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
+import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.identity.api.module.UserAdministration;
 import com.jeepclub.backend.identity.api.module.UserQuery;
 import com.jeepclub.backend.identity.api.module.UserRegistration;
@@ -46,6 +48,7 @@ class UserAdministrationTransactionTest {
     @Autowired private UserAdministration identityAdministration;
     @Autowired private UserQuery identityQuery;
     @Autowired private AuthenticationAccountRepository accountRepository;
+    @Autowired private AuthenticationAccountJpaRepository accountJpaRepository;
     @Autowired private SessionRepository sessionRepository;
     @Autowired private RefreshTokenRepository refreshTokenRepository;
     @Autowired private PasswordChangeChallengeRepository challengeRepository;
@@ -134,6 +137,20 @@ class UserAdministrationTransactionTest {
         assertThat(reloaded.getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
         assertThat(reloaded.getPasswordHash()).isEqualTo(preservedHash);
         assertThat(reloaded.getFailedLoginAttempts()).isEqualTo(5);
+    }
+
+    @Test
+    void missingAuthenticationAccountRollsBackUserDisableAsInvalidCompositeState() {
+        Long userId = provision("13579246828", "missing-account@example.com");
+        accountJpaRepository.deleteById(userId);
+        accountJpaRepository.flush();
+
+        assertThatThrownBy(() -> identityAdministration.disable(userId, CHANGED_AT))
+                .isInstanceOf(AuthenticationAccountNotFoundException.class)
+                .hasMessageContaining("Authentication account not found");
+
+        assertThat(identityQuery.isAdministrativelyActive(userId)).isTrue();
+        assertThat(accountRepository.findByIdentityId(userId)).isEmpty();
     }
 
     private Long provision(String cpf, String email) {

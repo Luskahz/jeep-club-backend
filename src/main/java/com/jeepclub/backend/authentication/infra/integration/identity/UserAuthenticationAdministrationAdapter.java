@@ -1,9 +1,9 @@
 package com.jeepclub.backend.authentication.infra.integration.identity;
 
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.identity.api.module.spi.UserAuthenticationAdministrationPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -35,6 +35,6 @@ public class UserAuthenticationAdministrationAdapter
 
     private AuthenticationAccount findForUpdate(Long identityId) {
         return accountRepository.findByIdentityIdForUpdate(identityId)
-                .orElseThrow(() -> new UserNotFoundException(identityId));
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException(identityId));
     }
 }

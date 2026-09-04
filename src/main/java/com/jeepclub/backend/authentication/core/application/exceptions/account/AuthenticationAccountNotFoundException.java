@@ -1,6 +1,6 @@
 package com.jeepclub.backend.authentication.core.application.exceptions.account;
 
-public class AuthenticationAccountNotFoundException extends RuntimeException {
+public class AuthenticationAccountNotFoundException extends IllegalStateException {
 
     public AuthenticationAccountNotFoundException(String message) {
         super(message);
