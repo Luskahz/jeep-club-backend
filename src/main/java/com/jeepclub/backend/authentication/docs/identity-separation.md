@@ -1,47 +1,47 @@
-# Separacao entre identidade e autenticacao
+# Separação entre Identity, Authentication e Authorization
 
-`AuthenticationAccount` representa o acesso e a seguranca de uma identidade.
-Ela armazena somente `identityId`, hash, estado da credencial, bloqueio por
-tentativas, habilitacao administrativa do acesso e timestamps de autenticacao.
+O bounded context `identity` contém o agregado cadastral `User`.
+`AuthenticationAccount` representa exclusivamente o acesso e a segurança desse
+usuário: `identityId`, hash, estado da credencial, bloqueio por tentativas,
+habilitação administrativa do acesso e timestamps de autenticação.
 
-Os estados permanecem independentes:
+Os estados são independentes:
 
-- `IdentityStatus` define atividade administrativa e elegibilidade de negocio;
-- `AuthenticationAccessStatus` permite ou revoga acesso administrativamente;
-- `AuthenticationStatus` representa bloqueio automatico;
-- `CredentialStatus` representa senha permanente, troca obrigatoria ou primeiro acesso.
+- `UserStatus`: atividade administrativa e elegibilidade de negócio;
+- `AuthenticationAccessStatus`: acesso administrativamente habilitado;
+- `AuthenticationStatus`: bloqueio automático;
+- `CredentialStatus`: senha permanente, troca obrigatória ou primeiro acesso.
 
-Desativar ou reativar um usuario pela administracao altera identidade e acesso
-de autenticacao na mesma transacao. `IdentityAdministration` e o owner do caso
-de uso composto e chama `IdentityAuthenticationAdministrationPort`; o adapter
-fica em `authentication.infra.integration.identity`. A ordem de lock e sempre
-Identity antes de AuthenticationAccount. No disable, o adapter tambem revoga
-sessions, refresh tokens e challenges. Reativar nao remove bloqueio automatico,
-nao torna permanente uma credencial temporaria e nao recria tokens.
+Identity coordena registro e disable/enable por portas consumer-owned. As
+implementações em `authentication.infra.integration.identity` provisionam a
+conta, emitem tokens ou aplicam os efeitos de lifecycle. No disable são
+revogados sessions, refresh tokens e challenges; no enable não são alterados
+lock, tentativas, senha nem `CredentialStatus`. A ordem de lock é sempre User e
+depois AuthenticationAccount, dentro da mesma transação.
 
-`authentication_accounts.identity_id` e uma chave primaria atribuida com o ID
-de `identity_users` e tambem uma chave estrangeira para essa tabela. A
-infraestrutura usa uma associacao unidirecional lazy com `@OneToOne`, `@MapsId`
-e sem cascade de remocao. Nao existe ID independente. O dominio continua usando
-somente `Long identityId`. O schema e gerado pelo JPA/Hibernate e nenhuma
-migration foi adicionada nesta etapa.
+`authentication_accounts.identity_id` é PK e FK para `identity_users.id`. A
+infraestrutura usa associação unidirecional lazy com `@OneToOne`, `@MapsId`,
+sem cascade de remoção e sem `orphanRemoval`. O domínio Authentication armazena
+somente `Long identityId`; `UserEntity` é usado neste módulo apenas para mapear
+essa associação física.
 
-Login, cadastro, recuperacao de senha, refresh, bootstrap, membership e
-administracao usam as duas novas fontes. A antiga tabela unificada
-`authentication_users` foi removida; nao existe dual write.
+## Superfícies HTTP
 
-JWT e sessions continuam usando o identificador estavel como `userId` no
-contrato externo. `/me` e as consultas cadastrais leem `IdentityQuery`, sem
-replicar dados pessoais dentro de autenticacao.
+- `/identity/me`: dados cadastrais e estado administrativo do User;
+- `/authentication/me`: identificadores e validade da sessão atual;
+- `/authorization/me`: `userId` e authorities correntes.
 
-O antigo contrato genérico de consulta de usuário foi removido. Dados pessoais,
-existência e atividade administrativa são consultados diretamente em
-`IdentityQuery`. Não foi criado
-um `AuthenticationQuery` especulativo; esse contrato so deve existir quando
-houver um consumidor real de informacoes pertencentes a autenticacao.
+Não existe endpoint agregador `/me`. Se necessário no futuro, ele deverá ficar
+em uma camada de composição/BFF, fora dos três bounded contexts.
 
-`AdminUserJpaQueryRepository` e explicitamente um read model composto. Ele
-parte de `AuthenticationAccountEntity` e navega pela associacao formal ate
-Identity em um unico join, mantendo paginação, filtros, busca, ordenacao e
-sparse field selection no banco e sem N+1. Essa leitura nao transfere ownership
-de dados cadastrais para Authentication.
+O registro público é `POST /identity/register`. Identity cria o User e delega
+hash, criação da AuthenticationAccount, tokens e login inicial à porta de
+Authentication. Membership e o bootstrap de desenvolvimento reutilizam esse
+mesmo fluxo. Os endpoints legados `/authentication/register` e
+`/authentication/admin/users/**` não existem mais.
+
+Authentication consulta `identity.api.module.UserQuery` somente para resolver
+CPF, validar existência/atividade e obter dados necessários em autenticação ou
+recuperação. Não acessa repository, service ou domínio interno de Identity.
+Identity, por sua vez, não acessa AuthenticationAccountRepository,
+PasswordHasher, Session ou RefreshToken diretamente.

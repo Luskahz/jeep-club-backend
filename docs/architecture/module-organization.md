@@ -1,8 +1,8 @@
 # Padrão de organização dos módulos
 
-Este documento registra o padrão adotado a partir dos módulos `authentication`
-e `billing`. A organização é por recurso de domínio, sem divisão por caso de
-uso.
+Este documento registra o padrão adotado a partir dos módulos `identity`,
+`authentication` e `billing`. A organização é por recurso de domínio, sem
+divisão por caso de uso.
 
 ## Estrutura base
 
@@ -74,6 +74,18 @@ uso.
 - Helpers compartilhados por services normal e administrativo ficam em
   `service.internal`; rotinas de inicialização ficam em `service.bootstrap`.
 
+### Identity, Authentication e Authorization
+
+- `identity` contém o agregado `User`, seus dados cadastrais, estado
+  administrativo, registro e lifecycle;
+- `authentication` contém `AuthenticationAccount`, credenciais, login, lock,
+  sessões, refresh tokens e recuperação de senha;
+- `authorization` contém roles, permissions, vínculos e authorities.
+
+As superfícies atuais são `/identity/me`, `/authentication/me` e
+`/authorization/me`. Um eventual `/me` agregado deverá ser criado numa camada
+de composição/BFF, não em um desses bounded contexts.
+
 ## Preservação do contrato HTTP
 
 Mover, renomear ou dividir classes internas não autoriza alterar:
@@ -86,7 +98,8 @@ Mover, renomear ou dividir classes internas não autoriza alterar:
 - códigos de erro e regras de autorização observáveis.
 
 Qualquer melhoria que modifique um desses itens deve ser tratada separadamente
-como evolução versionada da API.
+como evolução versionada da API ou ser explicitamente autorizada no escopo da
+refatoração. O cutover para `/identity/**` é uma dessas evoluções explícitas.
 
 Os casos encontrados durante esta padronização estão registrados em
 [contract-sensitive-findings.md](contract-sensitive-findings.md).
