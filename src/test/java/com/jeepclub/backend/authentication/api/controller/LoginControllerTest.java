@@ -12,7 +12,6 @@ import com.jeepclub.backend.authentication.core.application.result.MeResult;
 import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
 import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -157,12 +156,9 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: consultar sessÃ£o autenticada usa o principal e ordena authorities")
+    @DisplayName("Sucesso: consultar sessão autenticada retorna apenas dados técnicos")
     void shouldReturnAuthenticatedSessionData() throws Exception {
-        Authentication authentication = authenticatedUser(
-                "AUTHENTICATION_USER_READ",
-                "AUTHENTICATION_SESSION_READ"
-        );
+        Authentication authentication = authenticatedUser("AUTHENTICATION_SESSION_READ");
 
         when(sessionService.getCurrentSession(
                 1L,
@@ -170,16 +166,6 @@ class LoginControllerTest {
                 Instant.parse("2026-05-21T20:30:00Z")
         )).thenReturn(new MeResult(
                 1L,
-                "Lucas Alves",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                AccountStatus.ACTIVE,
-                null,
-                null,
                 10L,
                 true,
                 900L
@@ -191,12 +177,11 @@ class LoginControllerTest {
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(1L))
-                .andExpect(jsonPath("$.userName").value("Lucas Alves"))
                 .andExpect(jsonPath("$.sessionId").value(10L))
                 .andExpect(jsonPath("$.sessionActive").value(true))
                 .andExpect(jsonPath("$.expiresInSeconds").value(900L))
-                .andExpect(jsonPath("$.authorities[0]").value("AUTHENTICATION_SESSION_READ"))
-                .andExpect(jsonPath("$.authorities[1]").value("AUTHENTICATION_USER_READ"));
+                .andExpect(jsonPath("$.authorities").doesNotExist())
+                .andExpect(jsonPath("$.userName").doesNotExist());
     }
 
     @Test

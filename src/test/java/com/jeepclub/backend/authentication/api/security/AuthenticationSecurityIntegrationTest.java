@@ -52,6 +52,12 @@ class AuthenticationSecurityIntegrationTest {
         mockMvc.perform(get("/authentication/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        mockMvc.perform(get("/identity/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        mockMvc.perform(get("/authorization/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(post("/authentication/logout"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
@@ -82,6 +88,9 @@ class AuthenticationSecurityIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/identity/register']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/register']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/authentication/refresh']['post']").exists())
+                .andExpect(jsonPath("$['paths']['/authentication/me']['get']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me']['get']").exists())
+                .andExpect(jsonPath("$['paths']['/authorization/me']['get']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/password-recovery/requests']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/disable']['patch']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/admin/users']").doesNotExist());

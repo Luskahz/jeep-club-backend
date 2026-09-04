@@ -21,8 +21,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,8 +28,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping(
@@ -186,7 +182,7 @@ public class SessionController {
     @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
     @Operation(
             summary = "Consultar sessão autenticada",
-            description = "Retorna os dados da sessão do usuário autenticado e suas permissões atuais.",
+            description = "Retorna somente os dados técnicos da sessão do usuário autenticado.",
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -207,8 +203,7 @@ public class SessionController {
             }
     )
     public ResponseEntity<MeResponseDTO> getMe(
-            @AuthenticationPrincipal UserPrincipal principal,
-            Authentication authentication
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         MeResult result = sessionService.getCurrentSession(
                 principal.getUserId(),
@@ -216,14 +211,8 @@ public class SessionController {
                 principal.getAccessTokenExpiresAt()
         );
 
-        List<String> authorities = authentication.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .sorted()
-                .toList();
-
         return ResponseEntity.ok(
-                MeResponseDTO.from(result, authorities)
+                MeResponseDTO.from(result)
         );
     }
 }

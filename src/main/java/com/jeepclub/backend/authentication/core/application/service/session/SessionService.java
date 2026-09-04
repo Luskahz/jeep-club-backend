@@ -14,7 +14,6 @@ import com.jeepclub.backend.authentication.core.application.result.login.LoginRe
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
 import com.jeepclub.backend.authentication.core.application.service.internal.PasswordChangeChallengeIssuer;
 import com.jeepclub.backend.authentication.core.application.service.internal.TokenIssuanceService;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordChangeChallenge;
 import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
@@ -28,7 +27,6 @@ import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryReque
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.UserDetails;
 import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -53,13 +51,13 @@ public class SessionService {
     private final CredentialRevocationService credentialRevocationService;
     private final PasswordChangeChallengeIssuer challengeIssuer;
     private final TokenIssuanceService tokenIssuanceService;
-    private final UserQuery identityQuery;
+    private final UserQuery userQuery;
     private final Clock clock;
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResult login(String cpf, String password) {
         Instant now = Instant.now(clock);
-        UserDetails identity = identityQuery.findByCpf(cpf)
+        var identity = userQuery.findByCpf(cpf)
                 .orElseThrow(InvalidCredentialsException::new);
         AuthenticationAccount account = accountRepository
                 .findByIdentityIdForUpdate(identity.id())
@@ -141,27 +139,13 @@ public class SessionService {
         Objects.requireNonNull(sessionId, "sessionId cannot be null");
         Objects.requireNonNull(accessTokenExpiresAt, "accessTokenExpiresAt cannot be null");
         Instant now = Instant.now(clock);
-        UserDetails identity = identityQuery.findById(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User not found"));
         Session session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new SessionNotFoundException("Session not found"));
-        if (!session.getUserId().equals(identity.id())) {
+        if (!session.getUserId().equals(userId)) {
             throw new SessionUserMismatchException("Session does not belong to this user");
         }
         return new MeResult(
-                identity.id(),
-                identity.name(),
-                identity.birthDate(),
-                identity.email(),
-                identity.cpf(),
-                identity.rg(),
-                identity.phoneNumber(),
-                identity.profilePhotoUrl(),
-                identity.administrativelyActive()
-                        ? AccountStatus.ACTIVE
-                        : AccountStatus.DISABLED,
-                identity.createdAt(),
-                identity.updatedAt(),
+                userId,
                 session.getId(),
                 session.isValid(now),
                 Math.max(Duration.between(now, accessTokenExpiresAt).getSeconds(), 0)

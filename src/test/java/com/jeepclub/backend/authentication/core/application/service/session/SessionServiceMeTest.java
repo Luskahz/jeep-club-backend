@@ -4,7 +4,6 @@ import com.jeepclub.backend.authentication.core.application.result.MeResult;
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
 import com.jeepclub.backend.authentication.core.application.service.internal.PasswordChangeChallengeIssuer;
 import com.jeepclub.backend.authentication.core.application.service.internal.TokenIssuanceService;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
@@ -14,7 +13,6 @@ import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryReque
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.UserDetails;
 import com.jeepclub.backend.identity.api.module.UserQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,7 +22,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,7 +29,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class SessionServiceIdentityTest {
+class SessionServiceMeTest {
 
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -53,21 +50,7 @@ class SessionServiceIdentityTest {
     private SessionService service;
 
     @Test
-    void currentSessionLoadsRegistrationDataThroughIdentityBoundary() {
-        UserDetails identity = new UserDetails(
-                42L,
-                "User Name",
-                LocalDate.of(1990, 1, 1),
-                "identity@example.com",
-                "52998224725",
-                "123456789",
-                "5512999999999",
-                "profile.jpg",
-                true,
-                NOW.minusSeconds(3600),
-                null,
-                NOW.minusSeconds(60)
-        );
+    void currentSessionReturnsOnlyAuthenticationOwnedData() {
         Session session = Session.reconstitute(
                 7L,
                 42L,
@@ -77,7 +60,6 @@ class SessionServiceIdentityTest {
                 SessionStatus.ACTIVE
         );
         when(clock.instant()).thenReturn(NOW);
-        when(identityQuery.findById(42L)).thenReturn(Optional.of(identity));
         when(sessionRepository.findById(7L)).thenReturn(Optional.of(session));
 
         MeResult result = service.getCurrentSession(
@@ -87,11 +69,9 @@ class SessionServiceIdentityTest {
         );
 
         assertThat(result.userId()).isEqualTo(42L);
-        assertThat(result.userName()).isEqualTo("User Name");
-        assertThat(result.accountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(result.sessionId()).isEqualTo(7L);
         assertThat(result.sessionActive()).isTrue();
         assertThat(result.expiresInSeconds()).isEqualTo(900);
-        verifyNoInteractions(accountRepository);
+        verifyNoInteractions(accountRepository, identityQuery);
     }
 }
