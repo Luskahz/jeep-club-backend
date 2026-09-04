@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.service.refreshtoken;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.refreshtoken.RefreshTokenNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.application.result.admin.refresh.AdminRefreshTokenResult;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
@@ -83,7 +83,7 @@ public class AdminRefreshTokenService {
 
     private void ensureUserExists(Long userId) {
         if (!identityQuery.existsById(userId)) {
-            throw new UserIdNotFoundException(userId);
+            throw new AuthenticationAccountNotFoundException(userId);
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.service.session;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.application.result.admin.session.AdminSessionResult;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
@@ -94,7 +94,7 @@ public class AdminSessionService {
 
     private void ensureUserExists(Long userId) {
         if (!identityQuery.existsById(userId)) {
-            throw new UserIdNotFoundException(userId);
+            throw new AuthenticationAccountNotFoundException(userId);
         }
     }
 }

@@ -3,8 +3,8 @@ package com.jeepclub.backend.authentication.core.application.service.security;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountAccessDeniedException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
@@ -40,11 +40,11 @@ public class AccessTokenAuthenticationService {
         }
 
         AuthenticationAccount account = accountRepository.findByIdentityId(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User not found with this cpf."));
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account not found."));
 
         if (!identityQuery.isAdministrativelyActive(userId)
                 || !account.isAuthenticationAllowed()) {
-            throw new UserDisabledException("User inactive.");
+            throw new AuthenticationAccountAccessDeniedException("Authentication access is disabled.");
         }
     }
 }

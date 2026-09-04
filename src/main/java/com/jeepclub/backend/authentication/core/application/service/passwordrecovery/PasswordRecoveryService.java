@@ -2,7 +2,7 @@ package com.jeepclub.backend.authentication.core.application.service.passwordrec
 
 import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.tokenhash.TokenNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.application.result.IssuedPasswordResetToken;
 import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
@@ -77,7 +77,7 @@ public class PasswordRecoveryService {
         Long userId = requestRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User not found with this id."));
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account not found."));
         PasswordRecoveryRequest request = requestRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(() -> new TokenNotFoundException("Token invalid or expired."));
         if (!request.getUserId().equals(account.getIdentityId())

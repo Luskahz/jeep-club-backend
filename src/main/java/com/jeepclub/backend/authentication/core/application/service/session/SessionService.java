@@ -1,12 +1,12 @@
 package com.jeepclub.backend.authentication.core.application.service.session;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
+import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordChangeChallengeInvalidException;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordRecoveryRequestNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
 import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserPasswordChangeNotRequiredException;
 import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.result.MeResult;
 import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
@@ -90,7 +90,7 @@ public class SessionService {
         Long userId = challengeRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(this::invalidChallenge);
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User not found."));
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account not found."));
         PasswordChangeChallenge challenge = challengeRepository
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(this::invalidChallenge);
@@ -100,7 +100,7 @@ public class SessionService {
         }
         account.assertCanAttemptLogin();
         if (!account.isChangePasswordRequired()) {
-            throw new UserPasswordChangeNotRequiredException();
+            throw new PasswordChangeNotRequiredException();
         }
 
         PasswordRecoveryRequest request = null;

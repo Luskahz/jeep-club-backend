@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authentication.core.application.service.passwordrecovery;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.login.PasswordRecoveryRequestNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
+import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.authentication.core.application.result.IssuedPasswordResetToken;
 import com.jeepclub.backend.authentication.core.application.result.IssuedTemporaryPassword;
 import com.jeepclub.backend.authentication.core.application.result.PasswordResetLinkAdminResult;
@@ -50,7 +50,7 @@ public class AdminPasswordRecoveryService {
     @Transactional(readOnly = true)
     public List<AdminPasswordRecoveryRequestResult> findByUserId(Long userId) {
         if (!identityQuery.existsById(userId)) {
-            throw new UserIdNotFoundException(userId);
+            throw new AuthenticationAccountNotFoundException(userId);
         }
         return AdminPasswordRecoveryRequestResult.from(requestRepository.findByUserId(userId));
     }
@@ -67,7 +67,7 @@ public class AdminPasswordRecoveryService {
     public TemporaryPasswordAdminResult generateTemporaryPassword(Long userId) {
         Instant now = Instant.now(clock);
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account target not found."));
         account.assertCanRequestPasswordChange();
         PasswordRecoveryRequest request = requestManager.getOrCreate(account.getIdentityId(), now);
         IssuedTemporaryPassword temporaryPassword = passwordIssuer.issue();
@@ -84,7 +84,7 @@ public class AdminPasswordRecoveryService {
     public PasswordResetLinkAdminResult generateResetLink(Long userId) {
         Instant now = Instant.now(clock);
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
-                .orElseThrow(() -> new UserIdNotFoundException("User target not found."));
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account target not found."));
         account.assertCanRequestPasswordChange();
         PasswordRecoveryRequest request = requestManager.getOrCreate(account.getIdentityId(), now);
         IssuedPasswordResetToken token = tokenIssuer.issue();

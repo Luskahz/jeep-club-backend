@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.authentication.api.http.controller.SessionController;
 import com.jeepclub.backend.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
 import com.jeepclub.backend.authentication.api.http.exception.SessionExceptionHandler;
-import com.jeepclub.backend.authentication.api.http.exception.UserExceptionHandler;
+import com.jeepclub.backend.authentication.api.http.exception.AuthenticationAccountExceptionHandler;
 import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
 import com.jeepclub.backend.authentication.core.application.result.MeResult;
@@ -64,7 +64,7 @@ class LoginControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
                         new GlobalExceptionHandler(),
-                        new UserExceptionHandler(),
+                        new AuthenticationAccountExceptionHandler(),
                         new SessionExceptionHandler(),
                         new PasswordChangeChallengeExceptionHandler()
                 )
