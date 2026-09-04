@@ -1,9 +1,7 @@
-package com.jeepclub.backend.authentication.core.application.service.bootstrap;
+package com.jeepclub.backend.identity.core.application.service.bootstrap;
 
-import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
-import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
-import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.identity.api.module.UserRegistration;
 import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.identity.api.module.exception.UserRegistrationConflictException;
 import com.jeepclub.backend.shared.bootstrap.AdminBootstrapConfig;
@@ -18,8 +16,7 @@ import java.time.Instant;
 public class DevelopmentAdminUserBootstrapService {
 
     private final UserQuery identityQuery;
-    private final AuthenticationAccountProvisioningService provisioningService;
-    private final PasswordHasher passwordHasher;
+    private final UserRegistration userRegistration;
     private final AdminBootstrapConfig adminBootstrapConfig;
     private final Clock clock;
 
@@ -35,7 +32,7 @@ public class DevelopmentAdminUserBootstrapService {
     private Long createAdminUserHandlingConcurrency() {
         try {
             return createAdminUser();
-        } catch (UserRegistrationConflictException | AuthenticationAccountConflictException exception) {
+        } catch (UserRegistrationConflictException exception) {
             return identityQuery
                     .findByCpf(adminBootstrapConfig.cpf())
                     .map(identity -> identity.id())
@@ -46,19 +43,14 @@ public class DevelopmentAdminUserBootstrapService {
     private Long createAdminUser() {
         Instant now = Instant.now(clock);
 
-        String passwordHash =
-                passwordHasher.hash(
-                        adminBootstrapConfig.password()
-                );
-
-        return provisioningService.provision(
+        return userRegistration.createWithPermanentCredential(
                 new UserRegistrationData(
                         adminBootstrapConfig.name(), adminBootstrapConfig.birthDate(),
                         adminBootstrapConfig.email(), adminBootstrapConfig.cpf(),
                         adminBootstrapConfig.rg(), adminBootstrapConfig.phoneNumber(),
                         null, now
                 ),
-                passwordHash
+                adminBootstrapConfig.password()
         );
     }
 }

@@ -49,7 +49,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/authentication/login",
-                                "/authentication/register",
+                                "/identity/register",
                                 "/authentication/refresh",
                                 "/authentication/login/password-change",
 

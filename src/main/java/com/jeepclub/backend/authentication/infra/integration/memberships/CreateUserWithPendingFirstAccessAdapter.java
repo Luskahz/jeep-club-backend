@@ -1,10 +1,9 @@
 package com.jeepclub.backend.authentication.infra.integration.memberships;
 
 import com.jeepclub.backend.authentication.core.application.result.PasswordResetLinkAdminResult;
-import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
-import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RandomPasswordGenerator;
+import com.jeepclub.backend.identity.api.module.UserRegistration;
 import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessLink;
@@ -20,8 +19,7 @@ import java.time.Instant;
 public class CreateUserWithPendingFirstAccessAdapter
         implements CreateUserWithPendingFirstAccessPort {
 
-    private final AuthenticationAccountProvisioningService provisioningService;
-    private final PasswordHasher passwordHasher;
+    private final UserRegistration userRegistration;
     private final RandomPasswordGenerator passwordGenerator;
     private final AdminPasswordRecoveryService adminPasswordRecoveryService;
     private final Clock clock;
@@ -39,7 +37,7 @@ public class CreateUserWithPendingFirstAccessAdapter
                 email,
                 cpf,
                 phoneNumber,
-                passwordHasher.hash(temporaryPassword)
+                temporaryPassword
         );
 
         return new PendingFirstAccessUser(identityId, temporaryPassword);
@@ -58,7 +56,7 @@ public class CreateUserWithPendingFirstAccessAdapter
                 email,
                 cpf,
                 phoneNumber,
-                passwordHasher.hash(internalPassword)
+                internalPassword
         );
 
         PasswordResetLinkAdminResult resetLink =
@@ -72,14 +70,14 @@ public class CreateUserWithPendingFirstAccessAdapter
             String email,
             String cpf,
             String phoneNumber,
-            String passwordHash
+            String rawPassword
     ) {
         Instant now = Instant.now(clock);
-        return provisioningService.provisionPendingFirstAccess(
+        return userRegistration.createPendingFirstAccess(
                 new UserRegistrationData(
                         name, null, email, cpf, null, phoneNumber, null, now
                 ),
-                passwordHash
+                rawPassword
         );
     }
 }

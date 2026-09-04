@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.authentication.api.http.dto.recovery.PasswordRecoveryRequestResponseDTO;
 import com.jeepclub.backend.authentication.api.http.dto.session.LoginResponseDTO;
-import com.jeepclub.backend.authentication.api.http.dto.user.UserRegistrationRequestDTO;
+import com.jeepclub.backend.identity.api.http.dto.user.UserRegistrationRequestDTO;
 import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
 import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
@@ -30,11 +30,11 @@ class AuthenticationDtoContractCharacterizationTest {
     }
 
     @Test
-    void registrationKeepsPublishedBirthDataProperty() throws Exception {
+    void registrationUsesBirthDatePropertyWithoutLegacyAlias() throws Exception {
         String json = """
                 {
                   "name": "Lucas Alves",
-                  "birthData": "2000-05-17",
+                  "birthDate": "2000-05-17",
                   "email": "lucas@example.com",
                   "cpf": "52998224725",
                   "rg": "1234567",
@@ -50,8 +50,8 @@ class AuthenticationDtoContractCharacterizationTest {
 
         assertThat(request.birthDate()).isEqualTo(LocalDate.of(2000, 5, 17));
         JsonNode serialized = objectMapper.readTree(objectMapper.writeValueAsBytes(request));
-        assertThat(serialized.has("birthData")).isTrue();
-        assertThat(serialized.has("birthDate")).isFalse();
+        assertThat(serialized.has("birthDate")).isTrue();
+        assertThat(serialized.has("birthData")).isFalse();
     }
 
     @Test

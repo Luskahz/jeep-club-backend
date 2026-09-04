@@ -126,6 +126,28 @@ class AuthenticationAccountRepositoryAdapterTest {
                 .isInstanceOf(PersistenceException.class);
     }
 
+    @Test
+    void deletingAuthenticationAccountDoesNotDeleteUser() {
+        UserEntity user = persistIdentity();
+        repository.create(AuthenticationAccount.create(
+                user.getId(),
+                "password-hash",
+                CREATED_AT
+        ));
+        entityManager.flush();
+        entityManager.clear();
+
+        AuthenticationAccountEntity account = entityManager.find(
+                AuthenticationAccountEntity.class,
+                user.getId()
+        );
+        entityManager.remove(account);
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(entityManager.find(UserEntity.class, user.getId())).isNotNull();
+    }
+
     private UserEntity persistIdentity() {
         UserEntity identity = new UserEntity();
         identity.setName("Persistence User");

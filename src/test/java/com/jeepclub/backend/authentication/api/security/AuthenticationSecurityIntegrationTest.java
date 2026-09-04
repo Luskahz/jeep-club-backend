@@ -25,7 +25,7 @@ class AuthenticationSecurityIntegrationTest {
     @Test
     void publicAuthenticationRoutesReachTheirControllersAnonymously() throws Exception {
         assertPublicValidationRoute("/authentication/login", "{}");
-        assertPublicValidationRoute("/authentication/register", "{}");
+        assertPublicValidationRoute("/identity/register", "{}");
         assertPublicValidationRoute("/authentication/refresh", "{}");
         assertPublicValidationRoute("/authentication/login/password-change", "{}");
     }
@@ -79,7 +79,8 @@ class AuthenticationSecurityIntegrationTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$['paths']['/authentication/login']['post']").exists())
-                .andExpect(jsonPath("$['paths']['/authentication/register']['post']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/register']['post']").exists())
+                .andExpect(jsonPath("$['paths']['/authentication/register']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/authentication/refresh']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/password-recovery/requests']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/disable']['patch']").exists())

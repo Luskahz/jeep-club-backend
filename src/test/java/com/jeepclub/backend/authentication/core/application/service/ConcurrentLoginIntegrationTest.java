@@ -1,13 +1,12 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
 import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
-import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
-import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
 import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.identity.api.module.UserRegistration;
 import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +36,7 @@ class ConcurrentLoginIntegrationTest {
     @Autowired
     private SessionService sessionService;
     @Autowired
-    private PasswordHasher passwordHasher;
-    @Autowired
-    private AuthenticationAccountProvisioningService provisioningService;
+    private UserRegistration userRegistration;
     @Autowired
     private UserJpaRepository identityRepository;
     @Autowired
@@ -53,11 +50,11 @@ class ConcurrentLoginIntegrationTest {
     void setUp() {
         clearAuthenticationData();
         Instant createdAt = Instant.parse("2026-06-22T12:00:00Z");
-        provisioningService.provision(
+        userRegistration.createWithPermanentCredential(
                 new UserRegistrationData(
                         "Concurrent User", null, null, CPF, null, null, null, createdAt
                 ),
-                passwordHasher.hash(PASSWORD)
+                PASSWORD
         );
     }
 

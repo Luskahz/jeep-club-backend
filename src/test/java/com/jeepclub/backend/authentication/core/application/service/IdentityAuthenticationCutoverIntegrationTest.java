@@ -1,9 +1,9 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.identity.api.module.UserRegistration;
 import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.identity.api.module.UserStatus;
 import com.jeepclub.backend.identity.core.application.query.user.AdminUserField;
@@ -29,7 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional
 class IdentityAuthenticationCutoverIntegrationTest {
 
-    @Autowired private AuthenticationAccountProvisioningService provisioningService;
+    @Autowired private UserRegistration userRegistration;
     @Autowired private AuthenticationAccountRepository accountRepository;
     @Autowired private UserQuery identityQuery;
     @Autowired private AdminUserService adminUserService;
@@ -60,10 +60,10 @@ class IdentityAuthenticationCutoverIntegrationTest {
     @Test
     void pendingFirstAccessIdentityRemainsAdministrativelyActive() {
         Instant now = Instant.parse("2026-08-01T12:00:00Z");
-        Long identityId = provisioningService.provisionPendingFirstAccess(
+        Long identityId = userRegistration.createPendingFirstAccess(
                 new UserRegistrationData("Pending", null, null, "11144477735",
                         null, null, null, now),
-                "hash"
+                "raw-password"
         );
 
         assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
@@ -98,11 +98,11 @@ class IdentityAuthenticationCutoverIntegrationTest {
     }
 
     private Long provision(String name, String cpf, String email) {
-        return provisioningService.provision(
+        return userRegistration.createWithPermanentCredential(
                 new UserRegistrationData(name, null, email, cpf,
                         null, "5511999999999", null,
                         Instant.parse("2026-08-01T12:00:00Z")),
-                "hash"
+                "raw-password"
         );
     }
 }

@@ -1,6 +1,5 @@
 package com.jeepclub.backend.identity.core.application.service.user;
 
-import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
@@ -15,6 +14,7 @@ import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepositor
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.identity.api.module.UserAdministration;
 import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.identity.api.module.UserRegistration;
 import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.identity.api.module.spi.UserAuthenticationAdministrationPort;
 import org.junit.jupiter.api.AfterEach;
@@ -42,7 +42,7 @@ class UserAdministrationTransactionTest {
     private static final Instant CREATED_AT = Instant.parse("2026-08-01T12:00:00Z");
     private static final Instant CHANGED_AT = CREATED_AT.plusSeconds(60);
 
-    @Autowired private AuthenticationAccountProvisioningService provisioningService;
+    @Autowired private UserRegistration userRegistration;
     @Autowired private UserAdministration identityAdministration;
     @Autowired private UserQuery identityQuery;
     @Autowired private AuthenticationAccountRepository accountRepository;
@@ -113,11 +113,12 @@ class UserAdministrationTransactionTest {
 
     @Test
     void disableAndEnablePreserveLockCredentialAndPasswordState() {
-        Long identityId = provisioningService.provisionPendingFirstAccess(
+        Long identityId = userRegistration.createPendingFirstAccess(
                 identityData("52998224725", "preserved-state@example.com"),
-                "preserved-hash"
+                "preserved-password"
         );
         AuthenticationAccount account = account(identityId);
+        String preservedHash = account.getPasswordHash();
         for (int attempt = 0; attempt < 5; attempt++) {
             account.registerFailedLogin();
         }
@@ -131,12 +132,12 @@ class UserAdministrationTransactionTest {
         assertThat(reloaded.getAccessStatus()).isEqualTo(AuthenticationAccessStatus.ENABLED);
         assertThat(reloaded.getAuthenticationStatus()).isEqualTo(AuthenticationStatus.LOCKED);
         assertThat(reloaded.getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
-        assertThat(reloaded.getPasswordHash()).isEqualTo("preserved-hash");
+        assertThat(reloaded.getPasswordHash()).isEqualTo(preservedHash);
         assertThat(reloaded.getFailedLoginAttempts()).isEqualTo(5);
     }
 
     private Long provision(String cpf, String email) {
-        return provisioningService.provision(identityData(cpf, email), "password-hash");
+        return userRegistration.createWithPermanentCredential(identityData(cpf, email), "password-raw");
     }
 
     private UserRegistrationData identityData(String cpf, String email) {
