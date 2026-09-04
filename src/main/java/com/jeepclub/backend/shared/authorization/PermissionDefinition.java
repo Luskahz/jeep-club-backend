@@ -4,34 +4,34 @@ import java.util.Arrays;
 
 public enum PermissionDefinition {
 
-    // AUTHENTICATION / USERS
-    AUTHENTICATION_USER_READ(
-            PermissionCode.AUTHENTICATION_USER_READ,
-            ModuleCode.AUTHENTICATION,
+    // IDENTITY / USERS
+    IDENTITY_USER_READ(
+            PermissionCode.IDENTITY_USER_READ,
+            ModuleCode.IDENTITY,
             "Permite consultar usuários"
     ),
 
-    AUTHENTICATION_USER_CREATE(
-            PermissionCode.AUTHENTICATION_USER_CREATE,
-            ModuleCode.AUTHENTICATION,
+    IDENTITY_USER_CREATE(
+            PermissionCode.IDENTITY_USER_CREATE,
+            ModuleCode.IDENTITY,
             "Permite criar usuários"
     ),
 
-    AUTHENTICATION_USER_UPDATE(
-            PermissionCode.AUTHENTICATION_USER_UPDATE,
-            ModuleCode.AUTHENTICATION,
+    IDENTITY_USER_UPDATE(
+            PermissionCode.IDENTITY_USER_UPDATE,
+            ModuleCode.IDENTITY,
             "Permite atualizar usuários"
     ),
 
-    AUTHENTICATION_USER_DISABLE(
-            PermissionCode.AUTHENTICATION_USER_DISABLE,
-            ModuleCode.AUTHENTICATION,
+    IDENTITY_USER_DISABLE(
+            PermissionCode.IDENTITY_USER_DISABLE,
+            ModuleCode.IDENTITY,
             "Permite desativar usuários"
     ),
 
-    AUTHENTICATION_USER_ENABLE(
-            PermissionCode.AUTHENTICATION_USER_ENABLE,
-            ModuleCode.AUTHENTICATION,
+    IDENTITY_USER_ENABLE(
+            PermissionCode.IDENTITY_USER_ENABLE,
+            ModuleCode.IDENTITY,
             "Permite reativar usuários"
     ),
 

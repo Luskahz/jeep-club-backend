@@ -1,10 +1,10 @@
-package com.jeepclub.backend.authentication.api.http.controller.admin;
+package com.jeepclub.backend.identity.api.http.controller.admin;
 
-import com.jeepclub.backend.authentication.api.http.dto.admin.user.AdminUserFilterDTO;
-import com.jeepclub.backend.authentication.api.http.dto.admin.user.AdminUserResponseDTO;
-import com.jeepclub.backend.authentication.core.application.query.user.AdminUserField;
-import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
-import com.jeepclub.backend.authentication.core.application.service.user.AdminUserService;
+import com.jeepclub.backend.identity.api.http.dto.admin.user.AdminUserFilterDTO;
+import com.jeepclub.backend.identity.api.http.dto.admin.user.AdminUserResponseDTO;
+import com.jeepclub.backend.identity.core.application.query.user.AdminUserField;
+import com.jeepclub.backend.identity.core.application.result.admin.user.AdminUserResult;
+import com.jeepclub.backend.identity.core.application.service.user.AdminUserService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
@@ -33,27 +33,27 @@ import java.util.Set;
 
 @RestController
 @RequestMapping(
-        value = "/authentication/admin/users",
+        value = "/identity/admin/users",
         produces = MediaType.APPLICATION_JSON_VALUE
 )
 @RequiredArgsConstructor
 @Validated
 @Tag(
-        name = "Authentication - Users",
-        description = "Operações públicas e administrativas para cadastro, consulta e gerenciamento de usuários."
+        name = "Identity - Users",
+        description = "Operações administrativas sobre os dados cadastrais dos usuários."
 )
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_READ')")
-    @RequiredPermission("AUTHENTICATION_USER_READ")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_READ')")
+    @RequiredPermission("IDENTITY_USER_READ")
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Listar usuários",
             description = """
-                Retorna os usuários cadastrados no módulo de autenticação.
+                Retorna os usuários cadastrados no módulo de identidade.
 
                 A consulta suporta:
                 - paginação por `page` e `size`;
@@ -116,7 +116,7 @@ public class AdminUserController {
                         Campos que devem ser retornados para cada usuário.
                         Quando omitido, todos os campos disponíveis são considerados.
                         """,
-                    example = "ID,NAME,EMAIL,ACCOUNT_STATUS"
+                    example = "ID,NAME,EMAIL,STATUS"
             )
             @RequestParam(required = false)
             Set<AdminUserField> fields,
@@ -145,8 +145,8 @@ public class AdminUserController {
     }
 
     @GetMapping("/{userId}")
-    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_READ')")
-    @RequiredPermission("AUTHENTICATION_USER_READ")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_READ')")
+    @RequiredPermission("IDENTITY_USER_READ")
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Consultar usuário",
@@ -179,8 +179,8 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{userId}/disable")
-    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_DISABLE')")
-    @RequiredPermission("AUTHENTICATION_USER_DISABLE")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_DISABLE')")
+    @RequiredPermission("IDENTITY_USER_DISABLE")
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Desativar usuário",
@@ -221,8 +221,8 @@ public class AdminUserController {
     }
 
     @PatchMapping("/{userId}/enable")
-    @PreAuthorize("hasAuthority('AUTHENTICATION_USER_ENABLE')")
-    @RequiredPermission("AUTHENTICATION_USER_ENABLE")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_ENABLE')")
+    @RequiredPermission("IDENTITY_USER_ENABLE")
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Reativar usuário",

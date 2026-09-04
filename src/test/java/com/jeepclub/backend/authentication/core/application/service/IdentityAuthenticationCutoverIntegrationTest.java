@@ -1,15 +1,15 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.core.application.query.user.AdminUserField;
-import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
-import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
-import com.jeepclub.backend.authentication.core.application.service.user.AdminUserService;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.identity.api.module.UserQuery;
 import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.identity.core.application.query.user.AdminUserField;
+import com.jeepclub.backend.identity.core.application.query.user.AdminUserFilter;
+import com.jeepclub.backend.identity.core.application.result.admin.user.AdminUserResult;
+import com.jeepclub.backend.identity.core.application.service.user.AdminUserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -40,18 +40,18 @@ class IdentityAuthenticationCutoverIntegrationTest {
 
         AdminUserResult listed = adminUserService.findAll(
                 new AdminUserFilter(identityId, null, null, null, null, null,
-                        null, null, null, null, null, null, null, null),
+                        null, null, null, null, null, null, null),
                 EnumSet.allOf(AdminUserField.class),
                 PageRequest.of(0, 10, Sort.by("updatedAt"))
         ).getContent().get(0);
 
         assertThat(listed.id()).isEqualTo(identityId);
         assertThat(listed.email()).isEqualTo("cutover@example.com");
-        assertThat(listed.accountStatus()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(listed.status()).isEqualTo(UserStatus.ACTIVE);
 
         AdminUserResult disabled = adminUserService.disable(identityId);
 
-        assertThat(disabled.accountStatus()).isEqualTo(AccountStatus.DISABLED);
+        assertThat(disabled.status()).isEqualTo(UserStatus.DISABLED);
         assertThat(identityQuery.isAdministrativelyActive(identityId)).isFalse();
         assertThat(accountRepository.findByIdentityId(identityId).orElseThrow().getAccessStatus())
                 .isEqualTo(AuthenticationAccessStatus.DISABLED);
@@ -78,7 +78,7 @@ class IdentityAuthenticationCutoverIntegrationTest {
 
         Page<AdminUserResult> page = adminUserService.findAll(
                 new AdminUserFilter(null, null, null, null, null, null,
-                        null, null, null, null, null, null, null, "read model"),
+                        null, null, null, null, null, null, "read model"),
                 EnumSet.of(AdminUserField.ID, AdminUserField.NAME),
                 PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "name"))
         );
@@ -89,7 +89,7 @@ class IdentityAuthenticationCutoverIntegrationTest {
             assertThat(result.name()).isEqualTo("Read Model Beta");
             assertThat(result.id()).isNotNull();
             assertThat(result.email()).isNull();
-            assertThat(result.authenticationStatus()).isNull();
+            assertThat(result.status()).isNull();
         });
     }
 

@@ -8,5 +8,6 @@ public enum ModuleCode {
     MEMBERSHIP,
     TOOLS,
     HEALTH,
+    IDENTITY,
     VEHICLES
 }

@@ -55,7 +55,7 @@ class AuthenticationSecurityIntegrationTest {
         mockMvc.perform(post("/authentication/logout"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
-        mockMvc.perform(get("/authentication/admin/users"))
+        mockMvc.perform(get("/identity/admin/users"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/authentication/admin/password-recovery/requests"))
@@ -82,7 +82,8 @@ class AuthenticationSecurityIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/authentication/register']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/refresh']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/password-recovery/requests']['post']").exists())
-                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/disable']['patch']").exists());
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/disable']['patch']").exists())
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users']").doesNotExist());
     }
 
     private void assertPublicValidationRoute(String path, String body) throws Exception {
