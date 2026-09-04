@@ -1,6 +1,7 @@
-package com.jeepclub.backend.authentication.core.application.service;
+package com.jeepclub.backend.identity.core.application.service.user;
 
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
+import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.identity.api.module.UserQuery;
 import com.jeepclub.backend.identity.api.module.UserRegistration;
@@ -9,12 +10,12 @@ import com.jeepclub.backend.identity.api.module.UserStatus;
 import com.jeepclub.backend.identity.core.application.query.user.AdminUserField;
 import com.jeepclub.backend.identity.core.application.query.user.AdminUserFilter;
 import com.jeepclub.backend.identity.core.application.result.admin.user.AdminUserResult;
-import com.jeepclub.backend.identity.core.application.service.user.AdminUserService;
+import com.jeepclub.backend.identity.infra.exception.user.InvalidUserSortFieldException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,62 +24,70 @@ import java.time.Instant;
 import java.util.EnumSet;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class IdentityAuthenticationCutoverIntegrationTest {
+class UserContextBoundaryIntegrationTest {
 
     @Autowired private UserRegistration userRegistration;
     @Autowired private AuthenticationAccountRepository accountRepository;
-    @Autowired private UserQuery identityQuery;
+    @Autowired private UserQuery userQuery;
     @Autowired private AdminUserService adminUserService;
 
     @Test
-    void administrationCombinesBothAggregatesAndDisablesBothAtomically() {
-        Long identityId = provision("39053344705", "cutover@example.com");
+    void administrationReadsUserAndDisablesBothAggregatesAtomically() {
+        Long userId = provision("39053344705", "cutover@example.com");
 
         AdminUserResult listed = adminUserService.findAll(
-                new AdminUserFilter(identityId, null, null, null, null, null,
+                new AdminUserFilter(userId, null, null, null, null, null,
                         null, null, null, null, null, null, null),
                 EnumSet.allOf(AdminUserField.class),
                 PageRequest.of(0, 10, Sort.by("updatedAt"))
         ).getContent().get(0);
 
-        assertThat(listed.id()).isEqualTo(identityId);
+        assertThat(listed.id()).isEqualTo(userId);
         assertThat(listed.email()).isEqualTo("cutover@example.com");
         assertThat(listed.status()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(adminUserService.findById(userId)).isEqualTo(listed);
 
-        AdminUserResult disabled = adminUserService.disable(identityId);
+        AdminUserResult disabled = adminUserService.disable(userId);
 
         assertThat(disabled.status()).isEqualTo(UserStatus.DISABLED);
-        assertThat(identityQuery.isAdministrativelyActive(identityId)).isFalse();
-        assertThat(accountRepository.findByIdentityId(identityId).orElseThrow().getAccessStatus())
+        assertThat(userQuery.isAdministrativelyActive(userId)).isFalse();
+        assertThat(accountRepository.findByIdentityId(userId).orElseThrow().getAccessStatus())
                 .isEqualTo(AuthenticationAccessStatus.DISABLED);
+
+        AdminUserResult enabled = adminUserService.enable(userId);
+        assertThat(enabled.status()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(accountRepository.findByIdentityId(userId).orElseThrow().getAccessStatus())
+                .isEqualTo(AuthenticationAccessStatus.ENABLED);
     }
 
     @Test
-    void pendingFirstAccessIdentityRemainsAdministrativelyActive() {
+    void pendingFirstAccessUserRemainsAdministrativelyActive() {
         Instant now = Instant.parse("2026-08-01T12:00:00Z");
-        Long identityId = userRegistration.createPendingFirstAccess(
+        Long userId = userRegistration.createPendingFirstAccess(
                 new UserRegistrationData("Pending", null, null, "11144477735",
                         null, null, null, now),
                 "raw-password"
         );
 
-        assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
-        assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
-        assertThat(identityQuery.findAdministrativelyActiveUserIds()).contains(identityId);
+        assertThat(userQuery.isAdministrativelyActive(userId)).isTrue();
+        assertThat(userQuery.findAdministrativelyActiveUserIds()).contains(userId);
+        assertThat(accountRepository.findByIdentityId(userId).orElseThrow().getCredentialStatus())
+                .isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
     }
 
     @Test
-    void administrativeReadModelKeepsDatabasePaginationSearchSortAndSparseFields() {
+    void administrativeReadModelKeepsDatabasePaginationFiltersSearchSortAndSparseFields() {
         provision("Read Model Alpha", "12345678901", "alpha-read-model@example.com");
         provision("Read Model Beta", "12345678902", "beta-read-model@example.com");
 
         Page<AdminUserResult> page = adminUserService.findAll(
-                new AdminUserFilter(null, null, null, null, null, null,
-                        null, null, null, null, null, null, "read model"),
+                new AdminUserFilter(null, null, null, "read-model@example.com", null, null,
+                        null, UserStatus.ACTIVE, null, null, null, null, "read model"),
                 EnumSet.of(AdminUserField.ID, AdminUserField.NAME),
                 PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "name"))
         );
@@ -91,6 +100,16 @@ class IdentityAuthenticationCutoverIntegrationTest {
             assertThat(result.email()).isNull();
             assertThat(result.status()).isNull();
         });
+    }
+
+    @Test
+    void rejectsSortFieldsThatDoNotBelongToUser() {
+        assertThatThrownBy(() -> adminUserService.findAll(
+                new AdminUserFilter(null, null, null, null, null, null,
+                        null, null, null, null, null, null, null),
+                EnumSet.allOf(AdminUserField.class),
+                PageRequest.of(0, 10, Sort.by("credentialStatus"))
+        )).isInstanceOf(InvalidUserSortFieldException.class);
     }
 
     private Long provision(String cpf, String email) {

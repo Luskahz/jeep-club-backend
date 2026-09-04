@@ -9,12 +9,12 @@ import com.jeepclub.backend.identity.infra.persistence.sort.UserSortMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Component;
 
 import java.util.Optional;
 import java.util.Set;
 
-@Repository
+@Component
 @RequiredArgsConstructor
 public class AdminUserQueryRepositoryAdapter implements AdminUserQueryRepository {
     private final AdminUserJpaQueryRepository jpaQueryRepository;
