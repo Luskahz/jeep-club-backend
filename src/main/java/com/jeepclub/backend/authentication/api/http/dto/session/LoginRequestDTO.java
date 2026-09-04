@@ -2,6 +2,7 @@ package com.jeepclub.backend.authentication.api.http.dto.session;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.br.CPF;
 
@@ -9,13 +10,18 @@ import org.hibernate.validator.constraints.br.CPF;
 public record LoginRequestDTO(
 
         @Schema(
-                description = "CPF do usuário.",
-                example = "12345678909",
+                description = "CPF do usuário. Aceita somente os 11 dígitos ou o formato com pontuação.",
+                example = "52998224725",
                 minLength = 11,
                 maxLength = 14,
+                pattern = "^(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})$",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @NotBlank(message = "CPF é obrigatório.")
+        @Pattern(
+                regexp = "^(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})$",
+                message = "CPF deve estar no formato 00000000000 ou 000.000.000-00."
+        )
         @CPF(message = "CPF inválido.")
         String cpf,
 

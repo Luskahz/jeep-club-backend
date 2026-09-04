@@ -42,7 +42,9 @@ public class UserRegistrationController {
             description = "Cria o User, provisiona sua autenticação e devolve os tokens iniciais.",
             security = {},
             responses = {
-                    @ApiResponse(responseCode = "201", description = "Usuário registrado e autenticado."),
+                    @ApiResponse(responseCode = "201", description = "Usuário registrado e autenticado.",
+                            content = @Content(schema = @Schema(
+                                    implementation = UserAuthenticationTokenResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Dados inválidos.",
                             content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "409", description = "Dados cadastrais já utilizados.",

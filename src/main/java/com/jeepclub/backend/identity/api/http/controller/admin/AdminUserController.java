@@ -25,7 +25,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.EnumSet;
@@ -37,7 +36,6 @@ import java.util.Set;
         produces = MediaType.APPLICATION_JSON_VALUE
 )
 @RequiredArgsConstructor
-@Validated
 @Tag(
         name = "Identity - Users",
         description = "Operações administrativas sobre os dados cadastrais dos usuários."
@@ -167,6 +165,21 @@ public class AdminUserController {
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Identificador do usuário inválido.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Usuário não autenticado.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "Usuário sem a permissão IDENTITY_USER_READ.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
                     )
             }
     )
@@ -184,7 +197,14 @@ public class AdminUserController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Desativar usuário",
-            description = "Desativa administrativamente um usuário cadastrado.",
+            description = """
+                    Desativa administrativamente o User e o acesso da AuthenticationAccount na
+                    mesma operação. Sessões, refresh tokens e challenges aplicáveis são revogados
+                    ou invalidados.
+
+                    A operação preserva senha, CredentialStatus, lock automático e
+                    failedLoginAttempts.
+                    """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -209,6 +229,21 @@ public class AdminUserController {
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Identificador do usuário inválido.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Usuário não autenticado.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "Usuário sem a permissão IDENTITY_USER_DISABLE.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
                     )
             }
     )
@@ -226,7 +261,13 @@ public class AdminUserController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Reativar usuário",
-            description = "Reativa administrativamente um usuário desativado.",
+            description = """
+                    Reativa administrativamente o User e habilita o acesso da
+                    AuthenticationAccount na mesma operação.
+
+                    A operação não remove lock automático, não zera tentativas de login, não
+                    altera senha ou CredentialStatus e não recria tokens nem sessões.
+                    """,
             responses = {
                     @ApiResponse(
                             responseCode = "200",
@@ -251,6 +292,21 @@ public class AdminUserController {
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
+                    ),
+                    @ApiResponse(
+                            responseCode = "400",
+                            description = "Identificador do usuário inválido.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Usuário não autenticado.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "Usuário sem a permissão IDENTITY_USER_ENABLE.",
+                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
                     )
             }
     )
