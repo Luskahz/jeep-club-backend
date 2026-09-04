@@ -38,7 +38,7 @@ class UserContextBoundaryIntegrationTest {
 
     @Test
     void administrationReadsUserAndDisablesBothAggregatesAtomically() {
-        Long userId = provision("39053344705", "cutover@example.com");
+        Long userId = provision("74185296355", "cutover@example.com");
 
         AdminUserResult listed = adminUserService.findAll(
                 new AdminUserFilter(userId, null, null, null, null, null,
@@ -69,7 +69,7 @@ class UserContextBoundaryIntegrationTest {
     void pendingFirstAccessUserRemainsAdministrativelyActive() {
         Instant now = Instant.parse("2026-08-01T12:00:00Z");
         Long userId = userRegistration.createPendingFirstAccess(
-                new UserRegistrationData("Pending", null, null, "11144477735",
+                new UserRegistrationData("Pending", null, null, "24681357928",
                         null, null, null, now),
                 "raw-password"
         );
@@ -82,8 +82,8 @@ class UserContextBoundaryIntegrationTest {
 
     @Test
     void administrativeReadModelKeepsDatabasePaginationFiltersSearchSortAndSparseFields() {
-        provision("Read Model Alpha", "12345678901", "alpha-read-model@example.com");
-        provision("Read Model Beta", "12345678902", "beta-read-model@example.com");
+        provision("Read Model Alpha", "31415926590", "alpha-read-model@example.com");
+        provision("Read Model Beta", "27182818205", "beta-read-model@example.com");
 
         Page<AdminUserResult> page = adminUserService.findAll(
                 new AdminUserFilter(null, null, null, "read-model@example.com", null, null,
