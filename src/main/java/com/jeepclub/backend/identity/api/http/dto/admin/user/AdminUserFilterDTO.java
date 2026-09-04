@@ -27,7 +27,7 @@ public record AdminUserFilterDTO(
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate birthDate,
 
         @Schema(description = "E-mail ou parte do e-mail do usuário.", example = "lucas@example.com",
-                format = "email", maxLength = 180, nullable = true)
+                maxLength = 180, nullable = true)
         @Size(max = 180) String email,
 
         @Schema(description = "CPF exato. Aceita 11 dígitos ou o formato com pontuação.",

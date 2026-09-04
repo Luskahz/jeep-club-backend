@@ -20,12 +20,10 @@ import java.util.Objects;
 )
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AdminUserResponseDTO(
-        @Schema(description = "Identificador único e estável do usuário.", example = "1",
-                requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "Identificador único e estável do usuário.", example = "1")
         Long id,
 
-        @Schema(description = "Nome do usuário.", example = "Lucas Alves",
-                requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "Nome do usuário.", example = "Lucas Alves")
         String name,
 
         @Schema(description = "Data de nascimento do usuário.", example = "2000-05-17", format = "date",
@@ -37,8 +35,7 @@ public record AdminUserResponseDTO(
         String email,
 
         @Schema(description = "CPF canônico do usuário, contendo 11 dígitos.", example = "52998224725",
-                minLength = 11, maxLength = 11, pattern = "^\\d{11}$",
-                requiredMode = Schema.RequiredMode.REQUIRED)
+                minLength = 11, maxLength = 11, pattern = "^\\d{11}$")
         String cpf,
 
         @Schema(description = "RG canônico do usuário.", example = "123456789", nullable = true)
@@ -48,15 +45,15 @@ public record AdminUserResponseDTO(
         String phoneNumber,
 
         @Schema(description = "URL da foto de perfil do usuário.", example = "https://cdn.example.com/user/1.jpg",
-                format = "uri", nullable = true)
+                nullable = true)
         String profilePhotoUrl,
 
         @Schema(description = "Status administrativo do usuário.", example = "ACTIVE",
-                allowableValues = {"ACTIVE", "DISABLED"}, requiredMode = Schema.RequiredMode.REQUIRED)
+                allowableValues = {"ACTIVE", "DISABLED"})
         UserStatus status,
 
         @Schema(description = "Instante de criação do usuário.", example = "2026-01-01T00:00:00Z",
-                format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
+                format = "date-time")
         Instant createdAt,
 
         @Schema(description = "Instante da desativação administrativa.", example = "2026-06-01T12:00:00Z",
