@@ -1,6 +1,6 @@
 package com.jeepclub.backend.memberships.infra.integration.identity;
 
-import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import com.jeepclub.backend.memberships.core.port.UserExistencePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

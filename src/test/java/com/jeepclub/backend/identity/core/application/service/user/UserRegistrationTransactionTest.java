@@ -1,14 +1,14 @@
 package com.jeepclub.backend.identity.core.application.service.user;
 
-import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
-import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
-import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
-import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.UserQuery;
-import com.jeepclub.backend.identity.api.module.UserRegistration;
-import com.jeepclub.backend.identity.api.module.UserRegistrationData;
-import com.jeepclub.backend.identity.api.module.exception.UserRegistrationConflictException;
-import com.jeepclub.backend.identity.core.repository.UserRepository;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
+import com.jeepclub.backend.iam.authentication.core.application.result.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.session.SessionService;
+import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.iam.identity.api.module.exception.UserRegistrationConflictException;
+import com.jeepclub.backend.iam.identity.core.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

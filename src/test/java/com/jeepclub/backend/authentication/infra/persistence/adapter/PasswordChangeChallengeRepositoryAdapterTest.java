@@ -1,6 +1,7 @@
 package com.jeepclub.backend.authentication.infra.persistence.adapter;
 
-import com.jeepclub.backend.authentication.infra.persistence.jpa.PasswordChangeChallengeJpaRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.adapter.PasswordChangeChallengeRepositoryAdapter;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.PasswordChangeChallengeJpaRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

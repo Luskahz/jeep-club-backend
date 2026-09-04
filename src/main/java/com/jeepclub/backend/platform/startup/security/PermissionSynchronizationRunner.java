@@ -1,6 +1,6 @@
 package com.jeepclub.backend.platform.startup.security;
 
-import com.jeepclub.backend.authorization.core.application.service.bootstrap.PermissionSynchronizationService;
+import com.jeepclub.backend.iam.authorization.core.application.service.bootstrap.PermissionSynchronizationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;

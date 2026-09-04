@@ -1,6 +1,6 @@
 package com.jeepclub.backend.dependents.api.controller;
 
-import com.jeepclub.backend.authentication.core.application.service.security.AccessTokenAuthenticationService;
+import com.jeepclub.backend.iam.authentication.core.application.service.security.AccessTokenAuthenticationService;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;

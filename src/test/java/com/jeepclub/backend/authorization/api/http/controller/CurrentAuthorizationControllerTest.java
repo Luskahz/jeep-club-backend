@@ -1,5 +1,6 @@
 package com.jeepclub.backend.authorization.api.http.controller;
 
+import com.jeepclub.backend.iam.authorization.api.http.controller.CurrentAuthorizationController;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

@@ -1,8 +1,8 @@
 package com.jeepclub.backend.dependents.system;
 
-import com.jeepclub.backend.identity.api.module.UserStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
-import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserStatus;
+import com.jeepclub.backend.iam.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.iam.identity.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;

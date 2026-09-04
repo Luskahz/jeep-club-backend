@@ -1,10 +1,11 @@
 package com.jeepclub.backend.authentication.infra.integration.identity;
 
-import com.jeepclub.backend.authentication.core.application.service.internal.TokenIssuanceService;
-import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
-import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.iam.authentication.core.application.service.internal.TokenIssuanceService;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.CredentialStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount;
+import com.jeepclub.backend.iam.authentication.core.port.PasswordHasher;
+import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.iam.authentication.infra.integration.identity.UserAuthenticationProvisioningAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

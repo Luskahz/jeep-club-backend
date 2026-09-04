@@ -1,8 +1,9 @@
 package com.jeepclub.backend.identity.core.domain.model;
 
-import com.jeepclub.backend.identity.api.module.UserStatus;
-import com.jeepclub.backend.identity.core.domain.exception.UserAlreadyDisabledException;
-import com.jeepclub.backend.identity.core.domain.exception.UserNotDisabledException;
+import com.jeepclub.backend.iam.identity.api.module.UserStatus;
+import com.jeepclub.backend.iam.identity.core.domain.exception.UserAlreadyDisabledException;
+import com.jeepclub.backend.iam.identity.core.domain.exception.UserNotDisabledException;
+import com.jeepclub.backend.iam.identity.core.domain.model.User;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

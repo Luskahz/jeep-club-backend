@@ -1,12 +1,15 @@
 package com.jeepclub.backend.authentication.infra.persistence.jpa;
 
-import com.jeepclub.backend.authentication.infra.persistence.entity.PasswordChangeChallengeEntity;
-import com.jeepclub.backend.authentication.infra.persistence.entity.RefreshTokenEntity;
-import com.jeepclub.backend.authentication.infra.persistence.entity.SessionEntity;
-import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
+import com.jeepclub.backend.iam.authentication.infra.persistence.entity.PasswordChangeChallengeEntity;
+import com.jeepclub.backend.iam.authentication.infra.persistence.entity.RefreshTokenEntity;
+import com.jeepclub.backend.iam.authentication.infra.persistence.entity.SessionEntity;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.SessionStatus;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.PasswordChangeChallengeJpaRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.SessionJpaRepository;
 import jakarta.persistence.EntityManager;
-import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.iam.identity.infra.persistence.entity.UserEntity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

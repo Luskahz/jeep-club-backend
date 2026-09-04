@@ -3,7 +3,7 @@ package com.jeepclub.backend.identity.api.contract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.identity.api.http.dto.user.UserRegistrationRequestDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.user.UserRegistrationRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

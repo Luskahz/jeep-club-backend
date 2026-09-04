@@ -1,10 +1,11 @@
 package com.jeepclub.backend.authentication.core.domain.model;
 
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountBlockedException;
-import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountPasswordChangeRequiredException;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.AuthenticationAccessStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.AuthenticationStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.CredentialStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.exception.account.AuthenticationAccountBlockedException;
+import com.jeepclub.backend.iam.authentication.core.domain.exception.account.AuthenticationAccountPasswordChangeRequiredException;
+import com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;

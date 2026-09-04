@@ -1,7 +1,7 @@
 package com.jeepclub.backend.dependents.infra.integration.identity;
 
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
-import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

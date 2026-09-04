@@ -1,8 +1,9 @@
 package com.jeepclub.backend.authentication.infra.security.jwt;
 
-import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
-import com.jeepclub.backend.authentication.core.domain.model.IssuedAccessToken;
-import com.jeepclub.backend.authentication.core.domain.model.Session;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.SessionStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.model.IssuedAccessToken;
+import com.jeepclub.backend.iam.authentication.core.domain.model.Session;
+import com.jeepclub.backend.iam.authentication.infra.security.jwt.JwtServiceImpl;
 import com.jeepclub.backend.platform.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.platform.security.jwt.JwtProperties;
 import com.jeepclub.backend.platform.security.jwt.JwtSigningKeyProvider;

@@ -1,13 +1,13 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.service.internal.PasswordRecoveryRequestManager;
-import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
-import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.UserDetails;
-import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.authentication.core.application.result.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.internal.PasswordRecoveryRequestManager;
+import com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
+import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserDetails;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

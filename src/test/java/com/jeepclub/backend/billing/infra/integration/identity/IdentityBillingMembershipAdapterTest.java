@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.infra.integration.identity;
 
-import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

@@ -1,17 +1,17 @@
 package com.jeepclub.backend.authentication.infra.persistence;
 
-import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
-import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
-import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.authentication.infra.persistence.adapter.AuthenticationAccountRepositoryAdapter;
-import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
-import com.jeepclub.backend.authentication.infra.persistence.mapper.AuthenticationAccountMapper;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.AuthenticationAccessStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount;
+import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.adapter.AuthenticationAccountRepositoryAdapter;
+import com.jeepclub.backend.iam.authentication.infra.persistence.entity.AuthenticationAccountEntity;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.mapper.AuthenticationAccountMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
-import com.jeepclub.backend.identity.api.module.UserStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.iam.identity.api.module.UserStatus;
+import com.jeepclub.backend.iam.identity.infra.persistence.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;

@@ -1,16 +1,16 @@
 package com.jeepclub.backend.authentication.api.security;
 
-import com.jeepclub.backend.authorization.core.domain.model.Role;
-import com.jeepclub.backend.authorization.core.domain.model.RolePermission;
-import com.jeepclub.backend.authorization.core.domain.model.UserRole;
-import com.jeepclub.backend.authorization.core.repository.PermissionRepository;
-import com.jeepclub.backend.authorization.core.repository.RolePermissionRepository;
-import com.jeepclub.backend.authorization.core.repository.RoleRepository;
-import com.jeepclub.backend.authorization.core.repository.UserRoleRepository;
-import com.jeepclub.backend.identity.api.module.UserAuthenticationTokens;
-import com.jeepclub.backend.identity.api.module.UserQuery;
-import com.jeepclub.backend.identity.api.module.UserRegistration;
-import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.iam.authorization.core.domain.model.Role;
+import com.jeepclub.backend.iam.authorization.core.domain.model.RolePermission;
+import com.jeepclub.backend.iam.authorization.core.domain.model.UserRole;
+import com.jeepclub.backend.iam.authorization.core.repository.PermissionRepository;
+import com.jeepclub.backend.iam.authorization.core.repository.RolePermissionRepository;
+import com.jeepclub.backend.iam.authorization.core.repository.RoleRepository;
+import com.jeepclub.backend.iam.authorization.core.repository.UserRoleRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserAuthenticationTokens;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.shared.authorization.PermissionCode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

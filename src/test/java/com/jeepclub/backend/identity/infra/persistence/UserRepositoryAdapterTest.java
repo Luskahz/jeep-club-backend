@@ -1,12 +1,12 @@
 package com.jeepclub.backend.identity.infra.persistence;
 
-import com.jeepclub.backend.identity.core.application.exception.UserConflictException;
-import com.jeepclub.backend.identity.core.domain.model.User;
-import com.jeepclub.backend.identity.core.repository.UserRepository;
-import com.jeepclub.backend.identity.infra.persistence.adapter.UserRepositoryAdapter;
-import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
-import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
-import com.jeepclub.backend.identity.infra.persistence.mapper.UserMapper;
+import com.jeepclub.backend.iam.identity.core.application.exception.UserConflictException;
+import com.jeepclub.backend.iam.identity.core.domain.model.User;
+import com.jeepclub.backend.iam.identity.core.repository.UserRepository;
+import com.jeepclub.backend.iam.identity.infra.persistence.adapter.UserRepositoryAdapter;
+import com.jeepclub.backend.iam.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.iam.identity.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.iam.identity.infra.persistence.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;

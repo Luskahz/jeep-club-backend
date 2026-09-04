@@ -1,13 +1,13 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
-import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
-import com.jeepclub.backend.identity.api.module.UserRegistrationData;
-import com.jeepclub.backend.identity.api.module.UserRegistration;
-import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.iam.authentication.core.application.service.session.SessionService;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.SessionStatus;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
+import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.SessionJpaRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.iam.identity.infra.persistence.jpa.UserJpaRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

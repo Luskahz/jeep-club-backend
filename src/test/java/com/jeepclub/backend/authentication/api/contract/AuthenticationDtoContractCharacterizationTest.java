@@ -3,12 +3,12 @@ package com.jeepclub.backend.authentication.api.contract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.http.dto.recovery.PasswordRecoveryRequestResponseDTO;
-import com.jeepclub.backend.authentication.api.http.dto.session.LoginResponseDTO;
-import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
+import com.jeepclub.backend.iam.authentication.api.http.dto.recovery.PasswordRecoveryRequestResponseDTO;
+import com.jeepclub.backend.iam.authentication.api.http.dto.session.LoginResponseDTO;
+import com.jeepclub.backend.iam.authentication.core.application.result.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.iam.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

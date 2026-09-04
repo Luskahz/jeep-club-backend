@@ -1,9 +1,9 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
-import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;
-import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
-import com.jeepclub.backend.authentication.core.repository.SessionRepository;
+import com.jeepclub.backend.iam.authentication.core.application.service.internal.CredentialRevocationService;
+import com.jeepclub.backend.iam.authentication.core.repository.PasswordChangeChallengeRepository;
+import com.jeepclub.backend.iam.authentication.core.repository.RefreshTokenRepository;
+import com.jeepclub.backend.iam.authentication.core.repository.SessionRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

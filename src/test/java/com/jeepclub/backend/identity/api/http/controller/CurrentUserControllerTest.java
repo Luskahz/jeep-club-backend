@@ -1,8 +1,9 @@
 package com.jeepclub.backend.identity.api.http.controller;
 
-import com.jeepclub.backend.identity.api.module.UserDetails;
-import com.jeepclub.backend.identity.api.module.UserQuery;
-import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.iam.identity.api.http.controller.CurrentUserController;
+import com.jeepclub.backend.iam.identity.api.module.UserDetails;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import org.junit.jupiter.api.Test;
 
