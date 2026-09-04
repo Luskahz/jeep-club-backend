@@ -14,28 +14,38 @@ import java.time.LocalDate;
 public record UserRegistrationRequestDTO(
         @NotBlank(message = "Nome é obrigatório.")
         @Size(max = 150, message = "Nome deve ter no máximo 150 caracteres.")
+        @Schema(description = "Nome do usuário.", example = "Maria da Silva",
+                requiredMode = Schema.RequiredMode.REQUIRED)
         String name,
 
-        @Schema(description = "Data de nascimento do usuário.", example = "2000-05-17")
+        @Schema(description = "Data de nascimento do usuário.", example = "2000-05-17", nullable = true)
         LocalDate birthDate,
 
         @Email(message = "E-mail inválido.")
         @Size(max = 180, message = "E-mail deve ter no máximo 180 caracteres.")
+        @Schema(description = "E-mail do usuário.", example = "maria@example.com", nullable = true)
         String email,
 
         @NotBlank(message = "CPF é obrigatório.")
         @CPF(message = "CPF inválido.")
-        @Schema(description = "CPF formatado ou contendo apenas dígitos.", example = "529.982.247-25")
+        @Schema(description = "CPF formatado ou contendo apenas 11 dígitos.", example = "529.982.247-25",
+                requiredMode = Schema.RequiredMode.REQUIRED)
         String cpf,
 
         @Size(max = 20, message = "RG deve ter no máximo 20 caracteres.")
+        @Schema(description = "RG, armazenado de forma canônica somente com dígitos.", example = "123456789",
+                nullable = true)
         String rg,
 
         @NotBlank(message = "Senha é obrigatória.")
         @Size(min = 8, max = 100, message = "Senha deve ter entre 8 e 100 caracteres.")
+        @Schema(description = "Senha inicial, com 8 a 100 caracteres.", example = "SenhaForte@123",
+                requiredMode = Schema.RequiredMode.REQUIRED)
         String password,
 
         @Size(max = 20, message = "Telefone deve ter no máximo 20 caracteres.")
+        @Schema(description = "Telefone, armazenado de forma canônica somente com dígitos.",
+                example = "5511999999999", nullable = true)
         String phoneNumber
 ) {
 }
