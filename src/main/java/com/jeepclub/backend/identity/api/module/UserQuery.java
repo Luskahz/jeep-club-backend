@@ -11,15 +11,15 @@ import java.util.Optional;
  */
 public interface UserQuery {
 
-    Optional<UserDetails> findById(Long identityId);
+    Optional<UserDetails> findById(Long userId);
 
     Optional<UserDetails> findByCpf(String cpf);
 
-    boolean existsById(Long identityId);
+    boolean existsById(Long userId);
 
     List<Long> findAdministrativelyActiveUserIds();
 
-    boolean isAdministrativelyActive(Long identityId);
+    boolean isAdministrativelyActive(Long userId);
 
     boolean existsByCpf(String cpf);
 

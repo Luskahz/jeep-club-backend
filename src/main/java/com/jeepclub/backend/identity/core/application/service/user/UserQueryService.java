@@ -19,8 +19,8 @@ class UserQueryService implements UserQuery {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<UserDetails> findById(Long identityId) {
-        return userRepository.findById(identityId).map(UserQueryService::toDetails);
+    public Optional<UserDetails> findById(Long userId) {
+        return userRepository.findById(userId).map(UserQueryService::toDetails);
     }
 
     @Override
@@ -31,8 +31,8 @@ class UserQueryService implements UserQuery {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean existsById(Long identityId) {
-        return userRepository.existsById(identityId);
+    public boolean existsById(Long userId) {
+        return userRepository.existsById(userId);
     }
 
     @Override
@@ -43,8 +43,8 @@ class UserQueryService implements UserQuery {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean isAdministrativelyActive(Long identityId) {
-        return userRepository.existsActiveById(identityId);
+    public boolean isAdministrativelyActive(Long userId) {
+        return userRepository.existsActiveById(userId);
     }
 
     @Override

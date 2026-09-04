@@ -47,17 +47,17 @@ public class User {
     ) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        User identity = new User();
-        identity.name = normalizeName(name);
-        identity.birthDate = birthDate;
-        identity.email = normalizeEmail(email);
-        identity.cpf = normalizeCpf(cpf);
-        identity.rg = normalizeRg(rg);
-        identity.phoneNumber = normalizePhoneNumber(phoneNumber);
-        identity.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
-        identity.status = UserStatus.ACTIVE;
-        identity.createdAt = now;
-        return identity;
+        User user = new User();
+        user.name = normalizeName(name);
+        user.birthDate = birthDate;
+        user.email = normalizeEmail(email);
+        user.cpf = normalizeCpf(cpf);
+        user.rg = normalizeRg(rg);
+        user.phoneNumber = normalizePhoneNumber(phoneNumber);
+        user.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
+        user.status = UserStatus.ACTIVE;
+        user.createdAt = now;
+        return user;
     }
 
     public static User reconstitute(
@@ -79,20 +79,20 @@ public class User {
         Objects.requireNonNull(createdAt, "createdAt cannot be null");
         validateStatusTimestamps(status, createdAt, disabledAt, updatedAt);
 
-        User identity = new User();
-        identity.id = id;
-        identity.name = normalizeName(name);
-        identity.birthDate = birthDate;
-        identity.email = normalizeEmail(email);
-        identity.cpf = normalizeCpf(cpf);
-        identity.rg = normalizeRg(rg);
-        identity.phoneNumber = normalizePhoneNumber(phoneNumber);
-        identity.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
-        identity.status = status;
-        identity.createdAt = createdAt;
-        identity.disabledAt = disabledAt;
-        identity.updatedAt = updatedAt;
-        return identity;
+        User user = new User();
+        user.id = id;
+        user.name = normalizeName(name);
+        user.birthDate = birthDate;
+        user.email = normalizeEmail(email);
+        user.cpf = normalizeCpf(cpf);
+        user.rg = normalizeRg(rg);
+        user.phoneNumber = normalizePhoneNumber(phoneNumber);
+        user.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
+        user.status = status;
+        user.createdAt = createdAt;
+        user.disabledAt = disabledAt;
+        user.updatedAt = updatedAt;
+        return user;
     }
 
     public void disable(Instant now) {

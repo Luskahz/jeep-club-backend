@@ -23,36 +23,36 @@ class UserAdministrationService implements UserAdministration {
 
     @Override
     @Transactional
-    public UserDetails disable(Long identityId, Instant now) {
-        User user = findForUpdate(identityId);
+    public UserDetails disable(Long userId, Instant now) {
+        User user = findForUpdate(userId);
         try {
             user.disable(now);
         } catch (com.jeepclub.backend.identity.core.domain.exception.UserAlreadyDisabledException exception) {
-            throw new UserAlreadyDisabledException(identityId, exception);
+            throw new UserAlreadyDisabledException(userId, exception);
         }
 
         User saved = userRepository.save(user);
-        authenticationAdministrationPort.disableAuthentication(identityId, now);
+        authenticationAdministrationPort.disableAuthentication(userId, now);
         return UserQueryService.toDetails(saved);
     }
 
     @Override
     @Transactional
-    public UserDetails enable(Long identityId, Instant now) {
-        User user = findForUpdate(identityId);
+    public UserDetails enable(Long userId, Instant now) {
+        User user = findForUpdate(userId);
         try {
             user.enable(now);
         } catch (com.jeepclub.backend.identity.core.domain.exception.UserNotDisabledException exception) {
-            throw new UserNotDisabledException(identityId, exception);
+            throw new UserNotDisabledException(userId, exception);
         }
 
         User saved = userRepository.save(user);
-        authenticationAdministrationPort.enableAuthentication(identityId, now);
+        authenticationAdministrationPort.enableAuthentication(userId, now);
         return UserQueryService.toDetails(saved);
     }
 
-    private User findForUpdate(Long identityId) {
-        return userRepository.findByIdForUpdate(identityId)
-                .orElseThrow(() -> new UserNotFoundException(identityId));
+    private User findForUpdate(Long userId) {
+        return userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
     }
 }

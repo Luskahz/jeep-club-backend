@@ -15,15 +15,15 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class DevelopmentAdminUserBootstrapService {
 
-    private final UserQuery identityQuery;
+    private final UserQuery userQuery;
     private final UserRegistration userRegistration;
     private final AdminBootstrapConfig adminBootstrapConfig;
     private final Clock clock;
 
     public Long createAdminUserIfMissing() {
-        return identityQuery
+        return userQuery
                 .findByCpf(adminBootstrapConfig.cpf())
-                .map(identity -> identity.id())
+                .map(user -> user.id())
                 .orElseGet(
                         this::createAdminUserHandlingConcurrency
                 );
@@ -33,9 +33,9 @@ public class DevelopmentAdminUserBootstrapService {
         try {
             return createAdminUser();
         } catch (UserRegistrationConflictException exception) {
-            return identityQuery
+            return userQuery
                     .findByCpf(adminBootstrapConfig.cpf())
-                    .map(identity -> identity.id())
+                    .map(user -> user.id())
                     .orElseThrow(() -> exception);
         }
     }
