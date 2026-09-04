@@ -1,6 +1,6 @@
 package com.jeepclub.backend.memberships.infra.integration.identity;
 
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import com.jeepclub.backend.memberships.core.port.UserExistencePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class IdentityUserExistenceAdapter implements UserExistencePort {
 
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
 
     @Override
     public boolean existsByCpf(String cpf) {

@@ -1,6 +1,6 @@
 package com.jeepclub.backend.identity.api.module;
 
-public enum IdentityStatus {
+public enum UserStatus {
     ACTIVE,
     DISABLED
 }

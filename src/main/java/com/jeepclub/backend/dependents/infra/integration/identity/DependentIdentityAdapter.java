@@ -1,7 +1,7 @@
 package com.jeepclub.backend.dependents.infra.integration.identity;
 
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DependentIdentityAdapter implements DependentUserPort {
 
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
 
     @Override
     public boolean existsById(Long userId) {

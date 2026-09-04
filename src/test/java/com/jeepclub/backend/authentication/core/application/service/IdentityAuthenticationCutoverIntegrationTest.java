@@ -8,8 +8,8 @@ import com.jeepclub.backend.authentication.core.application.service.user.AdminUs
 import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
+import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,7 +31,7 @@ class IdentityAuthenticationCutoverIntegrationTest {
 
     @Autowired private AuthenticationAccountProvisioningService provisioningService;
     @Autowired private AuthenticationAccountRepository accountRepository;
-    @Autowired private IdentityQuery identityQuery;
+    @Autowired private UserQuery identityQuery;
     @Autowired private AdminUserService adminUserService;
 
     @Test
@@ -61,14 +61,14 @@ class IdentityAuthenticationCutoverIntegrationTest {
     void pendingFirstAccessIdentityRemainsAdministrativelyActive() {
         Instant now = Instant.parse("2026-08-01T12:00:00Z");
         Long identityId = provisioningService.provisionPendingFirstAccess(
-                new IdentityRegistrationData("Pending", null, null, "11144477735",
+                new UserRegistrationData("Pending", null, null, "11144477735",
                         null, null, null, now),
                 "hash"
         );
 
         assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
         assertThat(identityQuery.isAdministrativelyActive(identityId)).isTrue();
-        assertThat(identityQuery.findAdministrativelyActiveIdentityIds()).contains(identityId);
+        assertThat(identityQuery.findAdministrativelyActiveUserIds()).contains(identityId);
     }
 
     @Test
@@ -99,7 +99,7 @@ class IdentityAuthenticationCutoverIntegrationTest {
 
     private Long provision(String name, String cpf, String email) {
         return provisioningService.provision(
-                new IdentityRegistrationData(name, null, email, cpf,
+                new UserRegistrationData(name, null, email, cpf,
                         null, "5511999999999", null,
                         Instant.parse("2026-08-01T12:00:00Z")),
                 "hash"

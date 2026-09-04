@@ -13,7 +13,7 @@ import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +29,7 @@ public class RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final SessionRepository sessionRepository;
     private final AuthenticationAccountRepository accountRepository;
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
     private final RefreshTokenHashService tokenHashService;
     private final RefreshTokenIssuanceService refreshTokenIssuanceService;
     private final JwtService jwtService;

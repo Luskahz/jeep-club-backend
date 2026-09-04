@@ -1,7 +1,7 @@
 package com.jeepclub.backend.billing.infra.integration.identity;
 
 import com.jeepclub.backend.billing.core.port.BillingMembershipPort;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +12,11 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class IdentityBillingMembershipAdapter implements BillingMembershipPort {
 
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
 
     @Override
     public List<Long> findActiveMemberUserIds() {
-        return identityQuery.findAdministrativelyActiveIdentityIds();
+        return identityQuery.findAdministrativelyActiveUserIds();
     }
 
     @Override

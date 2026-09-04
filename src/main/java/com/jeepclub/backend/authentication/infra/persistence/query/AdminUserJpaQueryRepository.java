@@ -7,8 +7,8 @@ import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
-import com.jeepclub.backend.identity.api.module.IdentityStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -41,7 +41,7 @@ public class AdminUserJpaQueryRepository {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> query = cb.createTupleQuery();
         Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
-        Join<AuthenticationAccountEntity, IdentityEntity> identity = account.join("identity");
+        Join<AuthenticationAccountEntity, UserEntity> identity = account.join("user");
         query.multiselect(selections(identity, account, cb, fields));
         query.where(predicates(filter, identity, account, cb).toArray(Predicate[]::new));
         applySort(query, identity, account, cb, pageable);
@@ -57,7 +57,7 @@ public class AdminUserJpaQueryRepository {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> query = cb.createTupleQuery();
         Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
-        Join<AuthenticationAccountEntity, IdentityEntity> identity = account.join("identity");
+        Join<AuthenticationAccountEntity, UserEntity> identity = account.join("user");
         query.multiselect(selections(identity, account, cb, fields));
         query.where(cb.equal(identity.get("id"), userId));
         return entityManager.createQuery(query)
@@ -67,7 +67,7 @@ public class AdminUserJpaQueryRepository {
                 .map(tuple -> toResult(tuple, fields));
     }
 
-    private List<Selection<?>> selections(Join<AuthenticationAccountEntity, IdentityEntity> identity,
+    private List<Selection<?>> selections(Join<AuthenticationAccountEntity, UserEntity> identity,
                                            Root<AuthenticationAccountEntity> account,
                                            CriteriaBuilder cb, Set<AdminUserField> fields) {
         List<Selection<?>> result = new ArrayList<>();
@@ -92,7 +92,7 @@ public class AdminUserJpaQueryRepository {
         return result;
     }
 
-    private List<Predicate> predicates(AdminUserFilter filter, Join<AuthenticationAccountEntity, IdentityEntity> identity,
+    private List<Predicate> predicates(AdminUserFilter filter, Join<AuthenticationAccountEntity, UserEntity> identity,
                                        Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
         List<Predicate> result = new ArrayList<>();
         if (filter.id() != null) result.add(cb.equal(identity.get("id"), filter.id()));
@@ -101,7 +101,7 @@ public class AdminUserJpaQueryRepository {
         if (filter.email() != null) result.add(cb.like(cb.lower(identity.get("email")), like(filter.email())));
         if (filter.phoneNumber() != null) result.add(cb.like(identity.get("phoneNumber"), "%" + filter.phoneNumber() + "%"));
         if (filter.accountStatus() != null) result.add(cb.equal(identity.get("status"),
-                filter.accountStatus() == AccountStatus.ACTIVE ? IdentityStatus.ACTIVE : IdentityStatus.DISABLED));
+                filter.accountStatus() == AccountStatus.ACTIVE ? UserStatus.ACTIVE : UserStatus.DISABLED));
         if (filter.authenticationStatus() != null) result.add(cb.equal(account.get("authenticationStatus"), filter.authenticationStatus()));
         if (filter.credentialStatus() != null) result.add(cb.equal(account.get("credentialStatus"), filter.credentialStatus()));
         if (filter.passwordChangeRequired() != null) {
@@ -122,7 +122,7 @@ public class AdminUserJpaQueryRepository {
         return result;
     }
 
-    private void applySort(CriteriaQuery<Tuple> query, Join<AuthenticationAccountEntity, IdentityEntity> identity,
+    private void applySort(CriteriaQuery<Tuple> query, Join<AuthenticationAccountEntity, UserEntity> identity,
                            Root<AuthenticationAccountEntity> account, CriteriaBuilder cb, Pageable pageable) {
         List<Order> orders = pageable.getSort().stream().map(sort -> {
             Expression<?> expression = switch (sort.getProperty()) {
@@ -139,7 +139,7 @@ public class AdminUserJpaQueryRepository {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
         Root<AuthenticationAccountEntity> account = query.from(AuthenticationAccountEntity.class);
-        Join<AuthenticationAccountEntity, IdentityEntity> identity = account.join("identity");
+        Join<AuthenticationAccountEntity, UserEntity> identity = account.join("user");
         query.select(cb.count(account));
         query.where(predicates(filter, identity, account, cb).toArray(Predicate[]::new));
         return entityManager.createQuery(query).getSingleResult();
@@ -150,7 +150,7 @@ public class AdminUserJpaQueryRepository {
                 CredentialStatus.CHANGE_REQUIRED, CredentialStatus.PENDING_FIRST_ACCESS), true).otherwise(false);
     }
 
-    private Expression<Instant> updatedAt(Join<AuthenticationAccountEntity, IdentityEntity> identity,
+    private Expression<Instant> updatedAt(Join<AuthenticationAccountEntity, UserEntity> identity,
                                           Root<AuthenticationAccountEntity> account, CriteriaBuilder cb) {
         Expression<Instant> identityUpdated = identity.get("updatedAt");
         Expression<Instant> accountUpdated = account.get("updatedAt");
@@ -162,7 +162,7 @@ public class AdminUserJpaQueryRepository {
     }
 
     private AdminUserResult toResult(Tuple tuple, Set<AdminUserField> fields) {
-        IdentityStatus status = get(tuple, fields, AdminUserField.ACCOUNT_STATUS, "identityStatus", IdentityStatus.class);
+        UserStatus status = get(tuple, fields, AdminUserField.ACCOUNT_STATUS, "identityStatus", UserStatus.class);
         Instant identityUpdated = get(tuple, fields, AdminUserField.UPDATED_AT, "identityUpdatedAt", Instant.class);
         Instant accountUpdated = get(tuple, fields, AdminUserField.UPDATED_AT, "accountUpdatedAt", Instant.class);
         return new AdminUserResult(get(tuple, fields, AdminUserField.ID, "id", Long.class),
@@ -170,7 +170,7 @@ public class AdminUserJpaQueryRepository {
                 get(tuple, fields, AdminUserField.CPF, "cpf", String.class),
                 get(tuple, fields, AdminUserField.EMAIL, "email", String.class),
                 get(tuple, fields, AdminUserField.PHONE_NUMBER, "phoneNumber", String.class),
-                status == null ? null : (status == IdentityStatus.ACTIVE ? AccountStatus.ACTIVE : AccountStatus.DISABLED),
+                status == null ? null : (status == UserStatus.ACTIVE ? AccountStatus.ACTIVE : AccountStatus.DISABLED),
                 get(tuple, fields, AdminUserField.AUTHENTICATION_STATUS, "authenticationStatus", AuthenticationStatus.class),
                 get(tuple, fields, AdminUserField.CREDENTIAL_STATUS, "credentialStatus", CredentialStatus.class),
                 get(tuple, fields, AdminUserField.PASSWORD_CHANGE_REQUIRED, "passwordChangeRequired", Boolean.class),

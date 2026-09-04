@@ -26,9 +26,7 @@ import com.jeepclub.backend.authentication.core.domain.exception.account.Authent
 import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountNotDisabledException;
 import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountNotLockedException;
 import com.jeepclub.backend.authentication.core.domain.exception.account.AuthenticationAccountPasswordChangeRequiredException;
-import com.jeepclub.backend.identity.api.module.exception.IdentityAlreadyDisabledException;
-import com.jeepclub.backend.identity.api.module.exception.IdentityNotDisabledException;
-import com.jeepclub.backend.identity.api.module.exception.IdentityNotFoundException;
+import com.jeepclub.backend.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -138,8 +136,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler(IdentityNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleIdentityNotFound(IdentityNotFoundException exception) {
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleIdentityNotFound(UserNotFoundException exception) {
         return buildErrorResponse(
                 "USER_ID_NOT_FOUND",
                 exception.getMessage(),
@@ -147,7 +145,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler({UserAlreadyDisabledException.class, IdentityAlreadyDisabledException.class,
+    @ExceptionHandler({UserAlreadyDisabledException.class,
+            com.jeepclub.backend.identity.api.module.exception.UserAlreadyDisabledException.class,
             AuthenticationAccountAlreadyDisabledException.class})
     public ResponseEntity<ApiErrorResponse> handleUserAlreadyDisabled(
             RuntimeException exception
@@ -159,7 +158,8 @@ public class UserExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler({UserNotDisabledException.class, IdentityNotDisabledException.class,
+    @ExceptionHandler({UserNotDisabledException.class,
+            com.jeepclub.backend.identity.api.module.exception.UserNotDisabledException.class,
             AuthenticationAccountNotDisabledException.class})
     public ResponseEntity<ApiErrorResponse> handleUserNotDisabled(
             RuntimeException exception

@@ -9,15 +9,15 @@ import java.util.Optional;
  * <p>Authentication and credential state deliberately do not participate in
  * the administrative activity methods exposed here.</p>
  */
-public interface IdentityQuery {
+public interface UserQuery {
 
-    Optional<IdentityDetails> findById(Long identityId);
+    Optional<UserDetails> findById(Long identityId);
 
-    Optional<IdentityDetails> findByCpf(String cpf);
+    Optional<UserDetails> findByCpf(String cpf);
 
     boolean existsById(Long identityId);
 
-    List<Long> findAdministrativelyActiveIdentityIds();
+    List<Long> findAdministrativelyActiveUserIds();
 
     boolean isAdministrativelyActive(Long identityId);
 

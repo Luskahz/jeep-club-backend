@@ -1,18 +1,18 @@
 package com.jeepclub.backend.identity.infra.persistence.mapper;
 
-import com.jeepclub.backend.identity.core.domain.model.Identity;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.core.domain.model.User;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
 import org.springframework.stereotype.Component;
 
 @Component
-public class IdentityMapper {
+public class UserMapper {
 
-    public IdentityEntity toEntity(Identity domain) {
+    public UserEntity toEntity(User domain) {
         if (domain == null) {
             return null;
         }
 
-        IdentityEntity entity = new IdentityEntity();
+        UserEntity entity = new UserEntity();
         entity.setId(domain.getId());
         entity.setName(domain.getName());
         entity.setBirthDate(domain.getBirthDate());
@@ -28,12 +28,12 @@ public class IdentityMapper {
         return entity;
     }
 
-    public Identity toDomain(IdentityEntity entity) {
+    public User toDomain(UserEntity entity) {
         if (entity == null) {
             return null;
         }
 
-        return Identity.reconstitute(
+        return User.reconstitute(
                 entity.getId(),
                 entity.getName(),
                 entity.getBirthDate(),

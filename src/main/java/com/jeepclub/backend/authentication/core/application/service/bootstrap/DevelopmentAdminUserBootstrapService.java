@@ -3,9 +3,9 @@ package com.jeepclub.backend.authentication.core.application.service.bootstrap;
 import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
-import com.jeepclub.backend.identity.api.module.exception.IdentityRegistrationConflictException;
+import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.identity.api.module.exception.UserRegistrationConflictException;
 import com.jeepclub.backend.shared.bootstrap.AdminBootstrapConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,7 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class DevelopmentAdminUserBootstrapService {
 
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
     private final AuthenticationAccountProvisioningService provisioningService;
     private final PasswordHasher passwordHasher;
     private final AdminBootstrapConfig adminBootstrapConfig;
@@ -35,7 +35,7 @@ public class DevelopmentAdminUserBootstrapService {
     private Long createAdminUserHandlingConcurrency() {
         try {
             return createAdminUser();
-        } catch (IdentityRegistrationConflictException | AuthenticationAccountConflictException exception) {
+        } catch (UserRegistrationConflictException | AuthenticationAccountConflictException exception) {
             return identityQuery
                     .findByCpf(adminBootstrapConfig.cpf())
                     .map(identity -> identity.id())
@@ -52,7 +52,7 @@ public class DevelopmentAdminUserBootstrapService {
                 );
 
         return provisioningService.provision(
-                new IdentityRegistrationData(
+                new UserRegistrationData(
                         adminBootstrapConfig.name(), adminBootstrapConfig.birthDate(),
                         adminBootstrapConfig.email(), adminBootstrapConfig.cpf(),
                         adminBootstrapConfig.rg(), adminBootstrapConfig.phoneNumber(),

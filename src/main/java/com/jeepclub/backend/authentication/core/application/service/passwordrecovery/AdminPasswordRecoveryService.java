@@ -15,7 +15,7 @@ import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryReq
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +29,7 @@ import java.util.List;
 public class AdminPasswordRecoveryService {
 
     private final AuthenticationAccountRepository accountRepository;
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
     private final PasswordRecoveryRequestRepository requestRepository;
     private final PasswordRecoveryRequestManager requestManager;
     private final TemporaryPasswordIssuer passwordIssuer;

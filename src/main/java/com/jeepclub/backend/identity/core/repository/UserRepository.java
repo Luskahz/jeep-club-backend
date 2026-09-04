@@ -1,21 +1,21 @@
 package com.jeepclub.backend.identity.core.repository;
 
-import com.jeepclub.backend.identity.core.domain.model.Identity;
+import com.jeepclub.backend.identity.core.domain.model.User;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface IdentityRepository {
+public interface UserRepository {
 
-    Identity create(Identity identity);
+    User create(User identity);
 
-    Identity save(Identity identity);
+    User save(User identity);
 
-    Optional<Identity> findById(Long id);
+    Optional<User> findById(Long id);
 
-    Optional<Identity> findByCpf(String cpf);
+    Optional<User> findByCpf(String cpf);
 
-    Optional<Identity> findByIdForUpdate(Long id);
+    Optional<User> findByIdForUpdate(Long id);
 
     boolean existsById(Long id);
 

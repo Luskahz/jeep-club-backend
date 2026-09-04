@@ -1,6 +1,6 @@
 package com.jeepclub.backend.identity.infra.persistence.entity;
 
-import com.jeepclub.backend.identity.api.module.IdentityStatus;
+import com.jeepclub.backend.identity.api.module.UserStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -45,7 +45,7 @@ import java.time.LocalDate;
                 )
         }
 )
-public class IdentityEntity {
+public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -74,7 +74,7 @@ public class IdentityEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private IdentityStatus status;
+    private UserStatus status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

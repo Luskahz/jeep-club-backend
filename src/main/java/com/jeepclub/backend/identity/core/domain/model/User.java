@@ -1,8 +1,8 @@
 package com.jeepclub.backend.identity.core.domain.model;
 
-import com.jeepclub.backend.identity.api.module.IdentityStatus;
-import com.jeepclub.backend.identity.core.domain.exception.IdentityAlreadyDisabledException;
-import com.jeepclub.backend.identity.core.domain.exception.IdentityNotDisabledException;
+import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.identity.core.domain.exception.UserAlreadyDisabledException;
+import com.jeepclub.backend.identity.core.domain.exception.UserNotDisabledException;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +14,7 @@ import java.util.Objects;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class Identity {
+public class User {
 
     private static final int MAX_NAME_LENGTH = 150;
     private static final int MAX_EMAIL_LENGTH = 180;
@@ -30,12 +30,12 @@ public class Identity {
     private String rg;
     private String phoneNumber;
     private String profilePhotoUrl;
-    private IdentityStatus status;
+    private UserStatus status;
     private Instant createdAt;
     private Instant disabledAt;
     private Instant updatedAt;
 
-    public static Identity create(
+    public static User create(
             String name,
             LocalDate birthDate,
             String email,
@@ -47,7 +47,7 @@ public class Identity {
     ) {
         Objects.requireNonNull(now, "now cannot be null");
 
-        Identity identity = new Identity();
+        User identity = new User();
         identity.name = normalizeName(name);
         identity.birthDate = birthDate;
         identity.email = normalizeEmail(email);
@@ -55,12 +55,12 @@ public class Identity {
         identity.rg = normalizeRg(rg);
         identity.phoneNumber = normalizePhoneNumber(phoneNumber);
         identity.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
-        identity.status = IdentityStatus.ACTIVE;
+        identity.status = UserStatus.ACTIVE;
         identity.createdAt = now;
         return identity;
     }
 
-    public static Identity reconstitute(
+    public static User reconstitute(
             Long id,
             String name,
             LocalDate birthDate,
@@ -69,7 +69,7 @@ public class Identity {
             String rg,
             String phoneNumber,
             String profilePhotoUrl,
-            IdentityStatus status,
+            UserStatus status,
             Instant createdAt,
             Instant disabledAt,
             Instant updatedAt
@@ -79,7 +79,7 @@ public class Identity {
         Objects.requireNonNull(createdAt, "createdAt cannot be null");
         validateStatusTimestamps(status, createdAt, disabledAt, updatedAt);
 
-        Identity identity = new Identity();
+        User identity = new User();
         identity.id = id;
         identity.name = normalizeName(name);
         identity.birthDate = birthDate;
@@ -98,10 +98,10 @@ public class Identity {
     public void disable(Instant now) {
         validateMutationInstant(now);
         if (isDisabled()) {
-            throw new IdentityAlreadyDisabledException(id);
+            throw new UserAlreadyDisabledException(id);
         }
 
-        status = IdentityStatus.DISABLED;
+        status = UserStatus.DISABLED;
         disabledAt = now;
         updatedAt = now;
     }
@@ -109,20 +109,20 @@ public class Identity {
     public void enable(Instant now) {
         validateMutationInstant(now);
         if (!isDisabled()) {
-            throw new IdentityNotDisabledException(id);
+            throw new UserNotDisabledException(id);
         }
 
-        status = IdentityStatus.ACTIVE;
+        status = UserStatus.ACTIVE;
         disabledAt = null;
         updatedAt = now;
     }
 
     public boolean isActive() {
-        return status == IdentityStatus.ACTIVE;
+        return status == UserStatus.ACTIVE;
     }
 
     public boolean isDisabled() {
-        return status == IdentityStatus.DISABLED;
+        return status == UserStatus.DISABLED;
     }
 
     public static String normalizeName(String rawName) {
@@ -176,16 +176,16 @@ public class Identity {
     }
 
     private static void validateStatusTimestamps(
-            IdentityStatus status,
+            UserStatus status,
             Instant createdAt,
             Instant disabledAt,
             Instant updatedAt
     ) {
-        if (status == IdentityStatus.ACTIVE && disabledAt != null) {
-            throw new IllegalArgumentException("active identity cannot have disabledAt");
+        if (status == UserStatus.ACTIVE && disabledAt != null) {
+            throw new IllegalArgumentException("active user cannot have disabledAt");
         }
-        if (status == IdentityStatus.DISABLED && disabledAt == null) {
-            throw new IllegalArgumentException("disabled identity must have disabledAt");
+        if (status == UserStatus.DISABLED && disabledAt == null) {
+            throw new IllegalArgumentException("disabled user must have disabledAt");
         }
         if (disabledAt != null && disabledAt.isBefore(createdAt)) {
             throw new IllegalArgumentException("disabledAt cannot be before createdAt");

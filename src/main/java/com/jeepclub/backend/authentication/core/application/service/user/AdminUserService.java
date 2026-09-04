@@ -5,7 +5,7 @@ import com.jeepclub.backend.authentication.core.application.query.user.AdminUser
 import com.jeepclub.backend.authentication.core.application.query.user.AdminUserFilter;
 import com.jeepclub.backend.authentication.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.authentication.core.repository.AdminUserQueryRepository;
-import com.jeepclub.backend.identity.api.module.IdentityAdministration;
+import com.jeepclub.backend.identity.api.module.UserAdministration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +21,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AdminUserService {
 
-    private final IdentityAdministration identityAdministration;
+    private final UserAdministration identityAdministration;
     private final AdminUserQueryRepository adminUserQueryRepository;
     private final Clock clock;
 

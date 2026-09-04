@@ -15,8 +15,8 @@ import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RefreshTokenHashService;
 import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityDetails;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserDetails;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +29,7 @@ import java.time.Instant;
 public class PasswordRecoveryService {
 
     private final AuthenticationAccountRepository accountRepository;
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
     private final PasswordRecoveryRequestRepository requestRepository;
     private final PasswordRecoveryRequestManager requestManager;
     private final NotificationPort notificationPort;
@@ -42,7 +42,7 @@ public class PasswordRecoveryService {
     @Transactional
     public PublicPasswordRecoveryResult request(String cpf) {
         Instant now = Instant.now(clock);
-        IdentityDetails identity = identityQuery.findByCpf(cpf).orElse(null);
+        UserDetails identity = identityQuery.findByCpf(cpf).orElse(null);
         if (identity != null && identity.administrativelyActive()
                 && accountRepository.existsByIdentityId(identity.id())) {
             requestManager.getOrCreate(identity.id(), now);
@@ -53,7 +53,7 @@ public class PasswordRecoveryService {
     @Transactional
     public PublicPasswordRecoveryResult sendEmailToken(String cpf) {
         Instant now = Instant.now(clock);
-        IdentityDetails identity = identityQuery.findByCpf(cpf).orElse(null);
+        UserDetails identity = identityQuery.findByCpf(cpf).orElse(null);
         if (identity == null || !identity.administrativelyActive()
                 || !accountRepository.existsByIdentityId(identity.id())
                 || identity.email() == null || identity.email().isBlank()) {

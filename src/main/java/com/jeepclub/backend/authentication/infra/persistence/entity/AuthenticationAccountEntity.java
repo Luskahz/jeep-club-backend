@@ -3,7 +3,7 @@ package com.jeepclub.backend.authentication.infra.persistence.entity;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -40,7 +40,7 @@ public class AuthenticationAccountEntity {
             updatable = false,
             foreignKey = @ForeignKey(name = "fk_authentication_accounts_identity")
     )
-    private IdentityEntity identity;
+    private UserEntity user;
 
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

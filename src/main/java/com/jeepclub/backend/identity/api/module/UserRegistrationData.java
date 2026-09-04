@@ -3,8 +3,7 @@ package com.jeepclub.backend.identity.api.module;
 import java.time.Instant;
 import java.time.LocalDate;
 
-public record IdentityDetails(
-        Long id,
+public record UserRegistrationData(
         String name,
         LocalDate birthDate,
         String email,
@@ -12,9 +11,6 @@ public record IdentityDetails(
         String rg,
         String phoneNumber,
         String profilePhotoUrl,
-        boolean administrativelyActive,
-        Instant createdAt,
-        Instant disabledAt,
-        Instant updatedAt
+        Instant now
 ) {
 }

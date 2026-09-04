@@ -3,8 +3,8 @@ package com.jeepclub.backend.authentication.core.application.service.account;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityRegistration;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
+import com.jeepclub.backend.identity.api.module.UserRegistration;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +25,7 @@ class AuthenticationAccountProvisioningServiceTest {
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
     @Mock
-    private IdentityRegistration identityRegistration;
+    private UserRegistration identityRegistration;
 
     @Mock
     private AuthenticationAccountRepository accountRepository;
@@ -55,7 +55,7 @@ class AuthenticationAccountProvisioningServiceTest {
 
     @Test
     void provisionsPendingFirstAccessWithoutChangingIdentityData() {
-        IdentityRegistrationData data = identityData();
+        UserRegistrationData data = identityData();
 
         Long identityId = service.provisionPendingFirstAccess(data, "password-hash");
 
@@ -73,9 +73,9 @@ class AuthenticationAccountProvisioningServiceTest {
         return captor.getValue();
     }
 
-    private IdentityRegistrationData identityData() {
-        return new IdentityRegistrationData(
-                "Identity Name",
+    private UserRegistrationData identityData() {
+        return new UserRegistrationData(
+                "User Name",
                 null,
                 "identity@example.com",
                 "52998224725",

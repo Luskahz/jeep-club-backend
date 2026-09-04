@@ -6,8 +6,8 @@ import com.jeepclub.backend.authentication.core.application.service.passwordreco
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityDetails;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserDetails;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +32,7 @@ class RequestPasswordRecoveryServiceTest {
     @Mock
     private AuthenticationAccountRepository accountRepository;
     @Mock
-    private IdentityQuery identityQuery;
+    private UserQuery identityQuery;
     @Mock
     private PasswordRecoveryRequestManager requestManager;
     private PasswordRecoveryService service;
@@ -78,8 +78,8 @@ class RequestPasswordRecoveryServiceTest {
         verify(requestManager).getOrCreate(1L, NOW);
     }
 
-    private IdentityDetails activeIdentity() {
-        return new IdentityDetails(
+    private UserDetails activeIdentity() {
+        return new UserDetails(
                 1L, "Lucas", null, "lucas@example.com", CPF, null, null,
                 null, true, NOW.minusSeconds(3600), null, null
         );

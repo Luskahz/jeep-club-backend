@@ -5,7 +5,7 @@ import com.jeepclub.backend.authentication.core.application.exceptions.user.User
 import com.jeepclub.backend.authentication.core.application.result.admin.refresh.AdminRefreshTokenResult;
 import com.jeepclub.backend.authentication.core.domain.model.RefreshToken;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +19,7 @@ import java.util.List;
 public class AdminRefreshTokenService {
 
     private final RefreshTokenRepository refreshTokenRepository;
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
     private final Clock clock;
 
     @Transactional(readOnly = true)

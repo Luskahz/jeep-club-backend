@@ -4,7 +4,7 @@ import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
-import com.jeepclub.backend.identity.api.module.IdentityDetails;
+import com.jeepclub.backend.identity.api.module.UserDetails;
 
 import java.time.Instant;
 import java.util.Objects;
@@ -24,7 +24,7 @@ public record AdminUserResult(
 ) {
 
     public static AdminUserResult from(
-            IdentityDetails identity,
+            UserDetails identity,
             AuthenticationAccount account
     ) {
         Objects.requireNonNull(identity, "identity cannot be null");

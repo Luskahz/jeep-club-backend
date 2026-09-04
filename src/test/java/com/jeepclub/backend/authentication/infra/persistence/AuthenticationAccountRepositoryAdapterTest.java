@@ -10,8 +10,8 @@ import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationA
 import com.jeepclub.backend.authentication.infra.persistence.mapper.AuthenticationAccountMapper;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceException;
-import com.jeepclub.backend.identity.api.module.IdentityStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
@@ -42,7 +42,7 @@ class AuthenticationAccountRepositoryAdapterTest {
 
     @Test
     void persistsAccountForExistingIdentityUsingTheSameSharedPrimaryKey() {
-        IdentityEntity identity = persistIdentity();
+        UserEntity identity = persistIdentity();
         AuthenticationAccount created = repository.create(
                 AuthenticationAccount.create(identity.getId(), "password-hash", CREATED_AT)
         );
@@ -61,12 +61,12 @@ class AuthenticationAccountRepositoryAdapterTest {
                 identity.getId()
         );
         assertThat(entity.getIdentityId()).isEqualTo(identity.getId());
-        assertThat(entity.getIdentity().getId()).isEqualTo(identity.getId());
+        assertThat(entity.getUser().getId()).isEqualTo(identity.getId());
     }
 
     @Test
     void persistsAuthenticationAccessIndependently() {
-        IdentityEntity identity = persistIdentity();
+        UserEntity identity = persistIdentity();
         AuthenticationAccount account = repository.create(
                 AuthenticationAccount.create(identity.getId(), "password-hash", CREATED_AT)
         );
@@ -87,7 +87,7 @@ class AuthenticationAccountRepositoryAdapterTest {
 
     @Test
     void createDoesNotOverwriteExistingAccountWithSameIdentityId() {
-        IdentityEntity identity = persistIdentity();
+        UserEntity identity = persistIdentity();
         repository.create(
                 AuthenticationAccount.create(identity.getId(), "original-hash", CREATED_AT)
         );
@@ -110,7 +110,7 @@ class AuthenticationAccountRepositoryAdapterTest {
 
     @Test
     void doesNotCascadeIdentityDeletionThroughTheRelationship() {
-        IdentityEntity identity = persistIdentity();
+        UserEntity identity = persistIdentity();
         repository.create(AuthenticationAccount.create(
                 identity.getId(),
                 "password-hash",
@@ -119,19 +119,19 @@ class AuthenticationAccountRepositoryAdapterTest {
         entityManager.flush();
         entityManager.clear();
 
-        IdentityEntity managedIdentity = entityManager.find(IdentityEntity.class, identity.getId());
+        UserEntity managedIdentity = entityManager.find(UserEntity.class, identity.getId());
         entityManager.remove(managedIdentity);
 
         assertThatThrownBy(entityManager::flush)
                 .isInstanceOf(PersistenceException.class);
     }
 
-    private IdentityEntity persistIdentity() {
-        IdentityEntity identity = new IdentityEntity();
-        identity.setName("Persistence Identity");
+    private UserEntity persistIdentity() {
+        UserEntity identity = new UserEntity();
+        identity.setName("Persistence User");
         identity.setCpf("52998224725");
         identity.setEmail("persistence@example.com");
-        identity.setStatus(IdentityStatus.ACTIVE);
+        identity.setStatus(UserStatus.ACTIVE);
         identity.setCreatedAt(CREATED_AT);
         entityManager.persist(identity);
         entityManager.flush();
@@ -141,7 +141,7 @@ class AuthenticationAccountRepositoryAdapterTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration
     @EnableJpaRepositories(basePackageClasses = AuthenticationAccountJpaRepository.class)
-    @EntityScan(basePackageClasses = {AuthenticationAccountEntity.class, IdentityEntity.class})
+    @EntityScan(basePackageClasses = {AuthenticationAccountEntity.class, UserEntity.class})
     static class TestConfiguration {
     }
 }

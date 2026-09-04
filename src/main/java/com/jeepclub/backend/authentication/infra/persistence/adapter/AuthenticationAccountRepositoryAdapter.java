@@ -6,7 +6,7 @@ import com.jeepclub.backend.authentication.core.repository.AuthenticationAccount
 import com.jeepclub.backend.authentication.infra.persistence.entity.AuthenticationAccountEntity;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.mapper.AuthenticationAccountMapper;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityExistsException;
 import lombok.RequiredArgsConstructor;
@@ -58,8 +58,8 @@ public class AuthenticationAccountRepositoryAdapter
     }
 
     private AuthenticationAccountEntity toEntity(AuthenticationAccount account) {
-        IdentityEntity identity = entityManager.getReference(
-                IdentityEntity.class,
+        UserEntity identity = entityManager.getReference(
+                UserEntity.class,
                 account.getIdentityId()
         );
         return mapper.toEntity(account, identity);

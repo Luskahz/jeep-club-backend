@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.infra.integration.identity;
 
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -17,21 +17,21 @@ import static org.mockito.Mockito.when;
 class IdentityBillingMembershipAdapterTest {
 
     @Mock
-    private IdentityQuery identityQuery;
+    private UserQuery identityQuery;
 
     @InjectMocks
     private IdentityBillingMembershipAdapter adapter;
 
     @Test
-    void resolvesBillingTargetsFromAdministrativeIdentityStatus() {
-        when(identityQuery.findAdministrativelyActiveIdentityIds())
+    void resolvesBillingTargetsFromAdministrativeUserStatus() {
+        when(identityQuery.findAdministrativelyActiveUserIds())
                 .thenReturn(List.of(10L, 20L));
         when(identityQuery.isAdministrativelyActive(10L)).thenReturn(true);
 
         assertThat(adapter.findActiveMemberUserIds()).containsExactly(10L, 20L);
         assertThat(adapter.existsActiveMemberByUserId(10L)).isTrue();
 
-        verify(identityQuery).findAdministrativelyActiveIdentityIds();
+        verify(identityQuery).findAdministrativelyActiveUserIds();
         verify(identityQuery).isAdministrativelyActive(10L);
     }
 }

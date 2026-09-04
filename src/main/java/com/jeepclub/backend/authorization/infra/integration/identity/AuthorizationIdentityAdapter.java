@@ -1,7 +1,7 @@
 package com.jeepclub.backend.authorization.infra.integration.identity;
 
 import com.jeepclub.backend.authorization.core.port.UserIdentityPort;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class AuthorizationIdentityAdapter implements UserIdentityPort {
 
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
 
     @Override
     public boolean existsById(Long userId) {

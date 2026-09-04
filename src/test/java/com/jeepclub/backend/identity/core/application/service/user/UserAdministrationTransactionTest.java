@@ -1,4 +1,4 @@
-package com.jeepclub.backend.identity.core.application.service.identity;
+package com.jeepclub.backend.identity.core.application.service.user;
 
 import com.jeepclub.backend.authentication.core.application.service.account.AuthenticationAccountProvisioningService;
 import com.jeepclub.backend.authentication.core.application.service.internal.CredentialRevocationService;
@@ -13,10 +13,10 @@ import com.jeepclub.backend.authentication.core.repository.AuthenticationAccount
 import com.jeepclub.backend.authentication.core.repository.PasswordChangeChallengeRepository;
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
-import com.jeepclub.backend.identity.api.module.IdentityAdministration;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
-import com.jeepclub.backend.identity.api.module.spi.IdentityAuthenticationAdministrationPort;
+import com.jeepclub.backend.identity.api.module.UserAdministration;
+import com.jeepclub.backend.identity.api.module.UserQuery;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.identity.api.module.spi.UserAuthenticationAdministrationPort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,21 +37,21 @@ import static org.mockito.Mockito.reset;
 
 @SpringBootTest
 @ActiveProfiles("test")
-class IdentityAdministrationTransactionTest {
+class UserAdministrationTransactionTest {
 
     private static final Instant CREATED_AT = Instant.parse("2026-08-01T12:00:00Z");
     private static final Instant CHANGED_AT = CREATED_AT.plusSeconds(60);
 
     @Autowired private AuthenticationAccountProvisioningService provisioningService;
-    @Autowired private IdentityAdministration identityAdministration;
-    @Autowired private IdentityQuery identityQuery;
+    @Autowired private UserAdministration identityAdministration;
+    @Autowired private UserQuery identityQuery;
     @Autowired private AuthenticationAccountRepository accountRepository;
     @Autowired private SessionRepository sessionRepository;
     @Autowired private RefreshTokenRepository refreshTokenRepository;
     @Autowired private PasswordChangeChallengeRepository challengeRepository;
 
     @MockitoSpyBean
-    private IdentityAuthenticationAdministrationPort authenticationAdministrationPort;
+    private UserAuthenticationAdministrationPort authenticationAdministrationPort;
 
     @MockitoSpyBean
     private CredentialRevocationService credentialRevocationService;
@@ -139,8 +139,8 @@ class IdentityAdministrationTransactionTest {
         return provisioningService.provision(identityData(cpf, email), "password-hash");
     }
 
-    private IdentityRegistrationData identityData(String cpf, String email) {
-        return new IdentityRegistrationData(
+    private UserRegistrationData identityData(String cpf, String email) {
+        return new UserRegistrationData(
                 "Transactional Lifecycle",
                 null,
                 email,

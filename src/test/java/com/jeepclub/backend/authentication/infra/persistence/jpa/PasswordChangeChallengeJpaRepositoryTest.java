@@ -6,7 +6,7 @@ import com.jeepclub.backend.authentication.infra.persistence.entity.SessionEntit
 import com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus;
 import com.jeepclub.backend.authentication.core.domain.enums.SessionStatus;
 import jakarta.persistence.EntityManager;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -142,7 +142,7 @@ class PasswordChangeChallengeJpaRepositoryTest {
     @SpringBootConfiguration
     @EnableAutoConfiguration
     @EnableJpaRepositories(basePackageClasses = PasswordChangeChallengeJpaRepository.class)
-    @EntityScan(basePackageClasses = {PasswordChangeChallengeEntity.class, IdentityEntity.class})
+    @EntityScan(basePackageClasses = {PasswordChangeChallengeEntity.class, UserEntity.class})
     static class TestConfiguration {
     }
 

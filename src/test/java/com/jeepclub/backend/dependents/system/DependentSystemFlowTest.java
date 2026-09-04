@@ -1,8 +1,8 @@
 package com.jeepclub.backend.dependents.system;
 
-import com.jeepclub.backend.identity.api.module.IdentityStatus;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
-import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
+import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
@@ -32,13 +32,13 @@ class DependentSystemFlowTest {
     @Autowired
     private DependentService dependentService;
     @Autowired
-    private IdentityJpaRepository identityJpaRepository;
+    private UserJpaRepository identityJpaRepository;
     @Autowired
     private DependentJpaRepository dependentJpaRepository;
     @Autowired
     private DependentHistoryJpaRepository historyJpaRepository;
 
-    private IdentityEntity user;
+    private UserEntity user;
 
     @BeforeEach
     void setUp() {
@@ -106,11 +106,11 @@ class DependentSystemFlowTest {
         return history;
     }
 
-    private IdentityEntity user() {
-        IdentityEntity entity = new IdentityEntity();
+    private UserEntity user() {
+        UserEntity entity = new UserEntity();
         entity.setName("Titular Fluxo");
         entity.setCpf("39053344705");
-        entity.setStatus(IdentityStatus.ACTIVE);
+        entity.setStatus(UserStatus.ACTIVE);
         entity.setCreatedAt(NOW);
         return entity;
     }

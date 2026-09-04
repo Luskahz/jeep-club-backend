@@ -3,9 +3,9 @@ package com.jeepclub.backend.identity.api.module.spi;
 import java.time.Instant;
 
 /**
- * Authentication-side effects required by the administrative Identity lifecycle.
+ * Authentication-side effects required by the administrative User lifecycle.
  */
-public interface IdentityAuthenticationAdministrationPort {
+public interface UserAuthenticationAdministrationPort {
 
     void disableAuthentication(Long identityId, Instant now);
 

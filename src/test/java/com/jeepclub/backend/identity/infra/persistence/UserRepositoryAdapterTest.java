@@ -1,12 +1,12 @@
 package com.jeepclub.backend.identity.infra.persistence;
 
-import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
-import com.jeepclub.backend.identity.core.domain.model.Identity;
-import com.jeepclub.backend.identity.core.repository.IdentityRepository;
-import com.jeepclub.backend.identity.infra.persistence.adapter.IdentityRepositoryAdapter;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
-import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
-import com.jeepclub.backend.identity.infra.persistence.mapper.IdentityMapper;
+import com.jeepclub.backend.identity.core.application.exception.UserConflictException;
+import com.jeepclub.backend.identity.core.domain.model.User;
+import com.jeepclub.backend.identity.core.repository.UserRepository;
+import com.jeepclub.backend.identity.infra.persistence.adapter.UserRepositoryAdapter;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.identity.infra.persistence.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
@@ -24,24 +24,24 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({IdentityRepositoryAdapter.class, IdentityMapper.class})
-class IdentityRepositoryAdapterTest {
+@Import({UserRepositoryAdapter.class, UserMapper.class})
+class UserRepositoryAdapterTest {
 
     private static final Instant CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
 
     @Autowired
-    private IdentityRepository repository;
+    private UserRepository repository;
 
     @Test
     void persistsAndQueriesIdentityByAdministrativeStatus() {
-        Identity first = repository.create(identity(
-                "First Identity",
+        User first = repository.create(identity(
+                "First User",
                 "529.982.247-25",
                 "first@example.com",
                 "12.345.678-9"
         ));
-        Identity second = repository.create(identity(
-                "Second Identity",
+        User second = repository.create(identity(
+                "Second User",
                 "168.995.350-09",
                 "second@example.com",
                 "98.765.432-1"
@@ -69,61 +69,61 @@ class IdentityRepositoryAdapterTest {
     @Test
     void translatesCpfUniqueConstraintViolation() {
         repository.create(identity(
-                "First Identity",
+                "First User",
                 "52998224725",
                 "first@example.com",
                 "123456789"
         ));
 
         assertThatThrownBy(() -> repository.create(identity(
-                "Second Identity",
+                "Second User",
                 "529.982.247-25",
                 "second@example.com",
                 "987654321"
-        ))).isInstanceOf(IdentityConflictException.class);
+        ))).isInstanceOf(UserConflictException.class);
     }
 
     @Test
     void translatesEmailUniqueConstraintViolation() {
         repository.create(identity(
-                "First Identity",
+                "First User",
                 "52998224725",
                 "SAME@example.com",
                 "123456789"
         ));
 
         assertThatThrownBy(() -> repository.create(identity(
-                "Second Identity",
+                "Second User",
                 "16899535009",
                 "same@EXAMPLE.com",
                 "987654321"
-        ))).isInstanceOf(IdentityConflictException.class);
+        ))).isInstanceOf(UserConflictException.class);
     }
 
     @Test
     void translatesRgUniqueConstraintViolation() {
         repository.create(identity(
-                "First Identity",
+                "First User",
                 "52998224725",
                 "first@example.com",
                 "12.345.678-9"
         ));
 
         assertThatThrownBy(() -> repository.create(identity(
-                "Second Identity",
+                "Second User",
                 "16899535009",
                 "second@example.com",
                 "123456789"
-        ))).isInstanceOf(IdentityConflictException.class);
+        ))).isInstanceOf(UserConflictException.class);
     }
 
-    private Identity identity(
+    private User identity(
             String name,
             String cpf,
             String email,
             String rg
     ) {
-        return Identity.create(
+        return User.create(
                 name,
                 null,
                 email,
@@ -137,8 +137,8 @@ class IdentityRepositoryAdapterTest {
 
     @SpringBootConfiguration
     @EnableAutoConfiguration
-    @EnableJpaRepositories(basePackageClasses = IdentityJpaRepository.class)
-    @EntityScan(basePackageClasses = IdentityEntity.class)
+    @EnableJpaRepositories(basePackageClasses = UserJpaRepository.class)
+    @EntityScan(basePackageClasses = UserEntity.class)
     static class TestConfiguration {
     }
 }

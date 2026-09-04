@@ -5,7 +5,7 @@ import com.jeepclub.backend.authentication.core.application.service.account.Auth
 import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
 import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.core.port.RandomPasswordGenerator;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessLink;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
@@ -76,7 +76,7 @@ public class CreateUserWithPendingFirstAccessAdapter
     ) {
         Instant now = Instant.now(clock);
         return provisioningService.provisionPendingFirstAccess(
-                new IdentityRegistrationData(
+                new UserRegistrationData(
                         name, null, email, cpf, null, phoneNumber, null, now
                 ),
                 passwordHash

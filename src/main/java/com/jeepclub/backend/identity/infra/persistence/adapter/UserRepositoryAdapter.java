@@ -1,12 +1,12 @@
 package com.jeepclub.backend.identity.infra.persistence.adapter;
 
-import com.jeepclub.backend.identity.core.application.exception.IdentityConflictException;
-import com.jeepclub.backend.identity.api.module.IdentityStatus;
-import com.jeepclub.backend.identity.core.domain.model.Identity;
-import com.jeepclub.backend.identity.core.repository.IdentityRepository;
-import com.jeepclub.backend.identity.infra.persistence.entity.IdentityEntity;
-import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
-import com.jeepclub.backend.identity.infra.persistence.mapper.IdentityMapper;
+import com.jeepclub.backend.identity.core.application.exception.UserConflictException;
+import com.jeepclub.backend.identity.api.module.UserStatus;
+import com.jeepclub.backend.identity.core.domain.model.User;
+import com.jeepclub.backend.identity.core.repository.UserRepository;
+import com.jeepclub.backend.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.identity.infra.persistence.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,36 +18,36 @@ import java.util.Optional;
 
 @Repository
 @RequiredArgsConstructor
-public class IdentityRepositoryAdapter implements IdentityRepository {
+public class UserRepositoryAdapter implements UserRepository {
 
-    private final IdentityJpaRepository jpaRepository;
-    private final IdentityMapper mapper;
+    private final UserJpaRepository jpaRepository;
+    private final UserMapper mapper;
 
     @Override
-    public Identity create(Identity identity) {
-        return persist(identity, true);
+    public User create(User user) {
+        return persist(user, true);
     }
 
     @Override
-    public Identity save(Identity identity) {
-        return persist(identity, false);
+    public User save(User user) {
+        return persist(user, false);
     }
 
     @Override
-    public Optional<Identity> findById(Long id) {
+    public Optional<User> findById(Long id) {
         return jpaRepository.findById(id).map(mapper::toDomain);
     }
 
     @Override
-    public Optional<Identity> findByCpf(String cpf) {
+    public Optional<User> findByCpf(String cpf) {
         if (cpf == null) {
             return Optional.empty();
         }
-        return jpaRepository.findByCpf(Identity.normalizeCpf(cpf)).map(mapper::toDomain);
+        return jpaRepository.findByCpf(User.normalizeCpf(cpf)).map(mapper::toDomain);
     }
 
     @Override
-    public Optional<Identity> findByIdForUpdate(Long id) {
+    public Optional<User> findByIdForUpdate(Long id) {
         return jpaRepository.findByIdForUpdate(id).map(mapper::toDomain);
     }
 
@@ -73,30 +73,30 @@ public class IdentityRepositoryAdapter implements IdentityRepository {
 
     @Override
     public boolean existsActiveById(Long id) {
-        return jpaRepository.existsByIdAndStatus(id, IdentityStatus.ACTIVE);
+        return jpaRepository.existsByIdAndStatus(id, UserStatus.ACTIVE);
     }
 
     @Override
     public List<Long> findActiveIds() {
-        return jpaRepository.findIdsByStatus(IdentityStatus.ACTIVE);
+        return jpaRepository.findIdsByStatus(UserStatus.ACTIVE);
     }
 
-    private Identity persist(Identity identity, boolean flushImmediately) {
+    private User persist(User user, boolean flushImmediately) {
         try {
-            IdentityEntity entity = mapper.toEntity(identity);
-            IdentityEntity saved = flushImmediately
+            UserEntity entity = mapper.toEntity(user);
+            UserEntity saved = flushImmediately
                     ? jpaRepository.saveAndFlush(entity)
                     : jpaRepository.save(entity);
             return mapper.toDomain(saved);
         } catch (DataIntegrityViolationException exception) {
-            if (isIdentityUniqueConstraintViolation(exception)) {
-                throw new IdentityConflictException(exception);
+            if (isUserUniqueConstraintViolation(exception)) {
+                throw new UserConflictException(exception);
             }
             throw exception;
         }
     }
 
-    private boolean isIdentityUniqueConstraintViolation(Throwable exception) {
+    private boolean isUserUniqueConstraintViolation(Throwable exception) {
         Throwable cause = exception;
 
         while (cause != null) {

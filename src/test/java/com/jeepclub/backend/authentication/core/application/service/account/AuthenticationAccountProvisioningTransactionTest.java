@@ -2,8 +2,8 @@ package com.jeepclub.backend.authentication.core.application.service.account;
 
 import com.jeepclub.backend.authentication.core.application.exceptions.account.AuthenticationAccountConflictException;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
-import com.jeepclub.backend.identity.core.repository.IdentityRepository;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.identity.core.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,7 +27,7 @@ class AuthenticationAccountProvisioningTransactionTest {
     private AuthenticationAccountProvisioningService service;
 
     @Autowired
-    private IdentityRepository identityRepository;
+    private UserRepository identityRepository;
 
     @MockitoSpyBean
     private AuthenticationAccountRepository accountRepository;
@@ -48,8 +48,8 @@ class AuthenticationAccountProvisioningTransactionTest {
 
     @Test
     void commitsIdentityAndAuthenticationAccountWithTheSameId() {
-        IdentityRegistrationData data = new IdentityRegistrationData(
-                "Successful Identity",
+        UserRegistrationData data = new UserRegistrationData(
+                "Successful User",
                 null,
                 "successful@example.com",
                 "16899535009",
@@ -65,9 +65,9 @@ class AuthenticationAccountProvisioningTransactionTest {
         assertThat(accountRepository.existsByIdentityId(identityId)).isTrue();
     }
 
-    private IdentityRegistrationData identityData() {
-        return new IdentityRegistrationData(
-                "Transactional Identity",
+    private UserRegistrationData identityData() {
+        return new UserRegistrationData(
+                "Transactional User",
                 null,
                 "transactional@example.com",
                 CPF,

@@ -7,8 +7,8 @@ import com.jeepclub.backend.authentication.core.port.PasswordHasher;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.RefreshTokenJpaRepository;
 import com.jeepclub.backend.authentication.infra.persistence.jpa.SessionJpaRepository;
-import com.jeepclub.backend.identity.api.module.IdentityRegistrationData;
-import com.jeepclub.backend.identity.infra.persistence.jpa.IdentityJpaRepository;
+import com.jeepclub.backend.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.identity.infra.persistence.jpa.UserJpaRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,7 @@ class ConcurrentLoginIntegrationTest {
     @Autowired
     private AuthenticationAccountProvisioningService provisioningService;
     @Autowired
-    private IdentityJpaRepository identityRepository;
+    private UserJpaRepository identityRepository;
     @Autowired
     private AuthenticationAccountJpaRepository accountRepository;
     @Autowired
@@ -54,7 +54,7 @@ class ConcurrentLoginIntegrationTest {
         clearAuthenticationData();
         Instant createdAt = Instant.parse("2026-06-22T12:00:00Z");
         provisioningService.provision(
-                new IdentityRegistrationData(
+                new UserRegistrationData(
                         "Concurrent User", null, null, CPF, null, null, null, createdAt
                 ),
                 passwordHasher.hash(PASSWORD)

@@ -9,7 +9,7 @@ import com.jeepclub.backend.authentication.core.domain.model.Session;
 import com.jeepclub.backend.authentication.core.domain.model.AuthenticationAccount;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +22,7 @@ public class AccessTokenAuthenticationService {
 
     private final SessionRepository sessionRepository;
     private final AuthenticationAccountRepository accountRepository;
-    private final IdentityQuery identityQuery;
+    private final UserQuery identityQuery;
     private final Clock clock;
 
     public void validate(Long userId, Long sessionId) {

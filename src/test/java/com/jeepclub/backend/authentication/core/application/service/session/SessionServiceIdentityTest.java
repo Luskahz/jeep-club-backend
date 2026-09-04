@@ -14,8 +14,8 @@ import com.jeepclub.backend.authentication.core.repository.PasswordRecoveryReque
 import com.jeepclub.backend.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.authentication.core.repository.AuthenticationAccountRepository;
-import com.jeepclub.backend.identity.api.module.IdentityDetails;
-import com.jeepclub.backend.identity.api.module.IdentityQuery;
+import com.jeepclub.backend.identity.api.module.UserDetails;
+import com.jeepclub.backend.identity.api.module.UserQuery;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -46,7 +46,7 @@ class SessionServiceIdentityTest {
     @Mock private CredentialRevocationService credentialRevocationService;
     @Mock private PasswordChangeChallengeIssuer challengeIssuer;
     @Mock private TokenIssuanceService tokenIssuanceService;
-    @Mock private IdentityQuery identityQuery;
+    @Mock private UserQuery identityQuery;
     @Mock private Clock clock;
 
     @InjectMocks
@@ -54,9 +54,9 @@ class SessionServiceIdentityTest {
 
     @Test
     void currentSessionLoadsRegistrationDataThroughIdentityBoundary() {
-        IdentityDetails identity = new IdentityDetails(
+        UserDetails identity = new UserDetails(
                 42L,
-                "Identity Name",
+                "User Name",
                 LocalDate.of(1990, 1, 1),
                 "identity@example.com",
                 "52998224725",
@@ -87,7 +87,7 @@ class SessionServiceIdentityTest {
         );
 
         assertThat(result.userId()).isEqualTo(42L);
-        assertThat(result.userName()).isEqualTo("Identity Name");
+        assertThat(result.userName()).isEqualTo("User Name");
         assertThat(result.accountStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(result.sessionId()).isEqualTo(7L);
         assertThat(result.sessionActive()).isTrue();
