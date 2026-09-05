@@ -1,8 +1,5 @@
 package com.jeepclub.backend.authentication.api.contract;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.iam.authentication.api.http.dto.recovery.PasswordRecoveryRequestResponseDTO;
 import com.jeepclub.backend.iam.authentication.api.http.dto.session.LoginResponseDTO;
 import com.jeepclub.backend.iam.authentication.core.application.result.PublicPasswordRecoveryResult;
@@ -11,6 +8,9 @@ import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecover
 import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 
@@ -18,13 +18,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class AuthenticationDtoContractCharacterizationTest {
 
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        jsonMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
     }
 
     @Test
@@ -36,9 +37,9 @@ class AuthenticationDtoContractCharacterizationTest {
                 )
         );
 
-        JsonNode json = objectMapper.readTree(objectMapper.writeValueAsBytes(response));
+        JsonNode json = jsonMapper.readTree(jsonMapper.writeValueAsBytes(response));
 
-        assertThat(json.fieldNames()).toIterable().containsExactlyInAnyOrder(
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder(
                 "status",
                 "passwordChangeToken",
                 "passwordChangeTokenExpiresAt"
@@ -62,9 +63,9 @@ class AuthenticationDtoContractCharacterizationTest {
                         )
                 );
 
-        JsonNode json = objectMapper.readTree(objectMapper.writeValueAsBytes(response));
+        JsonNode json = jsonMapper.readTree(jsonMapper.writeValueAsBytes(response));
 
-        assertThat(json.fieldNames()).toIterable().containsExactlyInAnyOrder(
+        assertThat(json.propertyNames()).containsExactlyInAnyOrder(
                 "status",
                 "method",
                 "createdAt",

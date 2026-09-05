@@ -1,7 +1,5 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.iam.authentication.api.http.controller.SessionController;
 import com.jeepclub.backend.iam.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
 import com.jeepclub.backend.iam.authentication.api.http.exception.SessionExceptionHandler;
@@ -25,7 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,6 +32,8 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -55,9 +55,10 @@ class LoginControllerTest {
 
     @BeforeEach
     void setUp() {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        JsonMapper jsonMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -71,7 +72,7 @@ class LoginControllerTest {
                         new PasswordChangeChallengeExceptionHandler()
                 )
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .build();
     }

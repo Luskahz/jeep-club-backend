@@ -1,11 +1,11 @@
 package com.jeepclub.backend.identity.api.contract;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.jeepclub.backend.iam.identity.api.http.dto.user.UserRegistrationRequestDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.LocalDate;
 
@@ -13,13 +13,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class UserDtoContractCharacterizationTest {
 
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        jsonMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
     }
 
     @Test
@@ -36,10 +37,10 @@ class UserDtoContractCharacterizationTest {
                 }
                 """;
 
-        UserRegistrationRequestDTO request = objectMapper.readValue(json, UserRegistrationRequestDTO.class);
+        UserRegistrationRequestDTO request = jsonMapper.readValue(json, UserRegistrationRequestDTO.class);
 
         assertThat(request.birthDate()).isEqualTo(LocalDate.of(2000, 5, 17));
-        JsonNode serialized = objectMapper.readTree(objectMapper.writeValueAsBytes(request));
+        JsonNode serialized = jsonMapper.readTree(jsonMapper.writeValueAsBytes(request));
         assertThat(serialized.has("birthDate")).isTrue();
         assertThat(serialized.has("birthData")).isFalse();
     }
