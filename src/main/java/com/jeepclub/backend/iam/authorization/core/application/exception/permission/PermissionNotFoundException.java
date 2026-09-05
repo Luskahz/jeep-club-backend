@@ -1,0 +1,11 @@
+package com.jeepclub.backend.iam.authorization.core.application.exception.permission;
+
+public class PermissionNotFoundException extends RuntimeException {
+
+    public PermissionNotFoundException(Long permissionId) {
+        super("Permission not found with id: " + permissionId);
+    }
+    public PermissionNotFoundException(String permissionRawCode) {
+        super("Permission not found with code: " + permissionRawCode);
+    }
+}

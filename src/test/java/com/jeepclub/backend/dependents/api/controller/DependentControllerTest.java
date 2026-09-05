@@ -1,8 +1,6 @@
 package com.jeepclub.backend.dependents.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.jeepclub.backend.authentication.core.application.service.security.AccessTokenAuthenticationService;
+import com.jeepclub.backend.iam.authentication.core.application.service.security.AccessTokenAuthenticationService;
 import com.jeepclub.backend.dependents.api.http.controller.DependentController;
 import com.jeepclub.backend.dependents.api.http.dto.dependent.CreateDependentRequestDTO;
 import com.jeepclub.backend.dependents.api.http.dto.dependent.UpdateDependentRequestDTO;
@@ -32,6 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -67,11 +66,11 @@ class DependentControllerTest {
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
     private DependentResult result;
-    private ObjectMapper objectMapper;
+    private JsonMapper jsonMapper;
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        jsonMapper = JsonMapper.builder().findAndAddModules().build();
         Instant now = Instant.parse("2026-06-30T12:00:00Z");
         result = new DependentResult(
                 10L, "Pedro Silva", "52998224725",
@@ -104,7 +103,7 @@ class DependentControllerTest {
 
         mockMvc.perform(post("/dependents")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest())))
+                        .content(jsonMapper.writeValueAsString(createRequest())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(10L))
                 .andExpect(jsonPath("$.deletedAt").doesNotExist());
@@ -116,7 +115,7 @@ class DependentControllerTest {
                 .andExpect(jsonPath("$.userId").value(1L));
         mockMvc.perform(put("/dependents/10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(updateRequest())))
+                        .content(jsonMapper.writeValueAsString(updateRequest())))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/dependents/10"))
                 .andExpect(status().isNoContent());
@@ -133,7 +132,7 @@ class DependentControllerTest {
 
         mockMvc.perform(post("/dependents")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest())))
+                        .content(jsonMapper.writeValueAsString(createRequest())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DEPENDENT_OWNER_INACTIVE"));
     }
@@ -147,7 +146,7 @@ class DependentControllerTest {
 
         mockMvc.perform(post("/dependents")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(createRequest())))
+                        .content(jsonMapper.writeValueAsString(createRequest())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DEPENDENT_CPF_ALREADY_IN_USE"));
     }
@@ -161,7 +160,7 @@ class DependentControllerTest {
 
         mockMvc.perform(put("/dependents/10")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(jsonMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
 

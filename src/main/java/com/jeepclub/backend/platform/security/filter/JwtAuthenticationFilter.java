@@ -1,11 +1,11 @@
 package com.jeepclub.backend.platform.security.filter;
 
-import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionInvalidException;
-import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionNotFoundException;
-import com.jeepclub.backend.authentication.core.application.exceptions.session.SessionUserMismatchException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserDisabledException;
-import com.jeepclub.backend.authentication.core.application.exceptions.user.UserIdNotFoundException;
-import com.jeepclub.backend.authentication.core.application.service.security.AccessTokenAuthenticationService;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.session.SessionInvalidException;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.session.SessionNotFoundException;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.session.SessionUserMismatchException;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountAccessDeniedException;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
+import com.jeepclub.backend.iam.authentication.core.application.service.security.AccessTokenAuthenticationService;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
@@ -91,8 +91,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                  | SessionInvalidException
                  | SessionNotFoundException
                  | SessionUserMismatchException
-                 | UserDisabledException
-                 | UserIdNotFoundException exception) {
+                 | AuthenticationAccountAccessDeniedException
+                 | AuthenticationAccountNotFoundException exception) {
             SecurityContextHolder.clearContext();
             ApiProblemResponseWriter problemWriter = problemWriterProvider.getIfAvailable();
             if (problemWriter == null) {

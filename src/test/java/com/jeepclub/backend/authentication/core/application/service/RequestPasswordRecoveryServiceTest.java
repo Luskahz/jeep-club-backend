@@ -1,15 +1,13 @@
 package com.jeepclub.backend.authentication.core.application.service;
 
-import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.service.internal.PasswordRecoveryRequestManager;
-import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
-import com.jeepclub.backend.authentication.core.domain.model.User;
-import com.jeepclub.backend.authentication.core.repository.UserRepository;
+import com.jeepclub.backend.iam.authentication.core.application.result.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.internal.PasswordRecoveryRequestManager;
+import com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
+import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserDetails;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +30,9 @@ class RequestPasswordRecoveryServiceTest {
     private static final String CPF = "52998224725";
 
     @Mock
-    private UserRepository userRepository;
+    private AuthenticationAccountRepository accountRepository;
+    @Mock
+    private UserQuery identityQuery;
     @Mock
     private PasswordRecoveryRequestManager requestManager;
     private PasswordRecoveryService service;
@@ -41,7 +41,8 @@ class RequestPasswordRecoveryServiceTest {
     @BeforeEach
     void setUp() {
         service = new PasswordRecoveryService(
-                userRepository,
+                accountRepository,
+                identityQuery,
                 null,
                 requestManager,
                 null,
@@ -64,25 +65,23 @@ class RequestPasswordRecoveryServiceTest {
 
     @Test
     void unknownCpfReturnsSamePublicRepresentationAsExistingUser() {
-        when(userRepository.findByCpfForUpdate(CPF))
+        when(identityQuery.findByCpf(CPF))
                 .thenReturn(Optional.empty());
 
         PublicPasswordRecoveryResult unknown = service.request(CPF);
 
-        when(userRepository.findByCpfForUpdate(CPF))
-                .thenReturn(Optional.of(activeUser()));
+        when(identityQuery.findByCpf(CPF)).thenReturn(Optional.of(activeIdentity()));
+        when(accountRepository.existsByIdentityId(1L)).thenReturn(true);
         PublicPasswordRecoveryResult existing = service.request(CPF);
 
         assertThat(unknown).isEqualTo(existing);
         verify(requestManager).getOrCreate(1L, NOW);
     }
 
-    private User activeUser() {
-        return User.reconstitute(
-                1L, "Lucas", null, "lucas@example.com", CPF, null, "hash", null,
-                null, AccountStatus.ACTIVE, AuthenticationStatus.ENABLED,
-                CredentialStatus.PERMANENT, null, NOW.minusSeconds(3600), null,
-                null, null, 0
+    private UserDetails activeIdentity() {
+        return new UserDetails(
+                1L, "Lucas", null, "lucas@example.com", CPF, null, null,
+                null, true, NOW.minusSeconds(3600), null, null
         );
     }
 }

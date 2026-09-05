@@ -1,6 +1,6 @@
 package com.jeepclub.backend.billing.infra.integration.authorization;
 
-import com.jeepclub.backend.authorization.api.module.role.RoleQuery;
+import com.jeepclub.backend.iam.authorization.api.module.role.RoleQuery;
 import com.jeepclub.backend.billing.core.port.BillingAuthorizationPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

@@ -1,12 +1,12 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.jeepclub.backend.authentication.api.http.controller.admin.AdminPasswordRecoveryRequestController;
-import com.jeepclub.backend.authentication.core.application.result.PasswordResetLinkAdminResult;
-import com.jeepclub.backend.authentication.core.application.result.TemporaryPasswordAdminResult;
-import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
-import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
+import com.jeepclub.backend.iam.authentication.api.http.controller.admin.AdminPasswordRecoveryRequestController;
+import com.jeepclub.backend.iam.authentication.core.application.result.PasswordResetLinkAdminResult;
+import com.jeepclub.backend.iam.authentication.core.application.result.TemporaryPasswordAdminResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.model.PasswordRecoveryRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

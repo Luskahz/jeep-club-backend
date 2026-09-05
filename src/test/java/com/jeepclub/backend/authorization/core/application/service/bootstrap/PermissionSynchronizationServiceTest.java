@@ -1,7 +1,8 @@
 package com.jeepclub.backend.authorization.core.application.service.bootstrap;
 
-import com.jeepclub.backend.authorization.core.domain.model.Permission;
-import com.jeepclub.backend.authorization.core.repository.PermissionRepository;
+import com.jeepclub.backend.iam.authorization.core.application.service.bootstrap.PermissionSynchronizationService;
+import com.jeepclub.backend.iam.authorization.core.domain.model.Permission;
+import com.jeepclub.backend.iam.authorization.core.repository.PermissionRepository;
 import com.jeepclub.backend.shared.authorization.PermissionCode;
 import com.jeepclub.backend.shared.authorization.PermissionDefinition;
 import org.junit.jupiter.api.Test;

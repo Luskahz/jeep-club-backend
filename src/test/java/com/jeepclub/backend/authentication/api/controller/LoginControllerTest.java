@@ -1,18 +1,15 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.http.controller.SessionController;
-import com.jeepclub.backend.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
-import com.jeepclub.backend.authentication.api.http.exception.SessionExceptionHandler;
-import com.jeepclub.backend.authentication.api.http.exception.UserExceptionHandler;
-import com.jeepclub.backend.authentication.core.application.exceptions.login.InvalidCredentialsException;
-import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.result.MeResult;
-import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
-import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
+import com.jeepclub.backend.iam.authentication.api.http.controller.SessionController;
+import com.jeepclub.backend.iam.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
+import com.jeepclub.backend.iam.authentication.api.http.exception.SessionExceptionHandler;
+import com.jeepclub.backend.iam.authentication.api.http.exception.AuthenticationAccountExceptionHandler;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.InvalidCredentialsException;
+import com.jeepclub.backend.iam.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.iam.authentication.core.application.result.MeResult;
+import com.jeepclub.backend.iam.authentication.core.application.result.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.iam.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.session.SessionService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.AfterEach;
@@ -20,11 +17,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -33,6 +32,8 @@ import org.springframework.security.web.method.annotation.AuthenticationPrincipa
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -54,9 +55,10 @@ class LoginControllerTest {
 
     @BeforeEach
     void setUp() {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        JsonMapper jsonMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -65,12 +67,12 @@ class LoginControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
                         new GlobalExceptionHandler(),
-                        new UserExceptionHandler(),
+                        new AuthenticationAccountExceptionHandler(),
                         new SessionExceptionHandler(),
                         new PasswordChangeChallengeExceptionHandler()
                 )
                 .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .build();
     }
@@ -80,24 +82,25 @@ class LoginControllerTest {
         SecurityContextHolder.clearContext();
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"52998224725", "529.982.247-25"})
     @DisplayName("Sucesso: login com credenciais definitivas retorna 200 e tokens")
-    void shouldReturnTokensOnSuccessfulLogin() throws Exception {
+    void shouldReturnTokensOnSuccessfulLogin(String cpf) throws Exception {
         AuthTokens tokens = new AuthTokens(
                 "refresh-xyz",
                 "access-xyz",
                 3600L
         );
 
-        when(sessionService.login("52998224725", "senha123"))
+        when(sessionService.login(cpf, "senha123"))
                 .thenReturn(new AuthenticatedLoginResult(tokens));
 
         String payload = """
                 {
-                    "cpf": "52998224725",
+                    "cpf": "%s",
                     "senha": "senha123"
                 }
-                """;
+                """.formatted(cpf);
 
         mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -107,6 +110,23 @@ class LoginControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("access-xyz"))
                 .andExpect(jsonPath("$.refreshToken").value("refresh-xyz"))
                 .andExpect(jsonPath("$.expiresInSeconds").value(3600));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"529 982 247 25", "529-982-247-25", "ABC52998224725"})
+    void shouldRejectCpfFormatsOutsideTheHttpContract(String cpf) throws Exception {
+        String payload = """
+                {
+                    "cpf": "%s",
+                    "senha": "senha123"
+                }
+                """.formatted(cpf);
+
+        mockMvc.perform(post("/authentication/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     @Test
@@ -157,12 +177,9 @@ class LoginControllerTest {
     }
 
     @Test
-    @DisplayName("Sucesso: consultar sessÃ£o autenticada usa o principal e ordena authorities")
+    @DisplayName("Sucesso: consultar sessão autenticada retorna apenas dados técnicos")
     void shouldReturnAuthenticatedSessionData() throws Exception {
-        Authentication authentication = authenticatedUser(
-                "AUTHENTICATION_USER_READ",
-                "AUTHENTICATION_SESSION_READ"
-        );
+        Authentication authentication = authenticatedUser("AUTHENTICATION_SESSION_READ");
 
         when(sessionService.getCurrentSession(
                 1L,
@@ -170,16 +187,6 @@ class LoginControllerTest {
                 Instant.parse("2026-05-21T20:30:00Z")
         )).thenReturn(new MeResult(
                 1L,
-                "Lucas Alves",
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                AccountStatus.ACTIVE,
-                null,
-                null,
                 10L,
                 true,
                 900L
@@ -191,12 +198,11 @@ class LoginControllerTest {
                         .principal(authentication))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(1L))
-                .andExpect(jsonPath("$.userName").value("Lucas Alves"))
                 .andExpect(jsonPath("$.sessionId").value(10L))
                 .andExpect(jsonPath("$.sessionActive").value(true))
                 .andExpect(jsonPath("$.expiresInSeconds").value(900L))
-                .andExpect(jsonPath("$.authorities[0]").value("AUTHENTICATION_SESSION_READ"))
-                .andExpect(jsonPath("$.authorities[1]").value("AUTHENTICATION_USER_READ"));
+                .andExpect(jsonPath("$.authorities").doesNotExist())
+                .andExpect(jsonPath("$.userName").doesNotExist());
     }
 
     @Test

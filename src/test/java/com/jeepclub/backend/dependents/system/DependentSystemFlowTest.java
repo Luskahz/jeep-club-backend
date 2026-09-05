@@ -1,10 +1,8 @@
 package com.jeepclub.backend.dependents.system;
 
-import com.jeepclub.backend.authentication.core.domain.enums.AccountStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.AuthenticationStatus;
-import com.jeepclub.backend.authentication.core.domain.enums.CredentialStatus;
-import com.jeepclub.backend.authentication.infra.persistence.entity.UserEntity;
-import com.jeepclub.backend.authentication.infra.persistence.jpa.UserJpaRepository;
+import com.jeepclub.backend.iam.identity.api.module.UserStatus;
+import com.jeepclub.backend.iam.identity.infra.persistence.entity.UserEntity;
+import com.jeepclub.backend.iam.identity.infra.persistence.jpa.UserJpaRepository;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
@@ -34,7 +32,7 @@ class DependentSystemFlowTest {
     @Autowired
     private DependentService dependentService;
     @Autowired
-    private UserJpaRepository userJpaRepository;
+    private UserJpaRepository identityJpaRepository;
     @Autowired
     private DependentJpaRepository dependentJpaRepository;
     @Autowired
@@ -46,8 +44,8 @@ class DependentSystemFlowTest {
     void setUp() {
         historyJpaRepository.deleteAll();
         dependentJpaRepository.deleteAll();
-        userJpaRepository.deleteAll();
-        user = userJpaRepository.saveAndFlush(user());
+        identityJpaRepository.deleteAll();
+        user = identityJpaRepository.saveAndFlush(user());
     }
 
     @Test
@@ -112,10 +110,7 @@ class DependentSystemFlowTest {
         UserEntity entity = new UserEntity();
         entity.setName("Titular Fluxo");
         entity.setCpf("39053344705");
-        entity.setPasswordHash("{noop}Senha@123");
-        entity.setAccountStatus(AccountStatus.ACTIVE);
-        entity.setAuthenticationStatus(AuthenticationStatus.ENABLED);
-        entity.setCredentialStatus(CredentialStatus.PERMANENT);
+        entity.setStatus(UserStatus.ACTIVE);
         entity.setCreatedAt(NOW);
         return entity;
     }

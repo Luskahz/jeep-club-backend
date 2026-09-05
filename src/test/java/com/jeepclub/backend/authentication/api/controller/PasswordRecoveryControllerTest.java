@@ -1,14 +1,12 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.http.controller.PasswordRecoveryRequestController;
-import com.jeepclub.backend.authentication.api.http.exception.PasswordRecoveryExceptionHandler;
-import com.jeepclub.backend.authentication.core.application.result.PublicPasswordRecoveryResult;
-import com.jeepclub.backend.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
-import com.jeepclub.backend.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
-import com.jeepclub.backend.authentication.core.domain.model.PasswordRecoveryRequest;
+import com.jeepclub.backend.iam.authentication.api.http.controller.PasswordRecoveryRequestController;
+import com.jeepclub.backend.iam.authentication.api.http.exception.PasswordRecoveryExceptionHandler;
+import com.jeepclub.backend.iam.authentication.core.application.result.PublicPasswordRecoveryResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.PasswordRecoveryService;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
+import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
+import com.jeepclub.backend.iam.authentication.core.domain.model.PasswordRecoveryRequest;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,10 +15,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 
@@ -51,9 +51,10 @@ class PasswordRecoveryControllerTest {
 
     @BeforeEach
     void setUp() {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        JsonMapper jsonMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -65,7 +66,7 @@ class PasswordRecoveryControllerTest {
                         new GlobalExceptionHandler(),
                         new PasswordRecoveryExceptionHandler()
                 )
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .build();
     }

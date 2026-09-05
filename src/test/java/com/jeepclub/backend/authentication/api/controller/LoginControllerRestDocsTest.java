@@ -1,15 +1,13 @@
 package com.jeepclub.backend.authentication.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.jeepclub.backend.authentication.api.http.controller.SessionController;
-import com.jeepclub.backend.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
-import com.jeepclub.backend.authentication.api.http.exception.SessionExceptionHandler;
-import com.jeepclub.backend.authentication.api.http.exception.UserExceptionHandler;
-import com.jeepclub.backend.authentication.core.application.result.AuthTokens;
-import com.jeepclub.backend.authentication.core.application.result.login.AuthenticatedLoginResult;
-import com.jeepclub.backend.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
-import com.jeepclub.backend.authentication.core.application.service.session.SessionService;
+import com.jeepclub.backend.iam.authentication.api.http.controller.SessionController;
+import com.jeepclub.backend.iam.authentication.api.http.exception.PasswordChangeChallengeExceptionHandler;
+import com.jeepclub.backend.iam.authentication.api.http.exception.SessionExceptionHandler;
+import com.jeepclub.backend.iam.authentication.api.http.exception.AuthenticationAccountExceptionHandler;
+import com.jeepclub.backend.iam.authentication.core.application.result.AuthTokens;
+import com.jeepclub.backend.iam.authentication.core.application.result.login.AuthenticatedLoginResult;
+import com.jeepclub.backend.iam.authentication.core.application.result.login.PasswordChangeRequiredLoginResult;
+import com.jeepclub.backend.iam.authentication.core.application.service.session.SessionService;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,12 +16,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.http.MediaType;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
 
@@ -46,9 +46,10 @@ class LoginControllerRestDocsTest {
 
     @BeforeEach
     void setUp(RestDocumentationContextProvider restDocumentation) {
-        ObjectMapper objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        JsonMapper jsonMapper = JsonMapper.builder()
+                .findAndAddModules()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -57,11 +58,11 @@ class LoginControllerRestDocsTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(
                         new GlobalExceptionHandler(),
-                        new UserExceptionHandler(),
+                        new AuthenticationAccountExceptionHandler(),
                         new SessionExceptionHandler(),
                         new PasswordChangeChallengeExceptionHandler()
                 )
-                .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .apply(documentationConfiguration(restDocumentation))
                 .build();
