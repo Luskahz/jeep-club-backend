@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(basePackages = "com.jeepclub.backend.authentication")
+@RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.authentication")
 public class TokenHashExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(TokenInvalidException.class)

@@ -55,10 +55,10 @@ public interface SessionJpaRepository
     @Query("""
             UPDATE SessionEntity session
             SET session.status =
-                com.jeepclub.backend.authentication.core.domain.enums.SessionStatus.REVOKED
+                com.jeepclub.backend.iam.authentication.core.domain.enums.SessionStatus.REVOKED
             WHERE session.userId = :userId
               AND session.status =
-                com.jeepclub.backend.authentication.core.domain.enums.SessionStatus.ACTIVE
+                com.jeepclub.backend.iam.authentication.core.domain.enums.SessionStatus.ACTIVE
             """)
     void revokeActiveByUserId(@Param("userId") Long userId);
 }
