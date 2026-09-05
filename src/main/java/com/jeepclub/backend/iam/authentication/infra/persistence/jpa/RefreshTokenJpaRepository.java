@@ -67,10 +67,10 @@ public interface RefreshTokenJpaRepository
     @Query("""
             UPDATE RefreshTokenEntity token
             SET token.status =
-                com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus.REVOKED,
+                com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus.REVOKED,
                 token.replacedByTokenId = null
             WHERE token.status =
-                com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus.ACTIVE
+                com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus.ACTIVE
               AND token.sessionId IN (
                   SELECT session.id
                   FROM SessionEntity session
@@ -83,10 +83,10 @@ public interface RefreshTokenJpaRepository
     @Query("""
             UPDATE RefreshTokenEntity token
             SET token.status =
-                com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus.REVOKED,
+                com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus.REVOKED,
                 token.replacedByTokenId = null
             WHERE token.status =
-                com.jeepclub.backend.authentication.core.domain.enums.RefreshTokenStatus.ACTIVE
+                com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus.ACTIVE
               AND token.sessionId = :sessionId
             """)
     void revokeActiveBySessionId(@Param("sessionId") Long sessionId);

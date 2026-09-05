@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(
-        basePackages = "com.jeepclub.backend.authentication"
+        basePackages = "com.jeepclub.backend.iam.authentication"
 )
 public class RefreshTokenExceptionHandler
         extends ApiExceptionHandler {
