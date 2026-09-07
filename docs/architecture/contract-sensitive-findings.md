@@ -22,8 +22,8 @@ foram corrigidos, pois alterariam autorização, validação ou respostas HTTP.
 
 ## Health, Tools e Vehicles
 
-- O upsert administrativo de perfil médico não verifica a existência do dono;
-  adicionar a verificação cria novos `400/404` para IDs hoje aceitos.
+- A validação do owner de perfil médico e a política de retenção foram definidas
+  em `medical-profile-owner-lifecycle.md`.
 - `tools` anuncia itens ativos, mas a listagem também inclui inativos; um item
   removido ainda pode ser consultado ou reativado. Corrigir essas regras muda
   os resultados dos endpoints.

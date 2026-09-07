@@ -77,4 +77,12 @@ public record MedicalProfileResponse(
                 profile.getUpdatedAt()
         );
     }
+
+    @Override
+    public String toString() {
+        return "MedicalProfileResponse[id=" + id
+                + ", ownerType=" + ownerType
+                + ", ownerId=" + ownerId
+                + ", clinicalData=REDACTED]";
+    }
 }

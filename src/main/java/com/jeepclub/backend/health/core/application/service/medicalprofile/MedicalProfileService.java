@@ -1,12 +1,20 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
+import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditEvent;
+import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditOperation;
+import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditOutcome;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerInactiveException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerNotFoundException;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
+import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,10 +29,14 @@ public class MedicalProfileService {
 
     private final MedicalProfileRepository medicalProfileRepository;
     private final DependentOwnershipChecker dependentOwnershipChecker;
+    private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
+    private final MedicalProfileAuditTrail auditTrail;
     private final Clock clock;
 
     @Transactional(readOnly = true)
     public MedicalProfile getMyMedicalProfile(Long userId) {
+        validateAccessibleOwner(MedicalProfileOwnerType.USER, userId);
+
         return findByOwner(
                 MedicalProfileOwnerType.USER,
                 userId
@@ -36,10 +48,13 @@ public class MedicalProfileService {
             Long userId,
             UpsertMedicalProfileCommand data
     ) {
+        validateAccessibleOwner(MedicalProfileOwnerType.USER, userId);
+
         return upsertByOwner(
                 MedicalProfileOwnerType.USER,
                 userId,
-                data
+                data,
+                userId
         );
     }
 
@@ -50,7 +65,8 @@ public class MedicalProfileService {
     ) {
         validateDependentBelongsToUser(
                 dependentId,
-                userId
+                userId,
+                MedicalProfileAuditOperation.READ
         );
 
         return findByOwner(
@@ -67,18 +83,22 @@ public class MedicalProfileService {
     ) {
         validateDependentBelongsToUser(
                 dependentId,
-                userId
+                userId,
+                MedicalProfileAuditOperation.UPDATE
         );
 
         return upsertByOwner(
                 MedicalProfileOwnerType.DEPENDENT,
                 dependentId,
-                data
+                data,
+                userId
         );
     }
 
     @Transactional
     public void deleteMyMedicalProfile(Long userId) {
+        validateAccessibleOwner(MedicalProfileOwnerType.USER, userId);
+
         MedicalProfile profile = findByOwner(
                 MedicalProfileOwnerType.USER,
                 userId
@@ -89,6 +109,8 @@ public class MedicalProfileService {
                 userId,
                 Instant.now(clock)
         );
+        audit(userId, profile, MedicalProfileAuditOperation.DELETE,
+                MedicalProfileAuditOutcome.SUCCEEDED);
     }
 
     @Transactional
@@ -98,7 +120,8 @@ public class MedicalProfileService {
     ) {
         validateDependentBelongsToUser(
                 dependentId,
-                userId
+                userId,
+                MedicalProfileAuditOperation.DELETE
         );
 
         MedicalProfile profile = findByOwner(
@@ -111,6 +134,8 @@ public class MedicalProfileService {
                 userId,
                 Instant.now(clock)
         );
+        audit(userId, profile, MedicalProfileAuditOperation.DELETE,
+                MedicalProfileAuditOutcome.SUCCEEDED);
     }
 
     private MedicalProfile findByOwner(
@@ -125,16 +150,26 @@ public class MedicalProfileService {
     private MedicalProfile upsertByOwner(
             MedicalProfileOwnerType ownerType,
             Long ownerId,
-            UpsertMedicalProfileCommand data
+            UpsertMedicalProfileCommand data,
+            Long actorUserId
     ) {
-        return medicalProfileRepository
-                .findByOwner(ownerType, ownerId)
-                .map(profile -> updateProfile(profile, data))
-                .orElseGet(() -> createProfile(
-                        ownerType,
-                        ownerId,
-                        data
-                ));
+        var existing = medicalProfileRepository.findByOwnerForUpdate(
+                ownerType,
+                ownerId
+        );
+        MedicalProfile profile;
+        MedicalProfileAuditOperation operation;
+
+        if (existing.isPresent()) {
+            profile = updateProfile(existing.get(), data);
+            operation = MedicalProfileAuditOperation.UPDATE;
+        } else {
+            profile = createProfile(ownerType, ownerId, data);
+            operation = MedicalProfileAuditOperation.CREATE;
+        }
+
+        audit(actorUserId, profile, operation, MedicalProfileAuditOutcome.SUCCEEDED);
+        return profile;
     }
 
     private MedicalProfile updateProfile(
@@ -143,16 +178,16 @@ public class MedicalProfileService {
     ) {
         profile.update(
                 data.bloodType(),
-                clean(data.allergies()),
-                clean(data.chronicConditions()),
-                clean(data.continuousMedications()),
-                clean(data.healthInsuranceProvider()),
-                clean(data.healthInsurancePlan()),
-                clean(data.healthInsuranceNumber()),
-                clean(data.emergencyContactName()),
-                normalizePhone(data.emergencyContactPhone()),
-                clean(data.emergencyContactRelationship()),
-                clean(data.observations()),
+                data.allergies(),
+                data.chronicConditions(),
+                data.continuousMedications(),
+                data.healthInsuranceProvider(),
+                data.healthInsurancePlan(),
+                data.healthInsuranceNumber(),
+                data.emergencyContactName(),
+                data.emergencyContactPhone(),
+                data.emergencyContactRelationship(),
+                data.observations(),
                 Instant.now(clock)
         );
 
@@ -168,16 +203,16 @@ public class MedicalProfileService {
                 ownerType,
                 ownerId,
                 data.bloodType(),
-                clean(data.allergies()),
-                clean(data.chronicConditions()),
-                clean(data.continuousMedications()),
-                clean(data.healthInsuranceProvider()),
-                clean(data.healthInsurancePlan()),
-                clean(data.healthInsuranceNumber()),
-                clean(data.emergencyContactName()),
-                normalizePhone(data.emergencyContactPhone()),
-                clean(data.emergencyContactRelationship()),
-                clean(data.observations()),
+                data.allergies(),
+                data.chronicConditions(),
+                data.continuousMedications(),
+                data.healthInsuranceProvider(),
+                data.healthInsurancePlan(),
+                data.healthInsuranceNumber(),
+                data.emergencyContactName(),
+                data.emergencyContactPhone(),
+                data.emergencyContactRelationship(),
+                data.observations(),
                 Instant.now(clock)
         );
 
@@ -186,56 +221,68 @@ public class MedicalProfileService {
 
     private void validateDependentBelongsToUser(
             Long dependentId,
-            Long userId
+            Long userId,
+            MedicalProfileAuditOperation operation
     ) {
-        if (dependentId == null) {
-            throw new InvalidMedicalProfileDataException(
-                    "O ID do dependente é obrigatório."
-            );
-        }
-
-        if (userId == null) {
-            throw new InvalidMedicalProfileDataException(
-                    "O ID do usuário autenticado é obrigatório."
-            );
-        }
+        validateAccessibleOwner(MedicalProfileOwnerType.USER, userId);
+        validateAccessibleOwner(MedicalProfileOwnerType.DEPENDENT, dependentId);
 
         if (!dependentOwnershipChecker.belongsToUser(
                 dependentId,
                 userId
         )) {
+            auditTrail.record(new MedicalProfileAuditEvent(
+                    userId,
+                    MedicalProfileOwnerType.DEPENDENT,
+                    dependentId,
+                    operation,
+                    MedicalProfileAuditOutcome.DENIED,
+                    Instant.now(clock)
+            ));
             throw new MedicalProfileAccessDeniedException(
                     "O dependente informado não pertence ao usuário autenticado."
             );
         }
     }
 
-    private String clean(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String cleaned = value.trim();
-        return cleaned.isBlank() ? null : cleaned;
+    private void audit(
+            Long actorUserId,
+            MedicalProfile profile,
+            MedicalProfileAuditOperation operation,
+            MedicalProfileAuditOutcome outcome
+    ) {
+        auditTrail.record(new MedicalProfileAuditEvent(
+                actorUserId,
+                profile.getOwnerType(),
+                profile.getOwnerId(),
+                operation,
+                outcome,
+                Instant.now(clock)
+        ));
     }
 
-    private String normalizePhone(String phone) {
-        if (phone == null) {
-            return null;
-        }
-
-        String digits = phone.replaceAll("\\D", "");
-
-        if (digits.isBlank()) {
-            return null;
-        }
-
-        if (digits.length() < 10 || digits.length() > 11) {
+    private void validateAccessibleOwner(
+            MedicalProfileOwnerType ownerType,
+            Long ownerId
+    ) {
+        if (ownerId == null || ownerId <= 0) {
             throw new InvalidMedicalProfileDataException(
-                    "O telefone de emergência deve ter 10 ou 11 dígitos."
+                    "O ID do proprietário do perfil médico deve ser positivo."
             );
         }
 
-        return digits;
+        MedicalProfileOwnerStatus status = ownerStatusChecker.getStatus(
+                ownerType,
+                ownerId
+        );
+
+        if (status == MedicalProfileOwnerStatus.NOT_FOUND) {
+            throw new MedicalProfileOwnerNotFoundException(ownerType, ownerId);
+        }
+
+        if (status == MedicalProfileOwnerStatus.INACTIVE) {
+            throw new MedicalProfileOwnerInactiveException(ownerType, ownerId);
+        }
     }
+
 }

@@ -10,12 +10,6 @@ import java.time.Instant;
 @Getter
 public class MedicalProfile {
 
-    private static final int MAX_HEALTH_INSURANCE_PROVIDER_LENGTH = 120;
-    private static final int MAX_HEALTH_INSURANCE_PLAN_LENGTH = 120;
-    private static final int MAX_HEALTH_INSURANCE_NUMBER_LENGTH = 80;
-    private static final int MAX_EMERGENCY_CONTACT_NAME_LENGTH = 120;
-    private static final int MAX_EMERGENCY_CONTACT_RELATIONSHIP_LENGTH = 80;
-
     private final Long id;
     private final MedicalProfileOwnerType ownerType;
     private final Long ownerId;
@@ -201,49 +195,31 @@ public class MedicalProfile {
             String emergencyContactRelationship,
             String observations
     ) {
-        this.bloodType = bloodType == null
-                ? BloodType.UNKNOWN
-                : bloodType;
-
-        this.allergies = normalizeNullableText(allergies);
-        this.chronicConditions = normalizeNullableText(chronicConditions);
-        this.continuousMedications = normalizeNullableText(continuousMedications);
-
-        this.healthInsuranceProvider = normalizeLimitedText(
+        MedicalProfileData normalized = new MedicalProfileData(
+                bloodType,
+                allergies,
+                chronicConditions,
+                continuousMedications,
                 healthInsuranceProvider,
-                MAX_HEALTH_INSURANCE_PROVIDER_LENGTH,
-                "healthInsuranceProvider"
-        );
-
-        this.healthInsurancePlan = normalizeLimitedText(
                 healthInsurancePlan,
-                MAX_HEALTH_INSURANCE_PLAN_LENGTH,
-                "healthInsurancePlan"
-        );
-
-        this.healthInsuranceNumber = normalizeLimitedText(
                 healthInsuranceNumber,
-                MAX_HEALTH_INSURANCE_NUMBER_LENGTH,
-                "healthInsuranceNumber"
-        );
-
-        this.emergencyContactName = normalizeLimitedText(
                 emergencyContactName,
-                MAX_EMERGENCY_CONTACT_NAME_LENGTH,
-                "emergencyContactName"
-        );
-
-        this.emergencyContactPhone = normalizePhoneNumber(
-                emergencyContactPhone
-        );
-
-        this.emergencyContactRelationship = normalizeLimitedText(
+                emergencyContactPhone,
                 emergencyContactRelationship,
-                MAX_EMERGENCY_CONTACT_RELATIONSHIP_LENGTH,
-                "emergencyContactRelationship"
+                observations
         );
 
-        this.observations = normalizeNullableText(observations);
+        this.bloodType = normalized.bloodType();
+        this.allergies = normalized.allergies();
+        this.chronicConditions = normalized.chronicConditions();
+        this.continuousMedications = normalized.continuousMedications();
+        this.healthInsuranceProvider = normalized.healthInsuranceProvider();
+        this.healthInsurancePlan = normalized.healthInsurancePlan();
+        this.healthInsuranceNumber = normalized.healthInsuranceNumber();
+        this.emergencyContactName = normalized.emergencyContactName();
+        this.emergencyContactPhone = normalized.emergencyContactPhone();
+        this.emergencyContactRelationship = normalized.emergencyContactRelationship();
+        this.observations = normalized.observations();
     }
 
     private static void validateId(Long id) {
@@ -318,48 +294,4 @@ public class MedicalProfile {
         }
     }
 
-    private static String normalizeNullableText(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String normalized = value.trim();
-
-        return normalized.isBlank()
-                ? null
-                : normalized;
-    }
-
-    private static String normalizeLimitedText(
-            String value,
-            int maxLength,
-            String fieldName
-    ) {
-        String normalized = normalizeNullableText(value);
-
-        if (normalized != null && normalized.length() > maxLength) {
-            throw new InvalidMedicalProfileException(
-                    fieldName + " não pode exceder "
-                            + maxLength + " caracteres."
-            );
-        }
-
-        return normalized;
-    }
-
-    private static String normalizePhoneNumber(String phoneNumber) {
-        if (phoneNumber == null || phoneNumber.isBlank()) {
-            return null;
-        }
-
-        String normalized = phoneNumber.replaceAll("\\D", "");
-
-        if (normalized.length() < 10 || normalized.length() > 11) {
-            throw new InvalidMedicalProfileException(
-                    "O telefone de emergência deve possuir 10 ou 11 dígitos."
-            );
-        }
-
-        return normalized;
-    }
 }

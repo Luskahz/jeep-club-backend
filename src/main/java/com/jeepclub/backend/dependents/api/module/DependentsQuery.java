@@ -2,6 +2,8 @@ package com.jeepclub.backend.dependents.api.module;
 
 public interface DependentsQuery {
 
+    boolean existsById(Long dependentId);
+
     boolean existsActiveById(Long dependentId);
 
     boolean isActiveDependentOfUser(

@@ -27,6 +27,18 @@ public interface MedicalProfileJpaRepository extends JpaRepository<MedicalProfil
             Long ownerId
     );
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select m
+            from MedicalProfileEntity m
+            where m.ownerType = :ownerType
+              and m.ownerId = :ownerId
+            """)
+    Optional<MedicalProfileEntity> findByOwnerForUpdate(
+            @Param("ownerType") MedicalProfileOwnerType ownerType,
+            @Param("ownerId") Long ownerId
+    );
+
     boolean existsByOwnerTypeAndOwnerId(
             MedicalProfileOwnerType ownerType,
             Long ownerId

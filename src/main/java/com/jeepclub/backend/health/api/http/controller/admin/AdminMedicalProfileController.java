@@ -1,6 +1,7 @@
 package com.jeepclub.backend.health.api.http.controller.admin;
 
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileMutationResponse;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileResponse;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileSummaryResponse;
 import com.jeepclub.backend.health.core.application.service.medicalprofile.AdminMedicalProfileService;
@@ -40,10 +41,11 @@ public class AdminMedicalProfileController {
     @Operation(summary = "Lista perfis médicos de forma resumida para uso administrativo.")
     public ResponseEntity<List<MedicalProfileSummaryResponse>> listMedicalProfiles(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         List<MedicalProfileSummaryResponse> profiles = adminMedicalProfileService
-                .listMedicalProfiles(page, size)
+                .listMedicalProfiles(page, size, principal.getUserId())
                 .stream()
                 .map(MedicalProfileSummaryResponse::fromDomain)
                 .toList();
@@ -55,9 +57,13 @@ public class AdminMedicalProfileController {
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Busca um perfil médico pelo ID do próprio perfil médico.")
     public ResponseEntity<MedicalProfileResponse> getByProfileId(
-            @PathVariable Long profileId
+            @PathVariable Long profileId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        var profile = adminMedicalProfileService.getById(profileId);
+        var profile = adminMedicalProfileService.getById(
+                profileId,
+                principal.getUserId()
+        );
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
     }
 
@@ -65,11 +71,13 @@ public class AdminMedicalProfileController {
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Busca o perfil médico de um usuário específico.")
     public ResponseEntity<MedicalProfileResponse> getUserMedicalProfile(
-            @PathVariable Long userId
+            @PathVariable Long userId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         var profile = adminMedicalProfileService.getByOwner(
                 MedicalProfileOwnerType.USER,
-                userId
+                userId,
+                principal.getUserId()
         );
 
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
@@ -78,28 +86,32 @@ public class AdminMedicalProfileController {
     @PutMapping("/users/{userId}")
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_UPDATE')")
     @Operation(summary = "Cria ou atualiza o perfil médico de um usuário específico.")
-    public ResponseEntity<MedicalProfileResponse> upsertUserMedicalProfile(
+    public ResponseEntity<MedicalProfileMutationResponse> upsertUserMedicalProfile(
             @PathVariable Long userId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody MedicalProfileRequest request
     ) {
         var profile = adminMedicalProfileService.upsertByOwner(
                 MedicalProfileOwnerType.USER,
                 userId,
-                request.toApplicationData()
+                request.toApplicationData(),
+                principal.getUserId()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(MedicalProfileMutationResponse.fromDomain(profile));
     }
 
     @GetMapping("/dependents/{dependentId}")
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Busca o perfil médico de um dependente específico.")
     public ResponseEntity<MedicalProfileResponse> getDependentMedicalProfile(
-            @PathVariable Long dependentId
+            @PathVariable Long dependentId,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
         var profile = adminMedicalProfileService.getByOwner(
                 MedicalProfileOwnerType.DEPENDENT,
-                dependentId
+                dependentId,
+                principal.getUserId()
         );
 
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
@@ -108,17 +120,19 @@ public class AdminMedicalProfileController {
     @PutMapping("/dependents/{dependentId}")
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_UPDATE')")
     @Operation(summary = "Cria ou atualiza o perfil médico de um dependente específico.")
-    public ResponseEntity<MedicalProfileResponse> upsertDependentMedicalProfile(
+    public ResponseEntity<MedicalProfileMutationResponse> upsertDependentMedicalProfile(
             @PathVariable Long dependentId,
+            @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody MedicalProfileRequest request
     ) {
         var profile = adminMedicalProfileService.upsertByOwner(
                 MedicalProfileOwnerType.DEPENDENT,
                 dependentId,
-                request.toApplicationData()
+                request.toApplicationData(),
+                principal.getUserId()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(MedicalProfileMutationResponse.fromDomain(profile));
     }
 
     @DeleteMapping("/{profileId}")

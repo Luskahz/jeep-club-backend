@@ -14,6 +14,12 @@ public class DependentsQueryService implements DependentsQuery {
     private final DependentRepository dependentRepository;
 
     @Override
+    public boolean existsById(Long dependentId) {
+        return dependentId != null
+                && dependentRepository.findById(dependentId).isPresent();
+    }
+
+    @Override
     public boolean existsActiveById(Long dependentId) {
         if (dependentId == null) {
             return false;

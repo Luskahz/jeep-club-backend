@@ -18,6 +18,11 @@ public interface MedicalProfileRepository {
             Long ownerId
     );
 
+    Optional<MedicalProfile> findByOwnerForUpdate(
+            MedicalProfileOwnerType ownerType,
+            Long ownerId
+    );
+
     boolean existsByOwner(
             MedicalProfileOwnerType ownerType,
             Long ownerId
