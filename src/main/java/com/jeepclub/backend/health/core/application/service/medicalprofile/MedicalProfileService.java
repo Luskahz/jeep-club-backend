@@ -1,9 +1,6 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
-import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditEvent;
-import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditOperation;
-import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditOutcome;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
@@ -14,7 +11,6 @@ import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
-import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -30,7 +26,6 @@ public class MedicalProfileService {
     private final MedicalProfileRepository medicalProfileRepository;
     private final DependentOwnershipChecker dependentOwnershipChecker;
     private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
-    private final MedicalProfileAuditTrail auditTrail;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -53,8 +48,7 @@ public class MedicalProfileService {
         return upsertByOwner(
                 MedicalProfileOwnerType.USER,
                 userId,
-                data,
-                userId
+                data
         );
     }
 
@@ -65,8 +59,7 @@ public class MedicalProfileService {
     ) {
         validateDependentBelongsToUser(
                 dependentId,
-                userId,
-                MedicalProfileAuditOperation.READ
+                userId
         );
 
         return findByOwner(
@@ -83,15 +76,13 @@ public class MedicalProfileService {
     ) {
         validateDependentBelongsToUser(
                 dependentId,
-                userId,
-                MedicalProfileAuditOperation.UPDATE
+                userId
         );
 
         return upsertByOwner(
                 MedicalProfileOwnerType.DEPENDENT,
                 dependentId,
-                data,
-                userId
+                data
         );
     }
 
@@ -109,8 +100,6 @@ public class MedicalProfileService {
                 userId,
                 Instant.now(clock)
         );
-        audit(userId, profile, MedicalProfileAuditOperation.DELETE,
-                MedicalProfileAuditOutcome.SUCCEEDED);
     }
 
     @Transactional
@@ -120,8 +109,7 @@ public class MedicalProfileService {
     ) {
         validateDependentBelongsToUser(
                 dependentId,
-                userId,
-                MedicalProfileAuditOperation.DELETE
+                userId
         );
 
         MedicalProfile profile = findByOwner(
@@ -134,8 +122,6 @@ public class MedicalProfileService {
                 userId,
                 Instant.now(clock)
         );
-        audit(userId, profile, MedicalProfileAuditOperation.DELETE,
-                MedicalProfileAuditOutcome.SUCCEEDED);
     }
 
     private MedicalProfile findByOwner(
@@ -150,26 +136,16 @@ public class MedicalProfileService {
     private MedicalProfile upsertByOwner(
             MedicalProfileOwnerType ownerType,
             Long ownerId,
-            UpsertMedicalProfileCommand data,
-            Long actorUserId
+            UpsertMedicalProfileCommand data
     ) {
         var existing = medicalProfileRepository.findByOwnerForUpdate(
                 ownerType,
                 ownerId
         );
-        MedicalProfile profile;
-        MedicalProfileAuditOperation operation;
-
         if (existing.isPresent()) {
-            profile = updateProfile(existing.get(), data);
-            operation = MedicalProfileAuditOperation.UPDATE;
-        } else {
-            profile = createProfile(ownerType, ownerId, data);
-            operation = MedicalProfileAuditOperation.CREATE;
+            return updateProfile(existing.get(), data);
         }
-
-        audit(actorUserId, profile, operation, MedicalProfileAuditOutcome.SUCCEEDED);
-        return profile;
+        return createProfile(ownerType, ownerId, data);
     }
 
     private MedicalProfile updateProfile(
@@ -221,8 +197,7 @@ public class MedicalProfileService {
 
     private void validateDependentBelongsToUser(
             Long dependentId,
-            Long userId,
-            MedicalProfileAuditOperation operation
+            Long userId
     ) {
         validateAccessibleOwner(MedicalProfileOwnerType.USER, userId);
         validateAccessibleOwner(MedicalProfileOwnerType.DEPENDENT, dependentId);
@@ -231,34 +206,10 @@ public class MedicalProfileService {
                 dependentId,
                 userId
         )) {
-            auditTrail.record(new MedicalProfileAuditEvent(
-                    userId,
-                    MedicalProfileOwnerType.DEPENDENT,
-                    dependentId,
-                    operation,
-                    MedicalProfileAuditOutcome.DENIED,
-                    Instant.now(clock)
-            ));
             throw new MedicalProfileAccessDeniedException(
                     "O dependente informado não pertence ao usuário autenticado."
             );
         }
-    }
-
-    private void audit(
-            Long actorUserId,
-            MedicalProfile profile,
-            MedicalProfileAuditOperation operation,
-            MedicalProfileAuditOutcome outcome
-    ) {
-        auditTrail.record(new MedicalProfileAuditEvent(
-                actorUserId,
-                profile.getOwnerType(),
-                profile.getOwnerId(),
-                operation,
-                outcome,
-                Instant.now(clock)
-        ));
     }
 
     private void validateAccessibleOwner(

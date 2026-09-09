@@ -1,9 +1,6 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
-import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditEvent;
-import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditOperation;
-import com.jeepclub.backend.health.core.application.audit.MedicalProfileAuditOutcome;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerInactiveException;
@@ -12,7 +9,6 @@ import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
-import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,12 +26,10 @@ public class AdminMedicalProfileService {
 
     private final MedicalProfileRepository medicalProfileRepository;
     private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
-    private final MedicalProfileAuditTrail auditTrail;
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public MedicalProfile getById(Long id, Long actorUserId) {
-        validateActor(actorUserId);
+    public MedicalProfile getById(Long id) {
         if (id == null || id <= 0) {
             throw new InvalidMedicalProfileDataException(
                     "O ID do perfil médico deve ser positivo."
@@ -46,42 +40,31 @@ public class AdminMedicalProfileService {
                 .findById(id)
                 .orElseThrow(MedicalProfileNotFoundException::new);
         validateAccessibleOwner(profile.getOwnerType(), profile.getOwnerId());
-        audit(actorUserId, profile, MedicalProfileAuditOperation.READ);
         return profile;
     }
 
     @Transactional(readOnly = true)
     public MedicalProfile getByOwner(
             MedicalProfileOwnerType ownerType,
-            Long ownerId,
-            Long actorUserId
+            Long ownerId
     ) {
-        validateActor(actorUserId);
         validateOwner(ownerType, ownerId);
         validateAccessibleOwner(ownerType, ownerId);
 
         MedicalProfile profile = medicalProfileRepository
                 .findByOwner(ownerType, ownerId)
                 .orElseThrow(MedicalProfileNotFoundException::new);
-        audit(actorUserId, profile, MedicalProfileAuditOperation.READ);
         return profile;
     }
 
     @Transactional(readOnly = true)
     public Page<MedicalProfile> listMedicalProfiles(
-            Pageable pageable,
-            Long actorUserId
+            Pageable pageable
     ) {
-        validateActor(actorUserId);
         Page<MedicalProfile> page = medicalProfileRepository.findAll(pageable);
         var profiles = page.getContent().stream()
                 .filter(this::hasActiveOwner)
                 .toList();
-        profiles.forEach(profile -> audit(
-                actorUserId,
-                profile,
-                MedicalProfileAuditOperation.READ
-        ));
         return new PageImpl<>(profiles, pageable, page.getTotalElements());
     }
 
@@ -89,10 +72,8 @@ public class AdminMedicalProfileService {
     public MedicalProfile upsertByOwner(
             MedicalProfileOwnerType ownerType,
             Long ownerId,
-            UpsertMedicalProfileCommand data,
-            Long actorUserId
+            UpsertMedicalProfileCommand data
     ) {
-        validateActor(actorUserId);
         validateOwner(ownerType, ownerId);
         validateAccessibleOwner(ownerType, ownerId);
 
@@ -100,19 +81,10 @@ public class AdminMedicalProfileService {
                 ownerType,
                 ownerId
         );
-        MedicalProfile profile;
-        MedicalProfileAuditOperation operation;
-
         if (existing.isPresent()) {
-            profile = updateExisting(existing.get(), data);
-            operation = MedicalProfileAuditOperation.UPDATE;
-        } else {
-            profile = createNew(ownerType, ownerId, data);
-            operation = MedicalProfileAuditOperation.CREATE;
+            return updateExisting(existing.get(), data);
         }
-
-        audit(actorUserId, profile, operation);
-        return profile;
+        return createNew(ownerType, ownerId, data);
     }
 
     @Transactional
@@ -143,7 +115,6 @@ public class AdminMedicalProfileService {
                 deletedByUserId,
                 Instant.now(clock)
         );
-        audit(deletedByUserId, profile, MedicalProfileAuditOperation.DELETE);
     }
 
     private MedicalProfile updateExisting(
@@ -233,29 +204,6 @@ public class AdminMedicalProfileService {
                 profile.getOwnerType(),
                 profile.getOwnerId()
         ) == MedicalProfileOwnerStatus.ACTIVE;
-    }
-
-    private void validateActor(Long actorUserId) {
-        if (actorUserId == null || actorUserId <= 0) {
-            throw new InvalidMedicalProfileDataException(
-                    "O ID do ator da operação administrativa deve ser positivo."
-            );
-        }
-    }
-
-    private void audit(
-            Long actorUserId,
-            MedicalProfile profile,
-            MedicalProfileAuditOperation operation
-    ) {
-        auditTrail.record(new MedicalProfileAuditEvent(
-                actorUserId,
-                profile.getOwnerType(),
-                profile.getOwnerId(),
-                operation,
-                MedicalProfileAuditOutcome.SUCCEEDED,
-                Instant.now(clock)
-        ));
     }
 
 }

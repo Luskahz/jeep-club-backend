@@ -6,7 +6,6 @@ import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
-import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,8 +34,6 @@ class MedicalProfileDeleteServiceTest {
     private DependentOwnershipChecker dependentOwnershipChecker;
     @Mock
     private MedicalProfileOwnerStatusChecker ownerStatusChecker;
-    @Mock
-    private MedicalProfileAuditTrail auditTrail;
 
     private MedicalProfileService service;
     private AdminMedicalProfileService adminService;
@@ -48,13 +45,11 @@ class MedicalProfileDeleteServiceTest {
                 repository,
                 dependentOwnershipChecker,
                 ownerStatusChecker,
-                auditTrail,
                 clock
         );
         adminService = new AdminMedicalProfileService(
                 repository,
                 ownerStatusChecker,
-                auditTrail,
                 clock
         );
         lenient().when(ownerStatusChecker.getStatus(any(), any()))

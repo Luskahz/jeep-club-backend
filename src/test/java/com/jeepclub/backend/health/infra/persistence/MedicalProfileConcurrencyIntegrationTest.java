@@ -124,13 +124,11 @@ class MedicalProfileConcurrencyIntegrationTest {
                 repository,
                 (dependentId, userId) -> true,
                 (ownerType, ownerId) -> MedicalProfileOwnerStatus.ACTIVE,
-                event -> { },
                 Clock.fixed(NOW.plusSeconds(10), ZoneOffset.UTC)
         );
         AdminMedicalProfileService adminService = new AdminMedicalProfileService(
                 repository,
                 (ownerType, ownerId) -> MedicalProfileOwnerStatus.ACTIVE,
-                event -> { },
                 Clock.fixed(NOW.plusSeconds(20), ZoneOffset.UTC)
         );
 
@@ -157,8 +155,7 @@ class MedicalProfileConcurrencyIntegrationTest {
                 return transactionTemplate.execute(status -> adminService.upsertByOwner(
                         MedicalProfileOwnerType.USER,
                         UPDATE_OWNER_ID,
-                        command("Alergia informada pelo administrador"),
-                        99L
+                        command("Alergia informada pelo administrador")
                 ));
             });
 

@@ -11,7 +11,6 @@ import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
-import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,8 +43,6 @@ class MedicalProfileOwnerValidationServiceTest {
     private DependentOwnershipChecker ownershipChecker;
     @Mock
     private MedicalProfileOwnerStatusChecker statusChecker;
-    @Mock
-    private MedicalProfileAuditTrail auditTrail;
 
     private MedicalProfileService memberService;
     private AdminMedicalProfileService adminService;
@@ -57,13 +54,11 @@ class MedicalProfileOwnerValidationServiceTest {
                 repository,
                 ownershipChecker,
                 statusChecker,
-                auditTrail,
                 clock
         );
         adminService = new AdminMedicalProfileService(
                 repository,
                 statusChecker,
-                auditTrail,
                 clock
         );
     }
@@ -98,8 +93,7 @@ class MedicalProfileOwnerValidationServiceTest {
         assertThatThrownBy(() -> adminService.upsertByOwner(
                 MedicalProfileOwnerType.USER,
                 404L,
-                command(),
-                99L
+                command()
         )).isInstanceOf(MedicalProfileOwnerNotFoundException.class);
 
         verify(repository, never()).findByOwnerForUpdate(
@@ -154,7 +148,7 @@ class MedicalProfileOwnerValidationServiceTest {
         when(statusChecker.getStatus(MedicalProfileOwnerType.DEPENDENT, 11L))
                 .thenReturn(MedicalProfileOwnerStatus.INACTIVE);
 
-        assertThatThrownBy(() -> adminService.getById(1L, 99L))
+        assertThatThrownBy(() -> adminService.getById(1L))
                 .isInstanceOf(MedicalProfileOwnerInactiveException.class);
     }
 
@@ -174,7 +168,7 @@ class MedicalProfileOwnerValidationServiceTest {
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 404L))
                 .thenReturn(MedicalProfileOwnerStatus.NOT_FOUND);
 
-        var result = adminService.listMedicalProfiles(pageable, 99L);
+        var result = adminService.listMedicalProfiles(pageable);
 
         assertThat(result.getContent()).containsExactly(active);
         assertThat(result.getNumber()).isZero();

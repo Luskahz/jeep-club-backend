@@ -5,7 +5,6 @@ import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
-import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
@@ -35,8 +34,6 @@ class MedicalProfileNormalizationConsistencyTest {
     private DependentOwnershipChecker ownershipChecker;
     @Mock
     private MedicalProfileOwnerStatusChecker statusChecker;
-    @Mock
-    private MedicalProfileAuditTrail auditTrail;
 
     private MedicalProfileService memberService;
     private AdminMedicalProfileService adminService;
@@ -45,10 +42,10 @@ class MedicalProfileNormalizationConsistencyTest {
     void setUp() {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         memberService = new MedicalProfileService(
-                repository, ownershipChecker, statusChecker, auditTrail, clock
+                repository, ownershipChecker, statusChecker, clock
         );
         adminService = new AdminMedicalProfileService(
-                repository, statusChecker, auditTrail, clock
+                repository, statusChecker, clock
         );
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 7L))
                 .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
@@ -64,7 +61,7 @@ class MedicalProfileNormalizationConsistencyTest {
 
         MedicalProfile member = memberService.upsertMyMedicalProfile(7L, command);
         MedicalProfile admin = adminService.upsertByOwner(
-                MedicalProfileOwnerType.USER, 7L, command, 99L
+                MedicalProfileOwnerType.USER, 7L, command
         );
 
         assertSameMedicalData(member, admin);
@@ -80,7 +77,7 @@ class MedicalProfileNormalizationConsistencyTest {
 
         MedicalProfile member = memberService.upsertMyMedicalProfile(7L, command);
         MedicalProfile admin = adminService.upsertByOwner(
-                MedicalProfileOwnerType.USER, 7L, command, 99L
+                MedicalProfileOwnerType.USER, 7L, command
         );
 
         assertSameMedicalData(member, admin);
