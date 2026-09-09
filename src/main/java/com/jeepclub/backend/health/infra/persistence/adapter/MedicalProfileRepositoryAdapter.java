@@ -25,11 +25,11 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.dao.TransientDataAccessException;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -177,19 +177,14 @@ public class MedicalProfileRepositoryAdapter implements MedicalProfileRepository
     }
 
     @Override
-    public List<MedicalProfile> findAll(
-            int page,
-            int size
-    ) {
+    public Page<MedicalProfile> findAll(Pageable pageable) {
         return execute(
                 "find_all",
                 null,
                 null,
                 () -> medicalProfileJpaRepository
-                        .findAll(PageRequest.of(page, size))
-                        .stream()
+                        .findAll(pageable)
                         .map(medicalProfileMapper::toDomain)
-                        .toList()
         );
     }
 

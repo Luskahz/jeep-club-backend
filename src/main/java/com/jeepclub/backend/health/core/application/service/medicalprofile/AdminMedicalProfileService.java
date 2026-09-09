@@ -15,18 +15,18 @@ import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.port.MedicalProfileAuditTrail;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class AdminMedicalProfileService {
-
-    private static final int MAX_PAGE_SIZE = 100;
 
     private final MedicalProfileRepository medicalProfileRepository;
     private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
@@ -68,19 +68,13 @@ public class AdminMedicalProfileService {
     }
 
     @Transactional(readOnly = true)
-    public List<MedicalProfile> listMedicalProfiles(
-            int page,
-            int size,
+    public Page<MedicalProfile> listMedicalProfiles(
+            Pageable pageable,
             Long actorUserId
     ) {
         validateActor(actorUserId);
-        int sanitizedPage = Math.max(page, 0);
-        int sanitizedSize = sanitizePageSize(size);
-
-        List<MedicalProfile> profiles = medicalProfileRepository.findAll(
-                sanitizedPage,
-                sanitizedSize
-        ).stream()
+        Page<MedicalProfile> page = medicalProfileRepository.findAll(pageable);
+        var profiles = page.getContent().stream()
                 .filter(this::hasActiveOwner)
                 .toList();
         profiles.forEach(profile -> audit(
@@ -88,7 +82,7 @@ public class AdminMedicalProfileService {
                 profile,
                 MedicalProfileAuditOperation.READ
         ));
-        return profiles;
+        return new PageImpl<>(profiles, pageable, page.getTotalElements());
     }
 
     @Transactional
@@ -262,14 +256,6 @@ public class AdminMedicalProfileService {
                 MedicalProfileAuditOutcome.SUCCEEDED,
                 Instant.now(clock)
         ));
-    }
-
-    private int sanitizePageSize(int size) {
-        if (size <= 0) {
-            return 20;
-        }
-
-        return Math.min(size, MAX_PAGE_SIZE);
     }
 
 }

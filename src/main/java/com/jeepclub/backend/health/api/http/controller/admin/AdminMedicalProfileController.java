@@ -8,9 +8,13 @@ import com.jeepclub.backend.health.core.application.service.medicalprofile.Admin
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -20,10 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/admin/medical-profiles")
@@ -39,16 +40,14 @@ public class AdminMedicalProfileController {
     @GetMapping
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Lista perfis médicos de forma resumida para uso administrativo.")
-    public ResponseEntity<List<MedicalProfileSummaryResponse>> listMedicalProfiles(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+    public ResponseEntity<Page<MedicalProfileSummaryResponse>> listMedicalProfiles(
+            @Parameter(hidden = true)
+            @PageableDefault(size = 20, sort = "id") Pageable pageable,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        List<MedicalProfileSummaryResponse> profiles = adminMedicalProfileService
-                .listMedicalProfiles(page, size, principal.getUserId())
-                .stream()
-                .map(MedicalProfileSummaryResponse::fromDomain)
-                .toList();
+        Page<MedicalProfileSummaryResponse> profiles = adminMedicalProfileService
+                .listMedicalProfiles(pageable, principal.getUserId())
+                .map(MedicalProfileSummaryResponse::fromDomain);
 
         return ResponseEntity.ok(profiles);
     }

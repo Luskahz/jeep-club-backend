@@ -2,9 +2,10 @@ package com.jeepclub.backend.health.core.repository;
 
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
 public interface MedicalProfileRepository {
@@ -28,10 +29,7 @@ public interface MedicalProfileRepository {
             Long ownerId
     );
 
-    List<MedicalProfile> findAll(
-            int page,
-            int size
-    );
+    Page<MedicalProfile> findAll(Pageable pageable);
 
     void delete(
             MedicalProfile medicalProfile,

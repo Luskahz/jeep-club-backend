@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -158,10 +160,13 @@ class MedicalProfileOwnerValidationServiceTest {
 
     @Test
     void administrativeListDoesNotExposeInactiveOrOrphanProfiles() {
+        var pageable = PageRequest.of(0, 20);
         MedicalProfile active = profile(MedicalProfileOwnerType.USER, 7L);
         MedicalProfile inactive = profile(MedicalProfileOwnerType.DEPENDENT, 11L);
         MedicalProfile orphan = profile(MedicalProfileOwnerType.USER, 404L);
-        when(repository.findAll(0, 20)).thenReturn(List.of(active, inactive, orphan));
+        when(repository.findAll(pageable)).thenReturn(
+                new PageImpl<>(List.of(active, inactive, orphan), pageable, 3)
+        );
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 7L))
                 .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
         when(statusChecker.getStatus(MedicalProfileOwnerType.DEPENDENT, 11L))
@@ -169,8 +174,12 @@ class MedicalProfileOwnerValidationServiceTest {
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 404L))
                 .thenReturn(MedicalProfileOwnerStatus.NOT_FOUND);
 
-        assertThat(adminService.listMedicalProfiles(0, 20, 99L))
-                .containsExactly(active);
+        var result = adminService.listMedicalProfiles(pageable, 99L);
+
+        assertThat(result.getContent()).containsExactly(active);
+        assertThat(result.getNumber()).isZero();
+        assertThat(result.getSize()).isEqualTo(20);
+        assertThat(result.getTotalElements()).isEqualTo(1);
     }
 
     @Test
