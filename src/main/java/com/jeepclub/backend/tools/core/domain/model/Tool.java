@@ -41,8 +41,12 @@ public class Tool {
     }
 
     public void updateDetails(String name, String description) {
-        if (name != null && !name.isBlank()) this.name = name;
-        if (description != null && !description.isBlank()) this.description = description;
+        if (name != null && !name.isBlank()) {
+            this.name = name.trim();
+        }
+        if (description != null) {
+            this.description = description.trim();
+        }
         this.updatedAt = LocalDateTime.now();
     }
 

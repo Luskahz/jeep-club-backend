@@ -9,6 +9,7 @@ import com.jeepclub.backend.tools.core.application.service.tool.ToolService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -48,7 +49,7 @@ public class ToolController {
     @PostMapping
     @Operation(summary = "Criar uma ferramenta")
     public ResponseEntity<ToolResponseDTO> createTool(
-            @RequestBody ToolCreateRequestDTO request,
+            @Valid @RequestBody ToolCreateRequestDTO request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         ToolResponseDTO createdTool = new ToolResponseDTO(toolService.createTool(
                 request.name(),
@@ -62,7 +63,7 @@ public class ToolController {
     @Operation(summary = "Atualizar detalhes de uma ferramenta (Nome/Descrição)")
     public ResponseEntity<ToolResponseDTO> updateTool(
             @PathVariable Long id,
-            @RequestBody ToolUpdateRequestDTO request,
+            @Valid @RequestBody ToolUpdateRequestDTO request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         ToolResponseDTO updatedTool = new ToolResponseDTO(toolService.updateTool(
                 id,

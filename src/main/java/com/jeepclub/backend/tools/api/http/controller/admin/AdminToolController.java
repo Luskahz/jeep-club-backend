@@ -6,6 +6,7 @@ import com.jeepclub.backend.tools.core.application.service.tool.AdminToolService
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -49,7 +50,7 @@ public class AdminToolController {
     @Operation(summary = "Cadastra uma ferramenta em nome de um usuário específico")
     public ResponseEntity<ToolResponseDTO> createToolForUser(
             @PathVariable Long userId,
-            @RequestBody ToolCreateRequestDTO request) {
+            @Valid @RequestBody ToolCreateRequestDTO request) {
         var tool = adminToolService.createToolForUser(userId, request.name(), request.description());
         return ResponseEntity.status(HttpStatus.CREATED).body(new ToolResponseDTO(tool));
     }
@@ -59,7 +60,7 @@ public class AdminToolController {
     @Operation(summary = "Atualiza nome/descrição de uma ferramenta de qualquer usuário")
     public ResponseEntity<ToolResponseDTO> updateTool(
             @PathVariable Long id,
-            @RequestBody ToolUpdateRequestDTO request) {
+            @Valid @RequestBody ToolUpdateRequestDTO request) {
         var tool = adminToolService.updateTool(id, request.name(), request.description());
         return ResponseEntity.ok(new ToolResponseDTO(tool));
     }
