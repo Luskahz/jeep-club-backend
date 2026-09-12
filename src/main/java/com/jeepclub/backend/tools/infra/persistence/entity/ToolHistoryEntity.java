@@ -9,7 +9,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -53,11 +52,10 @@ public class ToolHistoryEntity {
     )
     private Long toolId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(length = 500)
     private String description;
 
     @Enumerated(EnumType.STRING)

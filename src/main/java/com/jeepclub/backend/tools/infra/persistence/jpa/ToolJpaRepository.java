@@ -12,9 +12,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface ToolJpaRepository extends JpaRepository<ToolEntity, Long>,  JpaSpecificationExecutor<ToolEntity> {
+public interface ToolJpaRepository extends JpaRepository<ToolEntity, Long>, JpaSpecificationExecutor<ToolEntity> {
 
-        
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select t
@@ -26,6 +25,4 @@ public interface ToolJpaRepository extends JpaRepository<ToolEntity, Long>,  Jpa
     );
 
     Page<ToolEntity> findByUserId(Long userId, Pageable pageable);
-
-    Optional<ToolEntity> findByIdAndUserId(Long id, Long userId);
 }

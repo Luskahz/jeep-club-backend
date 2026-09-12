@@ -6,11 +6,11 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Objeto de requisição para atualizar os dados de uma ferramenta existente.")
 public record ToolUpdateRequestDTO(
 
-        @Schema(description = "Novo nome da ferramenta (opcional).", example = "Chave de Roda Cruz Reforçada")
+        @Schema(description = "Novo nome da ferramenta (opcional).", example = "Chave de Roda Cruz Reforçada", maxLength = 100)
         @Size(max = 100, message = "O nome deve ter no máximo 100 caracteres")
         String name,
 
-        @Schema(description = "Nova descrição da ferramenta (opcional).", example = "Chave de roda pintada de preto.")
+        @Schema(description = "Nova descrição da ferramenta (opcional).", example = "Chave de roda pintada de preto.", maxLength = 500)
         @Size(max = 500, message = "A descrição deve ter no máximo 500 caracteres")
         String description
 ) {}

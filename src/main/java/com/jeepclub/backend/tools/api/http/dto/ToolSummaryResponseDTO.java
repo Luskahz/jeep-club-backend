@@ -16,7 +16,6 @@ public record ToolSummaryResponseDTO(
         @Schema(description = "Status atual da ferramenta.", example = "AVAILABLE")
         ToolStatus status
 ) {
-    // Construtor prático para converter a Entidade no Record de forma limpa
     public ToolSummaryResponseDTO(Tool tool) {
         this(tool.getId(), tool.getName(), tool.getStatus());
     }

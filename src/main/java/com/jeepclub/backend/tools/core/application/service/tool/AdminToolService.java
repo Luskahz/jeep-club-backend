@@ -33,34 +33,36 @@ public class AdminToolService {
 
     @Transactional
     public Tool createToolForUser(Long userId, String name, String description) {
-        Tool tool = Tool.create(name, description, userId);
+        Tool tool = Tool.create(name, description, userId, now());
         return toolRepository.save(tool);
     }
 
     @Transactional
     public Tool updateTool(Long id, String name, String description) {
         Tool tool = getToolDetails(id);
-        tool.updateDetails(name, description);
+        tool.updateDetails(name, description, now());
         return toolRepository.save(tool);
     }
 
     @Transactional
     public Tool activateTool(Long id) {
         Tool tool = getToolDetails(id);
-        tool.activate();
-        return toolRepository.save(tool);
+        return tool.activate(now()) ? toolRepository.save(tool) : tool;
     }
 
     @Transactional
     public Tool deactivateTool(Long id) {
         Tool tool = getToolDetails(id);
-        tool.deactivate();
-        return toolRepository.save(tool);
+        return tool.deactivate(now()) ? toolRepository.save(tool) : tool;
     }
 
     @Transactional
     public void deleteTool(Long id, Long deletedByUserId) {
         Tool tool = getToolDetails(id);
-        toolRepository.delete(tool, deletedByUserId, LocalDateTime.now(clock));
+        toolRepository.delete(tool, deletedByUserId, now());
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock);
     }
 }

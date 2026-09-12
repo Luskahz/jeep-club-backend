@@ -16,8 +16,8 @@ public class ToolMapper {
                 entity.getDescription(),
                 entity.getStatus(),
                 entity.getUserId(),
-                entity.getCreatedAt(), // <-- Datas adicionadas!
-                entity.getUpdatedAt() // <-- Datas adicionadas!
+                entity.getCreatedAt(),
+                entity.getUpdatedAt()
         );
     }
 
@@ -30,8 +30,8 @@ public class ToolMapper {
         entity.setDescription(domain.getDescription());
         entity.setStatus(domain.getStatus());
         entity.setUserId(domain.getUserId());
-        entity.setCreatedAt(domain.getCreatedAt()); // <-- Datas adicionadas!
-        entity.setUpdatedAt(domain.getUpdatedAt()); // <-- Datas adicionadas!
+        entity.setCreatedAt(domain.getCreatedAt());
+        entity.setUpdatedAt(domain.getUpdatedAt());
 
         return entity;
     }

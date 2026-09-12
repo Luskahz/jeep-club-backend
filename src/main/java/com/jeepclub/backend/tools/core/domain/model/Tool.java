@@ -5,6 +5,7 @@ import com.jeepclub.backend.tools.core.domain.exception.ToolAccessDeniedExceptio
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 @Getter
 public class Tool {
@@ -15,11 +16,18 @@ public class Tool {
     private ToolStatus status;
     private Long userId;
 
-    // Novos campos de auditoria
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private Tool(Long id, String name, String description, ToolStatus status, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    private Tool(
+            Long id,
+            String name,
+            String description,
+            ToolStatus status,
+            Long userId,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -29,37 +37,60 @@ public class Tool {
         this.updatedAt = updatedAt;
     }
 
-    // CREATE: Nasce automaticamente como ACTIVE e ganha a data de criação
-    public static Tool create(String name, String description, Long userId) {
-        LocalDateTime now = LocalDateTime.now();
-        return new Tool(null, name, description, ToolStatus.ACTIVE, userId, now, now);
+    public static Tool create(
+            String name,
+            String description,
+            Long userId,
+            LocalDateTime createdAt
+    ) {
+        Objects.requireNonNull(createdAt, "createdAt cannot be null");
+        return new Tool(null, name, description, ToolStatus.ACTIVE, userId, createdAt, createdAt);
     }
 
-    // RECONSTITUTE: Usado pelo Mapper para reconstruir o objeto vindo do banco
-    public static Tool reconstitute(Long id, String name, String description, ToolStatus status, Long userId, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public static Tool reconstitute(
+            Long id,
+            String name,
+            String description,
+            ToolStatus status,
+            Long userId,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt
+    ) {
         return new Tool(id, name, description, status, userId, createdAt, updatedAt);
     }
 
-    public void updateDetails(String name, String description) {
+    public void updateDetails(String name, String description, LocalDateTime updatedAt) {
+        Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
+
         if (name != null && !name.isBlank()) {
             this.name = name.trim();
         }
         if (description != null) {
             this.description = description.trim();
         }
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = updatedAt;
     }
 
-    // --- NOVOS MÉTODOS DE COMPORTAMENTO ---
+    public boolean activate(LocalDateTime updatedAt) {
+        Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
+        if (this.status == ToolStatus.ACTIVE) {
+            return false;
+        }
 
-    public void activate() {
         this.status = ToolStatus.ACTIVE;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = updatedAt;
+        return true;
     }
 
-    public void deactivate() {
+    public boolean deactivate(LocalDateTime updatedAt) {
+        Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
+        if (this.status == ToolStatus.INACTIVE) {
+            return false;
+        }
+
         this.status = ToolStatus.INACTIVE;
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = updatedAt;
+        return true;
     }
 
     public void assertBelongsTo(Long currentUserId) {

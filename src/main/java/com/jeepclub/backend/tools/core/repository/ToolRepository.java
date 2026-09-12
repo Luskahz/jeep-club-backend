@@ -10,17 +10,12 @@ import java.util.Optional;
 
 public interface ToolRepository {
 
-    // Lista paginada
     Page<Tool> findByUserId(Long userId, Pageable pageable);
-    // Adicao Tools
+
     Page<Tool> findAll(String name, ToolStatus status, Pageable pageable);
-    // Busca um
+
     Optional<Tool> findById(Long id);
 
-    // Valida o dono
-    Optional<Tool> findByIdAndUserId(Long id, Long userId);
-
-    // Métodos essenciais que o Service usa para o CRUD
     Tool save(Tool tool);
 
     void delete(

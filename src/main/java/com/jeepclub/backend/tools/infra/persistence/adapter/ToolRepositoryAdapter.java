@@ -28,12 +28,11 @@ public class ToolRepositoryAdapter implements ToolRepository {
     private final ToolMapper mapper;
     private final ToolHistoryMapper historyMapper;
 
-
     @Override
-public Page<Tool> findAll(String name, ToolStatus status, Pageable pageable) {
-    return jpaRepository.findAll(ToolSpecifications.withFilters(name, status), pageable)
-            .map(mapper::toDomain);
-}
+    public Page<Tool> findAll(String name, ToolStatus status, Pageable pageable) {
+        return jpaRepository.findAll(ToolSpecifications.withFilters(name, status), pageable)
+                .map(mapper::toDomain);
+    }
 
     @Override
     public Page<Tool> findByUserId(Long userId, Pageable pageable) {
@@ -48,14 +47,7 @@ public Page<Tool> findAll(String name, ToolStatus status, Pageable pageable) {
     }
 
     @Override
-    public Optional<Tool> findByIdAndUserId(Long toolId, Long userId) {
-        return jpaRepository.findByIdAndUserId(toolId, userId)
-                .map(mapper::toDomain);
-    }
-
-    @Override
     public Tool save(Tool tool) {
-        // Converte do Domínio para Entidade do banco, salva, e converte de volta.
         var entity = mapper.toEntity(tool);
         var savedEntity = jpaRepository.save(entity);
         return mapper.toDomain(savedEntity);
