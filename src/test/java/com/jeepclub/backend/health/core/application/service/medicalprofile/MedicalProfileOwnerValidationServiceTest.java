@@ -153,20 +153,12 @@ class MedicalProfileOwnerValidationServiceTest {
     }
 
     @Test
-    void administrativeListDoesNotExposeInactiveOrOrphanProfiles() {
+    void administrativeListUsesAlreadyFilteredPageWithoutOwnerLookups() {
         var pageable = PageRequest.of(0, 20);
         MedicalProfile active = profile(MedicalProfileOwnerType.USER, 7L);
-        MedicalProfile inactive = profile(MedicalProfileOwnerType.DEPENDENT, 11L);
-        MedicalProfile orphan = profile(MedicalProfileOwnerType.USER, 404L);
-        when(repository.findAll(pageable)).thenReturn(
-                new PageImpl<>(List.of(active, inactive, orphan), pageable, 3)
+        when(repository.findAllWithActiveOwners(pageable)).thenReturn(
+                new PageImpl<>(List.of(active), pageable, 1)
         );
-        when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 7L))
-                .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
-        when(statusChecker.getStatus(MedicalProfileOwnerType.DEPENDENT, 11L))
-                .thenReturn(MedicalProfileOwnerStatus.INACTIVE);
-        when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 404L))
-                .thenReturn(MedicalProfileOwnerStatus.NOT_FOUND);
 
         var result = adminService.listMedicalProfiles(pageable);
 
@@ -174,6 +166,51 @@ class MedicalProfileOwnerValidationServiceTest {
         assertThat(result.getNumber()).isZero();
         assertThat(result.getSize()).isEqualTo(20);
         assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(statusChecker, never()).getStatus(
+                MedicalProfileOwnerType.USER,
+                7L
+        );
+    }
+
+    @Test
+    void administrativeListPreservesFilteredTotalsAndSecondPage() {
+        var firstPage = PageRequest.of(0, 2);
+        var secondPage = PageRequest.of(1, 2);
+        MedicalProfile activeUser = profile(MedicalProfileOwnerType.USER, 7L);
+        MedicalProfile activeDependent = profile(MedicalProfileOwnerType.DEPENDENT, 11L);
+        MedicalProfile anotherActiveUser = profile(MedicalProfileOwnerType.USER, 8L);
+
+        when(repository.findAllWithActiveOwners(firstPage)).thenReturn(
+                new PageImpl<>(List.of(activeUser, activeDependent), firstPage, 3)
+        );
+        when(repository.findAllWithActiveOwners(secondPage)).thenReturn(
+                new PageImpl<>(List.of(anotherActiveUser), secondPage, 3)
+        );
+
+        var first = adminService.listMedicalProfiles(firstPage);
+        var second = adminService.listMedicalProfiles(secondPage);
+
+        assertThat(first.getContent()).containsExactly(activeUser, activeDependent);
+        assertThat(first.getTotalElements()).isEqualTo(3);
+        assertThat(first.getTotalPages()).isEqualTo(2);
+        assertThat(second.getContent()).containsExactly(anotherActiveUser);
+        assertThat(second.getNumber()).isEqualTo(1);
+        assertThat(second.getTotalElements()).isEqualTo(3);
+        assertThat(second.getTotalPages()).isEqualTo(2);
+    }
+
+    @Test
+    void administrativeListReturnsEmptyPageWhenNoOwnerIsEligible() {
+        var pageable = PageRequest.of(0, 20);
+        when(repository.findAllWithActiveOwners(pageable)).thenReturn(
+                new PageImpl<>(List.of(), pageable, 0)
+        );
+
+        var result = adminService.listMedicalProfiles(pageable);
+
+        assertThat(result).isEmpty();
+        assertThat(result.getTotalElements()).isZero();
+        assertThat(result.getTotalPages()).isZero();
     }
 
     @Test

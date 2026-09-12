@@ -12,7 +12,6 @@ import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,11 +60,7 @@ public class AdminMedicalProfileService {
     public Page<MedicalProfile> listMedicalProfiles(
             Pageable pageable
     ) {
-        Page<MedicalProfile> page = medicalProfileRepository.findAll(pageable);
-        var profiles = page.getContent().stream()
-                .filter(this::hasActiveOwner)
-                .toList();
-        return new PageImpl<>(profiles, pageable, page.getTotalElements());
+        return medicalProfileRepository.findAllWithActiveOwners(pageable);
     }
 
     @Transactional
@@ -197,13 +192,6 @@ public class AdminMedicalProfileService {
         if (status == MedicalProfileOwnerStatus.INACTIVE) {
             throw new MedicalProfileOwnerInactiveException(ownerType, ownerId);
         }
-    }
-
-    private boolean hasActiveOwner(MedicalProfile profile) {
-        return ownerStatusChecker.getStatus(
-                profile.getOwnerType(),
-                profile.getOwnerId()
-        ) == MedicalProfileOwnerStatus.ACTIVE;
     }
 
 }
