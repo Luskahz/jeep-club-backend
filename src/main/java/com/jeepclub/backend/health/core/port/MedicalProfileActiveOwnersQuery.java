@@ -2,10 +2,13 @@ package com.jeepclub.backend.health.core.port;
 
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 
-public interface MedicalProfileOwnerStatusChecker {
+import java.util.Collection;
+import java.util.Set;
 
-    MedicalProfileOwnerStatus getStatus(
+public interface MedicalProfileActiveOwnersQuery {
+
+    Set<Long> findActiveOwnerIds(
             MedicalProfileOwnerType ownerType,
-            Long ownerId
+            Collection<Long> ownerIds
     );
 }

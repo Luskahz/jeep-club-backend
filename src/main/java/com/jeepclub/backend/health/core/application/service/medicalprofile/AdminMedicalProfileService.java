@@ -7,6 +7,7 @@ import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwn
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerNotFoundException;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.port.MedicalProfileActiveOwnersQuery;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
@@ -32,6 +33,7 @@ public class AdminMedicalProfileService {
 
     private final MedicalProfileRepository medicalProfileRepository;
     private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
+    private final MedicalProfileActiveOwnersQuery activeOwnersQuery;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -79,11 +81,11 @@ public class AdminMedicalProfileService {
                     pageable.getSort()
             ));
 
-            Set<Long> activeUserIds = ownerStatusChecker.findActiveOwnerIds(
+            Set<Long> activeUserIds = activeOwnersQuery.findActiveOwnerIds(
                     MedicalProfileOwnerType.USER,
                     ownerIds(sourcePage.getContent(), MedicalProfileOwnerType.USER)
             );
-            Set<Long> activeDependentIds = ownerStatusChecker.findActiveOwnerIds(
+            Set<Long> activeDependentIds = activeOwnersQuery.findActiveOwnerIds(
                     MedicalProfileOwnerType.DEPENDENT,
                     ownerIds(sourcePage.getContent(), MedicalProfileOwnerType.DEPENDENT)
             );

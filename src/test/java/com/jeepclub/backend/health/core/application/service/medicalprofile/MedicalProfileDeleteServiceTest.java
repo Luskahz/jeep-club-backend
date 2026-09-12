@@ -50,6 +50,7 @@ class MedicalProfileDeleteServiceTest {
         adminService = new AdminMedicalProfileService(
                 repository,
                 ownerStatusChecker,
+                (ownerType, ownerIds) -> java.util.Set.of(),
                 clock
         );
         lenient().when(ownerStatusChecker.getStatus(any(), any()))

@@ -9,6 +9,7 @@ import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
+import com.jeepclub.backend.health.core.port.MedicalProfileActiveOwnersQuery;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
@@ -19,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -30,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
@@ -45,6 +48,8 @@ class MedicalProfileOwnerValidationServiceTest {
     private DependentOwnershipChecker ownershipChecker;
     @Mock
     private MedicalProfileOwnerStatusChecker statusChecker;
+    @Mock
+    private MedicalProfileActiveOwnersQuery activeOwnersQuery;
 
     private MedicalProfileService memberService;
     private AdminMedicalProfileService adminService;
@@ -61,6 +66,7 @@ class MedicalProfileOwnerValidationServiceTest {
         adminService = new AdminMedicalProfileService(
                 repository,
                 statusChecker,
+                activeOwnersQuery,
                 clock
         );
     }
@@ -174,12 +180,12 @@ class MedicalProfileOwnerValidationServiceTest {
         );
 
         pagesFrom(profiles);
-        when(statusChecker.findActiveOwnerIds(
-                MedicalProfileOwnerType.USER,
+        when(activeOwnersQuery.findActiveOwnerIds(
+                eq(MedicalProfileOwnerType.USER),
                 org.mockito.ArgumentMatchers.anyCollection()
         )).thenReturn(java.util.Set.of(7L, 9L));
-        when(statusChecker.findActiveOwnerIds(
-                MedicalProfileOwnerType.DEPENDENT,
+        when(activeOwnersQuery.findActiveOwnerIds(
+                eq(MedicalProfileOwnerType.DEPENDENT),
                 org.mockito.ArgumentMatchers.anyCollection()
         )).thenReturn(java.util.Set.of(11L));
 
@@ -207,12 +213,12 @@ class MedicalProfileOwnerValidationServiceTest {
                 profile(MedicalProfileOwnerType.DEPENDENT, 11L),
                 profile(MedicalProfileOwnerType.USER, 404L)
         ));
-        when(statusChecker.findActiveOwnerIds(
-                MedicalProfileOwnerType.USER,
+        when(activeOwnersQuery.findActiveOwnerIds(
+                eq(MedicalProfileOwnerType.USER),
                 org.mockito.ArgumentMatchers.anyCollection()
         )).thenReturn(java.util.Set.of());
-        when(statusChecker.findActiveOwnerIds(
-                MedicalProfileOwnerType.DEPENDENT,
+        when(activeOwnersQuery.findActiveOwnerIds(
+                eq(MedicalProfileOwnerType.DEPENDENT),
                 org.mockito.ArgumentMatchers.anyCollection()
         )).thenReturn(java.util.Set.of());
 
@@ -221,11 +227,11 @@ class MedicalProfileOwnerValidationServiceTest {
         assertThat(result).isEmpty();
         assertThat(result.getTotalElements()).isZero();
         assertThat(result.getTotalPages()).isZero();
-        verify(statusChecker).findActiveOwnerIds(
+        verify(activeOwnersQuery).findActiveOwnerIds(
                 MedicalProfileOwnerType.USER,
                 java.util.Set.of(7L, 404L)
         );
-        verify(statusChecker).findActiveOwnerIds(
+        verify(activeOwnersQuery).findActiveOwnerIds(
                 MedicalProfileOwnerType.DEPENDENT,
                 java.util.Set.of(11L)
         );
@@ -242,7 +248,7 @@ class MedicalProfileOwnerValidationServiceTest {
                 ))
                 .toList();
         pagesFrom(profiles);
-        when(statusChecker.findActiveOwnerIds(
+        when(activeOwnersQuery.findActiveOwnerIds(
                 org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyCollection()
         )).thenAnswer(invocation -> invocation.getArgument(1));
@@ -251,12 +257,12 @@ class MedicalProfileOwnerValidationServiceTest {
 
         assertThat(result.getContent()).hasSize(10);
         assertThat(result.getTotalElements()).isEqualTo(101);
-        verify(statusChecker, times(2)).findActiveOwnerIds(
-                MedicalProfileOwnerType.USER,
+        verify(activeOwnersQuery, times(2)).findActiveOwnerIds(
+                eq(MedicalProfileOwnerType.USER),
                 org.mockito.ArgumentMatchers.anyCollection()
         );
-        verify(statusChecker, times(2)).findActiveOwnerIds(
-                MedicalProfileOwnerType.DEPENDENT,
+        verify(activeOwnersQuery, times(2)).findActiveOwnerIds(
+                eq(MedicalProfileOwnerType.DEPENDENT),
                 org.mockito.ArgumentMatchers.anyCollection()
         );
     }

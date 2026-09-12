@@ -45,7 +45,7 @@ class MedicalProfileNormalizationConsistencyTest {
                 repository, ownershipChecker, statusChecker, clock
         );
         adminService = new AdminMedicalProfileService(
-                repository, statusChecker, clock
+                repository, statusChecker, (ownerType, ownerIds) -> java.util.Set.of(), clock
         );
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 7L))
                 .thenReturn(MedicalProfileOwnerStatus.ACTIVE);

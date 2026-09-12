@@ -129,6 +129,7 @@ class MedicalProfileConcurrencyIntegrationTest {
         AdminMedicalProfileService adminService = new AdminMedicalProfileService(
                 repository,
                 (ownerType, ownerId) -> MedicalProfileOwnerStatus.ACTIVE,
+                (ownerType, ownerIds) -> java.util.Set.of(),
                 Clock.fixed(NOW.plusSeconds(20), ZoneOffset.UTC)
         );
 

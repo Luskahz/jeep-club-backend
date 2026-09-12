@@ -2,6 +2,7 @@ package com.jeepclub.backend.health.infra.integration.owner;
 
 import com.jeepclub.backend.dependents.api.module.DependentsQuery;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
+import com.jeepclub.backend.health.core.port.MedicalProfileActiveOwnersQuery;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
@@ -13,7 +14,9 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
-public class MedicalProfileOwnerStatusAdapter implements MedicalProfileOwnerStatusChecker {
+public class MedicalProfileOwnerStatusAdapter implements
+        MedicalProfileOwnerStatusChecker,
+        MedicalProfileActiveOwnersQuery {
 
     private final UserQuery userQuery;
     private final DependentsQuery dependentsQuery;
