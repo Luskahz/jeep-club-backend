@@ -3,37 +3,52 @@ package com.jeepclub.backend.health.core.application.service.medicalprofile;
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerInactiveException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerNotFoundException;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.port.MedicalProfileActiveOwnersQuery;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AdminMedicalProfileService {
 
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final int OWNER_LOOKUP_BATCH_SIZE = 100;
 
     private final MedicalProfileRepository medicalProfileRepository;
+    private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
+    private final MedicalProfileActiveOwnersQuery activeOwnersQuery;
     private final Clock clock;
 
     @Transactional(readOnly = true)
     public MedicalProfile getById(Long id) {
-        if (id == null) {
+        if (id == null || id <= 0) {
             throw new InvalidMedicalProfileDataException(
-                    "O ID do perfil médico é obrigatório."
+                    "O ID do perfil médico deve ser positivo."
             );
         }
 
-        return medicalProfileRepository
+        MedicalProfile profile = medicalProfileRepository
                 .findById(id)
                 .orElseThrow(MedicalProfileNotFoundException::new);
+        validateAccessibleOwner(profile.getOwnerType(), profile.getOwnerId());
+        return profile;
     }
 
     @Transactional(readOnly = true)
@@ -42,24 +57,72 @@ public class AdminMedicalProfileService {
             Long ownerId
     ) {
         validateOwner(ownerType, ownerId);
+        validateAccessibleOwner(ownerType, ownerId);
 
-        return medicalProfileRepository
+        MedicalProfile profile = medicalProfileRepository
                 .findByOwner(ownerType, ownerId)
                 .orElseThrow(MedicalProfileNotFoundException::new);
+        return profile;
     }
 
     @Transactional(readOnly = true)
-    public List<MedicalProfile> listMedicalProfiles(
-            int page,
-            int size
+    public Page<MedicalProfile> listMedicalProfiles(
+            Pageable pageable
     ) {
-        int sanitizedPage = Math.max(page, 0);
-        int sanitizedSize = sanitizePageSize(size);
+        List<MedicalProfile> content = new ArrayList<>(pageable.getPageSize());
+        long eligibleCount = 0;
+        int sourcePageNumber = 0;
+        Page<MedicalProfile> sourcePage;
 
-        return medicalProfileRepository.findAll(
-                sanitizedPage,
-                sanitizedSize
-        );
+        do {
+            sourcePage = medicalProfileRepository.findAll(PageRequest.of(
+                    sourcePageNumber++,
+                    OWNER_LOOKUP_BATCH_SIZE,
+                    pageable.getSort()
+            ));
+
+            Set<Long> activeUserIds = activeOwnersQuery.findActiveOwnerIds(
+                    MedicalProfileOwnerType.USER,
+                    ownerIds(sourcePage.getContent(), MedicalProfileOwnerType.USER)
+            );
+            Set<Long> activeDependentIds = activeOwnersQuery.findActiveOwnerIds(
+                    MedicalProfileOwnerType.DEPENDENT,
+                    ownerIds(sourcePage.getContent(), MedicalProfileOwnerType.DEPENDENT)
+            );
+
+            for (MedicalProfile profile : sourcePage) {
+                if (isEligible(profile, activeUserIds, activeDependentIds)) {
+                    if (eligibleCount >= pageable.getOffset()
+                            && content.size() < pageable.getPageSize()) {
+                        content.add(profile);
+                    }
+                    eligibleCount++;
+                }
+            }
+        } while (sourcePage.hasNext());
+
+        return new PageImpl<>(content, pageable, eligibleCount);
+    }
+
+    private Set<Long> ownerIds(
+            List<MedicalProfile> profiles,
+            MedicalProfileOwnerType ownerType
+    ) {
+        return profiles.stream()
+                .filter(profile -> profile.getOwnerType() == ownerType)
+                .map(MedicalProfile::getOwnerId)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private boolean isEligible(
+            MedicalProfile profile,
+            Set<Long> activeUserIds,
+            Set<Long> activeDependentIds
+    ) {
+        return switch (profile.getOwnerType()) {
+            case USER -> activeUserIds.contains(profile.getOwnerId());
+            case DEPENDENT -> activeDependentIds.contains(profile.getOwnerId());
+        };
     }
 
     @Transactional
@@ -69,15 +132,16 @@ public class AdminMedicalProfileService {
             UpsertMedicalProfileCommand data
     ) {
         validateOwner(ownerType, ownerId);
+        validateAccessibleOwner(ownerType, ownerId);
 
-        return medicalProfileRepository
-                .findByOwner(ownerType, ownerId)
-                .map(existing -> updateExisting(existing, data))
-                .orElseGet(() -> createNew(
-                        ownerType,
-                        ownerId,
-                        data
-                ));
+        var existing = medicalProfileRepository.findByOwnerForUpdate(
+                ownerType,
+                ownerId
+        );
+        if (existing.isPresent()) {
+            return updateExisting(existing.get(), data);
+        }
+        return createNew(ownerType, ownerId, data);
     }
 
     @Transactional
@@ -85,13 +149,23 @@ public class AdminMedicalProfileService {
             Long profileId,
             Long deletedByUserId
     ) {
-        if (deletedByUserId == null) {
+        if (deletedByUserId == null || deletedByUserId <= 0) {
             throw new InvalidMedicalProfileDataException(
-                    "O ID do usuário responsável pela exclusão é obrigatório."
+                    "O ID do usuário responsável pela exclusão deve ser positivo."
             );
         }
 
-        MedicalProfile profile = getById(profileId);
+        if (profileId == null || profileId <= 0) {
+            throw new InvalidMedicalProfileDataException(
+                    "O ID do perfil médico deve ser positivo."
+            );
+        }
+
+        // A limpeza administrativa permanece disponível mesmo quando o owner
+        // foi desativado ou removido.
+        MedicalProfile profile = medicalProfileRepository
+                .findById(profileId)
+                .orElseThrow(MedicalProfileNotFoundException::new);
 
         medicalProfileRepository.delete(
                 profile,
@@ -106,16 +180,16 @@ public class AdminMedicalProfileService {
     ) {
         existing.update(
                 data.bloodType(),
-                clean(data.allergies()),
-                clean(data.chronicConditions()),
-                clean(data.continuousMedications()),
-                clean(data.healthInsuranceProvider()),
-                clean(data.healthInsurancePlan()),
-                clean(data.healthInsuranceNumber()),
-                clean(data.emergencyContactName()),
-                normalizePhone(data.emergencyContactPhone()),
-                clean(data.emergencyContactRelationship()),
-                clean(data.observations()),
+                data.allergies(),
+                data.chronicConditions(),
+                data.continuousMedications(),
+                data.healthInsuranceProvider(),
+                data.healthInsurancePlan(),
+                data.healthInsuranceNumber(),
+                data.emergencyContactName(),
+                data.emergencyContactPhone(),
+                data.emergencyContactRelationship(),
+                data.observations(),
                 Instant.now(clock)
         );
 
@@ -131,16 +205,16 @@ public class AdminMedicalProfileService {
                 ownerType,
                 ownerId,
                 data.bloodType(),
-                clean(data.allergies()),
-                clean(data.chronicConditions()),
-                clean(data.continuousMedications()),
-                clean(data.healthInsuranceProvider()),
-                clean(data.healthInsurancePlan()),
-                clean(data.healthInsuranceNumber()),
-                clean(data.emergencyContactName()),
-                normalizePhone(data.emergencyContactPhone()),
-                clean(data.emergencyContactRelationship()),
-                clean(data.observations()),
+                data.allergies(),
+                data.chronicConditions(),
+                data.continuousMedications(),
+                data.healthInsuranceProvider(),
+                data.healthInsurancePlan(),
+                data.healthInsuranceNumber(),
+                data.emergencyContactName(),
+                data.emergencyContactPhone(),
+                data.emergencyContactRelationship(),
+                data.observations(),
                 Instant.now(clock)
         );
 
@@ -157,50 +231,29 @@ public class AdminMedicalProfileService {
             );
         }
 
-        if (ownerId == null) {
+        if (ownerId == null || ownerId <= 0) {
             throw new InvalidMedicalProfileDataException(
-                    "O ID do proprietário do perfil médico é obrigatório."
+                    "O ID do proprietário do perfil médico deve ser positivo."
             );
         }
     }
 
-    private int sanitizePageSize(int size) {
-        if (size <= 0) {
-            return 20;
+    private void validateAccessibleOwner(
+            MedicalProfileOwnerType ownerType,
+            Long ownerId
+    ) {
+        MedicalProfileOwnerStatus status = ownerStatusChecker.getStatus(
+                ownerType,
+                ownerId
+        );
+
+        if (status == MedicalProfileOwnerStatus.NOT_FOUND) {
+            throw new MedicalProfileOwnerNotFoundException(ownerType, ownerId);
         }
 
-        return Math.min(size, MAX_PAGE_SIZE);
+        if (status == MedicalProfileOwnerStatus.INACTIVE) {
+            throw new MedicalProfileOwnerInactiveException(ownerType, ownerId);
+        }
     }
 
-    private String clean(String value) {
-        if (value == null) {
-            return null;
-        }
-
-        String cleaned = value.trim();
-
-        return cleaned.isBlank()
-                ? null
-                : cleaned;
-    }
-
-    private String normalizePhone(String phone) {
-        if (phone == null) {
-            return null;
-        }
-
-        String digits = phone.replaceAll("\\D", "");
-
-        if (digits.isBlank()) {
-            return null;
-        }
-
-        if (digits.length() < 10 || digits.length() > 11) {
-            throw new InvalidMedicalProfileDataException(
-                    "O telefone de emergência deve ter 10 ou 11 dígitos."
-            );
-        }
-
-        return digits;
-    }
 }

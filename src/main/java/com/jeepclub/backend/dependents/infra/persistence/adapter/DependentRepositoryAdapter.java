@@ -16,10 +16,12 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
@@ -101,6 +103,16 @@ public class DependentRepositoryAdapter implements DependentRepository {
                 id,
                 DependentStatus.ACTIVE
         );
+    }
+
+    @Override
+    public Set<Long> findActiveIdsByIds(Collection<Long> ids) {
+        return ids == null || ids.isEmpty()
+                ? Set.of()
+                : jpaRepository.findIdsByIdInAndStatus(
+                        ids,
+                        DependentStatus.ACTIVE
+                );
     }
 
     @Override

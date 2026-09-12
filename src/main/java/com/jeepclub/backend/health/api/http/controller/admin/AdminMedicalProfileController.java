@@ -1,15 +1,20 @@
 package com.jeepclub.backend.health.api.http.controller.admin;
 
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
+import com.jeepclub.backend.health.api.http.dto.MedicalProfileMutationResponse;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileResponse;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileSummaryResponse;
 import com.jeepclub.backend.health.core.application.service.medicalprofile.AdminMedicalProfileService;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,10 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/admin/medical-profiles")
@@ -38,15 +40,13 @@ public class AdminMedicalProfileController {
     @GetMapping
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
     @Operation(summary = "Lista perfis médicos de forma resumida para uso administrativo.")
-    public ResponseEntity<List<MedicalProfileSummaryResponse>> listMedicalProfiles(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+    public ResponseEntity<Page<MedicalProfileSummaryResponse>> listMedicalProfiles(
+            @Parameter(hidden = true)
+            @PageableDefault(size = 20, sort = "id") Pageable pageable
     ) {
-        List<MedicalProfileSummaryResponse> profiles = adminMedicalProfileService
-                .listMedicalProfiles(page, size)
-                .stream()
-                .map(MedicalProfileSummaryResponse::fromDomain)
-                .toList();
+        Page<MedicalProfileSummaryResponse> profiles = adminMedicalProfileService
+                .listMedicalProfiles(pageable)
+                .map(MedicalProfileSummaryResponse::fromDomain);
 
         return ResponseEntity.ok(profiles);
     }
@@ -57,7 +57,9 @@ public class AdminMedicalProfileController {
     public ResponseEntity<MedicalProfileResponse> getByProfileId(
             @PathVariable Long profileId
     ) {
-        var profile = adminMedicalProfileService.getById(profileId);
+        var profile = adminMedicalProfileService.getById(
+                profileId
+        );
         return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
     }
 
@@ -78,7 +80,7 @@ public class AdminMedicalProfileController {
     @PutMapping("/users/{userId}")
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_UPDATE')")
     @Operation(summary = "Cria ou atualiza o perfil médico de um usuário específico.")
-    public ResponseEntity<MedicalProfileResponse> upsertUserMedicalProfile(
+    public ResponseEntity<MedicalProfileMutationResponse> upsertUserMedicalProfile(
             @PathVariable Long userId,
             @Valid @RequestBody MedicalProfileRequest request
     ) {
@@ -88,7 +90,7 @@ public class AdminMedicalProfileController {
                 request.toApplicationData()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(MedicalProfileMutationResponse.fromDomain(profile));
     }
 
     @GetMapping("/dependents/{dependentId}")
@@ -108,7 +110,7 @@ public class AdminMedicalProfileController {
     @PutMapping("/dependents/{dependentId}")
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_UPDATE')")
     @Operation(summary = "Cria ou atualiza o perfil médico de um dependente específico.")
-    public ResponseEntity<MedicalProfileResponse> upsertDependentMedicalProfile(
+    public ResponseEntity<MedicalProfileMutationResponse> upsertDependentMedicalProfile(
             @PathVariable Long dependentId,
             @Valid @RequestBody MedicalProfileRequest request
     ) {
@@ -118,7 +120,7 @@ public class AdminMedicalProfileController {
                 request.toApplicationData()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(MedicalProfileMutationResponse.fromDomain(profile));
     }
 
     @DeleteMapping("/{profileId}")

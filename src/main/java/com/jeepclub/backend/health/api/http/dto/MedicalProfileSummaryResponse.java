@@ -1,6 +1,5 @@
 package com.jeepclub.backend.health.api.http.dto;
 
-import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -18,9 +17,6 @@ public record MedicalProfileSummaryResponse(
         @Schema(description = "ID do usuário ou dependente proprietário do perfil médico.", example = "10")
         Long ownerId,
 
-        @Schema(description = "Tipo sanguíneo.", example = "O_POSITIVE")
-        BloodType bloodType,
-
         @Schema(description = "Data e hora da última atualização.")
         Instant updatedAt
 ) {
@@ -29,7 +25,6 @@ public record MedicalProfileSummaryResponse(
                 profile.getId(),
                 profile.getOwnerType(),
                 profile.getOwnerId(),
-                profile.getBloodType(),
                 profile.getUpdatedAt()
         );
     }
