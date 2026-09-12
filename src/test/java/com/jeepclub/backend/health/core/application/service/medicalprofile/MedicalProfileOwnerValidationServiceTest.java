@@ -29,7 +29,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -153,39 +155,33 @@ class MedicalProfileOwnerValidationServiceTest {
     }
 
     @Test
-    void administrativeListUsesAlreadyFilteredPageWithoutOwnerLookups() {
-        var pageable = PageRequest.of(0, 20);
-        MedicalProfile active = profile(MedicalProfileOwnerType.USER, 7L);
-        when(repository.findAllWithActiveOwners(pageable)).thenReturn(
-                new PageImpl<>(List.of(active), pageable, 1)
-        );
-
-        var result = adminService.listMedicalProfiles(pageable);
-
-        assertThat(result.getContent()).containsExactly(active);
-        assertThat(result.getNumber()).isZero();
-        assertThat(result.getSize()).isEqualTo(20);
-        assertThat(result.getTotalElements()).isEqualTo(1);
-        verify(statusChecker, never()).getStatus(
-                MedicalProfileOwnerType.USER,
-                7L
-        );
-    }
-
-    @Test
-    void administrativeListPreservesFilteredTotalsAndSecondPage() {
+    void administrativeListPaginatesOnlyActiveOwnersWithExactTotals() {
         var firstPage = PageRequest.of(0, 2);
         var secondPage = PageRequest.of(1, 2);
         MedicalProfile activeUser = profile(MedicalProfileOwnerType.USER, 7L);
+        MedicalProfile inactiveUser = profile(MedicalProfileOwnerType.USER, 8L);
         MedicalProfile activeDependent = profile(MedicalProfileOwnerType.DEPENDENT, 11L);
-        MedicalProfile anotherActiveUser = profile(MedicalProfileOwnerType.USER, 8L);
+        MedicalProfile inactiveDependent = profile(MedicalProfileOwnerType.DEPENDENT, 12L);
+        MedicalProfile missingUser = profile(MedicalProfileOwnerType.USER, 404L);
+        MedicalProfile anotherActiveUser = profile(MedicalProfileOwnerType.USER, 9L);
+        List<MedicalProfile> profiles = List.of(
+                activeUser,
+                inactiveUser,
+                activeDependent,
+                inactiveDependent,
+                missingUser,
+                anotherActiveUser
+        );
 
-        when(repository.findAllWithActiveOwners(firstPage)).thenReturn(
-                new PageImpl<>(List.of(activeUser, activeDependent), firstPage, 3)
-        );
-        when(repository.findAllWithActiveOwners(secondPage)).thenReturn(
-                new PageImpl<>(List.of(anotherActiveUser), secondPage, 3)
-        );
+        pagesFrom(profiles);
+        when(statusChecker.findActiveOwnerIds(
+                MedicalProfileOwnerType.USER,
+                org.mockito.ArgumentMatchers.anyCollection()
+        )).thenReturn(java.util.Set.of(7L, 9L));
+        when(statusChecker.findActiveOwnerIds(
+                MedicalProfileOwnerType.DEPENDENT,
+                org.mockito.ArgumentMatchers.anyCollection()
+        )).thenReturn(java.util.Set.of(11L));
 
         var first = adminService.listMedicalProfiles(firstPage);
         var second = adminService.listMedicalProfiles(secondPage);
@@ -197,20 +193,72 @@ class MedicalProfileOwnerValidationServiceTest {
         assertThat(second.getNumber()).isEqualTo(1);
         assertThat(second.getTotalElements()).isEqualTo(3);
         assertThat(second.getTotalPages()).isEqualTo(2);
+        verify(statusChecker, never()).getStatus(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
-    void administrativeListReturnsEmptyPageWhenNoOwnerIsEligible() {
+    void administrativeListReturnsEmptyPageWhenNoOwnerIsEligibleWithoutNPlusOne() {
         var pageable = PageRequest.of(0, 20);
-        when(repository.findAllWithActiveOwners(pageable)).thenReturn(
-                new PageImpl<>(List.of(), pageable, 0)
-        );
+        pagesFrom(List.of(
+                profile(MedicalProfileOwnerType.USER, 7L),
+                profile(MedicalProfileOwnerType.DEPENDENT, 11L),
+                profile(MedicalProfileOwnerType.USER, 404L)
+        ));
+        when(statusChecker.findActiveOwnerIds(
+                MedicalProfileOwnerType.USER,
+                org.mockito.ArgumentMatchers.anyCollection()
+        )).thenReturn(java.util.Set.of());
+        when(statusChecker.findActiveOwnerIds(
+                MedicalProfileOwnerType.DEPENDENT,
+                org.mockito.ArgumentMatchers.anyCollection()
+        )).thenReturn(java.util.Set.of());
 
         var result = adminService.listMedicalProfiles(pageable);
 
         assertThat(result).isEmpty();
         assertThat(result.getTotalElements()).isZero();
         assertThat(result.getTotalPages()).isZero();
+        verify(statusChecker).findActiveOwnerIds(
+                MedicalProfileOwnerType.USER,
+                java.util.Set.of(7L, 404L)
+        );
+        verify(statusChecker).findActiveOwnerIds(
+                MedicalProfileOwnerType.DEPENDENT,
+                java.util.Set.of(11L)
+        );
+    }
+
+    @Test
+    void administrativeListUsesOneBatchLookupPerOwnerTypeForEachSourcePage() {
+        List<MedicalProfile> profiles = java.util.stream.IntStream.rangeClosed(1, 101)
+                .mapToObj(id -> profile(
+                        id % 2 == 0
+                                ? MedicalProfileOwnerType.USER
+                                : MedicalProfileOwnerType.DEPENDENT,
+                        (long) id
+                ))
+                .toList();
+        pagesFrom(profiles);
+        when(statusChecker.findActiveOwnerIds(
+                org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyCollection()
+        )).thenAnswer(invocation -> invocation.getArgument(1));
+
+        var result = adminService.listMedicalProfiles(PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(10);
+        assertThat(result.getTotalElements()).isEqualTo(101);
+        verify(statusChecker, times(2)).findActiveOwnerIds(
+                MedicalProfileOwnerType.USER,
+                org.mockito.ArgumentMatchers.anyCollection()
+        );
+        verify(statusChecker, times(2)).findActiveOwnerIds(
+                MedicalProfileOwnerType.DEPENDENT,
+                org.mockito.ArgumentMatchers.anyCollection()
+        );
     }
 
     @Test
@@ -249,6 +297,18 @@ class MedicalProfileOwnerValidationServiceTest {
                 NOW,
                 NOW
         );
+    }
+
+    private void pagesFrom(List<MedicalProfile> profiles) {
+        when(repository.findAll(any(Pageable.class))).thenAnswer(invocation -> {
+            Pageable requested = invocation.getArgument(0);
+            int start = (int) requested.getOffset();
+            int end = Math.min(start + requested.getPageSize(), profiles.size());
+            List<MedicalProfile> content = start >= profiles.size()
+                    ? List.of()
+                    : profiles.subList(start, end);
+            return new PageImpl<>(content, requested, profiles.size());
+        });
     }
 
     private UpsertMedicalProfileCommand command() {

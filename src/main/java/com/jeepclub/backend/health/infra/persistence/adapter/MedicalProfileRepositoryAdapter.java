@@ -13,8 +13,6 @@ import com.jeepclub.backend.health.infra.persistence.jpa.MedicalProfileHistoryJp
 import com.jeepclub.backend.health.infra.persistence.jpa.MedicalProfileJpaRepository;
 import com.jeepclub.backend.health.infra.persistence.mapper.MedicalProfileHistoryMapper;
 import com.jeepclub.backend.health.infra.persistence.mapper.MedicalProfileMapper;
-import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
-import com.jeepclub.backend.iam.identity.api.module.UserStatus;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -179,19 +177,13 @@ public class MedicalProfileRepositoryAdapter implements MedicalProfileRepository
     }
 
     @Override
-    public Page<MedicalProfile> findAllWithActiveOwners(Pageable pageable) {
+    public Page<MedicalProfile> findAll(Pageable pageable) {
         return execute(
-                "find_all_with_active_owners",
+                "find_all",
                 null,
                 null,
                 () -> medicalProfileJpaRepository
-                        .findAllWithActiveOwners(
-                                pageable,
-                                MedicalProfileOwnerType.USER,
-                                MedicalProfileOwnerType.DEPENDENT,
-                                UserStatus.ACTIVE,
-                                DependentStatus.ACTIVE
-                        )
+                        .findAll(pageable)
                         .map(medicalProfileMapper::toDomain)
         );
     }

@@ -20,6 +20,7 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -106,6 +107,25 @@ class MedicalProfileRepositoryAdapterTest {
         assertThat(replacement.getId()).isNotEqualTo(saved.getId());
         assertThat(replacement.getOwnerType()).isEqualTo(saved.getOwnerType());
         assertThat(replacement.getOwnerId()).isEqualTo(saved.getOwnerId());
+    }
+
+    @Test
+    void findAllPaginatesOnlyHealthProfiles() {
+        repository.save(profile());
+        repository.save(MedicalProfile.create(
+                MedicalProfileOwnerType.DEPENDENT,
+                8L,
+                BloodType.A_POSITIVE,
+                null, null, null, null, null, null, null, null, null, null,
+                CREATED_AT
+        ));
+
+        var firstPage = repository.findAll(PageRequest.of(0, 1));
+        var secondPage = repository.findAll(PageRequest.of(1, 1));
+
+        assertThat(firstPage.getTotalElements()).isEqualTo(2);
+        assertThat(firstPage.getTotalPages()).isEqualTo(2);
+        assertThat(secondPage.getContent()).singleElement();
     }
 
     private MedicalProfile profile() {

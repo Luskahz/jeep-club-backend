@@ -8,8 +8,10 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
 
@@ -38,4 +40,15 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
             ORDER BY identity.id
             """)
     List<Long> findIdsByStatus(@Param("status") UserStatus status);
+
+    @Query("""
+            SELECT identity.id
+            FROM UserEntity identity
+            WHERE identity.id IN :ids
+              AND identity.status = :status
+            """)
+    Set<Long> findIdsByIdInAndStatus(
+            @Param("ids") Collection<Long> ids,
+            @Param("status") UserStatus status
+    );
 }

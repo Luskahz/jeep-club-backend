@@ -18,6 +18,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +65,9 @@ class UserRepositoryAdapterTest {
         assertThat(repository.existsActiveById(first.getId())).isTrue();
         assertThat(repository.existsActiveById(second.getId())).isFalse();
         assertThat(repository.findActiveIds()).containsExactly(first.getId());
+        assertThat(repository.findActiveIdsByIds(List.of(
+                first.getId(), second.getId(), 404L
+        ))).containsExactly(first.getId());
     }
 
     @Test

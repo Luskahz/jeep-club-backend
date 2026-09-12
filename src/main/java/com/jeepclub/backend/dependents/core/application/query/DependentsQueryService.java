@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
+import java.util.Set;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -26,6 +29,15 @@ public class DependentsQueryService implements DependentsQuery {
         }
 
         return dependentRepository.existsActiveById(dependentId);
+    }
+
+    @Override
+    public Set<Long> findActiveDependentIdsByIds(
+            Collection<Long> dependentIds
+    ) {
+        return dependentIds == null || dependentIds.isEmpty()
+                ? Set.of()
+                : dependentRepository.findActiveIdsByIds(dependentIds);
     }
 
     @Override

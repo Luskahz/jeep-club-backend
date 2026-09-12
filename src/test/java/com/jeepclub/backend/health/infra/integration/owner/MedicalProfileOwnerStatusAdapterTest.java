@@ -11,6 +11,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -58,5 +59,31 @@ class MedicalProfileOwnerStatusAdapterTest {
                 .isEqualTo(MedicalProfileOwnerStatus.INACTIVE);
         assertThat(adapter.getStatus(MedicalProfileOwnerType.DEPENDENT, 3L))
                 .isEqualTo(MedicalProfileOwnerStatus.ACTIVE);
+    }
+
+    @Test
+    void resolvesActiveOwnersInOnePublicBatchQueryPerOwnerType() {
+        when(userQuery.findAdministrativelyActiveUserIdsByIds(
+                java.util.Set.of(1L, 2L)
+        )).thenReturn(java.util.Set.of(1L));
+        when(dependentsQuery.findActiveDependentIdsByIds(
+                java.util.Set.of(3L, 4L)
+        )).thenReturn(java.util.Set.of(4L));
+
+        assertThat(adapter.findActiveOwnerIds(
+                MedicalProfileOwnerType.USER,
+                java.util.Set.of(1L, 2L)
+        )).containsExactly(1L);
+        assertThat(adapter.findActiveOwnerIds(
+                MedicalProfileOwnerType.DEPENDENT,
+                java.util.Set.of(3L, 4L)
+        )).containsExactly(4L);
+
+        verify(userQuery).findAdministrativelyActiveUserIdsByIds(
+                java.util.Set.of(1L, 2L)
+        );
+        verify(dependentsQuery).findActiveDependentIdsByIds(
+                java.util.Set.of(3L, 4L)
+        );
     }
 }

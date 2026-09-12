@@ -8,6 +8,9 @@ import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.Set;
+
 @Component
 @RequiredArgsConstructor
 public class MedicalProfileOwnerStatusAdapter implements MedicalProfileOwnerStatusChecker {
@@ -27,6 +30,23 @@ public class MedicalProfileOwnerStatusAdapter implements MedicalProfileOwnerStat
         return switch (ownerType) {
             case USER -> userStatus(ownerId);
             case DEPENDENT -> dependentStatus(ownerId);
+        };
+    }
+
+    @Override
+    public Set<Long> findActiveOwnerIds(
+            MedicalProfileOwnerType ownerType,
+            Collection<Long> ownerIds
+    ) {
+        if (ownerType == null || ownerIds == null || ownerIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return switch (ownerType) {
+            case USER -> userQuery
+                    .findAdministrativelyActiveUserIdsByIds(ownerIds);
+            case DEPENDENT -> dependentsQuery
+                    .findActiveDependentIdsByIds(ownerIds);
         };
     }
 

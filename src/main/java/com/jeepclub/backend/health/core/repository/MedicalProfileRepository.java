@@ -29,7 +29,7 @@ public interface MedicalProfileRepository {
             Long ownerId
     );
 
-    Page<MedicalProfile> findAllWithActiveOwners(Pageable pageable);
+    Page<MedicalProfile> findAll(Pageable pageable);
 
     void delete(
             MedicalProfile medicalProfile,

@@ -12,9 +12,11 @@ import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 @RequiredArgsConstructor
@@ -79,6 +81,13 @@ public class UserRepositoryAdapter implements UserRepository {
     @Override
     public List<Long> findActiveIds() {
         return jpaRepository.findIdsByStatus(UserStatus.ACTIVE);
+    }
+
+    @Override
+    public Set<Long> findActiveIdsByIds(Collection<Long> ids) {
+        return ids == null || ids.isEmpty()
+                ? Set.of()
+                : jpaRepository.findIdsByIdInAndStatus(ids, UserStatus.ACTIVE);
     }
 
     private User persist(User user, boolean flushImmediately) {

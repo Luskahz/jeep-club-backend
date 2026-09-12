@@ -2,8 +2,10 @@ package com.jeepclub.backend.iam.identity.core.repository;
 
 import com.jeepclub.backend.iam.identity.core.domain.model.User;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface UserRepository {
 
@@ -28,4 +30,6 @@ public interface UserRepository {
     boolean existsActiveById(Long id);
 
     List<Long> findActiveIds();
+
+    Set<Long> findActiveIdsByIds(Collection<Long> ids);
 }

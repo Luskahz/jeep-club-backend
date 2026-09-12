@@ -12,16 +12,23 @@ import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class AdminMedicalProfileService {
+
+    private static final int OWNER_LOOKUP_BATCH_SIZE = 100;
 
     private final MedicalProfileRepository medicalProfileRepository;
     private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
@@ -60,7 +67,60 @@ public class AdminMedicalProfileService {
     public Page<MedicalProfile> listMedicalProfiles(
             Pageable pageable
     ) {
-        return medicalProfileRepository.findAllWithActiveOwners(pageable);
+        List<MedicalProfile> content = new ArrayList<>(pageable.getPageSize());
+        long eligibleCount = 0;
+        int sourcePageNumber = 0;
+        Page<MedicalProfile> sourcePage;
+
+        do {
+            sourcePage = medicalProfileRepository.findAll(PageRequest.of(
+                    sourcePageNumber++,
+                    OWNER_LOOKUP_BATCH_SIZE,
+                    pageable.getSort()
+            ));
+
+            Set<Long> activeUserIds = ownerStatusChecker.findActiveOwnerIds(
+                    MedicalProfileOwnerType.USER,
+                    ownerIds(sourcePage.getContent(), MedicalProfileOwnerType.USER)
+            );
+            Set<Long> activeDependentIds = ownerStatusChecker.findActiveOwnerIds(
+                    MedicalProfileOwnerType.DEPENDENT,
+                    ownerIds(sourcePage.getContent(), MedicalProfileOwnerType.DEPENDENT)
+            );
+
+            for (MedicalProfile profile : sourcePage) {
+                if (isEligible(profile, activeUserIds, activeDependentIds)) {
+                    if (eligibleCount >= pageable.getOffset()
+                            && content.size() < pageable.getPageSize()) {
+                        content.add(profile);
+                    }
+                    eligibleCount++;
+                }
+            }
+        } while (sourcePage.hasNext());
+
+        return new PageImpl<>(content, pageable, eligibleCount);
+    }
+
+    private Set<Long> ownerIds(
+            List<MedicalProfile> profiles,
+            MedicalProfileOwnerType ownerType
+    ) {
+        return profiles.stream()
+                .filter(profile -> profile.getOwnerType() == ownerType)
+                .map(MedicalProfile::getOwnerId)
+                .collect(java.util.stream.Collectors.toSet());
+    }
+
+    private boolean isEligible(
+            MedicalProfile profile,
+            Set<Long> activeUserIds,
+            Set<Long> activeDependentIds
+    ) {
+        return switch (profile.getOwnerType()) {
+            case USER -> activeUserIds.contains(profile.getOwnerId());
+            case DEPENDENT -> activeDependentIds.contains(profile.getOwnerId());
+        };
     }
 
     @Transactional
