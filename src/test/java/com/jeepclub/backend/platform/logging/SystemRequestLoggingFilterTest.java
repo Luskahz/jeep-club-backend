@@ -16,8 +16,6 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
-import java.util.Optional;
-
 class SystemRequestLoggingFilterTest {
 
     @AfterEach
@@ -26,9 +24,9 @@ class SystemRequestLoggingFilterTest {
     }
 
     @Test
-    void recordsNormalizedRouteAndDoesNotPersistQueryParameters() throws Exception {
-        SystemLogService service = mock(SystemLogService.class);
-        var filter = new SystemRequestLoggingFilter(Optional.of(service), new ClientPlatformResolver());
+    void recordsNormalizedRouteWithoutQueryParametersOrPersistentSystemLogDependency() throws Exception {
+        HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
         var request = new MockHttpServletRequest("GET", "/vehicles/42");
         request.setQueryString("token=secret");
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/vehicles/{vehicleId}");
@@ -38,11 +36,13 @@ class SystemRequestLoggingFilterTest {
 
         filter.doFilter(request, response, new MockFilterChain());
 
-        var captor = org.mockito.ArgumentCaptor.forClass(SystemLogEvent.class);
-        verify(service).record(captor.capture());
-        assertThat(captor.getValue().action()).isEqualTo("GET /vehicles/{vehicleId}");
-        assertThat(captor.getValue().path()).isEqualTo("/vehicles/42");
+        var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
+        verify(writer).write(captor.capture());
+        assertThat(captor.getValue().path()).isEqualTo("/vehicles/{vehicleId}");
         assertThat(captor.getValue().requestId()).isEqualTo("request-123");
+        assertThat(captor.getValue().device()).isEqualTo("ANDROID");
+        assertThat(captor.getValue().userId()).isEqualTo("-");
+        assertThat(captor.getValue().userName()).isEqualTo("-");
         assertThat(response.getHeader("X-Request-Id")).isEqualTo("request-123");
         assertThat(request.getAttribute(ClientPlatformResolver.REQUEST_ATTRIBUTE))
                 .isEqualTo(ClientPlatform.ANDROID);
@@ -50,9 +50,9 @@ class SystemRequestLoggingFilterTest {
 
     @Test
     void loggingFailureNeverChangesBusinessResponse() throws Exception {
-        SystemLogService service = mock(SystemLogService.class);
-        doThrow(new IllegalStateException("database unavailable")).when(service).record(any());
-        var filter = new SystemRequestLoggingFilter(Optional.of(service), new ClientPlatformResolver());
+        HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
+        doThrow(new IllegalStateException("logging unavailable")).when(writer).write(any());
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
         var request = new MockHttpServletRequest("POST", "/tools");
         var response = new MockHttpServletResponse();
 
@@ -63,19 +63,35 @@ class SystemRequestLoggingFilterTest {
     }
 
     @Test
+    void includesEnrichedAuthenticatedIdentityInOperationalEvent() throws Exception {
+        HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
+        var request = new MockHttpServletRequest("GET", "/identity/me");
+        request.setAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE, "42");
+        request.setAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE, "Lucas Alves");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
+        verify(writer).write(captor.capture());
+        assertThat(captor.getValue().userId()).isEqualTo("42");
+        assertThat(captor.getValue().userName()).isEqualTo("Lucas Alves");
+    }
+
+    @Test
     void ignoresTechnicalRoutes() throws Exception {
-        SystemLogService service = mock(SystemLogService.class);
-        var filter = new SystemRequestLoggingFilter(Optional.of(service), new ClientPlatformResolver());
+        HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
         var request = new MockHttpServletRequest("GET", "/actuator/health");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
-        org.mockito.Mockito.verifyNoInteractions(service);
+        org.mockito.Mockito.verifyNoInteractions(writer);
     }
 
     @Test
     void exposesRequestIdAndDeviceInMdcDuringRequestAndAlwaysCleansTheThread() throws Exception {
-        var filter = new SystemRequestLoggingFilter(Optional.empty(), new ClientPlatformResolver());
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), mock(HttpRequestLogWriter.class));
         var request = new MockHttpServletRequest("GET", "/vehicles");
         request.addHeader("X-Request-Id", "safe.request-123");
         request.addHeader(ClientPlatformResolver.HEADER_NAME, "WEB");
@@ -91,7 +107,7 @@ class SystemRequestLoggingFilterTest {
 
     @Test
     void replacesUnsafeRequestIdAndEchoesBackendGeneratedValue() throws Exception {
-        var filter = new SystemRequestLoggingFilter(Optional.empty(), new ClientPlatformResolver());
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), mock(HttpRequestLogWriter.class));
         var request = new MockHttpServletRequest("GET", "/vehicles");
         request.addHeader("X-Request-Id", "forged\r\nrequest");
         var response = new MockHttpServletResponse();
@@ -105,7 +121,8 @@ class SystemRequestLoggingFilterTest {
 
     @Test
     void cleansMdcAfterUnhandledException() {
-        var filter = new SystemRequestLoggingFilter(Optional.empty(), new ClientPlatformResolver());
+        HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
         var request = new MockHttpServletRequest("GET", "/failure");
         var response = new MockHttpServletResponse();
 
@@ -115,11 +132,15 @@ class SystemRequestLoggingFilterTest {
 
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
         assertThat(response.getHeader("X-Request-Id")).matches("[0-9a-f-]{36}");
+        var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
+        verify(writer).write(captor.capture());
+        assertThat(captor.getValue().status()).isEqualTo(500);
+        assertThat(captor.getValue().unhandledFailure()).isTrue();
     }
 
     @Test
     void reusedThreadDoesNotLeakContextIntoNextRequest() throws Exception {
-        var filter = new SystemRequestLoggingFilter(Optional.empty(), new ClientPlatformResolver());
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), mock(HttpRequestLogWriter.class));
         MDC.put(HttpLoggingContext.USER_ID, "stale-user");
         var first = new MockHttpServletRequest("GET", "/first");
         first.addHeader("X-Request-Id", "first-request");

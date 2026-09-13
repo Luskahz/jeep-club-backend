@@ -1,12 +1,9 @@
 package com.jeepclub.backend.platform.logging;
 
-import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -15,8 +12,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -25,16 +20,15 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
 
     private static final int MAX_REQUEST_ID_LENGTH = 100;
     private static final int MAX_PATH_LENGTH = 500;
-    private static final int MAX_ACTION_LENGTH = 120;
-    private final Optional<SystemLogService> systemLogService;
     private final ClientPlatformResolver clientPlatformResolver;
+    private final HttpRequestLogWriter logWriter;
 
     public SystemRequestLoggingFilter(
-            Optional<SystemLogService> systemLogService,
-            ClientPlatformResolver clientPlatformResolver
+            ClientPlatformResolver clientPlatformResolver,
+            HttpRequestLogWriter logWriter
     ) {
-        this.systemLogService = systemLogService;
         this.clientPlatformResolver = clientPlatformResolver;
+        this.logWriter = logWriter;
     }
 
     @Override
@@ -56,27 +50,29 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
         );
         response.setHeader("X-Request-Id", requestId);
 
+        Throwable unhandledFailure = null;
         try {
             filterChain.doFilter(request, response);
+        } catch (IOException | ServletException | RuntimeException | Error failure) {
+            unhandledFailure = failure;
+            throw failure;
         } finally {
             restoreIdentityContext(request);
-            int status = response.getStatus();
-            SystemLogOutcome outcome = status >= 500
-                    ? SystemLogOutcome.SERVER_ERROR
-                    : status >= 400 ? SystemLogOutcome.CLIENT_ERROR : SystemLogOutcome.SUCCESS;
-            String route = route(request);
+            int status = unhandledFailure != null && response.getStatus() < 500
+                    ? HttpServletResponse.SC_INTERNAL_SERVER_ERROR
+                    : response.getStatus();
             try {
-                systemLogService.ifPresent(service -> service.record(new SystemLogEvent(
-                        currentActorId(request),
-                        limit(request.getMethod() + " " + route, MAX_ACTION_LENGTH),
-                        request.getMethod(),
-                        limit(request.getRequestURI(), MAX_PATH_LENGTH),
-                        status,
-                        outcome,
-                        (System.nanoTime() - startedAt) / 1_000_000,
+                logWriter.write(new HttpRequestLogEvent(
                         requestId,
-                        Instant.now()
-                )));
+                        request.getMethod(),
+                        singleLine(limit(route(request), MAX_PATH_LENGTH)),
+                        status,
+                        (System.nanoTime() - startedAt) / 1_000_000,
+                        device.name(),
+                        attributeOrPlaceholder(request, HttpLoggingContext.USER_ID_ATTRIBUTE),
+                        attributeOrPlaceholder(request, HttpLoggingContext.USER_NAME_ATTRIBUTE),
+                        unhandledFailure != null
+                ));
             } catch (RuntimeException ignored) {
                 // Logging must never change the result of the business request.
             } finally {
@@ -115,6 +111,15 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
+    private String singleLine(String value) {
+        return value.replaceAll("[\\p{Cntrl}]", "_");
+    }
+
+    private String attributeOrPlaceholder(HttpServletRequest request, String attributeName) {
+        Object value = request.getAttribute(attributeName);
+        return value instanceof String text && !text.isBlank() ? text : "-";
+    }
+
     private void restoreIdentityContext(HttpServletRequest request) {
         Object userId = request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE);
         Object userName = request.getAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE);
@@ -126,19 +131,4 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
         }
     }
 
-    private Long currentActorId(HttpServletRequest request) {
-        Object enrichedUserId = request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE);
-        if (enrichedUserId instanceof String value) {
-            try {
-                return Long.valueOf(value);
-            } catch (NumberFormatException ignored) {
-                // Fall through to the SecurityContext compatibility path.
-            }
-        }
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
-            return principal.getUserId();
-        }
-        return null;
-    }
 }
