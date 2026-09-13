@@ -77,7 +77,7 @@ public class SessionService {
             return challengeIssuer.issue(account.getIdentityId(), now);
         }
 
-        AuthTokens tokens = tokenIssuanceService.issue(account, now);
+        AuthTokens tokens = tokenIssuanceService.issue(account, identity.name(), now);
         account.recordSuccessfulLogin(now);
         accountRepository.save(account);
         return new AuthenticatedLoginResult(tokens);
@@ -123,7 +123,10 @@ public class SessionService {
         challenge.markAsUsed(now);
         credentialRevocationService.revokeAllForUser(account.getIdentityId(), now);
 
-        AuthTokens tokens = tokenIssuanceService.issue(account, now);
+        String userName = userQuery.findById(userId)
+                .orElseThrow(() -> new AuthenticationAccountNotFoundException("Identity user not found."))
+                .name();
+        AuthTokens tokens = tokenIssuanceService.issue(account, userName, now);
         account.recordSuccessfulLogin(now);
         accountRepository.save(account);
         if (request != null) {

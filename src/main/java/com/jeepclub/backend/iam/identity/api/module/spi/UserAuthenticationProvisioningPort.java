@@ -7,6 +7,7 @@ import java.time.Instant;
 public interface UserAuthenticationProvisioningPort {
     UserAuthenticationTokens provisionAndAuthenticate(
             Long userId,
+            String userName,
             String rawPassword,
             Instant now
     );

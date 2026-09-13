@@ -61,10 +61,13 @@ public class RefreshTokenService {
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(RefreshTokenInvalidException::new);
 
+        var identity = identityQuery.findById(userId)
+                .orElseThrow(RefreshTokenInvalidException::new);
+
         if (!existingToken.getSession().getId().equals(session.getId())
                 || !existingToken.isValid(now)
                 || !session.isValid(now)
-                || !identityQuery.isAdministrativelyActive(userId)
+                || !identity.administrativelyActive()
                 || !account.isAuthenticationAllowed()) {
             throw new RefreshTokenInvalidException();
         }
@@ -80,7 +83,7 @@ public class RefreshTokenService {
         refreshTokenRepository.save(existingToken);
 
         IssuedAccessToken issuedAccessToken =
-                jwtService.generateAccessToken(userId, session);
+                jwtService.generateAccessToken(userId, identity.name(), session);
 
         long expiresInSeconds = Math.max(
                 Duration.between(

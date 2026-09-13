@@ -30,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -74,8 +75,9 @@ class AuthenticationSecurityIntegrationTest {
 
     @Test
     void authenticatedAndAdministrativeRoutesRemainProtected() throws Exception {
-        mockMvc.perform(get("/authentication/me"))
+        mockMvc.perform(get("/authentication/me").header("X-Request-Id", "security-unauthorized"))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string("X-Request-Id", "security-unauthorized"))
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/identity/me"))
                 .andExpect(status().isUnauthorized())
@@ -116,8 +118,11 @@ class AuthenticationSecurityIntegrationTest {
         );
         String bearer = "Bearer " + tokens.accessToken();
 
-        mockMvc.perform(get("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/identity/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .header("X-Request-Id", "security-forbidden"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().string("X-Request-Id", "security-forbidden"));
         mockMvc.perform(patch("/identity/admin/users/{id}/disable", targetId)
                         .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isForbidden());

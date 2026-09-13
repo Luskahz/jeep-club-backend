@@ -26,6 +26,7 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public IssuedAccessToken generateAccessToken(
             @NotNull Long identityId,
+            @NotNull String userName,
             @NotNull Session session
     ) {
         Instant now = Instant.now(clock);
@@ -36,6 +37,7 @@ public class JwtServiceImpl implements JwtService {
                 .setSubject(identityId.toString())
                 .claim("typ", "ACCESS")
                 .claim("sid", session.getId())
+                .claim("name", userName)
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(expiresAt))
                 .signWith(keyProvider.getKey(), SignatureAlgorithm.HS256)

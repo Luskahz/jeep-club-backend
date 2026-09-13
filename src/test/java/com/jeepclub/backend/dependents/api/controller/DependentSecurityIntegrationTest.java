@@ -90,7 +90,7 @@ class DependentSecurityIntegrationTest {
 
     private void authenticate(String token, Long userId, List<String> authorities) {
         when(jwtTokenParser.parseAndValidate(token)).thenReturn(
-                new JwtAuthenticatedUser(userId, 100L + userId, Instant.now().plusSeconds(3600))
+                new JwtAuthenticatedUser(userId, 100L + userId, "Test User", Instant.now().plusSeconds(3600))
         );
         when(userAuthoritiesProvider.findAuthorityCodesByUserId(userId))
                 .thenReturn(authorities);

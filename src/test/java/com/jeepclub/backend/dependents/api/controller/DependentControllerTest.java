@@ -77,7 +77,7 @@ class DependentControllerTest {
                 LocalDate.of(2010, 5, 20), RelationshipType.CHILD,
                 "11988887777", 1L, DependentStatus.ACTIVE, now, now
         );
-        UserPrincipal principal = new UserPrincipal(1L, 100L, now.plusSeconds(3600));
+        UserPrincipal principal = new UserPrincipal(1L, 100L, "Test User", now.plusSeconds(3600));
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, List.of())
         );
