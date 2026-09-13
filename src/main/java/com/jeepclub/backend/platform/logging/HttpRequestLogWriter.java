@@ -2,9 +2,6 @@ package com.jeepclub.backend.platform.logging;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-
-@Component
 public class HttpRequestLogWriter {
 
     static final String LOGGER_NAME = "com.jeepclub.backend.platform.logging.http";
@@ -21,7 +18,7 @@ public class HttpRequestLogWriter {
                 event.durationMillis(),
                 event.device(),
                 event.userId(),
-                escapeQuoted(event.userName())
+                HttpLogValueSanitizer.quoted(event.userName())
         };
 
         if (event.unhandledFailure() || event.status() >= 500) {
@@ -33,9 +30,4 @@ public class HttpRequestLogWriter {
         }
     }
 
-    private String escapeQuoted(String value) {
-        return value.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replaceAll("[\\p{Cntrl}]", "_");
-    }
 }

@@ -23,6 +23,10 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
     private final ClientPlatformResolver clientPlatformResolver;
     private final HttpRequestLogWriter logWriter;
 
+    public SystemRequestLoggingFilter() {
+        this(new ClientPlatformResolver(), new HttpRequestLogWriter());
+    }
+
     public SystemRequestLoggingFilter(
             ClientPlatformResolver clientPlatformResolver,
             HttpRequestLogWriter logWriter
@@ -65,7 +69,7 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
                 logWriter.write(new HttpRequestLogEvent(
                         requestId,
                         request.getMethod(),
-                        singleLine(limit(route(request), MAX_PATH_LENGTH)),
+                        HttpLogValueSanitizer.singleLine(limit(route(request), MAX_PATH_LENGTH)),
                         status,
                         (System.nanoTime() - startedAt) / 1_000_000,
                         device.name(),
@@ -111,10 +115,6 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
-    private String singleLine(String value) {
-        return value.replaceAll("[\\p{Cntrl}]", "_");
-    }
-
     private String attributeOrPlaceholder(HttpServletRequest request, String attributeName) {
         Object value = request.getAttribute(attributeName);
         return value instanceof String text && !text.isBlank() ? text : "-";
@@ -127,7 +127,7 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
             MDC.put(HttpLoggingContext.USER_ID, value);
         }
         if (userName instanceof String value) {
-            MDC.put(HttpLoggingContext.USER_NAME, value);
+            MDC.put(HttpLoggingContext.USER_NAME, HttpLogValueSanitizer.quoted(value));
         }
     }
 

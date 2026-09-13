@@ -3,6 +3,9 @@ package com.jeepclub.backend.platform.logging;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -15,6 +18,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+
+import java.util.stream.Stream;
 
 class SystemRequestLoggingFilterTest {
 
@@ -120,6 +125,65 @@ class SystemRequestLoggingFilterTest {
     }
 
     @Test
+    void generatesAndEchoesRequestIdWhenHeaderIsMissing() throws Exception {
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), mock(HttpRequestLogWriter.class));
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(new MockHttpServletRequest("GET", "/vehicles"), response, new MockFilterChain());
+
+        assertThat(response.getHeader("X-Request-Id")).matches("[0-9a-f-]{36}");
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidRequestIds")
+    void replacesEveryMalformedOrExcessiveRequestId(String supplied) throws Exception {
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), mock(HttpRequestLogWriter.class));
+        var request = new MockHttpServletRequest("GET", "/vehicles");
+        request.addHeader("X-Request-Id", supplied);
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getHeader("X-Request-Id"))
+                .isNotEqualTo(supplied)
+                .matches("[0-9a-f-]{36}");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {400, 500})
+    void cleansMdcAfterFourAndFiveHundredResponses(int status) throws Exception {
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), mock(HttpRequestLogWriter.class));
+        filter.doFilter(
+                new MockHttpServletRequest("GET", "/failure"),
+                new MockHttpServletResponse(),
+                (req, res) -> ((jakarta.servlet.http.HttpServletResponse) res).setStatus(status)
+        );
+
+        assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
+
+    @Test
+    void neverCopiesCredentialsPayloadQueryOrFullUserAgentIntoOperationalEvent() throws Exception {
+        HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
+        var request = new MockHttpServletRequest("POST", "/authentication/login");
+        request.setQueryString("activationToken=query-secret");
+        request.addHeader("Authorization", "Bearer jwt-secret");
+        request.addHeader("Cookie", "refreshToken=cookie-secret");
+        request.addHeader("User-Agent", "full-user-agent-secret");
+        request.setContent("{\"password\":\"body-secret\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
+        verify(writer).write(captor.capture());
+        String observableFields = captor.getValue().toString();
+        assertThat(observableFields).doesNotContain(
+                "query-secret", "jwt-secret", "cookie-secret", "full-user-agent-secret", "body-secret"
+        );
+    }
+
+    @Test
     void cleansMdcAfterUnhandledException() {
         HttpRequestLogWriter writer = mock(HttpRequestLogWriter.class);
         var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
@@ -155,5 +219,15 @@ class SystemRequestLoggingFilterTest {
         });
 
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
+
+    private static Stream<String> invalidRequestIds() {
+        return Stream.of(
+                " ",
+                "contains spaces",
+                "contains\tcontrol",
+                "contains" + (char) 1 + "control",
+                "a".repeat(101)
+        );
     }
 }

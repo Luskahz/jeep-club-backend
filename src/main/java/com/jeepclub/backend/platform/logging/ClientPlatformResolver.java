@@ -1,11 +1,8 @@
 package com.jeepclub.backend.platform.logging;
 
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.stereotype.Component;
-
 import java.util.Locale;
 
-@Component
 public class ClientPlatformResolver {
 
     public static final String HEADER_NAME = "X-Client-Platform";

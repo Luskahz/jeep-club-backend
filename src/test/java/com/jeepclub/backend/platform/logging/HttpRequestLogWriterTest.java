@@ -65,6 +65,18 @@ class HttpRequestLogWriterTest {
         assertThat(appender.list.get(0).getLevel()).isEqualTo(Level.ERROR);
     }
 
+    @Test
+    void escapesQuotedUserNameAndNeutralizesLineBreaks() {
+        new HttpRequestLogWriter().write(new HttpRequestLogEvent(
+                "request-123", "GET", "/vehicles", 200, 1,
+                "WEB", "42", "Lucas \"Jeep\"\\Admin\nInjected", false
+        ));
+
+        String message = appender.list.get(0).getFormattedMessage();
+        assertThat(message).contains("userName=\"Lucas \\\"Jeep\\\"\\\\Admin_Injected\"");
+        assertThat(message).doesNotContain("\n", "\r");
+    }
+
     private HttpRequestLogEvent event(int status, boolean unhandledFailure) {
         return new HttpRequestLogEvent(
                 "request-123",
