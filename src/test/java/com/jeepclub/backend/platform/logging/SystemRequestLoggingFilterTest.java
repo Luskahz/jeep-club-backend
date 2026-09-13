@@ -19,11 +19,12 @@ class SystemRequestLoggingFilterTest {
     @Test
     void recordsNormalizedRouteAndDoesNotPersistQueryParameters() throws Exception {
         SystemLogService service = mock(SystemLogService.class);
-        var filter = new SystemRequestLoggingFilter(Optional.of(service));
+        var filter = new SystemRequestLoggingFilter(Optional.of(service), new ClientPlatformResolver());
         var request = new MockHttpServletRequest("GET", "/vehicles/42");
         request.setQueryString("token=secret");
         request.setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/vehicles/{vehicleId}");
         request.addHeader("X-Request-Id", "request-123");
+        request.addHeader(ClientPlatformResolver.HEADER_NAME, "android");
         var response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, new MockFilterChain());
@@ -34,13 +35,15 @@ class SystemRequestLoggingFilterTest {
         assertThat(captor.getValue().path()).isEqualTo("/vehicles/42");
         assertThat(captor.getValue().requestId()).isEqualTo("request-123");
         assertThat(response.getHeader("X-Request-Id")).isEqualTo("request-123");
+        assertThat(request.getAttribute(ClientPlatformResolver.REQUEST_ATTRIBUTE))
+                .isEqualTo(ClientPlatform.ANDROID);
     }
 
     @Test
     void loggingFailureNeverChangesBusinessResponse() throws Exception {
         SystemLogService service = mock(SystemLogService.class);
         doThrow(new IllegalStateException("database unavailable")).when(service).record(any());
-        var filter = new SystemRequestLoggingFilter(Optional.of(service));
+        var filter = new SystemRequestLoggingFilter(Optional.of(service), new ClientPlatformResolver());
         var request = new MockHttpServletRequest("POST", "/tools");
         var response = new MockHttpServletResponse();
 
@@ -53,7 +56,7 @@ class SystemRequestLoggingFilterTest {
     @Test
     void ignoresTechnicalRoutes() throws Exception {
         SystemLogService service = mock(SystemLogService.class);
-        var filter = new SystemRequestLoggingFilter(Optional.of(service));
+        var filter = new SystemRequestLoggingFilter(Optional.of(service), new ClientPlatformResolver());
         var request = new MockHttpServletRequest("GET", "/actuator/health");
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());

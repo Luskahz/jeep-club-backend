@@ -23,9 +23,14 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
     private static final int MAX_PATH_LENGTH = 500;
     private static final int MAX_ACTION_LENGTH = 120;
     private final Optional<SystemLogService> systemLogService;
+    private final ClientPlatformResolver clientPlatformResolver;
 
-    public SystemRequestLoggingFilter(Optional<SystemLogService> systemLogService) {
+    public SystemRequestLoggingFilter(
+            Optional<SystemLogService> systemLogService,
+            ClientPlatformResolver clientPlatformResolver
+    ) {
         this.systemLogService = systemLogService;
+        this.clientPlatformResolver = clientPlatformResolver;
     }
 
     @Override
@@ -36,6 +41,10 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         long startedAt = System.nanoTime();
         String requestId = requestId(request);
+        request.setAttribute(
+                ClientPlatformResolver.REQUEST_ATTRIBUTE,
+                clientPlatformResolver.resolve(request)
+        );
         response.setHeader("X-Request-Id", requestId);
 
         try {
