@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -44,6 +45,7 @@ class AuthenticationSecurityIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private RolePermissionRepository rolePermissionRepository;
     @Autowired private UserRoleRepository userRoleRepository;
+    @Autowired private Clock clock;
 
     @Test
     void publicAuthenticationRoutesReachTheirControllersAnonymously() throws Exception {
@@ -95,7 +97,7 @@ class AuthenticationSecurityIntegrationTest {
     @Test
     @Transactional
     void identityAdminEndpointsEnforceReadDisableAndEnablePermissions() throws Exception {
-        Instant now = Instant.parse("2026-09-04T12:00:00Z");
+        Instant now = Instant.now(clock);
         String actorCpf = "86420975310";
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
                 new UserRegistrationData(
