@@ -1,6 +1,5 @@
-package com.jeepclub.backend.billing.infra.storage;
+package com.jeepclub.backend.billing.core.application.service.paymentreceipt;
 
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Setter;
@@ -9,23 +8,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
-import java.nio.file.Path;
 import java.util.Set;
 
 @Component
 @Validated
 @Setter
-@ConfigurationProperties(prefix = "billing.receipts.storage")
-public class PaymentReceiptStorageProperties {
+@ConfigurationProperties(prefix = "billing.receipts.validation")
+public class PaymentReceiptValidationProperties {
 
     @NotNull
-    private Path rootDirectory = Path.of("storage/billing/payment-receipts");
-
-    @NotBlank
-    private String publicBaseUrl = "/billing/payment-receipts";
-
-    @NotNull
-    private DataSize maxFileSize = DataSize.ofMegabytes(5);
+    private DataSize maxFileSize = DataSize.ofMegabytes(10);
 
     @NotEmpty
     private Set<String> allowedContentTypes = Set.of(
@@ -43,14 +35,6 @@ public class PaymentReceiptStorageProperties {
             "png",
             "webp"
     );
-
-    public Path rootDirectory() {
-        return rootDirectory;
-    }
-
-    public String publicBaseUrl() {
-        return publicBaseUrl;
-    }
 
     public DataSize maxFileSize() {
         return maxFileSize;

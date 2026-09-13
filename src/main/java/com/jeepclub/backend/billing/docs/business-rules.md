@@ -11,7 +11,7 @@ As regras descritas aqui devem orientar alterações futuras em:
 * DTOs;
 * controllers;
 * adapters;
-* migrations;
+* modelo de persistência definido pelas Entities JPA;
 * testes;
 * documentação de API.
 
@@ -544,6 +544,16 @@ Exemplos:
 * arquivar cycle ainda gerado.
 
 Esses casos devem retornar erro equivalente a `409 CONFLICT`.
+
+## Regra 53-A — Responsabilidades do comprovante
+
+Billing valida obrigatoriedade, conteúdo vazio, tamanho máximo de 10 MB, MIME e extensão. A extensão é normalizada uma vez. O Platform armazena os bytes através de `FileStorage`, usando o namespace `billing/payment-receipts`, e controla provider e root directory.
+
+`receiptStorageKey` é a única referência persistida. `receiptUrl` é derivada como `/billing/member-payments/{paymentId}/receipt` e a key não é exposta no contrato público.
+
+## Regra 53-B — Autorização do comprovante
+
+O download é permitido somente ao owner da `MemberCharge` vinculada ou a quem possui `BILLING_PAYMENT_READ`. Conhecer a `storageKey` nunca autoriza acesso.
 
 ## Regra 54 — Erros de acesso devem retornar proibido
 

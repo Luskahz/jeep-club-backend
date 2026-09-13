@@ -638,9 +638,11 @@ Membro autenticado.
 5. Sistema verifica se não existe payment editável para a cobrança.
 6. Sistema verifica se a cobrança aceita nova submissão na data atual.
 7. Sistema valida se amount é igual ao finalAmount da cobrança.
-8. Sistema armazena comprovante.
-9. Sistema cria MemberPayment com status PENDING_VALIDATION.
-10. Sistema retorna o pagamento criado.
+8. Billing valida o comprovante e normaliza sua extensão.
+9. Sistema armazena bytes via FileStorage no namespace billing/payment-receipts.
+10. Sistema persiste somente a receiptStorageKey e cria MemberPayment com status PENDING_VALIDATION.
+11. Rollback remove a nova key; commit mantém o arquivo.
+12. Sistema retorna o pagamento criado com receiptUrl lógica por paymentId.
 ```
 
 ### Resultado
@@ -681,11 +683,12 @@ REJECTED
 6. Sistema verifica se a cobrança ainda está PENDING.
 7. Se o payment está REJECTED, sistema valida se a cobrança aceita nova submissão na data atual.
 8. Sistema valida se amount é igual ao finalAmount da cobrança.
-9. Sistema armazena novo comprovante.
-10. Sistema atualiza o MemberPayment.
-11. Sistema altera status para PENDING_VALIDATION.
-12. Sistema limpa dados de rejeição.
-13. Sistema retorna o pagamento atualizado.
+9. Billing valida o novo comprovante e armazena B via FileStorage.
+10. Sistema atualiza o MemberPayment para receiptStorageKey B, mantendo A até o fim da transação.
+11. Sistema altera status para PENDING_VALIDATION e limpa dados de rejeição.
+12. No commit, remove A; no rollback, remove B e preserva A.
+13. Falha no cleanup de A é registrada e B continua válido.
+14. Sistema retorna o pagamento atualizado com receiptUrl lógica.
 ```
 
 ### Resultado
@@ -695,6 +698,16 @@ O pagamento fica novamente pendente de validação.
 ### Regra importante
 
 Se o pagamento já foi confirmado antes do `PUT`, a atualização deve falhar.
+
+## Fluxo 21-A — Baixar comprovante
+
+1. A rota recebe `paymentId` e o usuário autenticado.
+2. Billing carrega `MemberPayment` e a `MemberCharge` vinculada.
+3. Autoriza owner ou authority `BILLING_PAYMENT_READ`.
+4. Somente então usa a `receiptStorageKey` interna em `FileStorage.load`.
+5. A API adapta os bytes do `StorageResource` e responde com MIME controlado e cache privado.
+
+A rota não aceita `storageKey`; o acesso horizontal e a antiga rota baseada em key são bloqueados.
 
 ## Fluxo 22 — Confirmar pagamento
 

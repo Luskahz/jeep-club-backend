@@ -30,7 +30,7 @@ public record MemberPaymentSummaryResponse(
         @Schema(description = "Data informada em que o pagamento foi realizado.")
         Instant paidAt,
 
-        @Schema(description = "URL para visualização do comprovante.")
+        @Schema(description = "Rota lógica autorizada para download do comprovante.", example = "/billing/member-payments/1/receipt")
         String receiptUrl,
 
         @Schema(description = "Data de criação do pagamento.")
@@ -47,7 +47,7 @@ public record MemberPaymentSummaryResponse(
                 result.paymentMethod(),
                 result.status(),
                 result.paidAt(),
-                result.receiptUrl(),
+                "/billing/member-payments/" + result.id() + "/receipt",
                 result.createdAt()
         );
     }

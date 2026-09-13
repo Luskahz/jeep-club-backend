@@ -99,8 +99,8 @@ public class MemberPaymentController {
     }
 
     private PaymentReceiptFile toPaymentReceiptFile(MultipartFile multipartFile) {
-        if (multipartFile == null || multipartFile.isEmpty()) {
-            throw new InvalidPaymentReceiptException("Payment receipt file is required.");
+        if (multipartFile == null) {
+            return null;
         }
 
         try {

@@ -81,13 +81,6 @@ public class MemberPaymentEntity {
     )
     private String receiptStorageKey;
 
-    @Column(
-            name = "receipt_url",
-            nullable = false,
-            length = 1000
-    )
-    private String receiptUrl;
-
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
 

@@ -24,6 +24,17 @@ public class BillingMemberPaymentExceptionHandler extends ApiExceptionHandler {
         );
     }
 
+    @ExceptionHandler(PaymentReceiptNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handlePaymentReceiptNotFound(
+            PaymentReceiptNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "PAYMENT_RECEIPT_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
     @ExceptionHandler(MemberPaymentAccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleMemberPaymentAccessDenied(
             MemberPaymentAccessDeniedException exception

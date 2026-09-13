@@ -30,10 +30,7 @@ public record MemberPaymentResponse(
         @Schema(description = "Data informada em que o pagamento foi realizado.")
         Instant paidAt,
 
-        @Schema(description = "Chave interna do comprovante armazenado.")
-        String receiptStorageKey,
-
-        @Schema(description = "URL para visualização do comprovante.")
+        @Schema(description = "Rota lógica autorizada para download do comprovante.", example = "/billing/member-payments/1/receipt")
         String receiptUrl,
 
         @Schema(description = "Data de confirmação do pagamento.", nullable = true)
@@ -74,8 +71,7 @@ public record MemberPaymentResponse(
                 result.paymentMethod(),
                 result.status(),
                 result.paidAt(),
-                result.receiptStorageKey(),
-                result.receiptUrl(),
+                receiptUrl(result.id()),
                 result.confirmedAt(),
                 result.confirmedByUserId(),
                 result.rejectedAt(),
@@ -86,5 +82,9 @@ public record MemberPaymentResponse(
                 result.createdAt(),
                 result.updatedAt()
         );
+    }
+
+    private static String receiptUrl(Long paymentId) {
+        return "/billing/member-payments/" + paymentId + "/receipt";
     }
 }

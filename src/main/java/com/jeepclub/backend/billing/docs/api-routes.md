@@ -767,6 +767,8 @@ SubmitMemberPaymentRequest
 MemberPaymentResponse
 ```
 
+O response expõe `receiptUrl` como rota lógica por `paymentId` e não expõe `receiptStorageKey`.
+
 ## Atualizar pagamento enviado
 
 ```http id="l5x4nd"
@@ -801,6 +803,22 @@ UpdateMemberPaymentRequest
 200 OK
 MemberPaymentResponse
 ```
+
+## Baixar comprovante de pagamento
+
+```http
+GET /billing/member-payments/{paymentId}/receipt
+```
+
+### Permissão
+
+Owner do `MemberCharge` vinculado **ou** authority `BILLING_PAYMENT_READ`.
+
+### Segurança e resposta
+
+A autorização de objeto ocorre antes de `FileStorage.load`. A `storageKey` não é aceita na URL nem como prova de autorização. O endpoint retorna os bytes do `StorageResource`, `Content-Type` controlado (`PDF`, `JPEG`, `PNG` ou `WebP`) e `Cache-Control: private`.
+
+A rota legada `/billing/payment-receipts/{year}/{month}/{day}/{filename}` foi removida.
 
 ## Listar pagamentos
 

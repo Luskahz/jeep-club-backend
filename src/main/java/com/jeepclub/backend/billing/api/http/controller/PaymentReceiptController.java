@@ -1,16 +1,22 @@
 package com.jeepclub.backend.billing.api.http.controller;
 
-import com.jeepclub.backend.billing.core.application.exception.payment.InvalidPaymentReceiptException;
+import com.jeepclub.backend.billing.core.application.result.PaymentReceiptResult;
 import com.jeepclub.backend.billing.core.application.service.paymentreceipt.PaymentReceiptService;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.CacheControl;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.time.Duration;
 
 @RestController
@@ -19,32 +25,40 @@ public class PaymentReceiptController {
 
     private final PaymentReceiptService paymentReceiptService;
 
-    @GetMapping("/billing/payment-receipts/{year}/{month}/{day}/{filename:.+}")
+    @GetMapping("/billing/member-payments/{paymentId}/receipt")
+    @Operation(
+            summary = "Baixar comprovante de pagamento",
+            description = "Permite o download ao dono do pagamento ou a quem possui BILLING_PAYMENT_READ.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Comprovante retornado."),
+                    @ApiResponse(responseCode = "403", description = "Pagamento não pertence ao usuário e falta permissão administrativa."),
+                    @ApiResponse(responseCode = "404", description = "Pagamento ou comprovante não encontrado.")
+            }
+    )
     public ResponseEntity<Resource> findPaymentReceipt(
-            @PathVariable String year,
-            @PathVariable String month,
-            @PathVariable String day,
-            @PathVariable String filename
+            @PathVariable @Positive(message = "ID do pagamento deve ser maior que zero.") Long paymentId,
+            Authentication authentication
     ) {
-        String storageKey = "%s/%s/%s/%s".formatted(
-                year,
-                month,
-                day,
-                filename
+        UserPrincipal principal = extractPrincipal(authentication);
+        boolean hasAdministrativeRead = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "BILLING_PAYMENT_READ".equals(authority.getAuthority()));
+        PaymentReceiptResult receipt = paymentReceiptService.find(
+                paymentId,
+                principal.getUserId(),
+                hasAdministrativeRead
         );
-
-        Resource resource = toResource(paymentReceiptService.find(storageKey));
 
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePrivate())
-                .body(resource);
+                .contentType(MediaType.parseMediaType(receipt.contentType()))
+                .contentLength(receipt.size())
+                .body(new ByteArrayResource(receipt.content()));
     }
 
-    private Resource toResource(URI resourceUri) {
-        try {
-            return new UrlResource(resourceUri);
-        } catch (MalformedURLException exception) {
-            throw new InvalidPaymentReceiptException("Could not read payment receipt file.");
+    private static UserPrincipal extractPrincipal(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new IllegalArgumentException("Authenticated user principal is required.");
         }
+        return principal;
     }
 }
