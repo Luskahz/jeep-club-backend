@@ -7,6 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.slf4j.MDC;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
@@ -17,6 +20,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Component
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class SystemRequestLoggingFilter extends OncePerRequestFilter {
 
     private static final int MAX_REQUEST_ID_LENGTH = 100;
@@ -41,15 +45,21 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         long startedAt = System.nanoTime();
         String requestId = requestId(request);
+        ClientPlatform device = clientPlatformResolver.resolve(request);
+        MDC.clear();
+        MDC.put(HttpLoggingContext.REQUEST_ID, requestId);
+        MDC.put(HttpLoggingContext.DEVICE, device.name());
+        request.setAttribute(HttpLoggingContext.REQUEST_ID_ATTRIBUTE, requestId);
         request.setAttribute(
                 ClientPlatformResolver.REQUEST_ATTRIBUTE,
-                clientPlatformResolver.resolve(request)
+                device
         );
         response.setHeader("X-Request-Id", requestId);
 
         try {
             filterChain.doFilter(request, response);
         } finally {
+            restoreIdentityContext(request);
             int status = response.getStatus();
             SystemLogOutcome outcome = status >= 500
                     ? SystemLogOutcome.SERVER_ERROR
@@ -57,7 +67,7 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
             String route = route(request);
             try {
                 systemLogService.ifPresent(service -> service.record(new SystemLogEvent(
-                        currentActorId(),
+                        currentActorId(request),
                         limit(request.getMethod() + " " + route, MAX_ACTION_LENGTH),
                         request.getMethod(),
                         limit(request.getRequestURI(), MAX_PATH_LENGTH),
@@ -69,6 +79,8 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
                 )));
             } catch (RuntimeException ignored) {
                 // Logging must never change the result of the business request.
+            } finally {
+                MDC.clear();
             }
         }
     }
@@ -85,7 +97,10 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
 
     private String requestId(HttpServletRequest request) {
         String supplied = request.getHeader("X-Request-Id");
-        if (supplied == null || supplied.isBlank() || supplied.length() > MAX_REQUEST_ID_LENGTH) {
+        if (supplied == null
+                || supplied.isBlank()
+                || supplied.length() > MAX_REQUEST_ID_LENGTH
+                || !supplied.matches("[A-Za-z0-9._:-]+")) {
             return UUID.randomUUID().toString();
         }
         return supplied;
@@ -100,7 +115,26 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
-    private Long currentActorId() {
+    private void restoreIdentityContext(HttpServletRequest request) {
+        Object userId = request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE);
+        Object userName = request.getAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE);
+        if (userId instanceof String value) {
+            MDC.put(HttpLoggingContext.USER_ID, value);
+        }
+        if (userName instanceof String value) {
+            MDC.put(HttpLoggingContext.USER_NAME, value);
+        }
+    }
+
+    private Long currentActorId(HttpServletRequest request) {
+        Object enrichedUserId = request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE);
+        if (enrichedUserId instanceof String value) {
+            try {
+                return Long.valueOf(value);
+            } catch (NumberFormatException ignored) {
+                // Fall through to the SecurityContext compatibility path.
+            }
+        }
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
             return principal.getUserId();

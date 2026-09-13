@@ -1,6 +1,7 @@
 package com.jeepclub.backend.platform.security.config;
 
 import com.jeepclub.backend.platform.security.filter.JwtAuthenticationFilter;
+import com.jeepclub.backend.platform.logging.RequestContextEnrichmentFilter;
 import com.jeepclub.backend.platform.security.jwt.JwtProperties;
 import com.jeepclub.backend.platform.security.handler.ApiAccessDeniedHandler;
 import com.jeepclub.backend.platform.security.handler.ApiAuthenticationEntryPoint;
@@ -22,15 +23,18 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final ApiAuthenticationEntryPoint authenticationEntryPoint;
     private final ApiAccessDeniedHandler accessDeniedHandler;
+    private final RequestContextEnrichmentFilter requestContextEnrichmentFilter;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
             ApiAuthenticationEntryPoint authenticationEntryPoint,
-            ApiAccessDeniedHandler accessDeniedHandler
+            ApiAccessDeniedHandler accessDeniedHandler,
+            RequestContextEnrichmentFilter requestContextEnrichmentFilter
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
+        this.requestContextEnrichmentFilter = requestContextEnrichmentFilter;
     }
 
     @Bean
@@ -82,6 +86,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        requestContextEnrichmentFilter,
+                        JwtAuthenticationFilter.class
                 );
 
         return http.build();
