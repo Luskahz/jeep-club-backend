@@ -12,6 +12,7 @@ import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberP
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
 import com.jeepclub.backend.billing.core.application.service.paymentreceipt.PaymentReceiptValidator;
+import com.jeepclub.backend.billing.core.application.service.paymentreceipt.PaymentReceiptLifecycle;
 import com.jeepclub.backend.billing.core.application.service.paymentreceipt.ValidatedPaymentReceipt;
 import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
 import com.jeepclub.backend.billing.core.repository.MemberChargeRepository;
@@ -44,6 +45,7 @@ public class MemberPaymentService {
     private final MemberPaymentRepository memberPaymentRepository;
     private final MemberChargeRepository memberChargeRepository;
     private final PaymentReceiptValidator paymentReceiptValidator;
+    private final PaymentReceiptLifecycle paymentReceiptLifecycle;
     private final FileStorage fileStorage;
     private final Clock clock;
 
@@ -70,6 +72,7 @@ public class MemberPaymentService {
         ensurePaymentAmountMatchesCharge(amount, memberCharge);
 
         StoredFile storedReceipt = storeReceipt(receiptFile);
+        paymentReceiptLifecycle.register(storedReceipt.storageKey(), null);
         MemberPayment memberPayment = MemberPayment.submitForValidation(
                 memberCharge.getId(),
                 amount,
@@ -107,7 +110,9 @@ public class MemberPaymentService {
         }
         ensurePaymentAmountMatchesCharge(amount, memberCharge);
 
+        String previousStorageKey = memberPayment.getReceiptStorageKey();
         StoredFile storedReceipt = storeReceipt(receiptFile);
+        paymentReceiptLifecycle.register(storedReceipt.storageKey(), previousStorageKey);
         memberPayment.updateSubmission(
                 amount,
                 paymentMethod,
