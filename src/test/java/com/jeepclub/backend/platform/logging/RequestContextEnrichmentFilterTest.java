@@ -58,4 +58,28 @@ class RequestContextEnrichmentFilterTest {
                 (req, res) -> assertThat(MDC.get(HttpLoggingContext.USER_ID)).isNull()
         );
     }
+
+    @Test
+    void legacyPrincipalKeepsCanonicalUserIdWithoutInventingUserName() throws Exception {
+        var principal = new UserPrincipal(
+                42L, 7L, null, Instant.parse("2026-09-13T12:00:00Z")
+        );
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(principal, null, List.of())
+        );
+        var request = new MockHttpServletRequest("GET", "/authorization/me");
+
+        new RequestContextEnrichmentFilter().doFilter(
+                request,
+                new MockHttpServletResponse(),
+                (req, res) -> {
+                    assertThat(MDC.get(HttpLoggingContext.USER_ID)).isEqualTo("42");
+                    assertThat(MDC.get(HttpLoggingContext.USER_NAME)).isNull();
+                }
+        );
+
+        assertThat(request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE)).isEqualTo("42");
+        assertThat(request.getAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE)).isNull();
+        assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
 }

@@ -53,9 +53,15 @@ public class JwtTokenParser {
     }
 
     private String extractUserName(Claims claims) {
-        String userName = claims.get(USER_NAME_CLAIM, String.class);
-        if (userName == null || userName.isBlank()) {
-            throw new IllegalArgumentException("JWT user name is required.");
+        Object rawUserName = claims.get(USER_NAME_CLAIM);
+        if (rawUserName == null) {
+            return null;
+        }
+        if (!(rawUserName instanceof String userName)) {
+            throw new IllegalArgumentException("JWT user name must be a string.");
+        }
+        if (userName.isBlank()) {
+            throw new IllegalArgumentException("JWT user name must not be blank.");
         }
         String normalized = userName.trim();
         if (normalized.length() > MAX_USER_NAME_LENGTH) {

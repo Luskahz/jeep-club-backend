@@ -113,6 +113,13 @@ O access token também contém a claim documentada `name`. `JwtTokenParser`
 recupera essa claim e `JwtAuthenticationFilter` a propaga por
 `JwtAuthenticatedUser` até `UserPrincipal.userName`.
 
+Durante o rollout, access tokens legados válidos podem não conter `name`. Essa
+ausência não invalida assinatura, issuer, tipo, `userId`, `sid`, expiração,
+sessão ou authorities: o request autentica normalmente, `userId` permanece no
+MDC e `userName` usa o placeholder `-`. Não há consulta ao Identity, banco ou
+serviço externo para preencher o nome ausente. Depois de login ou refresh
+normal, o novo access token volta a carregar a claim.
+
 `userName` é exclusivamente contexto humano e observacional:
 
 - não participa de autorização ou regra de negócio;
