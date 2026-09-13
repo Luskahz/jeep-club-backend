@@ -86,9 +86,14 @@ context. Notas adicionais são orientadas por necessidade, não por template.
   pode ser publicada como SPI. Identity publica suas necessidades de
   provisionamento em `identity.api.module.spi`, e Authentication fornece os
   adapters em `authentication.infra.integration.identity`.
-- Associações JPA legadas entre módulos não devem ser convertidas em IDs
-  escalares apenas para satisfazer a organização de pacotes: a remoção precisa
-  de uma migração própria que preserve explicitamente as chaves estrangeiras.
+- Associações JPA legadas entre módulos não devem ser alteradas apenas para
+  satisfazer a organização de pacotes. Sua remoção ou refatoração exige escopo
+  funcional/persistente explícito e análise das relações existentes.
+- Na fase atual, alterações de schema são representadas pelas Entities JPA e o
+  banco de desenvolvimento pode ser ajustado ou recriado quando necessário;
+  isso não implica criar migration versionada. Se o projeto adotar migrations
+  futuramente, essa política deverá ser definida por decisão arquitetural
+  própria.
 - A associação física legada de `AuthenticationAccountEntity` com `UserEntity`
   é uma exceção já existente e não autoriza novos imports cross-module de JPA.
 - Helpers compartilhados por services normal e administrativo ficam em
