@@ -1,8 +1,8 @@
 # Authentication
 
-Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
-[organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
-e as [regras de desenvolvimento](../../../../../../../../docs/architecture/feature-development-rules.md).
+Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
+[organização dos módulos](../../../../../../../../../docs/architecture/module-organization.md)
+e as [regras de desenvolvimento](../../../../../../../../../docs/architecture/feature-development-rules.md).
 Este documento descreve somente o bounded context `iam.authentication`. O
 contrato HTTP detalhado pertence ao OpenAPI gerado pelos controllers e DTOs do
 módulo.
@@ -122,4 +122,4 @@ global atual, sem migrations versionadas obrigatórias.
 Os testes existentes cobrem contrato DTO, controllers, segurança HTTP, estados
 da conta, revogação, login concorrente, adapters de persistência, JWT e
 integrações de provisionamento. Ao alterar este contexto, escolha os testes
-afetados conforme as [regras globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
+afetados conforme as [regras globais](../../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
