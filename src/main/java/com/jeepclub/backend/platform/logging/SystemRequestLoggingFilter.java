@@ -67,14 +67,10 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
                     : response.getStatus();
             try {
                 logWriter.write(new HttpRequestLogEvent(
-                        requestId,
                         request.getMethod(),
                         HttpLogValueSanitizer.singleLine(limit(route(request), MAX_PATH_LENGTH)),
                         status,
                         (System.nanoTime() - startedAt) / 1_000_000,
-                        device.name(),
-                        attributeOrPlaceholder(request, HttpLoggingContext.USER_ID_ATTRIBUTE),
-                        attributeOrPlaceholder(request, HttpLoggingContext.USER_NAME_ATTRIBUTE),
                         unhandledFailure != null
                 ));
             } catch (RuntimeException ignored) {
@@ -113,11 +109,6 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
 
     private String limit(String value, int maxLength) {
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private String attributeOrPlaceholder(HttpServletRequest request, String attributeName) {
-        Object value = request.getAttribute(attributeName);
-        return value instanceof String text && !text.isBlank() ? text : "-";
     }
 
     private void restoreIdentityContext(HttpServletRequest request) {

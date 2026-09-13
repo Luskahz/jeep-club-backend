@@ -15,10 +15,13 @@ import io.jsonwebtoken.Jwts;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -38,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@ExtendWith(OutputCaptureExtension.class)
 class HttpLoggingIntegrationTest {
 
     @Autowired private MockMvc mockMvc;
@@ -66,7 +70,9 @@ class HttpLoggingIntegrationTest {
 
     @Test
     @Transactional
-    void authenticatedRequestProducesSingleEnrichedOperationalLineAndCleansMdc() throws Exception {
+    void authenticatedRequestProducesSingleEnrichedOperationalLineAndCleansMdc(
+            CapturedOutput output
+    ) throws Exception {
         Instant now = Instant.now(clock);
         String cpf = "41876293040";
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
@@ -88,23 +94,26 @@ class HttpLoggingIntegrationTest {
         assertThat(appender.list).hasSize(1);
         ILoggingEvent event = appender.list.get(0);
         assertThat(event.getFormattedMessage()).contains(
-                "requestId=integration-authenticated",
+                "http_request",
                 "method=GET",
                 "path=/identity/me",
-                "status=200",
-                "device=IOS",
-                "userId=" + userId,
-                "userName=\"Observability User\""
-        );
+                "status=200"
+        ).doesNotContain("requestId=", "device=", "userId=", "userName=");
         assertThat(event.getMDCPropertyMap()).containsEntry("requestId", "integration-authenticated")
                 .containsEntry("userId", userId.toString())
                 .containsEntry("userName", "Observability User")
                 .containsEntry("device", "IOS");
+        assertCompactConsoleLine(
+                httpConsoleLine(output, "integration-authenticated"),
+                "integration-authenticated", userId.toString(), "Observability User", "IOS"
+        );
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 
     @Test
-    void anonymousRequestProducesControlledPlaceholdersWithoutResidualIdentity() throws Exception {
+    void anonymousRequestProducesControlledPlaceholdersWithoutResidualIdentity(
+            CapturedOutput output
+    ) throws Exception {
         mockMvc.perform(post("/authentication/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}")
@@ -114,18 +123,20 @@ class HttpLoggingIntegrationTest {
 
         assertThat(appender.list).hasSize(1);
         assertThat(appender.list.get(0).getFormattedMessage()).contains(
-                "requestId=integration-anonymous",
-                "status=400",
-                "device=UNKNOWN",
-                "userId=-",
-                "userName=\"-\""
+                "http_request", "method=POST", "status=400"
+        ).doesNotContain("requestId=", "device=", "userId=", "userName=");
+        assertCompactConsoleLine(
+                httpConsoleLine(output, "integration-anonymous"),
+                "integration-anonymous", "-", "-", "UNKNOWN"
         );
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 
     @Test
     @Transactional
-    void legacyTokenWithoutNameKeepsUserIdAndUsesMissingNamePlaceholder() throws Exception {
+    void legacyTokenWithoutNameKeepsUserIdAndUsesMissingNamePlaceholder(
+            CapturedOutput output
+    ) throws Exception {
         Instant now = Instant.now(clock);
         String cpf = "16593278008";
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
@@ -156,15 +167,59 @@ class HttpLoggingIntegrationTest {
         assertThat(appender.list).hasSize(1);
         ILoggingEvent event = appender.list.get(0);
         assertThat(event.getFormattedMessage()).contains(
-                "requestId=integration-legacy-token",
-                "userId=" + issued.userId(),
-                "userName=\"-\""
-        ).doesNotContain("legacy-observability@example.com");
+                "http_request", "method=GET", "path=/authorization/me", "status=200"
+        ).doesNotContain(
+                "requestId=", "device=", "userId=", "userName=",
+                "legacy-observability@example.com"
+        );
         assertThat(event.getMDCPropertyMap())
                 .containsEntry("requestId", "integration-legacy-token")
                 .containsEntry("userId", issued.userId().toString())
                 .containsEntry("device", "WEB")
                 .doesNotContainKey("userName");
+        assertCompactConsoleLine(
+                httpConsoleLine(output, "integration-legacy-token"),
+                "integration-legacy-token", issued.userId().toString(), "-", "WEB"
+        );
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
+
+    private String httpConsoleLine(CapturedOutput output, String requestId) {
+        return output.getAll().lines()
+                .filter(line -> line.contains("requestId=" + requestId))
+                .filter(line -> line.contains(" - http_request "))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("HTTP console line not found for " + requestId));
+    }
+
+    private void assertCompactConsoleLine(
+            String line,
+            String requestId,
+            String userId,
+            String userName,
+            String device
+    ) {
+        assertThat(line).contains(
+                "requestId=" + requestId,
+                "userId=" + userId,
+                "userName=\"" + userName + "\"",
+                "device=" + device,
+                "http_request method=",
+                "path=",
+                "status=",
+                "durationMs="
+        ).doesNotContain("\n", "\r");
+        assertThat(occurrences(line, "requestId=")).isEqualTo(1);
+        assertThat(occurrences(line, "userId=")).isEqualTo(1);
+        assertThat(occurrences(line, "userName=")).isEqualTo(1);
+        assertThat(occurrences(line, "device=")).isEqualTo(1);
+        assertThat(occurrences(line, "method=")).isEqualTo(1);
+        assertThat(occurrences(line, "path=")).isEqualTo(1);
+        assertThat(occurrences(line, "status=")).isEqualTo(1);
+        assertThat(occurrences(line, "durationMs=")).isEqualTo(1);
+    }
+
+    private int occurrences(String value, String fragment) {
+        return (value.length() - value.replace(fragment, "").length()) / fragment.length();
     }
 }

@@ -15,11 +15,14 @@ import org.springframework.web.servlet.HandlerMapping;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 import java.util.stream.Stream;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 class SystemRequestLoggingFilterTest {
 
@@ -38,16 +41,21 @@ class SystemRequestLoggingFilterTest {
         request.addHeader("X-Request-Id", "request-123");
         request.addHeader(ClientPlatformResolver.HEADER_NAME, "android");
         var response = new MockHttpServletResponse();
+        var mdcAtCompletion = new AtomicReference<Map<String, String>>();
+        doAnswer(invocation -> {
+            mdcAtCompletion.set(MDC.getCopyOfContextMap());
+            return null;
+        }).when(writer).write(any());
 
         filter.doFilter(request, response, new MockFilterChain());
 
         var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
         verify(writer).write(captor.capture());
         assertThat(captor.getValue().path()).isEqualTo("/vehicles/{vehicleId}");
-        assertThat(captor.getValue().requestId()).isEqualTo("request-123");
-        assertThat(captor.getValue().device()).isEqualTo("ANDROID");
-        assertThat(captor.getValue().userId()).isEqualTo("-");
-        assertThat(captor.getValue().userName()).isEqualTo("-");
+        assertThat(mdcAtCompletion.get())
+                .containsEntry("requestId", "request-123")
+                .containsEntry("device", "ANDROID")
+                .doesNotContainKeys("userId", "userName");
         assertThat(response.getHeader("X-Request-Id")).isEqualTo("request-123");
         assertThat(request.getAttribute(ClientPlatformResolver.REQUEST_ATTRIBUTE))
                 .isEqualTo(ClientPlatform.ANDROID);
@@ -74,13 +82,18 @@ class SystemRequestLoggingFilterTest {
         var request = new MockHttpServletRequest("GET", "/identity/me");
         request.setAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE, "42");
         request.setAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE, "Lucas Alves");
+        var mdcAtCompletion = new AtomicReference<Map<String, String>>();
+        doAnswer(invocation -> {
+            mdcAtCompletion.set(MDC.getCopyOfContextMap());
+            return null;
+        }).when(writer).write(any());
 
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
-        var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
-        verify(writer).write(captor.capture());
-        assertThat(captor.getValue().userId()).isEqualTo("42");
-        assertThat(captor.getValue().userName()).isEqualTo("Lucas Alves");
+        verify(writer).write(any());
+        assertThat(mdcAtCompletion.get())
+                .containsEntry("userId", "42")
+                .containsEntry("userName", "Lucas Alves");
     }
 
     @Test

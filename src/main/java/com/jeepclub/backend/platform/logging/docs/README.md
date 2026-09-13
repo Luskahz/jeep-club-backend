@@ -19,12 +19,16 @@ este pipeline.
 chama `HttpRequestLogWriter`. O resultado é uma única linha SLF4J, sem fila, banco
 ou worker:
 
+O pattern global escreve a correlação do MDC e a mensagem `http_request` acrescenta
+somente os campos próprios da conclusão HTTP. A saída efetiva é uma única linha,
+sem repetir contexto:
+
 ```text
-http_request requestId=82fd91 method=GET path=/vehicles/{vehicleId} status=200 durationMs=37 device=WEB userId=7 userName="Lucas Alves"
+2026-09-13T10:15:30.123-03:00 INFO  [http-nio-8080-exec-1] c.j.backend.platform.logging.http requestId=82fd91 userId=7 userName="Lucas Alves" device=WEB - http_request method=GET path=/vehicles/{vehicleId} status=200 durationMs=37
 ```
 
 O `path` usa o pattern resolvido pelo Spring MVC quando disponível e, caso
-contrário, a URI sem query string. Campos de identidade ausentes usam `-` e
+contrário, a URI sem query string. O pattern representa campos MDC ausentes com `-` e
 device ausente ou inválido usa `UNKNOWN`.
 
 Severidade:
