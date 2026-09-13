@@ -8,6 +8,7 @@ import com.jeepclub.backend.shared.storage.exception.StorageCollisionException;
 import com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException;
 import com.jeepclub.backend.shared.storage.exception.StorageOperationException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -188,6 +189,28 @@ class LocalFileStorageTest {
                     assertThat(exception.getMessage()).doesNotContain(rootFile.toString());
                     assertThat(exception.getCause()).isInstanceOf(IOException.class);
                 });
+    }
+
+    @Test
+    void shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot() throws IOException {
+        Path root = tempDirectory.resolve("root");
+        Path outside = tempDirectory.resolve("outside.txt");
+        Files.createDirectories(root);
+        Files.writeString(outside, "preserve");
+        Path link = root.resolve("linked.txt");
+
+        try {
+            Files.createSymbolicLink(link, outside);
+        } catch (UnsupportedOperationException | IOException | SecurityException exception) {
+            Assumptions.assumeTrue(false, "Symbolic links are unavailable in this test environment");
+        }
+
+        LocalFileStorage storage = storage(root);
+        assertThatThrownBy(() -> storage.load("linked.txt"))
+                .isInstanceOf(InvalidStorageKeyException.class);
+        assertThatThrownBy(() -> storage.delete("linked.txt"))
+                .isInstanceOf(InvalidStorageKeyException.class);
+        assertThat(outside).hasContent("preserve");
     }
 
     private LocalFileStorage storage(Path root) {
