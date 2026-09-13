@@ -2,23 +2,15 @@
 
 ## Objetivo
 
-Este documento registra decisões técnicas e pendências de implementação do módulo `billing`.
-
-Ele deve ser usado como referência para as próximas etapas após o fechamento do desenho de API + CORE.
+Este documento registra decisões técnicas, estado implementado e pendências do módulo `billing`.
 
 ## Status atual
 
-O desenho de `api` e `core` do módulo Billing está definido.
+O Billing possui API, core, persistência JPA, mappers, repository adapters, permissões e integração de comprovantes com o `FileStorage` global. A cobertura de comprovantes inclui validação, persistência, segurança, provider LOCAL e lifecycle transacional.
 
-As próximas etapas pertencem principalmente a:
+O projeto ainda está em desenvolvimento. Nesta fase o schema é modelado pelas Entities JPA; não são utilizados Flyway, Liquibase ou migrations versionadas.
 
-* infraestrutura;
-* persistência;
-* mapeamento;
-* migrations;
-* permissões;
-* testes;
-* schedulers futuros.
+Permanecem pendentes apenas evoluções indicadas explicitamente nas seções abaixo, como integrações ainda indisponíveis, cobertura dos demais fluxos, locks adicionais e schedulers futuros.
 
 ## Estrutura esperada
 
@@ -68,7 +60,7 @@ Ela não deve depender de:
 
 ## Camada infra
 
-A camada `infra` deve implementar os detalhes técnicos necessários para executar os contratos definidos pelo core.
+A camada `infra` implementa os detalhes técnicos do Billing necessários para executar os contratos definidos pelo core.
 
 Exemplos:
 
@@ -76,13 +68,13 @@ Exemplos:
 * Spring Data repositories;
 * mappers;
 * adapters;
-* migrations;
-* integração com o `FileStorage` global para comprovantes;
 * integrações com outros módulos.
 
-## Pendência 1 — Entities JPA
+No fluxo de comprovantes, validação, autorização, consumo do contrato `FileStorage` e coordenação do `PaymentReceiptLifecycle` pertencem ao `core`. O provider físico, filesystem, root directory, segurança de paths, geração da `storageKey` e I/O pertencem a `platform.storage`.
 
-Devem ser criadas entities JPA para persistir os agregados e modelos do módulo.
+## Estado implementado — Entities JPA
+
+As entities JPA persistem os agregados e modelos do módulo.
 
 Entidades esperadas:
 
@@ -95,21 +87,11 @@ MemberPaymentEntity
 MemberRefundEntity
 ```
 
-A estratégia exata de herança para `ChargeAssignment` deve ser definida na infraestrutura.
+`ChargeAssignmentEntity` e suas especializações modelam a estratégia de persistência das atribuições.
 
-Possíveis abordagens:
+## Estado implementado — Mappers
 
-```text id="5hebrz"
-1. SINGLE_TABLE
-2. JOINED
-3. Uma tabela única manual com targetType e targetId
-```
-
-A escolha deve preservar simplicidade e clareza de consulta.
-
-## Pendência 2 — Mappers
-
-Devem ser criados mappers entre domínio e persistência.
+Os mappers entre domínio e persistência estão implementados.
 
 Exemplos:
 
@@ -132,9 +114,9 @@ Os mappers devem:
 * preservar status;
 * evitar regra de negócio.
 
-## Pendência 3 — Adapters de repository
+## Estado implementado — Adapters de repository
 
-Os repositories do core devem ser implementados por adapters na infra.
+Os repositories do core são implementados por adapters na infra.
 
 Exemplo conceitual:
 
@@ -153,7 +135,7 @@ Os adapters devem ser responsáveis por:
 * cumprir contratos do core;
 * esconder detalhes de persistência.
 
-## Pendência 4 — Locks reais
+## Estado implementado — Locks dos fluxos críticos atuais
 
 O core declara métodos com intenção de lock:
 
@@ -162,7 +144,7 @@ MemberChargeRepository.findByIdForUpdate
 MemberPaymentRepository.findByIdForUpdate
 ```
 
-Na infra, esses métodos devem ser implementados com lock pessimista real.
+Na infra, esses métodos usam lock pessimista real.
 
 Exemplo:
 
@@ -172,7 +154,7 @@ Exemplo:
 Optional<MemberChargeEntity> findByIdForUpdate(@Param("id") Long id);
 ```
 
-Sem essa implementação, a regra de concorrência existe no core, mas não é garantida no banco.
+Os adapters encaminham `findByIdForUpdate` para essas consultas bloqueantes.
 
 ## Pendência 5 — Avaliar locks futuros
 
@@ -193,11 +175,11 @@ Esses locks podem fortalecer fluxos como:
 
 Não são bloqueantes para o fechamento de API + CORE, mas devem ser considerados na infraestrutura.
 
-## Pendência 6 — Migrations
+## Schema atual
 
-Devem ser criadas migrations para as tabelas do Billing.
+O schema desta fase de desenvolvimento é modelado pelas Entities JPA. O projeto não possui Flyway, Liquibase nem migrations versionadas, e não há pendência ativa para criá-las.
 
-Tabelas esperadas conceitualmente:
+Tabelas modeladas:
 
 ```text id="wggu7o"
 billing_charge_definitions
@@ -274,9 +256,9 @@ index(status)
 
 Pode ser avaliado reforço para impedir múltiplos refunds ativos por payment.
 
-## Pendência 7 — Ports externos
+## Estado atual — Ports externos
 
-O Billing depende de ports para consultar informações de outros módulos.
+O Billing depende de ports para consultar informações de outros módulos. Existem adapters para os ports listados; a integração de eventos permanece explicitamente indisponível até existir um contrato concreto do módulo responsável.
 
 Ports esperados:
 
@@ -324,9 +306,9 @@ A leitura autorizada carrega `MemberPayment` e `MemberCharge`, exige owner ou `B
 
 O lifecycle usa callback da transação: rollback compensa o arquivo novo e commit remove o antigo. Falha de cleanup é observável, sem invalidar a nova referência.
 
-## Pendência 10 — Permissões BILLING
+## Estado implementado — Permissões BILLING
 
-As permissões usadas nos controllers devem ser registradas no módulo de authorization.
+As permissões usadas nos controllers estão registradas no módulo de authorization.
 
 Permissões observadas no Billing:
 
@@ -361,12 +343,12 @@ BILLING_REFUND_EXPIRE
 BILLING_REFUND_CANCEL
 ```
 
-Essas permissões devem ser adicionadas em:
+Essas permissões estão definidas em:
 
 ```text id="b6a7zb"
 PermissionCode
 PermissionDefinition
-ModuleCode, se necessário
+ModuleCode
 ```
 
 ## Pendência 11 — Segurança dos endpoints do membro
@@ -411,7 +393,7 @@ Isso melhora consistência da API.
 
 ## Pendência 13 — Testes de domínio
 
-Criar testes unitários para entidades de domínio.
+A cobertura específica de comprovantes já valida `MemberPayment`, persistência baseada somente em `receiptStorageKey` e regras de arquivo. Ainda deve ser ampliada a cobertura unitária geral das entidades de domínio.
 
 Entidades prioritárias:
 
@@ -438,7 +420,7 @@ Cenários importantes:
 
 ## Pendência 14 — Testes de services
 
-Criar testes para os services de aplicação.
+Os services de comprovantes já possuem testes de validação, autorização e lifecycle transacional. Ainda deve ser ampliada a cobertura dos demais services de aplicação.
 
 Services prioritários:
 
@@ -469,7 +451,7 @@ Cenários importantes:
 
 ## Pendência 15 — Testes de controller
 
-Criar testes para controllers com MockMvc.
+O download de comprovantes já possui testes de integração de segurança e contrato HTTP. Ainda deve ser ampliada a cobertura dos demais controllers com MockMvc.
 
 Validar:
 
@@ -632,15 +614,16 @@ reescrita de histórico após mudar ChargeAssignment
 Antes de considerar a infra do Billing fechada, validar:
 
 ```text id="1j8ckr"
-[ ] Todas as entities JPA criadas.
-[ ] Todos os mappers criados.
-[ ] Todos os repositories do core implementados.
+[x] Todas as entities JPA atuais criadas.
+[x] Todos os mappers atuais criados.
+[x] Todos os repositories atuais do core implementados.
 [ ] Todos os ports externos implementados.
-[ ] Locks pessimistas reais implementados.
-[ ] Migrations criadas.
+[x] Locks pessimistas reais de `MemberCharge` e `MemberPayment` implementados.
+[x] Schema atual modelado pelas Entities JPA, sem framework de migration nesta fase.
 [ ] Índices criados.
-[ ] Permissões BILLING_* registradas.
+[x] Permissões BILLING_* registradas.
 [x] Storage de comprovante integrado ao `FileStorage` global.
+[x] Testes de validação, persistência, segurança e lifecycle de comprovantes criados.
 [ ] Testes unitários de domínio criados.
 [ ] Testes de service criados.
 [ ] Testes de controller criados.

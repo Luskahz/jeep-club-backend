@@ -11,7 +11,7 @@ As regras descritas aqui devem orientar alterações futuras em:
 * DTOs;
 * controllers;
 * adapters;
-* migrations;
+* modelo de persistência definido pelas Entities JPA;
 * testes;
 * documentação de API.
 

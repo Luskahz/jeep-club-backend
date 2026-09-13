@@ -54,21 +54,24 @@ Ela contém:
 * interfaces de repository;
 * exceptions de aplicação e domínio.
 
+Para comprovantes, o `core` é responsável pela validação semântica, autorização por ownership ou permissão, coordenação do lifecycle transacional e consumo do contrato compartilhado `FileStorage`.
+
 A camada `core` deve ser independente de detalhes de banco, JPA, storage físico, frameworks externos ou integrações concretas.
 
 ### infra
 
-A camada `infra` será responsável por implementar detalhes técnicos.
+A camada `infra` implementa os detalhes técnicos que pertencem ao módulo Billing.
 
 Exemplos:
 
 * entities JPA;
 * repositories JPA;
 * mappers;
-* adapters de ports;
-* consumo do `FileStorage` global e coordenação do lifecycle de comprovantes;
+* adapters e integrações concretas dos ports do módulo;
 * locks pessimistas reais;
-* migrations.
+* configuração de persistência do Billing.
+
+O provider físico dos comprovantes pertence a `platform.storage`, que controla filesystem, root directory, segurança de paths, geração da `storageKey` e I/O. `billing.infra` não coordena `PaymentReceiptLifecycle` nem resolve paths físicos.
 
 ## Principais conceitos
 
@@ -270,19 +273,15 @@ state-models.md
 concurrency.md
 ```
 
-## Pendências fora do API + CORE
+## Estado atual e pendências
 
-O desenho de API + CORE do módulo está definido.
+O módulo já possui entities JPA, mappers, adapters de repository, locks pessimistas nos fluxos de `MemberCharge` e `MemberPayment`, permissões `BILLING_*` e integração de comprovantes com o `FileStorage` global.
 
-As próximas etapas pertencem principalmente à infraestrutura e testes:
+Nesta fase de desenvolvimento o schema é modelado pelas Entities JPA. O projeto não usa Flyway, Liquibase ou migrations versionadas.
 
-* implementar entities JPA;
-* implementar mappers;
-* implementar adapters dos repositories;
-* implementar adapters dos ports externos;
-* manter as validações semânticas, autorização e lifecycle dos comprovantes;
-* implementar locks pessimistas reais nos métodos `findByIdForUpdate`;
-* criar migrations;
-* registrar permissões `BILLING_*`;
-* criar testes de unidade e integração;
+Permanecem como evolução apenas itens ainda não cobertos de forma geral:
+
+* completar integrações externas que ainda usam implementação indisponível;
+* ampliar testes de unidade e integração dos demais fluxos de Billing;
+* avaliar locks adicionais conforme os cenários de concorrência evoluírem;
 * implementar schedulers futuros quando necessário.
