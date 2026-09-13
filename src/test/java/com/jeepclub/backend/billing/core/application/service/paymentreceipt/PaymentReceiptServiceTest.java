@@ -16,6 +16,8 @@ import com.jeepclub.backend.shared.storage.StorageResource;
 import com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -96,17 +98,38 @@ class PaymentReceiptServiceTest {
                 .hasMessage("Payment receipt file not found.");
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "file.pdf,application/pdf",
+            "file.jpg,image/jpeg",
+            "file.jpeg,image/jpeg",
+            "file.png,image/png",
+            "file.webp,image/webp"
+    })
+    void mapsControlledStorageExtensionToSafeContentType(String filename, String expectedContentType) {
+        String key = "billing/payment-receipts/" + filename;
+        when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment(key)));
+        when(chargeRepository.findById(2L)).thenReturn(Optional.of(charge(10L)));
+        when(fileStorage.load(key)).thenReturn(new StorageResource(key, new byte[]{1}));
+
+        assertThat(service.find(1L, 10L, false).contentType()).isEqualTo(expectedContentType);
+    }
+
     private void arrangePaymentAndCharge(Long ownerId) {
         when(paymentRepository.findById(1L)).thenReturn(Optional.of(payment()));
         when(chargeRepository.findById(2L)).thenReturn(Optional.of(charge(ownerId)));
     }
 
     private static MemberPayment payment() {
+        return payment("billing/payment-receipts/file.pdf");
+    }
+
+    private static MemberPayment payment(String storageKey) {
         Instant now = Instant.parse("2026-09-13T12:00:00Z");
         return MemberPayment.reconstitute(
                 1L, 2L, new BigDecimal("100.00"), PaymentMethod.PIX,
                 MemberPaymentStatus.PENDING_VALIDATION, now,
-                "billing/payment-receipts/file.pdf",
+                storageKey,
                 null, null, null, null, null, null, null, now, null
         );
     }
