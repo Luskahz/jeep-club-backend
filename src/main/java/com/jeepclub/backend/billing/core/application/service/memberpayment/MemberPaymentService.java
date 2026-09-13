@@ -70,7 +70,6 @@ public class MemberPaymentService {
                 paymentMethod,
                 paidAt,
                 storedReceipt.storageKey(),
-                storedReceipt.url(),
                 notes,
                 now
         );
@@ -108,7 +107,6 @@ public class MemberPaymentService {
                 paymentMethod,
                 paidAt,
                 storedReceipt.storageKey(),
-                storedReceipt.url(),
                 notes,
                 now
         );
