@@ -1,6 +1,7 @@
 package com.jeepclub.backend.platform.storage.config;
 
 import com.jeepclub.backend.platform.storage.properties.StorageProperties;
+import com.jeepclub.backend.platform.time.TimeConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
@@ -11,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class StorageConfigTest {
 
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withUserConfiguration(StorageConfig.class);
+            .withUserConfiguration(StorageConfig.class, TimeConfig.class);
 
     @Test
     void shouldLoadLocalProviderDefaults() {
