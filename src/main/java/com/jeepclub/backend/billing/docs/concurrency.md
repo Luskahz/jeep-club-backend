@@ -598,6 +598,19 @@ Update finalAmount com payment pendente -> 409 CONFLICT
 
 ## Regras finais
 
+## Lifecycle transacional do comprovante
+
+O banco e o `FileStorage` não compartilham transação. Depois de armazenar a nova key, Billing registra sincronização com a transação real:
+
+* commit de criação: mantém a nova key;
+* rollback de criação: tenta remover a nova key;
+* commit da substituição A -> B: remove A somente após o commit de B;
+* rollback da substituição: mantém A e tenta remover B;
+* falha de cleanup é registrada e não desfaz a referência já commitada;
+* o cleanup nunca remove a key que já era a referência atual.
+
+Provider, root e path físico permanecem responsabilidade de `platform.storage`.
+
 ```text id="5j7ve0"
 1. Não usar lock de tela.
 2. Não criar endpoint de lock/deslock.

@@ -66,7 +66,7 @@ Exemplos:
 * repositories JPA;
 * mappers;
 * adapters de ports;
-* storage real de comprovantes;
+* consumo do `FileStorage` global e coordenação do lifecycle de comprovantes;
 * locks pessimistas reais;
 * migrations.
 
@@ -280,7 +280,7 @@ As próximas etapas pertencem principalmente à infraestrutura e testes:
 * implementar mappers;
 * implementar adapters dos repositories;
 * implementar adapters dos ports externos;
-* implementar storage real de comprovantes;
+* manter as validações semânticas, autorização e lifecycle dos comprovantes;
 * implementar locks pessimistas reais nos métodos `findByIdForUpdate`;
 * criar migrations;
 * registrar permissões `BILLING_*`;

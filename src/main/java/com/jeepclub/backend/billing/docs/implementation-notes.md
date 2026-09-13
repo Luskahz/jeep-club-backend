@@ -77,7 +77,7 @@ Exemplos:
 * mappers;
 * adapters;
 * migrations;
-* storage de comprovantes;
+* integração com o `FileStorage` global para comprovantes;
 * integrações com outros módulos.
 
 ## Pendência 1 — Entities JPA
@@ -284,7 +284,6 @@ Ports esperados:
 BillingMembershipPort
 BillingAuthorizationPort
 BillingEventPort
-PaymentReceiptStoragePort
 ```
 
 ## BillingMembershipPort
@@ -315,47 +314,15 @@ Usado para:
 * validar se um evento existe;
 * buscar participantes confirmados de um evento.
 
-## PaymentReceiptStoragePort
+## Storage global de comprovantes
 
-Responsável por armazenar comprovantes de pagamento.
+Billing consome diretamente `FileStorage`; não mantém adapter de filesystem ou wrapper 1:1. A política `PaymentReceiptValidator` valida tamanho máximo de 10 MB, MIME e extensão e produz a extensão normalizada usada em `StorageFile`.
 
-Usado no envio e atualização de `MemberPayment`.
+O namespace é `billing/payment-receipts`. `receiptStorageKey` é a única identidade persistida e permanece interna. O response expõe somente `receiptUrl` lógica por `paymentId`.
 
-## Pendência 8 — Storage de comprovantes
+A leitura autorizada carrega `MemberPayment` e `MemberCharge`, exige owner ou `BILLING_PAYMENT_READ`, chama `FileStorage.load` e adapta os bytes de `StorageResource` na borda HTTP. Provider, root directory e path físico pertencem a `platform.storage`.
 
-O storage de comprovantes deve validar e armazenar arquivos de forma segura.
-
-Validações recomendadas:
-
-* arquivo obrigatório;
-* arquivo não vazio;
-* tamanho máximo;
-* content type permitido;
-* extensão permitida;
-* nome seguro;
-* geração de storage key interna;
-* URL controlada.
-
-O controller não deve salvar arquivo diretamente.
-
-O controller apenas converte `MultipartFile` para `PaymentReceiptFile` e delega ao core.
-
-O core delega ao `PaymentReceiptStoragePort`.
-
-## Pendência 9 — Exposição de receiptStorageKey
-
-Avaliar se `receiptStorageKey` deve ser exposto na API.
-
-Em geral:
-
-```text id="3n34gr"
-receiptUrl = dado útil para cliente/admin
-receiptStorageKey = detalhe interno de storage
-```
-
-Pode ser melhor expor apenas `receiptUrl` nos responses públicos.
-
-Se `receiptStorageKey` for necessário para auditoria administrativa, avaliar DTO separado para admin.
+O lifecycle usa callback da transação: rollback compensa o arquivo novo e commit remove o antigo. Falha de cleanup é observável, sem invalidar a nova referência.
 
 ## Pendência 10 — Permissões BILLING
 
@@ -673,7 +640,7 @@ Antes de considerar a infra do Billing fechada, validar:
 [ ] Migrations criadas.
 [ ] Índices criados.
 [ ] Permissões BILLING_* registradas.
-[ ] Storage de comprovante implementado.
+[x] Storage de comprovante integrado ao `FileStorage` global.
 [ ] Testes unitários de domínio criados.
 [ ] Testes de service criados.
 [ ] Testes de controller criados.
