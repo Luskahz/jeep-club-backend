@@ -61,7 +61,7 @@ public class RefreshTokenController {
                             responseCode = "400",
                             description = "Requisição inválida ou refresh token inconsistente.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -69,7 +69,7 @@ public class RefreshTokenController {
                             responseCode = "401",
                             description = "Refresh token inválido, expirado, revogado ou vinculado a uma sessão inválida.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )

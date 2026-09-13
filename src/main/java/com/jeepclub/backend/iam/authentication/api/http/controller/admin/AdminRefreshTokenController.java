@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,24 @@ import java.util.List;
 )
 @RequiredArgsConstructor
 @Validated
+@ApiResponses({
+        @ApiResponse(
+                responseCode = "401",
+                description = "Autenticação ausente ou access token inválido.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        ),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Usuário autenticado não possui a authority exigida.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        )
+})
 @Tag(
         name = "Authentication - Refresh Tokens",
         description = "Operações públicas e administrativas para renovação, consulta e gerenciamento de refresh tokens."
@@ -84,7 +103,7 @@ public class AdminRefreshTokenController {
                             responseCode = "404",
                             description = "Refresh token não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -118,7 +137,7 @@ public class AdminRefreshTokenController {
                             responseCode = "404",
                             description = "Usuário não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -152,7 +171,7 @@ public class AdminRefreshTokenController {
                             responseCode = "404",
                             description = "Refresh token não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -160,7 +179,7 @@ public class AdminRefreshTokenController {
                             responseCode = "409",
                             description = "Refresh token já está revogado ou não pode ser revogado no estado atual.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
