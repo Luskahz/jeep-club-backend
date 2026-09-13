@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(basePackages = "com.jeepclub.backend.identity")
+@RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.identity")
 public class IdentityUserExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(UserNotFoundException exception) {

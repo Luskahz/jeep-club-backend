@@ -41,6 +41,8 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -51,6 +53,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminUserControllerTest {
 
     private static final Instant CREATED_AT = Instant.parse("2026-01-01T00:00:00Z");
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 50;
 
     @Mock
     private AdminUserService adminUserService;
@@ -66,9 +70,14 @@ class AdminUserControllerTest {
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
+        PageableHandlerMethodArgumentResolver pageableResolver =
+                new PageableHandlerMethodArgumentResolver();
+        pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
+        pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
+
         mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
-                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setCustomArgumentResolvers(pageableResolver)
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .build();
@@ -127,6 +136,163 @@ class AdminUserControllerTest {
         assertThat(fieldsCaptor.getValue()).containsExactlyInAnyOrderElementsOf(
                 EnumSet.allOf(AdminUserField.class)
         );
+    }
+
+    @Test
+    void listBindsAndNormalizesAllSupportedFilters() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenReturn(emptyPage());
+
+        mockMvc.perform(get("/identity/admin/users")
+                        .param("id", "7")
+                        .param("name", "  Lucas Alves  ")
+                        .param("birthDate", "2000-05-17")
+                        .param("email", "  lucas@example.com  ")
+                        .param("cpf", "529.982.247-25")
+                        .param("rg", "  12.345.678-9  ")
+                        .param("phoneNumber", "+55(11)99999-9999")
+                        .param("status", "ACTIVE")
+                        .param("createdFrom", "2026-01-01T00:00:00Z")
+                        .param("createdTo", "2026-01-31T23:59:59Z")
+                        .param("updatedFrom", "2026-02-01T00:00:00Z")
+                        .param("updatedTo", "2026-02-28T23:59:59Z")
+                        .param("q", "  clube jeep  "))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<AdminUserFilter> filterCaptor = ArgumentCaptor.forClass(AdminUserFilter.class);
+        verify(adminUserService).findAll(filterCaptor.capture(), any(), any());
+
+        assertThat(filterCaptor.getValue()).isEqualTo(new AdminUserFilter(
+                7L,
+                "Lucas Alves",
+                LocalDate.of(2000, 5, 17),
+                "lucas@example.com",
+                "52998224725",
+                "123456789",
+                "5511999999999",
+                UserStatus.ACTIVE,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-01-31T23:59:59Z"),
+                Instant.parse("2026-02-01T00:00:00Z"),
+                Instant.parse("2026-02-28T23:59:59Z"),
+                "clube jeep"
+        ));
+    }
+
+    @Test
+    void listAcceptsEqualTemporalRangeLimits() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenReturn(emptyPage());
+        String instant = "2026-01-15T12:30:00Z";
+
+        mockMvc.perform(get("/identity/admin/users")
+                        .param("createdFrom", instant)
+                        .param("createdTo", instant)
+                        .param("updatedFrom", instant)
+                        .param("updatedTo", instant))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<AdminUserFilter> filterCaptor = ArgumentCaptor.forClass(AdminUserFilter.class);
+        verify(adminUserService).findAll(filterCaptor.capture(), any(), any());
+        Instant expected = Instant.parse(instant);
+        assertThat(filterCaptor.getValue().createdFrom()).isEqualTo(expected);
+        assertThat(filterCaptor.getValue().createdTo()).isEqualTo(expected);
+        assertThat(filterCaptor.getValue().updatedFrom()).isEqualTo(expected);
+        assertThat(filterCaptor.getValue().updatedTo()).isEqualTo(expected);
+    }
+
+    @Test
+    void listUsesConfiguredPaginationDefaultsAndReturnsEmptyPageMetadata() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenAnswer(invocation -> {
+            Pageable pageable = invocation.getArgument(2);
+            return new PageImpl<>(List.of(), pageable, 0);
+        });
+
+        mockMvc.perform(get("/identity/admin/users"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.number").value(0))
+                .andExpect(jsonPath("$.size").value(DEFAULT_PAGE_SIZE))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(adminUserService).findAll(any(), any(), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageNumber()).isZero();
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(DEFAULT_PAGE_SIZE);
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("id").isAscending()).isTrue();
+    }
+
+    @Test
+    void listCapsRequestedPageSizeAtConfiguredMaximum() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenReturn(emptyPage());
+
+        mockMvc.perform(get("/identity/admin/users").param("size", "999"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(adminUserService).findAll(any(), any(), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(MAX_PAGE_SIZE);
+    }
+
+    @Test
+    void listBindsAllowedAscendingAndDescendingSorts() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenReturn(emptyPage());
+
+        mockMvc.perform(get("/identity/admin/users")
+                        .param("sort", "email,asc")
+                        .param("sort", "createdAt,desc"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        verify(adminUserService).findAll(any(), any(), pageableCaptor.capture());
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("email").isAscending()).isTrue();
+        assertThat(pageableCaptor.getValue().getSort().getOrderFor("createdAt").isDescending()).isTrue();
+    }
+
+    @Test
+    void emptyFieldsParameterSelectsAllFields() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenReturn(emptyPage());
+
+        mockMvc.perform(get("/identity/admin/users").param("fields", ""))
+                .andExpect(status().isOk());
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Set<AdminUserField>> fieldsCaptor = ArgumentCaptor.forClass(Set.class);
+        verify(adminUserService).findAll(any(), fieldsCaptor.capture(), any());
+        assertThat(fieldsCaptor.getValue()).containsExactlyInAnyOrderElementsOf(
+                EnumSet.allOf(AdminUserField.class)
+        );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"UNKNOWN", "ID,UNKNOWN"})
+    void malformedFieldsReturnRfcProblem(String fields) throws Exception {
+        mockMvc.perform(get("/identity/admin/users").param("fields", fields))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.properties.code").value("HTTP_400"))
+                .andExpect(jsonPath("$.title").exists())
+                .andExpect(jsonPath("$.detail").exists())
+                .andExpect(jsonPath("$.properties.timestamp").exists());
+
+        verify(adminUserService, never()).findAll(any(), any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "birthDate=17-05-2000",
+            "createdFrom=2026-01-01",
+            "updatedTo=not-a-date",
+            "status=UNKNOWN"
+    })
+    void invalidFilterBindingReturnsRfcValidationProblem(String query) throws Exception {
+        mockMvc.perform(get("/identity/admin/users?" + query))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").exists())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        verify(adminUserService, never()).findAll(any(), any(), any());
     }
 
     @Test
@@ -216,5 +382,9 @@ class AdminUserControllerTest {
                 CREATED_AT, status == UserStatus.DISABLED ? CREATED_AT.plusSeconds(60) : null,
                 CREATED_AT.plusSeconds(60)
         );
+    }
+
+    private PageImpl<AdminUserResult> emptyPage() {
+        return new PageImpl<>(List.of(), PageRequest.of(0, DEFAULT_PAGE_SIZE), 0);
     }
 }
