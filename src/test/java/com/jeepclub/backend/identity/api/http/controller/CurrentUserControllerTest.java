@@ -27,7 +27,7 @@ class CurrentUserControllerTest {
         )));
         var controller = new CurrentUserController(userQuery);
 
-        var body = controller.getMe(new UserPrincipal(42L, 7L, createdAt.plusSeconds(900)))
+        var body = controller.getMe(new UserPrincipal(42L, 7L, "User", createdAt.plusSeconds(900)))
                 .getBody();
 
         assertThat(body).isNotNull();

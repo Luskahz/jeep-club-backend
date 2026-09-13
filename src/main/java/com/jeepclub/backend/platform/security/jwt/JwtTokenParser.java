@@ -18,6 +18,8 @@ public class JwtTokenParser {
     private static final String TOKEN_TYPE_CLAIM = "typ";
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
     private static final String SESSION_ID_CLAIM = "sid";
+    private static final String USER_NAME_CLAIM = "name";
+    private static final int MAX_USER_NAME_LENGTH = 150;
 
     private final JwtProperties jwtProperties;
     private final JwtSigningKeyProvider keyProvider;
@@ -39,13 +41,27 @@ public class JwtTokenParser {
 
         Long userId = extractUserId(claims);
         Long sessionId = extractSessionId(claims);
+        String userName = extractUserName(claims);
         Instant expiresAt = extractExpiration(claims);
 
         return new JwtAuthenticatedUser(
                 userId,
                 sessionId,
+                userName,
                 expiresAt
         );
+    }
+
+    private String extractUserName(Claims claims) {
+        String userName = claims.get(USER_NAME_CLAIM, String.class);
+        if (userName == null || userName.isBlank()) {
+            throw new IllegalArgumentException("JWT user name is required.");
+        }
+        String normalized = userName.trim();
+        if (normalized.length() > MAX_USER_NAME_LENGTH) {
+            throw new IllegalArgumentException("JWT user name is too long.");
+        }
+        return normalized;
     }
 
     private void validateAccessTokenType(Claims claims) {

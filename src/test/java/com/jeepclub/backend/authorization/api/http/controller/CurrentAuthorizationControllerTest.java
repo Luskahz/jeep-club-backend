@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class CurrentAuthorizationControllerTest {
     @Test
     void returnsUserIdAndSortedAuthoritiesOnly() {
-        var principal = new UserPrincipal(42L, 7L, Instant.parse("2026-01-01T00:15:00Z"));
+        var principal = new UserPrincipal(42L, 7L, "Test User", Instant.parse("2026-01-01T00:15:00Z"));
         var authentication = new UsernamePasswordAuthenticationToken(
                 principal,
                 null,

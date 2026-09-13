@@ -16,6 +16,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JwtServiceImplTest {
 
@@ -37,12 +38,34 @@ class JwtServiceImplTest {
                 SessionStatus.ACTIVE
         );
 
-        IssuedAccessToken token = service.generateAccessToken(42L, session);
+        IssuedAccessToken token = service.generateAccessToken(42L, "Lucas Alves", session);
         JwtAuthenticatedUser authenticated = parser.parseAndValidate(token.token());
 
         assertThat(authenticated.userId()).isEqualTo(42L);
         assertThat(authenticated.sessionId()).isEqualTo(7L);
+        assertThat(authenticated.userName()).isEqualTo("Lucas Alves");
         assertThat(token.expiresAt()).isEqualTo(NOW.plusSeconds(900));
+    }
+
+    @Test
+    void rejectsAccessTokenWithoutRequiredObservationalNameClaim() {
+        JwtProperties properties = properties();
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        JwtSigningKeyProvider keyProvider = new JwtSigningKeyProvider(properties);
+        JwtTokenParser parser = new JwtTokenParser(properties, keyProvider, clock);
+        String token = io.jsonwebtoken.Jwts.builder()
+                .setIssuer(properties.getIssuer())
+                .setSubject("42")
+                .claim("typ", "ACCESS")
+                .claim("sid", 7L)
+                .setIssuedAt(java.util.Date.from(NOW))
+                .setExpiration(java.util.Date.from(NOW.plusSeconds(900)))
+                .signWith(keyProvider.getKey(), io.jsonwebtoken.SignatureAlgorithm.HS256)
+                .compact();
+
+        assertThatThrownBy(() -> parser.parseAndValidate(token))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("JWT user name is required.");
     }
 
     private JwtProperties properties() {

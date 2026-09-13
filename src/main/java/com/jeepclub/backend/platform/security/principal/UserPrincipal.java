@@ -10,15 +10,19 @@ public class UserPrincipal {
 
     private final Long userId;
     private final Long sessionId;
+    /** Human-readable, non-authoritative context from the access-token {@code name} claim. */
+    private final String userName;
     private final Instant accessTokenExpiresAt;
 
     public UserPrincipal(
             Long userId,
             Long sessionId,
+            String userName,
             Instant accessTokenExpiresAt
     ) {
         this.userId = Objects.requireNonNull(userId, "userId is required");
         this.sessionId = Objects.requireNonNull(sessionId, "sessionId is required");
+        this.userName = Objects.requireNonNull(userName, "userName is required");
         this.accessTokenExpiresAt = Objects.requireNonNull(
                 accessTokenExpiresAt,
                 "accessTokenExpiresAt is required"

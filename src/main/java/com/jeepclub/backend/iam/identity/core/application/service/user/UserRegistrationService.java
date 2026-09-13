@@ -28,6 +28,7 @@ class UserRegistrationService implements UserRegistration {
         Long userId = createUser(data);
         return authenticationProvisioningPort.provisionAndAuthenticate(
                 userId,
+                data.name(),
                 rawPassword,
                 data.now()
         );

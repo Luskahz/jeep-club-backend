@@ -24,11 +24,12 @@ public class UserAuthenticationProvisioningAdapter implements UserAuthentication
     @Override
     public UserAuthenticationTokens provisionAndAuthenticate(
             Long userId,
+            String userName,
             String rawPassword,
             Instant now
     ) {
         AuthenticationAccount account = create(userId, rawPassword, now, false);
-        AuthTokens tokens = tokenIssuanceService.issue(account, now);
+        AuthTokens tokens = tokenIssuanceService.issue(account, userName, now);
         account.recordSuccessfulLogin(now);
         accountRepository.save(account);
         return new UserAuthenticationTokens(

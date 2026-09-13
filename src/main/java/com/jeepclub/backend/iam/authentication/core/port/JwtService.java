@@ -4,5 +4,5 @@ import com.jeepclub.backend.iam.authentication.core.domain.model.IssuedAccessTok
 import com.jeepclub.backend.iam.authentication.core.domain.model.Session;
 
 public interface JwtService {
-    IssuedAccessToken generateAccessToken(Long identityId, Session session);
+    IssuedAccessToken generateAccessToken(Long identityId, String userName, Session session);
 }
