@@ -30,8 +30,10 @@ O projeto segue uma arquitetura inspirada em **Arquitetura Hexagonal (Ports & Ad
 
 Essa divisão facilita manutenção, testes e evolução do sistema.
 
-O padrão adotado para controllers, services e limites entre módulos está
-detalhado em [docs/architecture/module-organization.md](docs/architecture/module-organization.md).
+Antes de qualquer feature ou fix, consulte o
+[índice de arquitetura e governança documental](docs/architecture/README.md).
+Ele aponta para o padrão de módulos, as regras globais de desenvolvimento e as
+fontes especializadas de Platform.
 
 ---
 
@@ -141,12 +143,17 @@ http://localhost:8080/swagger-ui/index.html
 
 # Estrutura do Projeto
 
-```
-src
- ├── authentication
+```text
+src/main/java/com/jeepclub/backend
+ ├── iam
+ ├── memberships
  ├── dependents
- ├── platform
- ├── ...
+ ├── health
+ ├── vehicles
+ ├── tools
+ ├── billing
+ ├── shared
+ └── platform
 ```
 
 Cada módulo é organizado em camadas seguindo os princípios da Arquitetura Hexagonal.
