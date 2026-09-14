@@ -27,7 +27,7 @@ public record SubmitMemberPaymentRequest(
         Instant paidAt,
 
         @NotNull(message = "Comprovante é obrigatório.")
-        @Schema(description = "Arquivo do comprovante de pagamento.", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "Arquivo PDF, JPEG, PNG ou WebP de até 10 MB.", type = "string", format = "binary", requiredMode = Schema.RequiredMode.REQUIRED)
         MultipartFile receiptFile,
 
         @Size(max = 500, message = "Observações devem ter no máximo 500 caracteres.")

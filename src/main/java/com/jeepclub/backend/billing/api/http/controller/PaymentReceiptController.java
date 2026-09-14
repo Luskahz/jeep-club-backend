@@ -3,7 +3,10 @@ package com.jeepclub.backend.billing.api.http.controller;
 import com.jeepclub.backend.billing.core.application.result.PaymentReceiptResult;
 import com.jeepclub.backend.billing.core.application.service.paymentreceipt.PaymentReceiptService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -30,9 +33,11 @@ public class PaymentReceiptController {
             summary = "Baixar comprovante de pagamento",
             description = "Permite o download ao dono do pagamento ou a quem possui BILLING_PAYMENT_READ.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Comprovante retornado."),
-                    @ApiResponse(responseCode = "403", description = "Pagamento não pertence ao usuário e falta permissão administrativa."),
-                    @ApiResponse(responseCode = "404", description = "Pagamento ou comprovante não encontrado.")
+                    @ApiResponse(responseCode = "200", description = "Bytes do comprovante, com o Content-Type original suportado.", content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE, schema = @Schema(type = "string", format = "binary"))),
+                    @ApiResponse(responseCode = "400", description = "paymentId deve ser maior que zero.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Pagamento não pertence ao usuário e falta permissão administrativa.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Pagamento, cobrança vinculada ou comprovante não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
     public ResponseEntity<Resource> findPaymentReceipt(

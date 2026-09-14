@@ -120,6 +120,17 @@ class PaymentReceiptSecurityIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void nonPositivePaymentIdIsHandledByMethodValidation() throws Exception {
+        authenticate("owner", 10L, List.of());
+
+        mockMvc.perform(get("/billing/member-payments/0/receipt")
+                        .header("Authorization", "Bearer owner"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("HTTP_400"));
+    }
+
     private void authenticate(String token, Long userId, List<String> authorities) {
         when(jwtTokenParser.parseAndValidate(token)).thenReturn(
                 new JwtAuthenticatedUser(userId, 100L + userId, "Test User", Instant.now().plusSeconds(3600))
