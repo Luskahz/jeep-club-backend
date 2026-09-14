@@ -1,116 +1,131 @@
 # Identity
 
-## Ownership
+Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
+[organização dos módulos](../../../../../../../../../docs/architecture/module-organization.md)
+e as [regras de desenvolvimento](../../../../../../../../../docs/architecture/feature-development-rules.md).
+Este documento descreve somente o bounded context `iam.identity`. O OpenAPI
+gerado pelos controllers e DTOs do módulo é a fonte de verdade do contrato HTTP.
 
-`identity` é o bounded context proprietário do recurso/agregado `User`. Sua
-fonte de verdade é a tabela `identity_users` e suas responsabilidades são:
+## Responsabilidade e limites
 
-- ID persistente e estável;
-- nome, nascimento, CPF, RG, e-mail, telefone e foto;
-- normalização e unicidade cadastral;
-- estado administrativo `UserStatus` (`ACTIVE` ou `DISABLED`);
-- cadastro e lifecycle administrativo do usuário.
+Identity é proprietário do agregado `User`: identificador estável, nome,
+`birthDate`, e-mail, CPF, RG, telefone, URL de foto de perfil, estado
+administrativo e timestamps de criação, desativação e atualização. Também é
+proprietário do cadastro, das consultas cadastrais e do lifecycle administrativo
+do usuário.
 
-CPF, RG e telefone são armazenados somente com dígitos. E-mail é normalizado
-para lowercase. Exclusão com histórico será uma feature futura.
+Identity não é proprietário de senha, hash, login, lock, sessões, access token
+ou refresh token: esses conceitos pertencem a Authentication. Tampouco possui
+roles, permissions ou authorities, que pertencem a Authorization. Em particular,
+o lifecycle administrativo não consulta roles e não contém exceção para o
+usuário com ROOT; a proteção contra lockout administrativo é uma decisão ainda
+fora deste bounded context, no escopo da BACK-324.
 
-`authentication` é proprietário de `AuthenticationAccount`, credenciais,
-login, lock automático, sessões, refresh tokens e recuperação de senha.
-`authorization` é proprietário de roles, permissions e authorities. A futura
-entidade `Member` pertence a `memberships` e não é antecipada nesta etapa.
+`User` é criado com `UserStatus.ACTIVE`. O único outro estado é `DISABLED`:
+`disable` define `disabledAt` e `updatedAt`; `enable` remove `disabledAt` e
+atualiza `updatedAt`. Desabilitar um usuário já desabilitado e habilitar um
+usuário ativo são conflitos. O agregado não conhece lock de autenticação nem
+estado de credencial.
 
-## Contratos de módulo
+## Dados cadastrais e normalização
 
-Consumidores usam somente `identity.api.module`:
+Nome e textos opcionais são aparados; e-mail é aparado e convertido para
+minúsculas. CPF, RG e telefone são persistidos somente com dígitos. CPF tem
+exatamente 11 dígitos e CPF, e-mail e RG são únicos na persistência. Campos
+opcionais em branco se tornam ausentes.
 
-- `UserQuery` para dados e atividade administrativa;
-- `UserRegistration` para criação;
-- `UserAdministration` para o lifecycle administrativo composto;
-- exceptions públicas para outcomes que atravessam a fronteira.
+O nome do campo HTTP de nascimento é `birthDate`. Não há alias `birthData` no
+DTO ou na serialização atual. Formatos aceitos, limites e exemplos do request,
+bem como o formato canônico retornado, pertencem aos schemas OpenAPI.
 
-As portas consumer-owned `UserAuthenticationProvisioningPort` e
-`UserAuthenticationAdministrationPort` descrevem apenas os efeitos exigidos em
-Authentication. Seus adapters concretos ficam em
-`authentication.infra.integration.identity`; Identity não acessa repositories,
-services, models ou hashers internos de Authentication.
+## Lifecycle composto com Authentication
 
-## API HTTP
+Identity define as necessidades de Authentication em
+`api.module.spi.UserAuthenticationProvisioningPort` e
+`UserAuthenticationAdministrationPort`. Os adapters de Authentication em
+`authentication.infra.integration.identity` implementam essas portas; Identity
+não acessa service, repository, entity ou hash interno daquele módulo.
 
-- `POST /identity/register`: cria `User`, provisiona `AuthenticationAccount` e
-  devolve os tokens da autenticação inicial;
-- `GET /identity/me`: retorna somente dados cadastrais do usuário autenticado;
-- `GET /identity/admin/users` e `GET /identity/admin/users/{userId}`: leitura
-  administrativa paginada e baseada exclusivamente em `UserEntity`;
-- `PATCH /identity/admin/users/{userId}/disable` e `/enable`: lifecycle
-  administrativo composto.
+- `UserRegistration` cria o User e solicita provisionamento de credencial.
+  Registro HTTP provisiona e autentica; os fluxos internos também podem criar
+  credencial permanente ou pendente de primeiro acesso.
+- `UserAdministration.disable` bloqueia o User e solicita que Authentication
+  desabilite o acesso e revogue credenciais ativas. A operação é transacional:
+  falha no efeito de Authentication desfaz a transição de Identity.
+- `UserAdministration.enable` reativa o User e solicita habilitação de acesso.
+  Não desbloqueia a conta, não zera tentativas, não altera senha ou estado da
+  credencial e não recria sessões/tokens.
 
-O registro aceita CPF com 11 dígitos ou pontuado válido, mas persiste o valor
-canônico. O campo de nascimento do contrato é `birthDate`; `birthData` não é
-alias suportado.
+O acesso administrativo de Authentication, lock e `CredentialStatus` continuam
+estados independentes. Um User administrativamente ativo pode estar bloqueado
+ou pendente de primeiro acesso e ainda ser ativo para os consumidores de
+`UserQuery`.
 
-## Lifecycle administrativo composto
+## Contratos e integrações públicas
 
-```text
-Admin request
-    ↓
-UserAdministration
-    ├── User
-    └── UserAuthenticationAdministrationPort
-            ├── AuthenticationAccount
-            └── revogação de credenciais (somente disable)
-```
+`api.module` é a fronteira Java pública. Suas assinaturas continuam no código;
+os contratos são:
 
-No disable, a mesma transação altera `UserStatus` para `DISABLED`, desabilita o
-acesso da conta e revoga sessões, refresh tokens e challenges ativos. Senha,
-histórico, lock automático e estado da credencial são preservados.
+- `UserQuery`: consultas somente leitura de User, existência por ID/CPF/e-mail
+  e atividade administrativa, inclusive consultas em lote. É consumido por
+  Authentication e por adapters de Authorization, Billing, Memberships,
+  Dependents, Vehicles e Health.
+- `UserRegistration` e `UserRegistrationData`: criação composta de User com
+  credencial permanente, pendente de primeiro acesso ou já autenticada. O
+  bootstrap de desenvolvimento o consome diretamente; o fluxo de Memberships
+  chega a ele pelo adapter de Authentication que implementa o contrato do
+  consumidor.
+- `UserAdministration`: transições administrativas compostas de disable/enable
+  e seus efeitos em Authentication; o controller administrativo o usa por meio
+  de `AdminUserService`.
+- `UserDetails`, `UserAuthenticationTokens` e `UserStatus`: valores de
+  transporte dos contratos acima, sem expor entity, repository ou modelo JPA.
+- `UserAuthenticationProvisioningPort` e
+  `UserAuthenticationAdministrationPort`: SPIs proprietários de Identity que
+  Authentication implementa para provisionamento e administração de acesso.
 
-No enable, a mesma transação altera `UserStatus` para `ACTIVE` e habilita o
-acesso da conta. Não desbloqueia a conta, não torna credencial temporária
-permanente e não recria sessões ou tokens. Os locks seguem sempre a ordem
-`User` → `AuthenticationAccount`; falhas causam rollback da operação completa.
+`DevelopmentAdminUserBootstrapService` usa `UserQuery` e `UserRegistration`
+para assegurar o usuário administrativo configurado. O bootstrap de role ROOT
+é responsabilidade de Authorization; essa composição não muda o ownership de
+User, conta ou role.
 
-## Estados independentes
+## Consulta administrativa e contrato HTTP
 
-- `UserStatus`: atividade administrativa e elegibilidade de negócio;
-- `AuthenticationAccessStatus`: acesso administrativamente habilitado;
-- `AuthenticationStatus`: lock automático por segurança;
-- `CredentialStatus`: credencial permanente, troca obrigatória ou primeiro acesso.
+O OpenAPI descreve registro público, `/identity/me` autenticado e a superfície
+administrativa de usuários. As operações administrativas usam `@PreAuthorize`
+para enforcement e `@RequiredPermission` apenas para publicar a mesma authority
+no OpenAPI: `IDENTITY_USER_READ`, `IDENTITY_USER_DISABLE` e
+`IDENTITY_USER_ENABLE`.
 
-Um `User ACTIVE` pode ter Authentication bloqueada ou credencial
-`PENDING_FIRST_ACCESS`/`CHANGE_REQUIRED` e ainda permanecer elegível para
-billing. Billing consulta somente a atividade administrativa de User.
+A listagem administrativa retorna uma `Page<AdminUserResponseDTO>`. Aceita
+paginação zero-based (`page`, `size`; padrão 20 e máximo 50), `sort` com os
+campos permitidos, filtros cadastrais, busca `q` e `fields`. Quando `fields`
+é omitido ou vazio, todos os campos de `AdminUserField` são selecionados;
+campos não solicitados podem ser omitidos do item retornado. Filtros, seleção,
+ordenação e paginação são executados na consulta de Identity, não por leituras
+de Authentication ou outros contextos.
 
-## Persistência
+`/identity/me` usa o `UserPrincipal` já autenticado para obter o ID e consulta
+Identity somente para os dados cadastrais. A documentação detalhada de paths,
+parâmetros, schemas, validações, respostas e erros RFC 9457 está no OpenAPI;
+não há catálogo Markdown concorrente.
 
-```text
-identity_users.id
-        1
-        │ shared primary key
-        0..1
-authentication_accounts.identity_id
-```
+## Persistência e concorrência
 
-`authentication_accounts.identity_id` é simultaneamente PK e FK. A associação
-JPA é unidirecional, lazy, com `@OneToOne`, `@MapsId` e sem cascade de remoção
-ou `orphanRemoval`. O domínio Authentication mantém somente o escalar
-`Long identityId`. `UserEntity` aparece em Authentication exclusivamente nessa
-associação física. O schema segue criado por JPA/Hibernate, sem migrations.
+`UserEntity`, repository JPA, mapper, adapter e read model administrativo
+ficam em `infra.persistence`; o domínio não depende de JPA. `identity_users`
+aplica unicidade a CPF, e-mail e RG. Alterações de lifecycle tomam lock
+pessimista em User e participam da mesma transação do efeito em Authentication.
 
-## Integrações
+Há uma associação física legada de chave compartilhada entre User e
+`AuthenticationAccount`, necessária à PK/FK existente. Ela não permite acesso
+cross-module a modelos internos. A política de schema é a global atual: entities
+e Hibernate representam mudanças e não há migrations versionadas obrigatórias.
 
-```text
-billing        ─┐
-authorization  ─┤
-dependents     ─┤
-memberships    ─┼──> UserQuery / UserRegistration
-vehicles       ─┤
-authentication─┘
+## Testes
 
-UserAdministration / UserRegistration
-    └──> consumer-owned ports
-             └──> authentication.infra.integration.identity
-```
-
-O read model administrativo pertence integralmente a Identity e consulta
-somente `UserEntity`, com paginação, filtros, busca, ordenação e sparse fields
-no banco, sem N+1.
+Os testes do módulo caracterizam serialização de `birthDate`, registro,
+normalização, lifecycle transacional, read model administrativo, paginação,
+filtros, sparse fields, sort e persistência. Alterações futuras devem escolher
+cobertura proporcional conforme as
+[regras globais](../../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
