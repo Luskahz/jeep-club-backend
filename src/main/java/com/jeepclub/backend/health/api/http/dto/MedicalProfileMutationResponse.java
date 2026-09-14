@@ -8,9 +8,16 @@ import java.time.Instant;
 
 @Schema(description = "Confirmação administrativa sem reexposição de dados clínicos.")
 public record MedicalProfileMutationResponse(
+        @Schema(description = "Identificador do perfil médico.", example = "1")
         Long id,
+
+        @Schema(description = "Tipo do owner do perfil médico.", example = "USER")
         MedicalProfileOwnerType ownerType,
+
+        @Schema(description = "Identificador do owner do perfil médico.", example = "10")
         Long ownerId,
+
+        @Schema(description = "Data e hora da criação ou última atualização do perfil.", format = "date-time")
         Instant updatedAt
 ) {
     public static MedicalProfileMutationResponse fromDomain(MedicalProfile profile) {

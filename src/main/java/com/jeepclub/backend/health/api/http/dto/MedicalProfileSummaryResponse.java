@@ -17,7 +17,7 @@ public record MedicalProfileSummaryResponse(
         @Schema(description = "ID do usuário ou dependente proprietário do perfil médico.", example = "10")
         Long ownerId,
 
-        @Schema(description = "Data e hora da última atualização.")
+        @Schema(description = "Data e hora da última atualização.", format = "date-time")
         Instant updatedAt
 ) {
     public static MedicalProfileSummaryResponse fromDomain(MedicalProfile profile) {
