@@ -166,6 +166,29 @@ class AuthenticationSecurityIntegrationTest {
     }
 
     @Test
+    @Transactional
+    void positiveAdministrativePathVariableCurrentlyUsesInternalServerError() throws Exception {
+        Instant now = Instant.now(clock);
+        String cpf = "95846031722";
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData(
+                        "Positive Validation", null, "positive-validation@example.com", cpf,
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+        Long userId = userQuery.findByCpf(cpf).orElseThrow().id();
+        Role role = roleRepository.save(Role.create("positive-validation", "Test role", now));
+        userRoleRepository.save(UserRole.create(userId, role.getId(), now));
+        grant(role, PermissionCode.AUTHENTICATION_SESSION_READ, now);
+
+        mockMvc.perform(get("/authentication/admin/sessions/{sessionId}", 0)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"));
+    }
+
+    @Test
     void openApiKeepsPublishedAuthenticationPaths() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -201,6 +224,50 @@ class AuthenticationSecurityIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['AdminUserResponse']['properties']['createdAt']").exists())
                 .andExpect(jsonPath("$['components']['schemas']['AdminUserResponse']['properties']['disabledAt']").exists())
                 .andExpect(jsonPath("$['components']['schemas']['AdminUserResponse']['properties']['updatedAt']").exists());
+    }
+
+    @Test
+    void openApiDescribesAuthenticationResponsesPrecisely() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminSessionResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/sessions']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/sessions']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminSessionResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminRefreshTokenResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminRefreshTokenResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminPasswordRecoveryRequestResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests/users/{userId}']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests/users/{userId}']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminPasswordRecoveryRequestResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/login/password-change']['post']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/me']['get']['responses']['403']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/me']['get']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/logout']['post']['responses']['403']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/logout']['post']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions/{sessionId}/logout']['patch']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions/{sessionId}/logout']['patch']['responses']['409']")
+                        .doesNotExist());
     }
 
     private void assertPublicValidationRoute(String path, String body) throws Exception {

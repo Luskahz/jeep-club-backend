@@ -68,7 +68,7 @@ public class PasswordRecoveryRequestController {
                             responseCode = "400",
                             description = "Requisição inválida ou dados inconsistentes.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(
                                             implementation =
                                                     ApiErrorResponse.class
@@ -129,7 +129,7 @@ public class PasswordRecoveryRequestController {
                             responseCode = "400",
                             description = "Requisição inválida ou dados inconsistentes.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(
                                             implementation =
                                                     ApiErrorResponse.class
@@ -181,9 +181,42 @@ public class PasswordRecoveryRequestController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Token inválido, expirado ou requisição inconsistente.",
+                            description = "Requisição inválida ou nova senha inconsistente.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(
+                                            implementation =
+                                                    ApiErrorResponse.class
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "401",
+                            description = "Token de recuperação inválido ou expirado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(
+                                            implementation =
+                                                    ApiErrorResponse.class
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "A conta não pode alterar a senha porque o acesso está desabilitado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(
+                                            implementation =
+                                                    ApiErrorResponse.class
+                                    )
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Token ou conta de autenticação não encontrados.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(
                                             implementation =
                                                     ApiErrorResponse.class
