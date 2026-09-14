@@ -23,7 +23,7 @@ public class DetailForEditResponseDTO {
     @Schema(description = "Placa no formato Mercosul (ABC1D23) ou antigo (ABC1234)", example = "ABC1D23")
     private String plate;
 
-    @Schema(description = "RENAVAM do veículo (9 a 11 dígitos)", example = "12345678901")
+    @Schema(description = "RENAVAM conforme persistido no cadastro", example = "38249206428")
     private String renavam;
 
     @Schema(description = "Marca do fabricante", example = "Jeep")

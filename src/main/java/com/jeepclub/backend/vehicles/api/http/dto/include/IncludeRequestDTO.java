@@ -5,7 +5,7 @@ import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
-@Schema(description = "Dados necessários para registrar um novo veículo.")
+@Schema(description = "Dados do cadastro de um novo veículo.")
 public record IncludeRequestDTO(
 
         @Schema(
@@ -13,9 +13,7 @@ public record IncludeRequestDTO(
                 example = "Trovão Azul",
                 maxLength = 100,
                 requiredMode = Schema.RequiredMode.NOT_REQUIRED
-                //requiredMode = Schema.RequiredMode.REQUIRED
         )
-        //@NotBlank(message = "O apelido é obrigatório.")
         @Size(max = 100, message = "O apelido deve ter no máximo 100 caracteres.")
         String nickname,
 
@@ -24,9 +22,7 @@ public record IncludeRequestDTO(
                 example = "https://jeepclub.com",
                 maxLength = 255,
                 requiredMode = Schema.RequiredMode.NOT_REQUIRED
-                //requiredMode = Schema.RequiredMode.REQUIRED
         )
-        //@NotBlank(message = "O caminho da foto é obrigatório.")
         @Size(max = 255, message = "O caminho da foto deve ter no máximo 255 caracteres.")
         String photo,
 
@@ -34,7 +30,8 @@ public record IncludeRequestDTO(
                 description = "Placa do veículo.",
                 example = "ABC1D23",
                 minLength = 7,
-                maxLength = 8,
+                maxLength = 7,
+                pattern = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @NotBlank(message = "A placa é obrigatória.")
@@ -123,6 +120,7 @@ public record IncludeRequestDTO(
         @Schema(
                 description = "Cilindrada ou motorização do veículo.",
                 example = "2.0",
+                minimum = "0",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @Min(value = 0, message = "A cilindrada não pode ser negativa.")
