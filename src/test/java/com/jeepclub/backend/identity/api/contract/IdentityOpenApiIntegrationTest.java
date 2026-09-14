@@ -87,7 +87,11 @@ class IdentityOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/enable']['patch']['x-required-permissions'][0]")
                         .value("IDENTITY_USER_ENABLE"))
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/enable']['patch']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
-                        .value("#/components/schemas/ApiErrorResponse"));
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/enable']['patch']['responses']['409']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/enable']['patch']['responses']['409']['content']['application/json']")
+                        .doesNotExist());
     }
 
     @Test

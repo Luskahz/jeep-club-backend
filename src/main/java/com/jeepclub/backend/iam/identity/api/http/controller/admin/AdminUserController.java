@@ -295,7 +295,7 @@ public class AdminUserController {
                             responseCode = "409",
                             description = "Usuário já está ativo ou não pode ser reativado no estado atual.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
