@@ -49,6 +49,8 @@ class MembershipOpenApiIntegrationTest {
                         .isArray())
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications']['get']['responses']['200']['content']['application/json']['schema']['$ref']")
                         .value("#/components/schemas/PageMembershipApplicationResponseDTO"))
+                .andExpect(jsonPath("$['paths']['/admin/membership-applications/{id}']['get']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['components']['schemas']['PageMembershipApplicationResponseDTO']['properties']['content']['type']")
                         .value("array"))
                 .andExpect(jsonPath("$['components']['schemas']['PageMembershipApplicationResponseDTO']['properties']['content']['items']['$ref']")

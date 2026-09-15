@@ -1,6 +1,7 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipapplication;
 
 import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.AdminMembershipApplicantBlockService;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
@@ -19,6 +20,7 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -99,6 +101,15 @@ class AdminMembershipApplicationServiceTest {
         assertThat(application.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         assertThat(application.getCreatedUserId()).isEqualTo(20L);
         verify(applicationRepository).save(application);
+    }
+
+    @Test
+    void findByIdThrowsNotFoundWhenApplicationDoesNotExist() {
+        when(applicationRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.findById(999L))
+                .isInstanceOf(MembershipApplicationNotFoundException.class)
+                .hasMessageContaining("999");
     }
 
     private MembershipApplication pendingApplication() {
