@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -44,8 +43,9 @@ public class AdminMembershipApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<MembershipApplication> findById(Long id) {
-        return membershipApplicationRepository.findById(id);
+    public MembershipApplication findById(Long id) {
+        return membershipApplicationRepository.findById(id)
+                .orElseThrow(() -> new MembershipApplicationNotFoundException(id));
     }
 
     @Transactional

@@ -112,17 +112,19 @@ public class AdminMembershipApplicationController {
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão MEMBERSHIP_MEMBERSHIP_REQUEST_READ.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
-                    @ApiResponse(responseCode = "404", description = "Solicitação não encontrada.")
+                    @ApiResponse(responseCode = "404", description = "Solicitação não encontrada.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
     public ResponseEntity<MembershipApplicationResponseDTO> getById(
             @Parameter(description = "Identificador da solicitação.", example = "123")
             @PathVariable Long id
     ) {
-        return adminMembershipApplicationService.findById(id)
-                .map(MembershipApplicationResponseDTO::fromDomain)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        MembershipApplicationResponseDTO response = MembershipApplicationResponseDTO.fromDomain(
+                adminMembershipApplicationService.findById(id)
+        );
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{id}/approve/temporary-password")
