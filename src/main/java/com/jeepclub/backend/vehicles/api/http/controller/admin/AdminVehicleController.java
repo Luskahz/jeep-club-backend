@@ -2,21 +2,28 @@ package com.jeepclub.backend.vehicles.api.http.controller.admin;
 
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.include.IncludeRequestDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.list.ListResponseDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.list.VehiclePageResponseSchema;
 import com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,7 +41,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/vehicles")
 @RequiredArgsConstructor
 @Validated
-@Tag(name = "Vehicles", description = "")
+@Tag(
+        name = "Vehicles - Admin",
+        description = "Operações administrativas sobre veículos ativos de qualquer proprietário."
+)
 public class AdminVehicleController {
 
     private final AdminVehicleService adminVehicleService;
@@ -44,9 +54,18 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_CREATE")
     @Operation(
             summary = "Registrar veículo para um membro cadastrado",
-            description = "Cria um novo veículo anexado a um membro pelo seu ID"
+            description = "Cria um veículo ACTIVE para um userId existente. A verificação atual não distingue usuário ativo de desabilitado.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Veículo cadastrado."),
+                    @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_CREATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Proprietário não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Placa ou RENAVAM já cadastrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<Void> includeVehicle(
+            @Parameter(description = "Identificador do usuário proprietário.", example = "7", required = true)
             @PathVariable Long memberId,
             @RequestBody @Valid IncludeRequestDTO request
     ) {
@@ -75,10 +94,15 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_READ")
     @Operation(
             summary = "Listar todos os veículos",
-            description = "Retorna todos os veículos ativos da plataforma"
+            description = "Retorna uma página zero-based de todos os veículos ACTIVE. `size` é 10 por padrão e limitado globalmente a 50; `sort` usa `id` por padrão.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Página de veículos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = VehiclePageResponseSchema.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<Page<ListResponseDTO>> listAllVehicles(
-            @Parameter(hidden = true)
+            @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
         return ResponseEntity.ok(
@@ -91,9 +115,16 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_READ")
     @Operation(
             summary = "Detalhar qualquer veículo",
-            description = "Retorna os detalhes de qualquer veículo pelo ID"
+            description = "Retorna os detalhes de um veículo ACTIVE pelo ID.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Veículo retornado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DetailResponseDTO.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Veículo ativo não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<DetailResponseDTO> detailVehicle(
+            @Parameter(description = "Identificador do veículo.", example = "42", required = true)
             @PathVariable Long vehicleId
     ) {
         return ResponseEntity.ok(DetailResponseDTO.from(
@@ -106,10 +137,17 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_READ")
     @Operation(
             operationId = "detailVehicle_1",
-            summary = "Detalhar qualquer veículo",
-            description = "Retorna os detalhes de qualquer veículo pelo ID"
+            summary = "Consultar dados de edição de qualquer veículo",
+            description = "Retorna os dados editáveis de um veículo ACTIVE pelo ID.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Dados de edição retornados.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DetailForEditResponseDTO.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Veículo ativo não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<DetailForEditResponseDTO> detailVehicleForEdit(
+            @Parameter(description = "Identificador do veículo.", example = "42", required = true)
             @PathVariable Long vehicleId
     ) {
         return ResponseEntity.ok(DetailForEditResponseDTO.from(
@@ -122,9 +160,18 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_UPDATE")
     @Operation(
             summary = "Editar qualquer veículo",
-            description = "Atualiza os dados de qualquer veículo pelo ID"
+            description = "Substitui os dados de um veículo ACTIVE. O payload atual não possui semântica parcial uniforme; consulte o schema de EditRequestDTO.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Veículo atualizado."),
+                    @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_UPDATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Veículo ativo não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Nova placa ou RENAVAM já cadastrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<Void> editVehicle(
+            @Parameter(description = "Identificador do veículo.", example = "42", required = true)
             @PathVariable Long vehicleId,
             @RequestBody @Valid EditRequestDTO request
     ) {
@@ -153,9 +200,17 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_DELETE")
     @Operation(
             summary = "Deletar qualquer veículo",
-            description = "Arquiva o histórico e remove qualquer veículo pelo ID"
+            description = "Sob lock, arquiva o snapshot e remove fisicamente um veículo ACTIVE pelo ID.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Veículo removido e histórico arquivado."),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_DELETE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Veículo ativo não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Veículo removido concorrentemente antes da obtenção do lock.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<Void> deleteVehicle(
+            @Parameter(description = "Identificador do veículo.", example = "42", required = true)
             @PathVariable Long vehicleId,
             @AuthenticationPrincipal UserPrincipal principal
     ) {

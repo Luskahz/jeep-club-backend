@@ -20,14 +20,11 @@ produzir `500` foi removido: `GlobalExceptionHandler` já trata
 - A consulta administrativa por ID retorna `404` sem corpo quando não encontra
   a solicitação. Padronizar esse erro com `ApiErrorResponse` altera o response.
 
-## Health, Tools e Vehicles
+## Tools e Vehicles
 
-- A validação do owner de perfil médico e a política de retenção foram definidas
-  em
-  [`health/docs/medical-profile-owner-lifecycle.md`](../../src/main/java/com/jeepclub/backend/health/docs/medical-profile-owner-lifecycle.md).
-- `tools` anuncia itens ativos, mas a listagem também inclui inativos; um item
-  removido ainda pode ser consultado ou reativado. Corrigir essas regras muda
-  os resultados dos endpoints.
+- A listagem de `tools` do membro inclui itens `ACTIVE` e `INACTIVE`, apesar da
+  nomenclatura histórica do método sugerir apenas itens disponíveis. Filtrar a
+  resposta por estado modifica o contrato atual.
 - Em `vehicles`, ownership inválido é ocultado como `404` e os DTOs de edição
   usam campos primitivos em `PUT`. Alterar para `403`, parcialidade ou novas
   validações modifica o contrato atual.

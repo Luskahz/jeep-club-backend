@@ -9,8 +9,8 @@ público do core e suas mensagens nunca são usadas na resposta HTTP.
 | Condição | Exceção de aplicação | HTTP | Código |
 | --- | --- | --- | --- |
 | Owner já possui perfil | `MedicalProfileConflictException` | 409 | `MEDICAL_PROFILE_CONFLICT` |
-| Lock ou atualização concorrente | `MedicalProfileConflictException` | 409 | `MEDICAL_PROFILE_CONFLICT` |
-| Timeout/falha transitória | `MedicalProfilePersistenceUnavailableException` | 503 | `MEDICAL_PROFILE_PERSISTENCE_UNAVAILABLE` |
+| Lock, timeout de lock ou atualização concorrente | `MedicalProfileConflictException` | 409 | `MEDICAL_PROFILE_CONFLICT` |
+| Falha transitória de acesso a dados | `MedicalProfilePersistenceUnavailableException` | 503 | `MEDICAL_PROFILE_PERSISTENCE_UNAVAILABLE` |
 | Outra falha de persistência | `MedicalProfilePersistenceException` | 500 | `MEDICAL_PROFILE_PERSISTENCE_FAILURE` |
 
 O adapter força `flush` nas mutações para que violações diferidas pelo

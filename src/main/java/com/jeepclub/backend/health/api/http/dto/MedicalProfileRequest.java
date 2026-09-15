@@ -9,7 +9,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record MedicalProfileRequest(
 
         @Schema(
-                description = "Tipo sanguíneo do usuário ou dependente.",
+                description = "Tipo sanguíneo do owner. Quando omitido, o domínio registra UNKNOWN.",
                 example = "O_POSITIVE"
         )
         BloodType bloodType,
@@ -64,7 +64,7 @@ public record MedicalProfileRequest(
         String emergencyContactName,
 
         @Schema(
-                description = "Telefone do contato de emergência.",
+                description = "Telefone do contato de emergência. A API aceita pontuação, normaliza e armazena somente 10 ou 11 dígitos.",
                 example = "(12) 99999-9999"
         )
         String emergencyContactPhone,

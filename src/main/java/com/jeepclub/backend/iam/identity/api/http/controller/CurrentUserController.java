@@ -36,9 +36,11 @@ public class CurrentUserController {
                     @ApiResponse(responseCode = "200", description = "Dados cadastrais retornados.",
                             content = @Content(schema = @Schema(implementation = CurrentUserResponseDTO.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "404", description = "User não encontrado.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
     public ResponseEntity<CurrentUserResponseDTO> getMe(

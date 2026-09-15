@@ -8,7 +8,12 @@ import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.application.service.memberpayment.MemberPaymentService;
 import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -34,6 +39,7 @@ import java.net.URI;
         name = "Billing - Member Payments",
         description = "Endpoints para envio, atualização, consulta e validação de pagamentos de membros."
 )
+@ApiResponses(@ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))))
 public class MemberPaymentController {
 
     private final MemberPaymentService memberPaymentService;
@@ -44,7 +50,14 @@ public class MemberPaymentController {
     )
     @Operation(
             summary = "Enviar comprovante de pagamento",
-            description = "Permite que o usuário autenticado envie o comprovante de pagamento de uma cobrança própria."
+            description = "Recebe multipart/form-data com amount, paymentMethod, paidAt, receiptFile obrigatório e notes opcional. A cobrança deve pertencer ao usuário, aceitar pagamento na data atual e não possuir outro pagamento editável.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Pagamento enviado para validação.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MemberPaymentResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Payload, valor ou comprovante inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Cobrança pertence a outro usuário.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Cobrança não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Cobrança não aceita pagamento ou já possui pagamento editável.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<MemberPaymentResponse> submitForValidation(
             @PathVariable @Positive(message = "ID da cobrança deve ser maior que zero.") Long memberChargeId,
@@ -75,7 +88,14 @@ public class MemberPaymentController {
     )
     @Operation(
             summary = "Atualizar comprovante de pagamento",
-            description = "Permite que o usuário autenticado atualize um pagamento próprio enquanto ele estiver pendente de validação ou rejeitado."
+            description = "Substitui integralmente os dados e o receiptFile de um pagamento próprio PENDING_VALIDATION ou REJECTED. Pagamento rejeitado volta a PENDING_VALIDATION; nesse caso a janela de pagamento é revalidada.",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Pagamento atualizado e novo comprovante associado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MemberPaymentResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Payload, valor ou comprovante inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Pagamento pertence a cobrança de outro usuário.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Pagamento ou cobrança vinculada não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Estado do pagamento ou da cobrança não permite atualização.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
     )
     public ResponseEntity<MemberPaymentResponse> updateSubmission(
             @PathVariable @Positive(message = "ID do pagamento deve ser maior que zero.") Long paymentId,

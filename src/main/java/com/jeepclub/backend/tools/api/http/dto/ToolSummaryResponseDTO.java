@@ -13,7 +13,7 @@ public record ToolSummaryResponseDTO(
         @Schema(description = "Nome da ferramenta.", example = "Macaco Hidráulico")
         String name,
 
-        @Schema(description = "Status atual da ferramenta.", example = "AVAILABLE")
+        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE"})
         ToolStatus status
 ) {
     public ToolSummaryResponseDTO(Tool tool) {

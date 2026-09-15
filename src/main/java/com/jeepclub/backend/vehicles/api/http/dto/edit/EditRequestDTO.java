@@ -8,13 +8,14 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-@Schema(description = "Payload para edição parcial de um veículo. Apenas os campos enviados serão atualizados.")
+@Schema(description = "Payload de substituição dos dados editáveis do veículo. A implementação atual não possui semântica parcial: campos de referência omitidos chegam como null e qualquer primitive omitida é rejeitada durante a leitura do JSON.")
 public record EditRequestDTO(
 
         @Schema(
                 description = "Apelido informal do veículo",
                 example = "Jipe do João",
                 nullable = true,
+                requiredMode = Schema.RequiredMode.NOT_REQUIRED,
                 maxLength = 50
         )
         @Size(max = 50)
@@ -24,6 +25,7 @@ public record EditRequestDTO(
                 description = "URL pública da foto do veículo",
                 example = "https://example.com/foto.jpg",
                 nullable = true,
+                requiredMode = Schema.RequiredMode.NOT_REQUIRED,
                 maxLength = 500
         )
         @Size(max = 500)
@@ -32,19 +34,18 @@ public record EditRequestDTO(
         @Schema(
                 description = "Placa do veículo no formato Mercosul (ABC1D23) ou antigo (ABC1234)",
                 example = "ABC1D23",
-                nullable = true,
-                pattern = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$"
+                nullable = false,
+                pattern = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$",
+                requiredMode = Schema.RequiredMode.REQUIRED
         )
         @Pattern(regexp = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$", message = "Placa inválida")
         String plate,
 
         @Schema(
-                description = "RENAVAM do veículo (9 a 11 dígitos numéricos)",
-                example = "12345678901",
-                nullable = true,
-                minLength = 9,
-                maxLength = 11,
-                pattern = "^\\d{9,11}$"
+                description = "RENAVAM válido. Na edição, o checksum ignora caracteres não numéricos, mas o texto recebido é encaminhado sem normalização para persistência.",
+                example = "38249206428",
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED
         )
         @ValidRenavam
         String renavam,
@@ -52,7 +53,8 @@ public record EditRequestDTO(
         @Schema(
                 description = "Marca do fabricante",
                 example = "Jeep",
-                nullable = true,
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
                 maxLength = 50
         )
         @Size(max = 50)
@@ -61,7 +63,8 @@ public record EditRequestDTO(
         @Schema(
                 description = "Modelo do veículo",
                 example = "Wrangler",
-                nullable = true,
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
                 maxLength = 100
         )
         @Size(max = 100)
@@ -70,7 +73,8 @@ public record EditRequestDTO(
         @Schema(
                 description = "Ano de fabricação do veículo",
                 example = "2021",
-                nullable = true,
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
                 minimum = "1900",
                 maximum = "2100"
         )
@@ -81,7 +85,8 @@ public record EditRequestDTO(
         @Schema(
                 description = "Ano do modelo do veículo (pode ser diferente do ano de fabricação)",
                 example = "2022",
-                nullable = true,
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
                 minimum = "1900",
                 maximum = "2100"
         )
@@ -93,6 +98,7 @@ public record EditRequestDTO(
                 description = "Cor predominante do veículo",
                 example = "Preto",
                 nullable = true,
+                requiredMode = Schema.RequiredMode.NOT_REQUIRED,
                 maxLength = 30
         )
         @Size(max = 30)
@@ -101,7 +107,8 @@ public record EditRequestDTO(
         @Schema(
                 description = "Número de lugares do veículo, incluindo o motorista",
                 example = "5",
-                nullable = true,
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
                 minimum = "1",
                 maximum = "50"
         )
@@ -112,25 +119,27 @@ public record EditRequestDTO(
         @Schema(
                 description = "Tipo de combustível aceito pelo veículo",
                 example = "GASOLINE",
-                nullable = true,
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
                 allowableValues = {"GASOLINE", "ETHANOL", "DIESEL", "FLEX", "ELECTRIC", "HYBRID"}
         )
         FuelType fuelType,
 
         @Schema(
-                description = "Cilindrada do motor em litros",
+                description = "Cilindrada do motor em litros. O campo primitive deve estar presente no JSON.",
                 example = "2.0",
-                nullable = true,
-                minimum = "0.0",
-                maximum = "20.0"
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                minimum = "0.0"
         )
         @Min(value = 0, message = "Cilindrada inválida")
         double engineDisplacement,
 
         @Schema(
-                description = "Indica se o veículo possui guincho/reboque",
+                description = "Indica se o veículo possui guincho/reboque. O campo primitive deve estar presente no JSON.",
                 example = "true",
-                nullable = true
+                nullable = false,
+                requiredMode = Schema.RequiredMode.REQUIRED
         )
         boolean towing
 ) {}

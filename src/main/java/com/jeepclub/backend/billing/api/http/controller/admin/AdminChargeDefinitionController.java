@@ -4,9 +4,16 @@ import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionRequ
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionResponse;
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionUpdateRequest;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.application.service.chargedefinition.AdminChargeDefinitionService;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -15,6 +22,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -29,12 +37,19 @@ import java.net.URI;
         name = "Billing - Charge Definitions",
         description = "Endpoints administrativos para gerenciamento de definições de cobrança."
 )
+@ApiResponses({
+        @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Permissão administrativa ausente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+})
 public class AdminChargeDefinitionController {
 
     private final AdminChargeDefinitionService adminChargeDefinitionService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_CREATE')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_CREATE")
+    @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Já existe definição com o mesmo nome.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Criar definição de cobrança",
             description = "Cria um modelo de cobrança que poderá gerar débitos para membros em ciclos ou contextos específicos."
@@ -59,6 +74,10 @@ public class AdminChargeDefinitionController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_UPDATE')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_UPDATE")
+    @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Definição não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Definição arquivada ou nome duplicado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Atualizar definição de cobrança",
             description = "Atualiza os dados principais de uma definição de cobrança. A alteração afeta apenas usos futuros da definição."
@@ -83,9 +102,11 @@ public class AdminChargeDefinitionController {
 
     @GetMapping
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_READ')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_READ")
     @Operation(
             summary = "Listar definições de cobrança",
-            description = "Lista os modelos de cobrança cadastrados no sistema de forma paginada e resumida."
+            description = "Lista os modelos de cobrança de forma paginada. Usa page zero-based, size 20 por padrão e limite global de 50.",
+            responses = @ApiResponse(responseCode = "200", description = "Página de definições retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.ChargeDefinitions.class)))
     )
     public ResponseEntity<Page<ChargeDefinitionSummaryResponse>> findAll(
             @ParameterObject Pageable pageable
@@ -97,6 +118,8 @@ public class AdminChargeDefinitionController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_READ')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_READ")
+    @ApiResponse(responseCode = "404", description = "Definição não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Buscar definição de cobrança por ID",
             description = "Consulta os dados de uma definição de cobrança específica."
@@ -111,6 +134,9 @@ public class AdminChargeDefinitionController {
 
     @PatchMapping("/{id}/activate")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_UPDATE')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_UPDATE")
+    @ApiResponse(responseCode = "404", description = "Definição não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Definição arquivada não pode ser ativada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Ativar definição de cobrança",
             description = "Ativa uma definição de cobrança para permitir novas utilizações."
@@ -125,6 +151,9 @@ public class AdminChargeDefinitionController {
 
     @PatchMapping("/{id}/deactivate")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_UPDATE')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_UPDATE")
+    @ApiResponse(responseCode = "404", description = "Definição não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Definição arquivada não pode ser desativada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Desativar definição de cobrança",
             description = "Desativa uma definição de cobrança sem removê-la do histórico."
@@ -139,6 +168,9 @@ public class AdminChargeDefinitionController {
 
     @PatchMapping("/{id}/archive")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_UPDATE')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_UPDATE")
+    @ApiResponse(responseCode = "404", description = "Definição não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Definição já arquivada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Arquivar definição de cobrança",
             description = "Arquiva uma definição de cobrança, impedindo sua reativação no fluxo normal."

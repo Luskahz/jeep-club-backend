@@ -46,9 +46,11 @@ public class UserRegistrationController {
                             content = @Content(schema = @Schema(
                                     implementation = UserAuthenticationTokenResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Dados inválidos.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "409", description = "Dados cadastrais já utilizados.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
     public ResponseEntity<UserAuthenticationTokenResponseDTO> register(

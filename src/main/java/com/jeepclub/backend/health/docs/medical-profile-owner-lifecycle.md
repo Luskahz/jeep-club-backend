@@ -13,7 +13,7 @@ ativo, inativo ou inexistente usando `UserQuery` e `DependentsQuery`.
 | Estado do owner | Consulta/upsert de membro | Consulta/upsert administrativo | Exclusão administrativa do perfil |
 | --- | --- | --- | --- |
 | Ativo | Permitido, respeitando o vínculo do dependente | Permitido | Permitido |
-| Inativo | Bloqueado | Bloqueado | Permitido |
+| Inativo | Bloqueado, inclusive para exclusão pelo membro | Bloqueado | Permitido |
 | Inexistente/removido | Bloqueado | Bloqueado | Permitido para saneamento |
 
 IDs nulos ou não positivos são dados inválidos. Owner inexistente produz
@@ -29,18 +29,16 @@ usuário continua produzindo `MEDICAL_PROFILE_ACCESS_DENIED` (403).
   segunda linha.
 - A remoção definitiva do owner torna qualquer perfil remanescente inacessível
   imediatamente, pois a validação passa a classificá-lo como inexistente.
-- A exclusão física do perfil operacional deve ocorrer por consumidor de evento
-  de remoção do owner ou por rotina periódica de reconciliação. Até essa limpeza,
-  o registro fica retido e bloqueado, nunca exposto pela API.
-- A exclusão do perfil usa o fluxo administrativo existente: copia os dados para
-  `medical_profiles_history` e remove a linha operacional. A retenção e descarte
-  do histórico seguem a política legal de dados de saúde e não o ciclo de vida
-  técnico do owner.
+- O perfil retido pode ser limpo pelo endpoint administrativo que recebe o ID do
+  perfil, mesmo quando o owner está inativo ou inexistente. Até essa limpeza,
+  ele permanece bloqueado e não é exposto pelas rotas operacionais.
+- A exclusão por membro autorizado ou por administrador copia os dados para
+  `medical_profiles_history` e remove a linha operacional na mesma transação.
+  O histórico não é exposto pelas rotas de perfil.
 
 ## Consistência entre módulos
 
 A validação por contrato impede novos órfãos nos fluxos de `health`, mas não é
-uma transação distribuída com a remoção do owner. A pequena janela entre validar
-e persistir é tratada pela reconciliação/evento de remoção. Uma foreign key ou
-transação compartilhada só poderá ser introduzida por nova decisão arquitetural
-que reveja os limites dos módulos.
+uma transação distribuída com o lifecycle do owner. Uma foreign key ou transação
+compartilhada só poderá ser introduzida por nova decisão arquitetural que reveja
+os limites dos módulos.
