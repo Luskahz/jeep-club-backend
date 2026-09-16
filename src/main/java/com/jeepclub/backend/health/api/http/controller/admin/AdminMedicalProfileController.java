@@ -9,6 +9,7 @@ import com.jeepclub.backend.health.core.application.service.medicalprofile.Admin
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,7 +21,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
@@ -58,9 +58,7 @@ public class AdminMedicalProfileController {
                     como ordenação padrão. O retorno mantém o formato direto de `Page` vigente.
                     """,
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Página de perfis médicos retornada.",
-                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MedicalProfilePageResponseSchema.class))),
+                    @ApiResponse(responseCode = "200", description = "Página de perfis médicos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfilePageResponseSchema.class))),
                     @ApiResponse(responseCode = "400", description = "Parâmetros de paginação ou ordenação inválidos.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão HEALTH_MEDICAL_PROFILE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -69,13 +67,13 @@ public class AdminMedicalProfileController {
                     @ApiResponse(responseCode = "503", description = "Persistência temporariamente indisponível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<Page<MedicalProfileSummaryResponse>> listMedicalProfiles(
+    public ResponseEntity<PageResponse<MedicalProfileSummaryResponse>> listMedicalProfiles(
             @ParameterObject
             @PageableDefault(size = 20, sort = "id") Pageable pageable
     ) {
-        Page<MedicalProfileSummaryResponse> profiles = adminMedicalProfileService
+        PageResponse<MedicalProfileSummaryResponse> profiles = PageResponse.from(adminMedicalProfileService
                 .listMedicalProfiles(pageable)
-                .map(MedicalProfileSummaryResponse::fromDomain);
+                .map(MedicalProfileSummaryResponse::fromDomain));
 
         return ResponseEntity.ok(profiles);
     }

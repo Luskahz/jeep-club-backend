@@ -65,9 +65,8 @@ storage key ou path físico.
 ## HTTP e persistência
 
 Métodos, paths, parâmetros, multipart, schemas, permissions, paginação e erros
-HTTP têm uma única fonte: `/v3/api-docs` e Swagger UI. Billing ainda retorna
-`Page<T>` diretamente; a forma runtime atual é documentada sem antecipar a
-padronização transversal rastreada pela BACK-377.
+HTTP têm uma única fonte: `/v3/api-docs` e Swagger UI. As listagens usam o
+envelope transversal `PageResponse<T>` na fronteira HTTP.
 
 As Entities JPA representam o schema nesta fase. Não há Flyway, Liquibase nem
 política de migrations versionadas; nenhuma mudança de schema deve inferir essa

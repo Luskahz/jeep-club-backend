@@ -1,13 +1,14 @@
 package com.jeepclub.backend.billing.api.http.controller.admin;
 
 import com.jeepclub.backend.billing.api.http.dto.charge.MemberChargeResponse;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.api.http.dto.charge.MemberChargeSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.charge.UpdateMemberChargeFinalAmountRequest;
-import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
 import com.jeepclub.backend.billing.core.application.service.membercharge.AdminMemberChargeService;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -55,7 +56,7 @@ public class AdminMemberChargeController {
             description = "Lista cobranças com filtros opcionais por userId e status persistido. Usa page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de cobranças retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberCharges.class)))
     )
-    public ResponseEntity<Page<MemberChargeSummaryResponse>> findAll(
+    public ResponseEntity<PageResponse<MemberChargeSummaryResponse>> findAll(
             @RequestParam(required = false) @Positive(message = "ID do usuário deve ser maior que zero.") Long userId,
             @RequestParam(required = false) MemberChargeStatus status,
             @ParameterObject Pageable pageable
@@ -66,7 +67,7 @@ public class AdminMemberChargeController {
                 pageable
         );
 
-        return ResponseEntity.ok(results.map(MemberChargeSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberChargeSummaryResponse::from)));
     }
 
     @GetMapping("/billing/member-charges/{memberChargeId}")

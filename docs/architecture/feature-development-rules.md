@@ -196,3 +196,21 @@ DTOs completam o contrato observado pelo frontend:
 Documente o comportamento real, inclusive status e validações observáveis. Não
 invente response, exemplo ou permission; não copie esse catálogo para Markdown.
 Ao mudar o contrato, ajuste implementação, OpenAPI e testes na mesma entrega.
+
+## Paginação HTTP
+
+Endpoints paginados usam `platform.web.pagination.PageResponse<T>` na fronteira
+HTTP. `Page<T>` e `Pageable` do Spring Data podem continuar nas camadas internas,
+mas `Page`/`PageImpl` não são serializados diretamente como resposta pública.
+
+O envelope estável contém `content`, `number`, `size`, `totalElements`,
+`totalPages`, `numberOfElements`, `first`, `last` e `empty`. Estruturas internas
+do Spring Data, como `pageable` e o objeto complexo `sort`, não fazem parte do
+contrato de resposta. Os parâmetros de consulta `page`, `size` e `sort`, seus
+defaults e limites continuam definidos por cada endpoint e pela configuração
+global vigente.
+
+O retorno parametrizado do controller deve permitir ao Springdoc gerar um
+schema específico cujo `content.items` referencia o DTO real do endpoint. Os
+testes de OpenAPI e MVC devem proteger, respectivamente, esse tipo e o JSON
+efetivamente serializado.

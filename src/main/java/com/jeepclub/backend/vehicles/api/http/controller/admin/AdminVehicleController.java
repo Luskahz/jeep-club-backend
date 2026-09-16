@@ -1,6 +1,7 @@
 package com.jeepclub.backend.vehicles.api.http.controller.admin;
 
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
@@ -19,7 +20,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -101,13 +101,13 @@ public class AdminVehicleController {
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<Page<ListResponseDTO>> listAllVehicles(
+    public ResponseEntity<PageResponse<ListResponseDTO>> listAllVehicles(
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(PageResponse.from(
                 adminVehicleService.findAll(pageable).map(ListResponseDTO::from)
-        );
+        ));
     }
 
     @GetMapping("/detail/admin/{vehicleId}")

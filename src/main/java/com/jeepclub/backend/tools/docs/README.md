@@ -89,11 +89,10 @@ está `ACTIVE`/`DISABLED`. Também não há FK declarada para Identity neste mó
 
 A listagem administrativa aceita `name` e `status`. `name` não vazio aplica
 busca por trecho case-insensitive; `status` compara exatamente `ACTIVE` ou
-`INACTIVE`; os filtros podem ser combinados. As listagens de membro e admin
-retornam diretamente `Page<T>` do Spring Data. A página é zero-based, o tamanho
+`INACTIVE`; os filtros podem ser combinados. As listagens de membro e admin usam
+o envelope transversal `PageResponse<T>`. A página é zero-based, o tamanho
 padrão global é 20, o máximo global é 50 e não há ordenação padrão específica
-de Tools. A estabilização transversal da forma JSON de `Page` pertence à
-BACK-377; este módulo apenas documenta o runtime atual.
+de Tools.
 
 ## Persistência, limites e testes
 

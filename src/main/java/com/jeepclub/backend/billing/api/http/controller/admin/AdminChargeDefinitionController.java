@@ -1,13 +1,14 @@
 package com.jeepclub.backend.billing.api.http.controller.admin;
 
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionRequest;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionResponse;
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.definition.ChargeDefinitionUpdateRequest;
-import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.ChargeDefinitionResult;
 import com.jeepclub.backend.billing.core.application.service.chargedefinition.AdminChargeDefinitionService;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -108,12 +109,12 @@ public class AdminChargeDefinitionController {
             description = "Lista os modelos de cobrança de forma paginada. Usa page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de definições retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.ChargeDefinitions.class)))
     )
-    public ResponseEntity<Page<ChargeDefinitionSummaryResponse>> findAll(
+    public ResponseEntity<PageResponse<ChargeDefinitionSummaryResponse>> findAll(
             @ParameterObject Pageable pageable
     ) {
         Page<ChargeDefinitionResult> results = adminChargeDefinitionService.findAll(pageable);
 
-        return ResponseEntity.ok(results.map(ChargeDefinitionSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(ChargeDefinitionSummaryResponse::from)));
     }
 
     @GetMapping("/{id}")

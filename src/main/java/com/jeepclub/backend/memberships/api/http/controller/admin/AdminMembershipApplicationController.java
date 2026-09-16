@@ -10,6 +10,7 @@ import com.jeepclub.backend.memberships.core.application.service.membershipappli
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,7 +22,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -58,9 +58,7 @@ public class AdminMembershipApplicationController {
                     com size 20 nesta rota. A ordenação padrão é requestedAt em ordem decrescente.
                     """,
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Página de solicitações retornada.",
-                            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MembershipApplicationPageResponseSchema.class))),
+                    @ApiResponse(responseCode = "200", description = "Página de solicitações retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MembershipApplicationPageResponseSchema.class))),
                     @ApiResponse(responseCode = "400", description = "Status, paginação ou ordenação inválidos.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -72,7 +70,7 @@ public class AdminMembershipApplicationController {
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<Page<MembershipApplicationResponseDTO>> list(
+    public ResponseEntity<PageResponse<MembershipApplicationResponseDTO>> list(
             @Parameter(description = "Filtra solicitações pelo estado atual.", example = "PENDING")
             @RequestParam(required = false) MembershipApplicationStatus status,
             @ParameterObject
@@ -83,11 +81,11 @@ public class AdminMembershipApplicationController {
             )
             Pageable pageable
     ) {
-        Page<MembershipApplicationResponseDTO> response =
+        PageResponse<MembershipApplicationResponseDTO> response = PageResponse.from(
                 (status != null
                         ? adminMembershipApplicationService.listByStatus(status, pageable)
                         : adminMembershipApplicationService.listAll(pageable))
-                        .map(MembershipApplicationResponseDTO::fromDomain);
+                        .map(MembershipApplicationResponseDTO::fromDomain));
 
         return ResponseEntity.ok(response);
     }

@@ -1,6 +1,7 @@
 package com.jeepclub.backend.vehicles.api.http.controller;
 
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditResponseDTO;
@@ -18,7 +19,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -91,15 +91,15 @@ public class VehicleController {
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<Page<ListResponseDTO>> listMemberVehicles(
+    public ResponseEntity<PageResponse<ListResponseDTO>> listMemberVehicles(
             @AuthenticationPrincipal UserPrincipal principal,
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
-        return ResponseEntity.ok(
+        return ResponseEntity.ok(PageResponse.from(
                 vehicleService.findAll(principal.getUserId(), pageable)
                         .map(ListResponseDTO::from)
-        );
+        ));
     }
 
     @GetMapping("/detail/member/{vehicleId}")
