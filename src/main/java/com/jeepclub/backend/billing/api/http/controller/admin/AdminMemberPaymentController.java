@@ -1,14 +1,15 @@
 package com.jeepclub.backend.billing.api.http.controller.admin;
 
 import com.jeepclub.backend.billing.api.http.dto.payment.MemberPaymentResponse;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.api.http.dto.payment.MemberPaymentSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.payment.RejectMemberPaymentRequest;
-import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.MemberPaymentResult;
 import com.jeepclub.backend.billing.core.application.service.memberpayment.AdminMemberPaymentService;
 import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -57,12 +58,12 @@ public class AdminMemberPaymentController {
             description = "Lista pagamentos com filtro opcional por status. Usa page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de pagamentos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberPayments.class)))
     )
-    public ResponseEntity<Page<MemberPaymentSummaryResponse>> findAll(
+    public ResponseEntity<PageResponse<MemberPaymentSummaryResponse>> findAll(
             @RequestParam(required = false) MemberPaymentStatus status,
             @ParameterObject Pageable pageable
     ) {
         Page<MemberPaymentResult> results = adminMemberPaymentService.findAll(status, pageable);
-        return ResponseEntity.ok(results.map(MemberPaymentSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberPaymentSummaryResponse::from)));
     }
 
     @GetMapping("/billing/member-payments/{paymentId}")

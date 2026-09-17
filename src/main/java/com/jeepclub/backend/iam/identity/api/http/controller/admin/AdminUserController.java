@@ -7,6 +7,7 @@ import com.jeepclub.backend.iam.identity.core.application.result.admin.user.Admi
 import com.jeepclub.backend.iam.identity.core.application.service.user.AdminUserService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,7 +19,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.SortDefault;
@@ -103,7 +103,7 @@ public class AdminUserController {
                     )
             }
     )
-    public ResponseEntity<Page<AdminUserResponseDTO>> findAll(
+    public ResponseEntity<PageResponse<AdminUserResponseDTO>> findAll(
             @Valid
             @ParameterObject
             @ModelAttribute
@@ -131,13 +131,13 @@ public class AdminUserController {
                         ? EnumSet.allOf(AdminUserField.class)
                         : EnumSet.copyOf(fields);
 
-        Page<AdminUserResponseDTO> response =
+        PageResponse<AdminUserResponseDTO> response = PageResponse.from(
                 adminUserService.findAll(
                                 filters.toFilter(),
                                 selectedFields,
                                 pageable
                         )
-                        .map(AdminUserResponseDTO::from);
+                        .map(AdminUserResponseDTO::from));
 
         return ResponseEntity.ok(response);
     }

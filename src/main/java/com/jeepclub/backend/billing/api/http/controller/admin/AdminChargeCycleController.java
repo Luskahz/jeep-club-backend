@@ -1,15 +1,16 @@
 package com.jeepclub.backend.billing.api.http.controller.admin;
 
 import com.jeepclub.backend.billing.api.http.dto.cycle.ChargeCycleResponse;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.api.http.dto.cycle.ChargeCycleSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.cycle.GenerateChargeCycleRequest;
 import com.jeepclub.backend.billing.api.http.dto.cycle.GenerateChargeCycleResponse;
-import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.cycle.ChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.result.cycle.GenerateChargeCycleResult;
 import com.jeepclub.backend.billing.core.application.service.chargecycle.AdminChargeCycleService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -83,7 +84,7 @@ public class AdminChargeCycleController {
             description = "Lista os ciclos gerados para a definição usando page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de ciclos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.ChargeCycles.class)))
     )
-    public ResponseEntity<Page<ChargeCycleSummaryResponse>> findByChargeDefinitionId(
+    public ResponseEntity<PageResponse<ChargeCycleSummaryResponse>> findByChargeDefinitionId(
             @PathVariable @Positive(message = "ID da definição de cobrança deve ser maior que zero.") Long chargeDefinitionId,
             @ParameterObject Pageable pageable
     ) {
@@ -92,7 +93,7 @@ public class AdminChargeCycleController {
                 pageable
         );
 
-        return ResponseEntity.ok(results.map(ChargeCycleSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(ChargeCycleSummaryResponse::from)));
     }
 
     @GetMapping("/billing/charge-cycles/{cycleId}")

@@ -1,11 +1,12 @@
 package com.jeepclub.backend.billing.api.http.controller;
 
 import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundResponse;
-import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
+import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundSummaryResponse;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
 import com.jeepclub.backend.billing.core.application.service.memberrefund.MemberRefundService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -69,7 +70,7 @@ public class MemberRefundController {
             description = "Lista somente os reembolsos vinculados ao usuário autenticado. A paginação usa page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de reembolsos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberRefunds.class)))
     )
-    public ResponseEntity<Page<MemberRefundSummaryResponse>> findMyRefunds(
+    public ResponseEntity<PageResponse<MemberRefundSummaryResponse>> findMyRefunds(
             @ParameterObject Pageable pageable,
             Authentication authentication
     ) {
@@ -77,7 +78,7 @@ public class MemberRefundController {
                 extractUserId(authentication),
                 pageable
         );
-        return ResponseEntity.ok(results.map(MemberRefundSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberRefundSummaryResponse::from)));
     }
 
     @PatchMapping("/billing/member-refunds/{refundId}/request")

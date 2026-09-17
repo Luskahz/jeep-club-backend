@@ -1,11 +1,12 @@
 package com.jeepclub.backend.tools.api.http.controller;
 
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.tools.api.http.dto.ToolCreateRequestDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolResponseDTO;
-import com.jeepclub.backend.tools.api.http.dto.ToolSummaryPageResponseSchema;
 import com.jeepclub.backend.tools.api.http.dto.ToolSummaryResponseDTO;
+import com.jeepclub.backend.tools.api.http.dto.ToolSummaryPageResponseSchema;
 import com.jeepclub.backend.tools.api.http.dto.ToolUpdateRequestDTO;
 import com.jeepclub.backend.tools.core.application.service.tool.ToolService;
 
@@ -18,7 +19,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -46,11 +46,12 @@ public class ToolController {
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<Page<ToolSummaryResponseDTO>> getAvailableTools(
+    public ResponseEntity<PageResponse<ToolSummaryResponseDTO>> getAvailableTools(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @ParameterObject Pageable pageable) {
-        Page<ToolSummaryResponseDTO> tools = toolService.listUserTools(userPrincipal.getUserId(), pageable)
-                .map(ToolSummaryResponseDTO::new);
+        PageResponse<ToolSummaryResponseDTO> tools = PageResponse.from(
+                toolService.listUserTools(userPrincipal.getUserId(), pageable)
+                        .map(ToolSummaryResponseDTO::new));
         return ResponseEntity.ok(tools);
     }
 

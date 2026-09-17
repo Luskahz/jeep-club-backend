@@ -5,6 +5,7 @@ import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.ChargeAssignmentResult;
 import com.jeepclub.backend.billing.core.application.service.chargeassignment.AdminChargeAssignmentService;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -137,7 +138,7 @@ public class AdminChargeAssignmentController {
             description = "Lista as atribuições da definição de forma paginada, usando page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de atribuições retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.ChargeAssignments.class)))
     )
-    public ResponseEntity<Page<ChargeAssignmentResponse>> findByChargeDefinitionId(
+    public ResponseEntity<PageResponse<ChargeAssignmentResponse>> findByChargeDefinitionId(
             @PathVariable @Positive(message = "ID da definição de cobrança deve ser maior que zero.") Long chargeDefinitionId,
             @ParameterObject Pageable pageable
     ) {
@@ -146,7 +147,7 @@ public class AdminChargeAssignmentController {
                 pageable
         );
 
-        return ResponseEntity.ok(results.map(ChargeAssignmentResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(ChargeAssignmentResponse::from)));
     }
     @GetMapping("/billing/charge-assignments/{assignmentId}")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_READ')")

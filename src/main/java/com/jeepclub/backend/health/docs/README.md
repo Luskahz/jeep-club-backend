@@ -65,10 +65,9 @@ externo desse contrato no código atual.
 
 O contrato HTTP detalhado — rotas do usuário, rotas administrativas, schemas,
 paginação, permissions e respostas RFC 9457 — é o OpenAPI publicado em
-`/v3/api-docs`. A listagem administrativa mantém o retorno direto
-`Page<MedicalProfileSummaryResponse>` vigente: página zero-based, `size` padrão
-20 e limite global 50, com ordenação padrão por `id`. A forma runtime de `Page`
-não é redefinida neste módulo.
+`/v3/api-docs`. A listagem administrativa usa o envelope transversal
+`PageResponse<MedicalProfileSummaryResponse>`: página zero-based, `size` padrão
+20 e limite global 50, com ordenação padrão por `id`.
 
 ## Testes relevantes
 

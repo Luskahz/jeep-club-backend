@@ -1,14 +1,15 @@
 package com.jeepclub.backend.billing.api.http.controller.admin;
 
 import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundResponse;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.refund.RejectMemberRefundRequest;
-import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
 import com.jeepclub.backend.billing.core.application.service.memberrefund.AdminMemberRefundService;
 import com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -57,12 +58,12 @@ public class AdminMemberRefundController {
             description = "Lista reembolsos com filtro opcional por status. Usa page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de reembolsos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberRefunds.class)))
     )
-    public ResponseEntity<Page<MemberRefundSummaryResponse>> findAll(
+    public ResponseEntity<PageResponse<MemberRefundSummaryResponse>> findAll(
             @RequestParam(required = false) MemberRefundStatus status,
             @ParameterObject Pageable pageable
     ) {
         Page<MemberRefundResult> results = adminMemberRefundService.findAll(status, pageable);
-        return ResponseEntity.ok(results.map(MemberRefundSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberRefundSummaryResponse::from)));
     }
 
     @GetMapping("/billing/member-refunds/{refundId}")
@@ -87,12 +88,12 @@ public class AdminMemberRefundController {
             description = "Lista os reembolsos vinculados ao ciclo usando page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de reembolsos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberRefunds.class)))
     )
-    public ResponseEntity<Page<MemberRefundSummaryResponse>> findByChargeCycleId(
+    public ResponseEntity<PageResponse<MemberRefundSummaryResponse>> findByChargeCycleId(
             @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId,
             @ParameterObject Pageable pageable
     ) {
         Page<MemberRefundResult> results = adminMemberRefundService.findByChargeCycleId(cycleId, pageable);
-        return ResponseEntity.ok(results.map(MemberRefundSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberRefundSummaryResponse::from)));
     }
 
     @PatchMapping("/billing/member-refunds/{refundId}/approve")

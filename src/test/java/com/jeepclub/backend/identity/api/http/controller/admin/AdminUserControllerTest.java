@@ -26,6 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
+import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @ExtendWith(MockitoExtension.class)
@@ -88,7 +90,7 @@ class AdminUserControllerTest {
         when(adminUserService.findAll(any(), any(), any())).thenReturn(new PageImpl<>(
                 List.of(user(7L, UserStatus.ACTIVE)),
                 PageRequest.of(1, 5, Sort.by(Sort.Direction.DESC, "name")),
-                8
+                12
         ));
 
         mockMvc.perform(get("/identity/admin/users")
@@ -100,8 +102,19 @@ class AdminUserControllerTest {
                         .param("size", "5")
                         .param("sort", "name,desc"))
                 .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.content[0].id").value(7))
-                .andExpect(jsonPath("$.content[0].name").value("Lucas Alves"));
+                .andExpect(jsonPath("$.content[0].name").value("Lucas Alves"))
+                .andExpect(jsonPath("$.number").value(1))
+                .andExpect(jsonPath("$.size").value(5))
+                .andExpect(jsonPath("$.totalElements").value(12))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.numberOfElements").value(1))
+                .andExpect(jsonPath("$.first").value(false))
+                .andExpect(jsonPath("$.last").value(false))
+                .andExpect(jsonPath("$.empty").value(false))
+                .andExpect(jsonPath("$.pageable").doesNotExist())
+                .andExpect(jsonPath("$.sort").doesNotExist());
 
         ArgumentCaptor<AdminUserFilter> filterCaptor = ArgumentCaptor.forClass(AdminUserFilter.class);
         @SuppressWarnings("unchecked")

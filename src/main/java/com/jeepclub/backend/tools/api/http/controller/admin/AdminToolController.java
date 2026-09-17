@@ -1,6 +1,7 @@
 package com.jeepclub.backend.tools.api.http.controller.admin;
 
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.tools.api.http.dto.*;
@@ -15,7 +16,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -44,15 +44,15 @@ public class AdminToolController {
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão TOOLS_TOOL_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<Page<AdminToolSummaryResponseDTO>> listTools(
+    public ResponseEntity<PageResponse<AdminToolSummaryResponseDTO>> listTools(
             @Parameter(description = "Trecho de nome para busca case-insensitive. Valor nulo ou vazio não filtra.", example = "macaco")
             @RequestParam(required = false) String name,
             @Parameter(description = "Status exato da ferramenta.", schema = @Schema(allowableValues = {"ACTIVE", "INACTIVE"}), example = "ACTIVE")
             @RequestParam(required = false) ToolStatus status,
             @ParameterObject Pageable pageable) {
-        Page<AdminToolSummaryResponseDTO> tools = adminToolService
+        PageResponse<AdminToolSummaryResponseDTO> tools = PageResponse.from(adminToolService
                 .listAllTools(name, status, pageable)
-                .map(AdminToolSummaryResponseDTO::new);
+                .map(AdminToolSummaryResponseDTO::new));
         return ResponseEntity.ok(tools);
     }
 

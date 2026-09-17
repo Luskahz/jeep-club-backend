@@ -1,12 +1,13 @@
 package com.jeepclub.backend.billing.api.http.controller;
 
 import com.jeepclub.backend.billing.api.http.dto.charge.MemberChargeResponse;
-import com.jeepclub.backend.billing.api.http.dto.charge.MemberChargeSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
+import com.jeepclub.backend.billing.api.http.dto.charge.MemberChargeSummaryResponse;
 import com.jeepclub.backend.billing.core.application.result.charge.MemberChargeResult;
 import com.jeepclub.backend.billing.core.application.service.membercharge.MemberChargeService;
 import com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -46,7 +47,7 @@ public class MemberChargeController {
             description = "Lista somente as cobranças do usuário autenticado, com filtro opcional pelo status persistido. A paginação usa page zero-based, size 20 por padrão e limite global de 50.",
             responses = @ApiResponse(responseCode = "200", description = "Página de cobranças retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberCharges.class)))
     )
-    public ResponseEntity<Page<MemberChargeSummaryResponse>> findMine(
+    public ResponseEntity<PageResponse<MemberChargeSummaryResponse>> findMine(
             @RequestParam(required = false) MemberChargeStatus status,
             @ParameterObject Pageable pageable,
             Authentication authentication
@@ -59,7 +60,7 @@ public class MemberChargeController {
                 pageable
         );
 
-        return ResponseEntity.ok(results.map(MemberChargeSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberChargeSummaryResponse::from)));
     }
 
     @GetMapping("/billing/me/member-charges/{memberChargeId}")

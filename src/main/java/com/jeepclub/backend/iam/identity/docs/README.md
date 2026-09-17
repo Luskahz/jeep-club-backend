@@ -97,7 +97,8 @@ para enforcement e `@RequiredPermission` apenas para publicar a mesma authority
 no OpenAPI: `IDENTITY_USER_READ`, `IDENTITY_USER_DISABLE` e
 `IDENTITY_USER_ENABLE`.
 
-A listagem administrativa retorna uma `Page<AdminUserResponseDTO>`. Aceita
+A listagem administrativa retorna o envelope paginado transversal
+`PageResponse<AdminUserResponseDTO>`. Aceita
 paginação zero-based (`page`, `size`; padrão 20 e máximo 50), `sort` com os
 campos permitidos, filtros cadastrais, busca `q` e `fields`. Quando `fields`
 é omitido ou vazio, todos os campos de `AdminUserField` são selecionados;
