@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
@@ -49,8 +50,9 @@ class AdminVehicleServiceTest {
     }
 
     @Test
-    void createsVehicleForExistingOwner() {
+    void createsVehicleForExistingActiveOwner() {
         when(userPort.existsById(7L)).thenReturn(true);
+        when(userPort.existsActiveById(7L)).thenReturn(true);
         when(vehicleRepository.save(any(Vehicle.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -67,6 +69,16 @@ class AdminVehicleServiceTest {
         assertThatThrownBy(this::createVehicle)
                 .isInstanceOf(UserNotFoundException.class)
                 .hasMessage("User id not found.");
+    }
+
+    @Test
+    void rejectsAdministrativelyDisabledOwner() {
+        when(userPort.existsById(7L)).thenReturn(true);
+        when(userPort.existsActiveById(7L)).thenReturn(false);
+
+        assertThatThrownBy(this::createVehicle)
+                .isInstanceOf(UserNotActiveException.class)
+                .hasMessage("User is not administratively active.");
     }
 
     @Test

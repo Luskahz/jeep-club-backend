@@ -54,14 +54,16 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_CREATE")
     @Operation(
             summary = "Registrar veículo para um membro cadastrado",
-            description = "Cria um veículo ACTIVE para um userId existente. A verificação atual não distingue usuário ativo de desabilitado.",
+            description = "Cria um veículo ACTIVE para um userId existente. O proprietário informado precisa "
+                    + "existir e estar administrativamente ativo (não desabilitado); um proprietário "
+                    + "desabilitado é rejeitado mesmo que o ID exista.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "Veículo cadastrado."),
                     @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_CREATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "404", description = "Proprietário não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
-                    @ApiResponse(responseCode = "409", description = "Placa ou RENAVAM já cadastrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+                    @ApiResponse(responseCode = "409", description = "Placa/RENAVAM já cadastrado, ou proprietário existente porém administrativamente desabilitado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
     public ResponseEntity<Void> includeVehicle(
