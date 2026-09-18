@@ -40,8 +40,13 @@ Os estados da conta são independentes:
 Desabilitar e habilitar o acesso não altera lock, contador de tentativas,
 senha nem estado da credencial. Uma troca de senha válida limpa o lock e torna
 a credencial permanente, mas não reabilita acesso administrativamente
-desabilitado. Não existe nesta implementação uma regra especial para impedir
-lockout do usuário com role ROOT; essa proteção pertence ao escopo da BACK-324.
+desabilitado. A proteção contra lockout administrativo do usuário com role ROOT
+é aplicada no lifecycle de Identity (que rejeita o disable sem produzir efeitos neste
+módulo). Para preservar a proteção contra ataques de brute force, a conta do ROOT
+permanece sujeita ao lock automático (`AuthenticationStatus.LOCKED`) após tentativas
+inválidas; a recuperação do lock ocorre via fluxo de redefinição de senha, ficando
+registrada como dívida derivada a avaliação de um fluxo dedicado de desbloqueio
+administrativo em Authentication.
 
 Uma `Session` inicia `ACTIVE`, pode passar a `LOGGED_OUT` no logout do dono ou
 na operação administrativa, e pode ser `REVOKED` por revogação de

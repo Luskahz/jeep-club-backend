@@ -16,10 +16,13 @@ do usuário.
 
 Identity não é proprietário de senha, hash, login, lock, sessões, access token
 ou refresh token: esses conceitos pertencem a Authentication. Tampouco possui
-roles, permissions ou authorities, que pertencem a Authorization. Em particular,
-o lifecycle administrativo não consulta roles e não contém exceção para o
-usuário com ROOT; a proteção contra lockout administrativo é uma decisão ainda
-fora deste bounded context, no escopo da BACK-324.
+roles, permissions ou authorities, que pertencem a Authorization. Para proteger o
+sistema contra lockout administrativo, o lifecycle administrativo de Identity consulta
+a porta consumer-owned `UserAuthorizationProtectionPort` (adaptada via `RoleQuery`
+de Authorization) e impede a desativação de usuário portador da role estrutural
+ROOT, retornando 409 CONFLICT com código `USER_ROOT_CANNOT_BE_DISABLED` sem produzir
+efeitos em Identity ou Authentication. O `enable` administrativo continua permitido
+para recuperação de estado.
 
 `User` é criado com `UserStatus.ACTIVE`. O único outro estado é `DISABLED`:
 `disable` define `disabledAt` e `updatedAt`; `enable` remove `disabledAt` e

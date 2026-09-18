@@ -14,11 +14,16 @@ import com.jeepclub.backend.iam.authentication.core.repository.PasswordChangeCha
 import com.jeepclub.backend.iam.authentication.core.repository.RefreshTokenRepository;
 import com.jeepclub.backend.iam.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.iam.authentication.infra.persistence.jpa.AuthenticationAccountJpaRepository;
+import com.jeepclub.backend.iam.authorization.core.application.service.bootstrap.RootRoleBootstrapService;
+import com.jeepclub.backend.iam.authorization.core.application.service.bootstrap.UserRoleAssignmentService;
 import com.jeepclub.backend.iam.identity.api.module.UserAdministration;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.spi.UserAuthenticationAdministrationPort;
+import com.jeepclub.backend.iam.identity.core.domain.model.User;
+import com.jeepclub.backend.iam.identity.core.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,7 +40,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -47,11 +54,14 @@ class UserAdministrationTransactionTest {
     @Autowired private UserRegistration userRegistration;
     @Autowired private UserAdministration identityAdministration;
     @Autowired private UserQuery identityQuery;
+    @Autowired private UserRepository userRepository;
     @Autowired private AuthenticationAccountRepository accountRepository;
     @Autowired private AuthenticationAccountJpaRepository accountJpaRepository;
     @Autowired private SessionRepository sessionRepository;
     @Autowired private RefreshTokenRepository refreshTokenRepository;
     @Autowired private PasswordChangeChallengeRepository challengeRepository;
+    @Autowired private RootRoleBootstrapService rootRoleBootstrapService;
+    @Autowired private UserRoleAssignmentService userRoleAssignmentService;
 
     @MockitoSpyBean
     private UserAuthenticationAdministrationPort authenticationAdministrationPort;
@@ -151,6 +161,58 @@ class UserAdministrationTransactionTest {
 
         assertThat(identityQuery.isAdministrativelyActive(userId)).isTrue();
         assertThat(accountRepository.findByIdentityId(userId)).isEmpty();
+    }
+
+    @Test
+    void rootUserCannotBeDisabledAndLeavesNoSideEffects() {
+        Long rootUserId = provision("85296374180", "root-user@example.com");
+        Long rootRoleId = rootRoleBootstrapService.ensureRootRole();
+        userRoleAssignmentService.assignRoleToUserIfMissing(rootUserId, rootRoleId);
+        AuthenticationArtifacts artifacts = createActiveArtifacts(rootUserId, "root-user");
+
+        assertThatThrownBy(() -> identityAdministration.disable(rootUserId, CHANGED_AT))
+                .isInstanceOf(RootUserCannotBeDisabledException.class)
+                .hasMessageContaining("User with ROOT role cannot be disabled");
+
+        assertActive(rootUserId);
+        assertArtifactsRemainActive(artifacts);
+        verify(authenticationAdministrationPort, never())
+                .disableAuthentication(anyLong(), any(Instant.class));
+        verify(credentialRevocationService, never())
+                .revokeAllForUser(anyLong(), any(Instant.class));
+    }
+
+    @Test
+    void normalUserWithoutRootRoleCanBeDisabledNormally() {
+        Long normalUserId = provision("96385274195", "normal-user@example.com");
+
+        identityAdministration.disable(normalUserId, CHANGED_AT);
+
+        assertThat(identityQuery.isAdministrativelyActive(normalUserId)).isFalse();
+        assertThat(account(normalUserId).getAccessStatus())
+                .isEqualTo(AuthenticationAccessStatus.DISABLED);
+    }
+
+    @Test
+    void enableContinuesToBeAllowedForRootUser() {
+        Long rootUserId = provision("74196385208", "root-enable@example.com");
+        Long rootRoleId = rootRoleBootstrapService.ensureRootRole();
+        userRoleAssignmentService.assignRoleToUserIfMissing(rootUserId, rootRoleId);
+
+        User user = userRepository.findById(rootUserId).orElseThrow();
+        user.disable(CHANGED_AT);
+        userRepository.save(user);
+        AuthenticationAccount account = account(rootUserId);
+        account.disableAccess(CHANGED_AT);
+        accountRepository.save(account);
+
+        assertThat(identityQuery.isAdministrativelyActive(rootUserId)).isFalse();
+        assertThat(account(rootUserId).getAccessStatus()).isEqualTo(AuthenticationAccessStatus.DISABLED);
+
+        identityAdministration.enable(rootUserId, CHANGED_AT.plusSeconds(60));
+
+        assertThat(identityQuery.isAdministrativelyActive(rootUserId)).isTrue();
+        assertThat(account(rootUserId).getAccessStatus()).isEqualTo(AuthenticationAccessStatus.ENABLED);
     }
 
     private Long provision(String cpf, String email) {
