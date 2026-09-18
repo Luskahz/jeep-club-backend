@@ -54,16 +54,17 @@ substituir manualmente o vínculo ROOT de um usuário. Ao substituir roles de um
 usuário, a implementação remove somente vínculos `CUSTOM` atuais; ROOT já
 existente é preservada e não pode ser incluída na lista solicitada.
 
-Essas proteções são sobre a role e seus vínculos. O módulo ainda não expõe uma
-consulta pública para responder se um usuário possui ROOT e não impede que
-Identity/Authentication desabilite ou bloqueie esse usuário. Essa é a fronteira
-da BACK-324, fora deste módulo nesta revisão.
+Essas proteções são sobre a role e seus vínculos. Para apoiar a proteção contra
+lockout administrativo em Identity, o módulo expõe na interface pública `RoleQuery`
+a consulta `hasRootRole(userId)`, que verifica se o usuário possui vínculo ativo com a
+role identificada estruturalmente por `RoleKind.ROOT`.
 
 ## Contratos e integrações
 
-O único contrato Java em `api.module` é `RoleQuery`, consumido por Billing via
-`BillingAuthorizationAdapter`. Ele é somente leitura: informa se uma role existe
-e está ativa e lista IDs de usuários vinculados a uma role ativa. Role inexistente,
+O contrato Java público em `api.module` é `RoleQuery`, consumido por Billing via
+`BillingAuthorizationAdapter` e por Identity via `IdentityAuthorizationProtectionAdapter`.
+Ele é somente leitura: informa se uma role existe e está ativa, lista IDs de usuários
+vinculados a uma role ativa e responde se um usuário é portador da role ROOT. Role inexistente,
 inativa ou excluída resulta em `false` ou lista vazia; não expõe entity,
 repository ou modelo JPA de Authorization.
 

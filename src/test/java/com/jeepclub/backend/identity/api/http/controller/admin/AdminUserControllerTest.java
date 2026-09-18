@@ -4,6 +4,7 @@ import com.jeepclub.backend.iam.authentication.core.application.exceptions.accou
 import com.jeepclub.backend.iam.identity.api.http.controller.admin.AdminUserController;
 import com.jeepclub.backend.iam.identity.api.http.exception.IdentityUserExceptionHandler;
 import com.jeepclub.backend.iam.identity.api.module.UserStatus;
+import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserAlreadyDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
@@ -359,6 +360,7 @@ class AdminUserControllerTest {
         when(adminUserService.disable(97L))
                 .thenThrow(new UserAlreadyDisabledException(97L, new IllegalStateException()));
         when(adminUserService.disable(96L)).thenThrow(new AuthenticationAccountNotFoundException(96L));
+        when(adminUserService.disable(95L)).thenThrow(new RootUserCannotBeDisabledException(95L));
 
         mockMvc.perform(patch("/identity/admin/users/7/disable"))
                 .andExpect(status().isOk())
@@ -370,6 +372,9 @@ class AdminUserControllerTest {
         mockMvc.perform(patch("/identity/admin/users/96/disable"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("INVALID_STATE"));
+        mockMvc.perform(patch("/identity/admin/users/95/disable"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("USER_ROOT_CANNOT_BE_DISABLED"));
     }
 
     @Test

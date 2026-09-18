@@ -7,4 +7,6 @@ public interface RoleQuery {
     boolean existsActiveRoleById(Long roleId);
 
     List<Long> findUserIdsByRoleId(Long roleId);
+
+    boolean hasRootRole(Long userId);
 }

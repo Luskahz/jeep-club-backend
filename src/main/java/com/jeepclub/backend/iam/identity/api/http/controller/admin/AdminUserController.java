@@ -205,6 +205,9 @@ public class AdminUserController {
                     mesma operação. Sessões, refresh tokens e challenges aplicáveis são revogados
                     ou invalidados.
 
+                    Usuários portadores da role estrutural ROOT são protegidos contra desativação
+                    e resultam em conflito 409.
+
                     A operação preserva senha, CredentialStatus, lock automático e
                     failedLoginAttempts.
                     """,
@@ -227,7 +230,7 @@ public class AdminUserController {
                     ),
                     @ApiResponse(
                             responseCode = "409",
-                            description = "Usuário já está desativado ou a conta de Authentication necessária ao lifecycle não existe.",
+                            description = "Usuário já está desativado, possui role ROOT protegida contra desativação ou a conta de Authentication necessária ao lifecycle não existe.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)

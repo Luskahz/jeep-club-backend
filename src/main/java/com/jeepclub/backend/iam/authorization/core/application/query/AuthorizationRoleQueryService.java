@@ -39,4 +39,17 @@ class AuthorizationRoleQueryService implements RoleQuery {
 
         return userRoleRepository.findUserIdsByRoleId(roleId);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean hasRootRole(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+
+        return roleRepository.findRoot()
+                .filter(Role::isActive)
+                .map(rootRole -> userRoleRepository.existsByUserIdAndRoleId(userId, rootRole.getId()))
+                .orElse(false);
+    }
 }
