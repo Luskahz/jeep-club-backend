@@ -96,7 +96,7 @@ class MembershipOpenApiIntegrationTest {
     @Transactional
     void repeatedPendingRequestIsIdempotentWithoutLeakingStoredPersonalData() throws Exception {
         String firstRequest = """
-                {"name":"Original Name","cpf":"529.982.247-25","email":null,
+                {"name":"Original Name","cpf":"714.583.920-23","email":null,
                  "phoneNumber":"(11) 99999-9999","message":"private message"}
                 """;
         mockMvc.perform(post("/membership-applications")
@@ -112,7 +112,7 @@ class MembershipOpenApiIntegrationTest {
         mockMvc.perform(post("/membership-applications")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Attacker Input","cpf":"52998224725","email":"attacker@example.com",
+                                {"name":"Attacker Input","cpf":"71458392023","email":"attacker@example.com",
                                  "phoneNumber":"11988888888","message":"probe"}
                                 """))
                 .andExpect(status().isOk())
