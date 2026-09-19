@@ -1,6 +1,5 @@
-package com.jeepclub.backend.authorization.core.application.query;
+package com.jeepclub.backend.iam.authorization.core.application.query;
 
-import com.jeepclub.backend.iam.authorization.core.application.query.AuthorizationRoleQueryService;
 import com.jeepclub.backend.iam.authorization.core.domain.model.Role;
 import com.jeepclub.backend.iam.authorization.core.repository.RoleRepository;
 import com.jeepclub.backend.iam.authorization.core.repository.UserRoleRepository;

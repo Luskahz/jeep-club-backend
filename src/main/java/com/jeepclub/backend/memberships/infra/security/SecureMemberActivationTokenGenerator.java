@@ -1,13 +1,13 @@
-package com.jeepclub.backend.iam.authentication.infra.security.token;
+package com.jeepclub.backend.memberships.infra.security;
 
-import com.jeepclub.backend.iam.authentication.core.port.RefreshTokenGenerator;
+import com.jeepclub.backend.memberships.core.port.MemberActivationTokenGenerator;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.util.Base64;
 
 @Component
-public class SecureRandomTokenGenerator implements RefreshTokenGenerator {
+public class SecureMemberActivationTokenGenerator implements MemberActivationTokenGenerator {
 
     private final SecureRandom random = new SecureRandom();
 

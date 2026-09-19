@@ -1,6 +1,7 @@
 package com.jeepclub.backend.identity.core.application.service.user;
 
 import com.jeepclub.backend.iam.identity.api.module.exception.UserEmailAlreadyInUseException;
+import com.jeepclub.backend.iam.identity.core.application.exception.UserConflictException;
 import com.jeepclub.backend.iam.identity.core.application.service.user.CurrentUserProfileService;
 import com.jeepclub.backend.iam.identity.core.domain.model.User;
 import com.jeepclub.backend.iam.identity.core.repository.UserRepository;
@@ -34,7 +35,7 @@ class CurrentUserProfileServiceTest {
     void authenticatedIdentityCanAddAndNormalizeEmail() {
         User user = user(null);
         when(repository.findByIdForUpdate(42L)).thenReturn(Optional.of(user));
-        when(repository.save(user)).thenReturn(user);
+        when(repository.saveAndFlush(user)).thenReturn(user);
 
         var result = service.updateEmail(42L, "  USER@Example.COM ");
 
@@ -51,7 +52,18 @@ class CurrentUserProfileServiceTest {
 
         assertThatThrownBy(() -> service.updateEmail(42L, "used@example.com"))
                 .isInstanceOf(UserEmailAlreadyInUseException.class);
-        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void persistenceConflictDuringFlushIsReportedAsEmailAlreadyInUse() {
+        User user = user(null);
+        when(repository.findByIdForUpdate(42L)).thenReturn(Optional.of(user));
+        when(repository.existsByEmailAndIdNot("used@example.com", 42L)).thenReturn(false);
+        when(repository.saveAndFlush(user)).thenThrow(new UserConflictException(new IllegalStateException()));
+
+        assertThatThrownBy(() -> service.updateEmail(42L, "used@example.com"))
+                .isInstanceOf(UserEmailAlreadyInUseException.class);
     }
 
     private User user(String email) {

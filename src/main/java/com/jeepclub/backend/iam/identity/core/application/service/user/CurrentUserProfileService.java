@@ -34,7 +34,7 @@ public class CurrentUserProfileService {
 
         user.updateEmail(normalizedEmail, Instant.now(clock));
         try {
-            return UserQueryService.toDetails(userRepository.save(user));
+            return UserQueryService.toDetails(userRepository.saveAndFlush(user));
         } catch (UserConflictException exception) {
             throw new UserEmailAlreadyInUseException(exception);
         }

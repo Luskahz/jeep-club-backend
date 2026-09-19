@@ -77,6 +77,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(
                                 HttpMethod.POST,
+                                "/membership-applications/activate"
+                        ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.POST,
                                 "/authentication/password-recovery/requests",
                                 "/authentication/password-recovery/requests/email-token",
                                 "/authentication/password-recovery/requests/token/reset"

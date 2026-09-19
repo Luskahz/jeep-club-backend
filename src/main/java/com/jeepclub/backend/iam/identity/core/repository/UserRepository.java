@@ -13,6 +13,8 @@ public interface UserRepository {
 
     User save(User user);
 
+    User saveAndFlush(User user);
+
     Optional<User> findById(Long id);
 
     Optional<User> findByCpf(String cpf);

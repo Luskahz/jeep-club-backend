@@ -74,12 +74,25 @@ class AuthenticationSecurityIntegrationTest {
     }
 
     @Test
+    void membershipActivationCompletionRouteIsNotInterceptedBySecurity() throws Exception {
+        mockMvc.perform(post("/membership-applications/activate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void authenticatedAndAdministrativeRoutesRemainProtected() throws Exception {
         mockMvc.perform(get("/authentication/me").header("X-Request-Id", "security-unauthorized"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("X-Request-Id", "security-unauthorized"))
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/identity/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        mockMvc.perform(patch("/identity/me/email")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"user@example.com\"}"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/authorization/me"))
