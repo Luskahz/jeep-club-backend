@@ -80,7 +80,4 @@ public class VehicleEntity {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
-
-    @Column(name = "disabled_at")
-    private Instant disabledAt;
 }

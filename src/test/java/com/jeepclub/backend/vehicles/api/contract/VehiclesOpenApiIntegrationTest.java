@@ -8,7 +8,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,7 +76,11 @@ class VehiclesOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['EditRequestDTO']['properties']['towing']['description']")
                         .value(org.hamcrest.Matchers.containsString("null explícito é rejeitado")))
                 .andExpect(jsonPath("$['components']['schemas']['DetailResponseDTO']['properties']['status']['enum']")
-                        .value(hasItems("ACTIVE", "SOFT_DELETED")))
+                        .value(hasItem("ACTIVE")))
+                .andExpect(jsonPath("$['components']['schemas']['DetailResponseDTO']['properties']['status']['enum']")
+                        .value(org.hamcrest.Matchers.not(hasItem("SOFT_DELETED"))))
+                .andExpect(jsonPath("$['components']['schemas']['DetailResponseDTO']['properties']['disabledAt']")
+                        .doesNotExist())
                 .andExpect(jsonPath("$['paths']['/vehicles/edit/admin/{vehicleId}']['put']['responses']['409']['content']['application/json']")
                         .doesNotExist());
     }

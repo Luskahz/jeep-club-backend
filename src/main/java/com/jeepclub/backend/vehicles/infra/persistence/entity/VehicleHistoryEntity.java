@@ -114,9 +114,6 @@ public class VehicleHistoryEntity {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @Column(name = "disabled_at")
-    private Instant disabledAt;
-
     @Column(name = "deleted_at", nullable = false, updatable = false)
     private Instant deletedAt;
 }

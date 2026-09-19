@@ -5,6 +5,7 @@ import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleFieldRequiredException;
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -193,6 +194,20 @@ class AdminVehicleServiceTest {
         verify(vehicleRepository, never()).save(any());
     }
 
+    @Test
+    void hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead() {
+        Vehicle legacy = Vehicle.reconstitute(
+                1L, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
+                "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
+                2.0, VehicleStatus.SOFT_DELETED, true, 7L, NOW.minusSeconds(60), null
+        );
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(legacy));
+
+        assertThatThrownBy(() -> service.findById(1L))
+                .isInstanceOf(VehicleIdNotFoundException.class)
+                .hasMessage("Vehicle not found.");
+    }
+
     private Vehicle createVehicle() {
         return service.createForOwner(
                 "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
@@ -205,7 +220,7 @@ class AdminVehicleServiceTest {
         return Vehicle.reconstitute(
                 1L, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, VehicleStatus.ACTIVE, true, 7L, NOW.minusSeconds(60), null, null
+                2.0, VehicleStatus.ACTIVE, true, 7L, NOW.minusSeconds(60), null
         );
     }
 

@@ -226,7 +226,7 @@ class VehicleServiceTest {
         return Vehicle.reconstitute(
                 id, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, status, true, ownerId, NOW.minusSeconds(60), null, null
+                2.0, status, true, ownerId, NOW.minusSeconds(60), null
         );
     }
 

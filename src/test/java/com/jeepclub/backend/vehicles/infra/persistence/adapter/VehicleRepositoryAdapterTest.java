@@ -121,6 +121,38 @@ class VehicleRepositoryAdapterTest {
         assertThat(persisted.getRenavam()).isEqualTo("38249206428");
     }
 
+    @Test
+    void legacySoftDeletedRowIsReadWithoutMappingFailure() {
+        // Nenhum caso de uso atual grava SOFT_DELETED; esta linha simula um
+        // registro legado pré-existente inserido diretamente via JPA, sem
+        // passar por Vehicle.create/save. O risco real é o Hibernate falhar
+        // ao desserializar VehicleEntity.status; este teste prova que a
+        // leitura continua segura mesmo assim.
+        VehicleEntity legacy = new VehicleEntity();
+        legacy.setNickname("Legado");
+        legacy.setPhoto("photo");
+        legacy.setPlate("LEG1D23");
+        legacy.setRenavam("98765432100");
+        legacy.setBrand("Jeep");
+        legacy.setModel("Wrangler");
+        legacy.setManufacturingYear(2020);
+        legacy.setModelYear(2020);
+        legacy.setColor("Preto");
+        legacy.setSeatingCapacity(5);
+        legacy.setFuelType(FuelType.DIESEL);
+        legacy.setEngineDisplacement(2.0);
+        legacy.setStatus(VehicleStatus.SOFT_DELETED);
+        legacy.setTowing(true);
+        legacy.setOwnerId(7L);
+        VehicleEntity savedLegacy = vehicleJpaRepository.saveAndFlush(legacy);
+        entityManager.clear();
+
+        Vehicle loaded = repository.findById(savedLegacy.getId()).orElseThrow();
+
+        assertThat(loaded.getStatus()).isEqualTo(VehicleStatus.SOFT_DELETED);
+        assertThat(loaded.getPlate()).isEqualTo("LEG1D23");
+    }
+
     private Vehicle vehicle(String plate, String renavam) {
         return Vehicle.create(
                 "Trovão",

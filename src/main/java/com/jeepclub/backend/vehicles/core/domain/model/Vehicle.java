@@ -34,7 +34,6 @@ public class Vehicle {
 
     private Instant createdAt;
     private Instant updatedAt;
-    private Instant deletedAt;
 
 
     public static Vehicle create(
@@ -72,7 +71,6 @@ public class Vehicle {
                 towing,
                 ownerId,
                 createdAt,
-                null,
                 null
         );
 
@@ -96,8 +94,7 @@ public class Vehicle {
             Boolean towing,
             Long ownerId,
             Instant createdAt,
-            Instant updatedAt,
-            Instant disabledAt
+            Instant updatedAt
     ) {
         Vehicle vehicle = new Vehicle();
         vehicle.id = id;
@@ -118,15 +115,7 @@ public class Vehicle {
         vehicle.ownerId = ownerId;
         vehicle.createdAt = createdAt;
         vehicle.updatedAt = updatedAt;
-        vehicle.deletedAt = disabledAt;
         return vehicle;
-    }
-
-    public Vehicle softDelete(Instant now) {
-        this.status = VehicleStatus.SOFT_DELETED;
-        this.updatedAt = now;
-        this.deletedAt = now;
-        return this;
     }
 
     public void update(

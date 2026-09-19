@@ -44,7 +44,7 @@ class VehicleTest {
         Vehicle vehicle = Vehicle.reconstitute(
                 1L, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, VehicleStatus.ACTIVE, true, 7L, NOW, null, null
+                2.0, VehicleStatus.ACTIVE, true, 7L, NOW, null
         );
 
         vehicle.update(
@@ -62,7 +62,7 @@ class VehicleTest {
         Vehicle vehicle = Vehicle.reconstitute(
                 1L, "Trovão", "photo", "abc1d23", "382.492.064-28", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, VehicleStatus.ACTIVE, true, 7L, NOW, null, null
+                2.0, VehicleStatus.ACTIVE, true, 7L, NOW, null
         );
 
         assertThat(vehicle.getPlate()).isEqualTo("ABC1D23");

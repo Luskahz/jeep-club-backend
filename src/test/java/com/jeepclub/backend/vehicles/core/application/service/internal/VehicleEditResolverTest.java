@@ -147,7 +147,7 @@ class VehicleEditResolverTest {
         return Vehicle.reconstitute(
                 1L, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, VehicleStatus.ACTIVE, true, 7L, CREATED_AT, null, null
+                2.0, VehicleStatus.ACTIVE, true, 7L, CREATED_AT, null
         );
     }
 
