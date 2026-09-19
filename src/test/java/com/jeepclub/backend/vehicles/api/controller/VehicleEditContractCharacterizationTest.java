@@ -6,13 +6,15 @@ import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
 import com.jeepclub.backend.vehicles.api.http.controller.VehicleController;
+import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestFieldReader;
 import com.jeepclub.backend.vehicles.api.http.exceptions.VehicleExceptionHandler;
+import com.jeepclub.backend.vehicles.core.application.FieldUpdate;
+import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
 import com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleService;
+import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -26,14 +28,14 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.time.Instant;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -42,12 +44,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 @Import({
         VehicleEditContractCharacterizationTest.AuthenticationPrincipalTestConfiguration.class,
+        EditRequestFieldReader.class,
         VehicleExceptionHandler.class,
         GlobalExceptionHandler.class
 })
 class VehicleEditContractCharacterizationTest {
 
-    private static final String VALID_EDIT = """
+    private static final String FULL_EDIT = """
             {
               "nickname": "Trovão",
               "photo": "photo",
@@ -69,13 +72,13 @@ class VehicleEditContractCharacterizationTest {
     private MockMvc mockMvc;
     @MockitoBean
     private VehicleService vehicleService;
+    private final JsonMapper jsonMapper = JsonMapper.builder().findAndAddModules().build();
     @MockitoBean
     private JwtTokenParser jwtTokenParser;
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
     @MockitoBean
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
-    private final JsonMapper jsonMapper = JsonMapper.builder().findAndAddModules().build();
 
     @BeforeEach
     void setUpPrincipal() {
@@ -95,43 +98,206 @@ class VehicleEditContractCharacterizationTest {
         SecurityContextHolder.clearContext();
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "manufacturingYear",
-            "modelYear",
-            "seatingCapacity",
-            "engineDisplacement",
-            "towing"
-    })
-    void omittedPrimitiveIsRejectedWhileReadingJson(String field) throws Exception {
+    @Test
+    void completePayloadReachesServiceWithEveryFieldAsPresentValue() throws Exception {
         mockMvc.perform(put("/vehicles/edit/member/42")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(withoutField(VALID_EDIT, field)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("HTTP_400"));
+                        .content(FULL_EDIT))
+                .andExpect(status().isNoContent());
 
-        verifyNoInteractions(vehicleService);
+        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
+                FieldUpdate.of("Trovão"),
+                FieldUpdate.of("photo"),
+                FieldUpdate.of("ABC1D23"),
+                FieldUpdate.of("38249206428"),
+                FieldUpdate.of("Jeep"),
+                FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023),
+                FieldUpdate.of(2024),
+                FieldUpdate.of("Verde"),
+                FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL),
+                FieldUpdate.of(2.0),
+                FieldUpdate.of(true)
+        )));
     }
 
     @Test
-    void completePayloadReachesServiceWithEveryPrimitiveValue() throws Exception {
+    void omittedPrimitiveIsTreatedAsPreservingCurrentValueInsteadOfFailing() throws Exception {
         mockMvc.perform(put("/vehicles/edit/member/42")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(VALID_EDIT))
+                        .content(withoutField(FULL_EDIT, "manufacturingYear")))
                 .andExpect(status().isNoContent());
 
-        verify(vehicleService).update(
-                42L, 7L, "Trovão", "photo", "ABC1D23", "38249206428",
-                "Jeep", "Wrangler", 2023, 2024, "Verde", 5,
-                com.jeepclub.backend.vehicles.core.domain.enums.FuelType.DIESEL,
-                2.0, true
+        verify(vehicleService).update(eq(42L), eq(7L), argThatManufacturingYearIsOmitted());
+    }
+
+    @Test
+    void omittedNullableFieldIsTreatedAsPreservingCurrentValue() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withoutField(FULL_EDIT, "nickname")))
+                .andExpect(status().isNoContent());
+
+        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
+                FieldUpdate.omitted(),
+                FieldUpdate.of("photo"),
+                FieldUpdate.of("ABC1D23"),
+                FieldUpdate.of("38249206428"),
+                FieldUpdate.of("Jeep"),
+                FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023),
+                FieldUpdate.of(2024),
+                FieldUpdate.of("Verde"),
+                FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL),
+                FieldUpdate.of(2.0),
+                FieldUpdate.of(true)
+        )));
+    }
+
+    @Test
+    void explicitNullClearsNullableField() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withNullField(FULL_EDIT, "nickname")))
+                .andExpect(status().isNoContent());
+
+        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
+                FieldUpdate.explicitNull(),
+                FieldUpdate.of("photo"),
+                FieldUpdate.of("ABC1D23"),
+                FieldUpdate.of("38249206428"),
+                FieldUpdate.of("Jeep"),
+                FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023),
+                FieldUpdate.of(2024),
+                FieldUpdate.of("Verde"),
+                FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL),
+                FieldUpdate.of(2.0),
+                FieldUpdate.of(true)
+        )));
+    }
+
+    @Test
+    void explicitNullOnRequiredFieldIsForwardedAsExplicitNullToTheService() throws Exception {
+        // A rejeição de null em campo obrigatório é decidida pelo VehicleEditResolver
+        // dentro do service (coberto por VehicleServiceTest/VehicleEditResolverTest);
+        // aqui, com o service mockado, só é possível caracterizar que o parsing HTTP
+        // distingue corretamente "null explícito" de "ausente" e encaminha ao service.
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withNullField(FULL_EDIT, "plate")))
+                .andExpect(status().isNoContent());
+
+        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
+                FieldUpdate.of("Trovão"),
+                FieldUpdate.of("photo"),
+                FieldUpdate.explicitNull(),
+                FieldUpdate.of("38249206428"),
+                FieldUpdate.of("Jeep"),
+                FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023),
+                FieldUpdate.of(2024),
+                FieldUpdate.of("Verde"),
+                FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL),
+                FieldUpdate.of(2.0),
+                FieldUpdate.of(true)
+        )));
+    }
+
+    @Test
+    void explicitFalseOnTowingIsAppliedAndDistinctFromOmission() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withField(FULL_EDIT, "towing", "false")))
+                .andExpect(status().isNoContent());
+
+        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
+                FieldUpdate.of("Trovão"),
+                FieldUpdate.of("photo"),
+                FieldUpdate.of("ABC1D23"),
+                FieldUpdate.of("38249206428"),
+                FieldUpdate.of("Jeep"),
+                FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023),
+                FieldUpdate.of(2024),
+                FieldUpdate.of("Verde"),
+                FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL),
+                FieldUpdate.of(2.0),
+                FieldUpdate.of(false)
+        )));
+    }
+
+    @Test
+    void explicitZeroOnEngineDisplacementIsAppliedAndDistinctFromOmission() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withField(FULL_EDIT, "engineDisplacement", "0")))
+                .andExpect(status().isNoContent());
+
+        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
+                FieldUpdate.of("Trovão"),
+                FieldUpdate.of("photo"),
+                FieldUpdate.of("ABC1D23"),
+                FieldUpdate.of("38249206428"),
+                FieldUpdate.of("Jeep"),
+                FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023),
+                FieldUpdate.of(2024),
+                FieldUpdate.of("Verde"),
+                FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL),
+                FieldUpdate.of(0.0),
+                FieldUpdate.of(true)
+        )));
+    }
+
+    @Test
+    void invalidExplicitZeroOnSeatingCapacityIsRejectedByValidation() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withField(FULL_EDIT, "seatingCapacity", "0")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.errors[0].field").value("seatingCapacity"));
+    }
+
+    @Test
+    void malformedFieldTypeIsRejectedAsBadRequestInsteadOfFailingUnexpectedly() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withField(FULL_EDIT, "manufacturingYear", "\"not-a-number\"")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
+    }
+
+    private VehicleEditFields argThatManufacturingYearIsOmitted() {
+        return org.mockito.ArgumentMatchers.argThat(fields ->
+                fields != null && fields.manufacturingYear().isOmitted()
+                        && fields.nickname().isPresentValue()
         );
     }
 
-    private String withoutField(String json, String field) throws Exception {
-        ObjectNode request = (ObjectNode) jsonMapper.readTree(json);
-        request.remove(field);
-        return jsonMapper.writeValueAsString(request);
+    private String withoutField(String json, String field) {
+        ObjectNode node = (ObjectNode) jsonMapper.readTree(json);
+        node.remove(field);
+        return jsonMapper.writeValueAsString(node);
+    }
+
+    private String withNullField(String json, String field) {
+        ObjectNode node = (ObjectNode) jsonMapper.readTree(json);
+        node.putNull(field);
+        return jsonMapper.writeValueAsString(node);
+    }
+
+    private String withField(String json, String field, String rawValueJson) {
+        ObjectNode node = (ObjectNode) jsonMapper.readTree(json);
+        node.replace(field, jsonMapper.readTree(rawValueJson));
+        return jsonMapper.writeValueAsString(node);
     }
 
     @TestConfiguration
