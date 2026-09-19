@@ -19,12 +19,12 @@ public record UserRegistrationRequestDTO(
                 requiredMode = Schema.RequiredMode.REQUIRED)
         String name,
 
-        @Schema(description = "Data de nascimento do usuário.", example = "2000-05-17", nullable = true)
+        @Schema(description = "Data de nascimento do usuário.", example = "2000-05-17", format = "date", nullable = true)
         LocalDate birthDate,
 
         @Email(message = "E-mail inválido.")
         @Size(max = 180, message = "E-mail deve ter no máximo 180 caracteres.")
-        @Schema(description = "E-mail do usuário.", example = "maria@example.com", nullable = true)
+        @Schema(description = "E-mail do usuário.", example = "maria@example.com", format = "email", nullable = true)
         String email,
 
         @NotBlank(message = "CPF é obrigatório.")

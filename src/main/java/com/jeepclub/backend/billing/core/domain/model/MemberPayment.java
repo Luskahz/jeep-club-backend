@@ -22,7 +22,6 @@ public class MemberPayment {
     private MemberPaymentStatus status;
     private Instant paidAt;
     private String receiptStorageKey;
-    private String receiptUrl;
     private Instant confirmedAt;
     private Long confirmedByUserId;
     private Instant rejectedAt;
@@ -41,7 +40,6 @@ public class MemberPayment {
             MemberPaymentStatus status,
             Instant paidAt,
             String receiptStorageKey,
-            String receiptUrl,
             Instant confirmedAt,
             Long confirmedByUserId,
             Instant rejectedAt,
@@ -59,7 +57,6 @@ public class MemberPayment {
         this.status = Objects.requireNonNull(status, "status cannot be null");
         this.paidAt = Objects.requireNonNull(paidAt, "paidAt cannot be null");
         this.receiptStorageKey = validateRequiredText(receiptStorageKey, "receiptStorageKey");
-        this.receiptUrl = validateRequiredText(receiptUrl, "receiptUrl");
         this.confirmedAt = confirmedAt;
         this.confirmedByUserId = confirmedByUserId;
         this.rejectedAt = rejectedAt;
@@ -79,7 +76,6 @@ public class MemberPayment {
             PaymentMethod paymentMethod,
             Instant paidAt,
             String receiptStorageKey,
-            String receiptUrl,
             String notes,
             Instant now
     ) {
@@ -93,7 +89,6 @@ public class MemberPayment {
                 MemberPaymentStatus.PENDING_VALIDATION,
                 paidAt,
                 receiptStorageKey,
-                receiptUrl,
                 null,
                 null,
                 null,
@@ -114,7 +109,6 @@ public class MemberPayment {
             MemberPaymentStatus status,
             Instant paidAt,
             String receiptStorageKey,
-            String receiptUrl,
             Instant confirmedAt,
             Long confirmedByUserId,
             Instant rejectedAt,
@@ -133,7 +127,6 @@ public class MemberPayment {
                 status,
                 paidAt,
                 receiptStorageKey,
-                receiptUrl,
                 confirmedAt,
                 confirmedByUserId,
                 rejectedAt,
@@ -206,7 +199,6 @@ public class MemberPayment {
             PaymentMethod paymentMethod,
             Instant paidAt,
             String receiptStorageKey,
-            String receiptUrl,
             String notes,
             Instant now
     ) {
@@ -223,7 +215,6 @@ public class MemberPayment {
         this.paymentMethod = Objects.requireNonNull(paymentMethod, "paymentMethod cannot be null");
         this.paidAt = Objects.requireNonNull(paidAt, "paidAt cannot be null");
         this.receiptStorageKey = validateRequiredText(receiptStorageKey, "receiptStorageKey");
-        this.receiptUrl = validateRequiredText(receiptUrl, "receiptUrl");
         this.notes = normalizeNullableText(notes);
 
         this.status = MemberPaymentStatus.PENDING_VALIDATION;

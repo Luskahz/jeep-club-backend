@@ -23,7 +23,7 @@ public class TokenIssuanceService {
     private final JwtService jwtService;
     private final ApplicationTimeProperties authTimeProperties;
 
-    public AuthTokens issue(AuthenticationAccount account, Instant now) {
+    public AuthTokens issue(AuthenticationAccount account, String userName, Instant now) {
         account.assertCanAuthenticate();
         Long identityId = account.getIdentityId();
 
@@ -36,7 +36,7 @@ public class TokenIssuanceService {
 
         IssuedRefreshToken refreshToken = refreshTokenIssuanceService.issue(session, now);
 
-        IssuedAccessToken accessToken = jwtService.generateAccessToken(identityId, session);
+        IssuedAccessToken accessToken = jwtService.generateAccessToken(identityId, userName, session);
         long expiresInSeconds = Math.max(
                 Duration.between(now, accessToken.expiresAt()).getSeconds(),
                 0

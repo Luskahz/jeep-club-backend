@@ -2,9 +2,11 @@ package com.jeepclub.backend.dependents.core.repository;
 
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 
+import java.util.Collection;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface DependentRepository {
 
@@ -26,6 +28,8 @@ public interface DependentRepository {
     );
 
     boolean existsActiveById(Long id);
+
+    Set<Long> findActiveIdsByIds(Collection<Long> ids);
 
     boolean existsActiveByIdAndUserId(
             Long id,

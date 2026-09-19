@@ -5,12 +5,19 @@ import com.jeepclub.backend.iam.authorization.core.application.result.Permission
 import com.jeepclub.backend.iam.authorization.core.application.result.PermissionsResult;
 import com.jeepclub.backend.iam.authorization.core.application.service.permission.AdminPermissionService;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -28,6 +35,24 @@ import java.util.List;
         name = "Authorization - Permissions",
         description = "Consulta de permissões disponíveis no módulo de autorização."
 )
+@ApiResponses({
+        @ApiResponse(
+                responseCode = "401",
+                description = "Usuário não autenticado.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        ),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Usuário autenticado não possui AUTHORIZATION_PERMISSION_READ.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        )
+})
 public class AdminPermissionController {
 
     private final AdminPermissionService adminPermissionService;
@@ -35,7 +60,15 @@ public class AdminPermissionController {
     @GetMapping
     @Operation(
             summary = "Listar permissões",
-            description = "Retorna todas as permissões cadastradas e sincronizadas pelo sistema."
+            description = "Retorna todas as permissões cadastradas e sincronizadas pelo sistema.",
+            responses = @ApiResponse(
+                    responseCode = "200",
+                    description = "Permissões retornadas.",
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            array = @ArraySchema(schema = @Schema(implementation = PermissionResponseDTO.class))
+                    )
+            )
     )
     public ResponseEntity<List<PermissionResponseDTO>> findAllPermissions() {
         PermissionsResult result = adminPermissionService.findAllPermissions();
@@ -48,7 +81,25 @@ public class AdminPermissionController {
     @GetMapping("/{permissionId}")
     @Operation(
             summary = "Buscar permissão por ID",
-            description = "Retorna os dados de uma permissão a partir do seu identificador."
+            description = "Retorna os dados de uma permissão a partir do seu identificador.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Permissão retornada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = PermissionResponseDTO.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Identificador inválido ou permissão inexistente atualmente resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    )
+            }
     )
     public ResponseEntity<PermissionResponseDTO> findPermissionById(
             @Parameter(
@@ -70,7 +121,25 @@ public class AdminPermissionController {
     @GetMapping("/code/{permissionCode}")
     @Operation(
             summary = "Buscar permissão por código",
-            description = "Retorna os dados de uma permissão a partir do seu código técnico."
+            description = "Retorna os dados de uma permissão a partir do seu código técnico.",
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Permissão retornada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = PermissionResponseDTO.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "Código inválido ou permissão inexistente atualmente resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    )
+            }
     )
     public ResponseEntity<PermissionResponseDTO> findPermissionByCode(
             @Parameter(

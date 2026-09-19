@@ -247,6 +247,7 @@ class LoginControllerTest {
         UserPrincipal principal = new UserPrincipal(
                 1L,
                 10L,
+                "Test User",
                 Instant.parse("2026-05-21T20:30:00Z")
         );
 

@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.identity.api.http.exception;
 
+import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserAlreadyDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
@@ -11,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(basePackages = "com.jeepclub.backend.identity")
+@RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.identity")
 public class IdentityUserExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(UserNotFoundException exception) {
@@ -31,5 +32,10 @@ public class IdentityUserExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(UserRegistrationConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleRegistrationConflict(UserRegistrationConflictException exception) {
         return buildErrorResponse("REGISTRATION_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(RootUserCannotBeDisabledException.class)
+    public ResponseEntity<ApiErrorResponse> handleRootUserCannotBeDisabled(RootUserCannotBeDisabledException exception) {
+        return buildErrorResponse("USER_ROOT_CANNOT_BE_DISABLED", exception.getMessage(), HttpStatus.CONFLICT);
     }
 }

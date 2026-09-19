@@ -9,6 +9,6 @@ public record BlockMembershipApplicantRequestDTO(
 
         @NotBlank(message = "Motivo do bloqueio é obrigatório.")
         @Size(max = 2000, message = "Motivo do bloqueio deve ter no máximo 2000 caracteres.")
-        @Schema(description = "Motivo administrativo do bloqueio.", example = "Tentativas recorrentes com dados inconsistentes.")
+        @Schema(description = "Motivo administrativo do bloqueio.", example = "Tentativas recorrentes com dados inconsistentes.", requiredMode = Schema.RequiredMode.REQUIRED, maxLength = 2000)
         String reason
 ) {}

@@ -1,13 +1,21 @@
 package com.jeepclub.backend.billing.api.http.controller.admin;
 
 import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundResponse;
+import com.jeepclub.backend.billing.api.http.dto.BillingPageSchemas;
 import com.jeepclub.backend.billing.api.http.dto.refund.MemberRefundSummaryResponse;
 import com.jeepclub.backend.billing.api.http.dto.refund.RejectMemberRefundRequest;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
 import com.jeepclub.backend.billing.core.application.service.memberrefund.AdminMemberRefundService;
 import com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
+import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
@@ -16,6 +24,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
@@ -33,26 +42,34 @@ import org.springframework.web.bind.annotation.RestController;
         name = "Billing - Member Refunds",
         description = "Endpoints para consulta e gestão de reembolsos de membros."
 )
+@ApiResponses({
+        @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+        @ApiResponse(responseCode = "403", description = "Permissão administrativa ausente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+})
 public class AdminMemberRefundController {
 
     private final AdminMemberRefundService adminMemberRefundService;
 
     @GetMapping("/billing/member-refunds")
     @PreAuthorize("hasAuthority('BILLING_REFUND_READ')")
+    @RequiredPermission("BILLING_REFUND_READ")
     @Operation(
             summary = "Listar reembolsos de membros",
-            description = "Lista reembolsos de membros de forma paginada, com filtro opcional por status."
+            description = "Lista reembolsos com filtro opcional por status. Usa page zero-based, size 20 por padrão e limite global de 50.",
+            responses = @ApiResponse(responseCode = "200", description = "Página de reembolsos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberRefunds.class)))
     )
-    public ResponseEntity<Page<MemberRefundSummaryResponse>> findAll(
+    public ResponseEntity<PageResponse<MemberRefundSummaryResponse>> findAll(
             @RequestParam(required = false) MemberRefundStatus status,
             @ParameterObject Pageable pageable
     ) {
         Page<MemberRefundResult> results = adminMemberRefundService.findAll(status, pageable);
-        return ResponseEntity.ok(results.map(MemberRefundSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberRefundSummaryResponse::from)));
     }
 
     @GetMapping("/billing/member-refunds/{refundId}")
     @PreAuthorize("hasAuthority('BILLING_REFUND_READ')")
+    @RequiredPermission("BILLING_REFUND_READ")
+    @ApiResponse(responseCode = "404", description = "Reembolso não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Buscar reembolso por ID",
             description = "Consulta os dados completos de um reembolso de membro."
@@ -65,20 +82,25 @@ public class AdminMemberRefundController {
 
     @GetMapping("/billing/charge-cycles/{cycleId}/member-refunds")
     @PreAuthorize("hasAuthority('BILLING_REFUND_READ')")
+    @RequiredPermission("BILLING_REFUND_READ")
     @Operation(
             summary = "Listar reembolsos de um ciclo",
-            description = "Lista os reembolsos vinculados a um ciclo de cobrança."
+            description = "Lista os reembolsos vinculados ao ciclo usando page zero-based, size 20 por padrão e limite global de 50.",
+            responses = @ApiResponse(responseCode = "200", description = "Página de reembolsos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = BillingPageSchemas.MemberRefunds.class)))
     )
-    public ResponseEntity<Page<MemberRefundSummaryResponse>> findByChargeCycleId(
+    public ResponseEntity<PageResponse<MemberRefundSummaryResponse>> findByChargeCycleId(
             @PathVariable @Positive(message = "ID do ciclo deve ser maior que zero.") Long cycleId,
             @ParameterObject Pageable pageable
     ) {
         Page<MemberRefundResult> results = adminMemberRefundService.findByChargeCycleId(cycleId, pageable);
-        return ResponseEntity.ok(results.map(MemberRefundSummaryResponse::from));
+        return ResponseEntity.ok(PageResponse.from(results.map(MemberRefundSummaryResponse::from)));
     }
 
     @PatchMapping("/billing/member-refunds/{refundId}/approve")
     @PreAuthorize("hasAuthority('BILLING_REFUND_APPROVE')")
+    @RequiredPermission("BILLING_REFUND_APPROVE")
+    @ApiResponse(responseCode = "404", description = "Reembolso não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Estado ou janela de elegibilidade não permite aprovação.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Aprovar reembolso",
             description = "Aprova um reembolso elegível ou solicitado."
@@ -94,6 +116,10 @@ public class AdminMemberRefundController {
 
     @PatchMapping("/billing/member-refunds/{refundId}/reject")
     @PreAuthorize("hasAuthority('BILLING_REFUND_REJECT')")
+    @RequiredPermission("BILLING_REFUND_REJECT")
+    @ApiResponse(responseCode = "400", description = "Motivo de rejeição inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Reembolso não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Reembolso não está solicitado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Rejeitar reembolso",
             description = "Rejeita um reembolso solicitado, registrando o motivo da rejeição."
@@ -114,6 +140,9 @@ public class AdminMemberRefundController {
 
     @PatchMapping("/billing/member-refunds/{refundId}/mark-as-refunded")
     @PreAuthorize("hasAuthority('BILLING_REFUND_MARK_AS_REFUNDED')")
+    @RequiredPermission("BILLING_REFUND_MARK_AS_REFUNDED")
+    @ApiResponse(responseCode = "404", description = "Reembolso não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Reembolso não está aprovado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Marcar reembolso como realizado",
             description = "Marca um reembolso aprovado como efetivamente realizado."
@@ -129,6 +158,9 @@ public class AdminMemberRefundController {
 
     @PatchMapping("/billing/member-refunds/{refundId}/expire")
     @PreAuthorize("hasAuthority('BILLING_REFUND_EXPIRE')")
+    @RequiredPermission("BILLING_REFUND_EXPIRE")
+    @ApiResponse(responseCode = "404", description = "Reembolso não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Reembolso não está elegível ou a janela ainda não expirou.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Expirar elegibilidade de reembolso",
             description = "Expira manualmente um reembolso elegível quando sua janela de elegibilidade já passou."
@@ -141,6 +173,9 @@ public class AdminMemberRefundController {
 
     @PatchMapping("/billing/member-refunds/{refundId}/cancel")
     @PreAuthorize("hasAuthority('BILLING_REFUND_CANCEL')")
+    @RequiredPermission("BILLING_REFUND_CANCEL")
+    @ApiResponse(responseCode = "404", description = "Reembolso não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Reembolso já está em estado terminal.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Cancelar processo de reembolso",
             description = "Cancela um processo de reembolso ainda ativo."

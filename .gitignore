@@ -38,6 +38,9 @@ jwt-secrets.properties
 # Local Spring configuration
 /src/main/resources/application-dev.properties
 
+# Local global file storage runtime data
+/storage/
+
 # Local JWT signing secret (machine-specific)
 jwt-secrets.properties
 

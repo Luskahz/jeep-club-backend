@@ -14,7 +14,13 @@ import java.time.Instant;
 @Setter
 @NoArgsConstructor
 @Entity
-@Table(name = "vehicles_vehicle")
+@Table(
+        name = "vehicles_vehicle",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_vehicle_plate", columnNames = "plate"),
+                @UniqueConstraint(name = "uk_vehicle_renavam", columnNames = "renavam")
+        }
+)
 public class VehicleEntity {
 
     @Id
@@ -27,10 +33,10 @@ public class VehicleEntity {
     @Column
     private String photo;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String plate;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String renavam;
 
     @Column(nullable = false)
@@ -74,7 +80,4 @@ public class VehicleEntity {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
-
-    @Column(name = "disabled_at")
-    private Instant disabledAt;
 }

@@ -7,6 +7,7 @@ import com.jeepclub.backend.iam.identity.core.application.result.admin.user.Admi
 import com.jeepclub.backend.iam.identity.core.application.service.user.AdminUserService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
+import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,10 +19,9 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.SortDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -54,7 +54,7 @@ public class AdminUserController {
                 Retorna os usuários cadastrados no módulo de identidade.
 
                 A consulta suporta:
-                - paginação por `page` e `size`;
+                - paginação zero-based por `page` e `size` (padrão 20, máximo 50);
                 - ordenação por `sort`;
                 - filtros administrativos combináveis;
                 - busca textual por `q`;
@@ -75,7 +75,7 @@ public class AdminUserController {
                             responseCode = "400",
                             description = "Filtros, paginação, ordenação ou campos solicitados são inválidos.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(
                                             implementation = ApiErrorResponse.class
                                     )
@@ -85,7 +85,7 @@ public class AdminUserController {
                             responseCode = "401",
                             description = "Usuário não autenticado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(
                                             implementation = ApiErrorResponse.class
                                     )
@@ -95,7 +95,7 @@ public class AdminUserController {
                             responseCode = "403",
                             description = "Usuário sem permissão para consultar usuários.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(
                                             implementation = ApiErrorResponse.class
                                     )
@@ -103,7 +103,7 @@ public class AdminUserController {
                     )
             }
     )
-    public ResponseEntity<Page<AdminUserResponseDTO>> findAll(
+    public ResponseEntity<PageResponse<AdminUserResponseDTO>> findAll(
             @Valid
             @ParameterObject
             @ModelAttribute
@@ -120,7 +120,7 @@ public class AdminUserController {
             Set<AdminUserField> fields,
 
             @ParameterObject
-            @PageableDefault(
+            @SortDefault(
                     sort = "id",
                     direction = Sort.Direction.ASC
             )
@@ -131,13 +131,13 @@ public class AdminUserController {
                         ? EnumSet.allOf(AdminUserField.class)
                         : EnumSet.copyOf(fields);
 
-        Page<AdminUserResponseDTO> response =
+        PageResponse<AdminUserResponseDTO> response = PageResponse.from(
                 adminUserService.findAll(
                                 filters.toFilter(),
                                 selectedFields,
                                 pageable
                         )
-                        .map(AdminUserResponseDTO::from);
+                        .map(AdminUserResponseDTO::from));
 
         return ResponseEntity.ok(response);
     }
@@ -162,24 +162,27 @@ public class AdminUserController {
                             responseCode = "404",
                             description = "Usuário não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
                             responseCode = "400",
                             description = "Identificador do usuário inválido.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
                             description = "Usuário não autenticado.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "403",
                             description = "Usuário sem a permissão IDENTITY_USER_READ.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     )
             }
     )
@@ -202,6 +205,9 @@ public class AdminUserController {
                     mesma operação. Sessões, refresh tokens e challenges aplicáveis são revogados
                     ou invalidados.
 
+                    Usuários portadores da role estrutural ROOT são protegidos contra desativação
+                    e resultam em conflito 409.
+
                     A operação preserva senha, CredentialStatus, lock automático e
                     failedLoginAttempts.
                     """,
@@ -218,32 +224,35 @@ public class AdminUserController {
                             responseCode = "404",
                             description = "Usuário não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
                             responseCode = "409",
-                            description = "Usuário já está desativado ou não pode ser desativado no estado atual.",
+                            description = "Usuário já está desativado, possui role ROOT protegida contra desativação ou a conta de Authentication necessária ao lifecycle não existe.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
                             responseCode = "400",
                             description = "Identificador do usuário inválido.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
                             description = "Usuário não autenticado.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "403",
                             description = "Usuário sem a permissão IDENTITY_USER_DISABLE.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     )
             }
     )
@@ -281,7 +290,7 @@ public class AdminUserController {
                             responseCode = "404",
                             description = "Usuário não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -289,24 +298,27 @@ public class AdminUserController {
                             responseCode = "409",
                             description = "Usuário já está ativo ou não pode ser reativado no estado atual.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
                             responseCode = "400",
                             description = "Identificador do usuário inválido.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "401",
                             description = "Usuário não autenticado.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     ),
                     @ApiResponse(
                             responseCode = "403",
                             description = "Usuário sem a permissão IDENTITY_USER_ENABLE.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))
                     )
             }
     )

@@ -15,4 +15,8 @@ public record UpsertMedicalProfileCommand(
         String emergencyContactRelationship,
         String observations
 ) {
+    @Override
+    public String toString() {
+        return "UpsertMedicalProfileCommand[REDACTED]";
+    }
 }

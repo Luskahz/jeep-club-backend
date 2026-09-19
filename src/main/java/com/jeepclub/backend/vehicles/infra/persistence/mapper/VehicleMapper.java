@@ -41,8 +41,7 @@ public class VehicleMapper {
                 entity.getTowing(),
                 entity.getOwnerId(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt(),
-                entity.getDisabledAt()
+                entity.getUpdatedAt()
         );
     }
 
@@ -73,7 +72,6 @@ public class VehicleMapper {
         entity.setOwnerId(domain.getOwnerId());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
-        entity.setDisabledAt(domain.getDeletedAt());
 
         return entity;
     }

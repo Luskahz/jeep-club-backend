@@ -25,7 +25,7 @@ public class DetailResponseDTO {
         @Schema(description = "Placa no formato Mercosul (ABC1D23) ou antigo (ABC1234)", example = "ABC1D23")
         private String plate;
 
-        @Schema(description = "RENAVAM do veículo (9 a 11 dígitos)", example = "12345678901")
+        @Schema(description = "RENAVAM conforme persistido no cadastro", example = "38249206428")
         private String renavam;
 
         @Schema(description = "Marca do fabricante", example = "Jeep")
@@ -57,9 +57,10 @@ public class DetailResponseDTO {
         private double engineDisplacement;
 
         @Schema(
-                description = "Status atual do veículo no sistema",
+                description = "Status persistido do veículo. A única política de exclusão vigente é hard "
+                        + "delete com histórico; nenhuma rota atual produz ou expõe outro valor.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE", "INACTIVE", "PENDING"}
+                allowableValues = {"ACTIVE"}
         )
         private VehicleStatus status;
 
@@ -74,9 +75,6 @@ public class DetailResponseDTO {
 
         @Schema(description = "Data e hora da última atualização (UTC)", example = "2024-06-01T08:00:00Z", nullable = true)
         private Instant updatedAt;
-
-        @Schema(description = "Data e hora em que o veículo foi desativado (UTC). Nulo se ainda ativo.", example = "2025-01-10T12:00:00Z", nullable = true)
-        private Instant disabledAt;
 
         public static DetailResponseDTO from(Vehicle vehicle) {
                 return DetailResponseDTO.builder()
@@ -98,7 +96,6 @@ public class DetailResponseDTO {
                         .ownerId(vehicle.getOwnerId())
                         .createdAt(vehicle.getCreatedAt())
                         .updatedAt(vehicle.getUpdatedAt())
-                        .disabledAt(vehicle.getDeletedAt())
                         .build();
         }
 }

@@ -8,8 +8,10 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface DependentJpaRepository
         extends JpaRepository<DependentEntity, Long> {
@@ -50,6 +52,17 @@ public interface DependentJpaRepository
     boolean existsByIdAndStatus(
             Long id,
             DependentStatus status
+    );
+
+    @Query("""
+            select d.id
+            from DependentEntity d
+            where d.id in :ids
+              and d.status = :status
+            """)
+    Set<Long> findIdsByIdInAndStatus(
+            @Param("ids") Collection<Long> ids,
+            @Param("status") DependentStatus status
     );
 
     boolean existsByIdAndUserIdAndStatus(

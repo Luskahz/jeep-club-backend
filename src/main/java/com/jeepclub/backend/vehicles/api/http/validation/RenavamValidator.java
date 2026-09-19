@@ -1,9 +1,12 @@
 package com.jeepclub.backend.vehicles.api.http.validation;
 
+import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 public class RenavamValidator implements ConstraintValidator<ValidRenavam, String> {
+
+    private static final String ACCEPTED_RENAVAM_SYNTAX = "^(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})$";
 
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
@@ -11,7 +14,11 @@ public class RenavamValidator implements ConstraintValidator<ValidRenavam, Strin
             return true;
         }
 
-        String renavam = value.replaceAll("\\D", "");
+        if (!value.matches(ACCEPTED_RENAVAM_SYNTAX)) {
+            return false;
+        }
+
+        String renavam = Vehicle.normalizeRenavam(value);
 
         if (renavam.length() != 11) {
             return false;

@@ -11,9 +11,11 @@ import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,16 @@ import java.util.List;
 )
 @RequiredArgsConstructor
 @Validated
+@ApiResponses({
+        @ApiResponse(
+                responseCode = "401",
+                description = "Autenticação ausente ou access token inválido.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        )
+})
 @Tag(
         name = "Authentication - Password Recovery",
         description = "Operações públicas e administrativas para recuperação, redefinição e gerenciamento de senhas."
@@ -61,14 +73,16 @@ public class AdminPasswordRecoveryRequestController {
                             description = "Solicitações retornadas com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = AdminPasswordRecoveryRequestResponseDTO.class)
+                                    array = @ArraySchema(
+                                            schema = @Schema(implementation = AdminPasswordRecoveryRequestResponseDTO.class)
+                                    )
                             )
                     ),
                     @ApiResponse(
                             responseCode = "403",
                             description = "Usuário autenticado não possui permissão para consultar solicitações de recuperação.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -106,7 +120,7 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "403",
                             description = "Usuário autenticado não possui permissão para consultar solicitações de recuperação.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -114,7 +128,15 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "404",
                             description = "Solicitação de recuperação não encontrada.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -147,14 +169,16 @@ public class AdminPasswordRecoveryRequestController {
                             description = "Solicitações do usuário retornadas com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = AdminPasswordRecoveryRequestResponseDTO.class)
+                                    array = @ArraySchema(
+                                            schema = @Schema(implementation = AdminPasswordRecoveryRequestResponseDTO.class)
+                                    )
                             )
                     ),
                     @ApiResponse(
                             responseCode = "403",
                             description = "Usuário autenticado não possui permissão para consultar solicitações de recuperação.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -162,7 +186,15 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "404",
                             description = "Usuário alvo não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -202,7 +234,7 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "403",
                             description = "Usuário autenticado não possui permissão para cancelar solicitações de recuperação.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -210,7 +242,7 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "404",
                             description = "Solicitação de recuperação não encontrada.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -218,7 +250,15 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "409",
                             description = "Solicitação já está cancelada, resolvida, expirada ou não pode ser cancelada no estado atual.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -255,18 +295,18 @@ public class AdminPasswordRecoveryRequestController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "400",
-                            description = "Identificador de usuário inválido ou operação inconsistente.",
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
                             responseCode = "403",
-                            description = "Usuário autenticado não possui permissão para gerar senha provisória.",
+                            description = "Usuário autenticado não possui a permission exigida ou a conta alvo está com acesso desabilitado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -274,7 +314,7 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "404",
                             description = "Usuário alvo não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -311,18 +351,18 @@ public class AdminPasswordRecoveryRequestController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "400",
-                            description = "Identificador de usuário inválido ou operação inconsistente.",
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
                     @ApiResponse(
                             responseCode = "403",
-                            description = "Usuário autenticado não possui permissão para gerar link administrativo.",
+                            description = "Usuário autenticado não possui a permission exigida ou a conta alvo está com acesso desabilitado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -330,7 +370,7 @@ public class AdminPasswordRecoveryRequestController {
                             responseCode = "404",
                             description = "Usuário alvo não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )

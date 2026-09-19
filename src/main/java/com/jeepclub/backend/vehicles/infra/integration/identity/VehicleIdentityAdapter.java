@@ -15,4 +15,9 @@ public class VehicleIdentityAdapter implements UserPort {
     public boolean existsById(Long userId) {
         return identityQuery.existsById(userId);
     }
+
+    @Override
+    public boolean existsActiveById(Long userId) {
+        return identityQuery.isAdministrativelyActive(userId);
+    }
 }

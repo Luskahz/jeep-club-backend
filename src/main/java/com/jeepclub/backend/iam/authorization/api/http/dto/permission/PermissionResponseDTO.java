@@ -18,7 +18,7 @@ public record PermissionResponseDTO(
 
         @Schema(
                 description = "Código técnico único da permissão.",
-                example = "AUTHZ_ROLE_CREATE",
+                example = "AUTHORIZATION_ROLE_CREATE",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         String code,

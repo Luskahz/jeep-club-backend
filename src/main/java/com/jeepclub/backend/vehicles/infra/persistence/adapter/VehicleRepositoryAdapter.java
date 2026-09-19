@@ -1,5 +1,7 @@
 package com.jeepclub.backend.vehicles.infra.persistence.adapter;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.exception.VehicleAlreadyDeletedException;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -11,16 +13,22 @@ import com.jeepclub.backend.vehicles.infra.persistence.jpa.VehicleJpaRepository;
 import com.jeepclub.backend.vehicles.infra.persistence.mapper.VehicleHistoryMapper;
 import com.jeepclub.backend.vehicles.infra.persistence.mapper.VehicleMapper;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Optional;
 
 @RequiredArgsConstructor
 @Repository
 public class VehicleRepositoryAdapter implements VehicleRepository {
+
+    private static final String PLATE_CONSTRAINT = "uk_vehicle_plate";
+    private static final String RENAVAM_CONSTRAINT = "uk_vehicle_renavam";
 
     private final VehicleJpaRepository jpaRepository;
     private final VehicleHistoryJpaRepository historyJpaRepository;
@@ -29,8 +37,39 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     @Override
     public Vehicle save(Vehicle vehicle) {
         VehicleEntity entity = VehicleMapper.toEntity(vehicle);
-        VehicleEntity saved = jpaRepository.save(entity);
-        return VehicleMapper.toDomain(saved);
+        try {
+            VehicleEntity saved = jpaRepository.saveAndFlush(entity);
+            return VehicleMapper.toDomain(saved);
+        } catch (DataIntegrityViolationException exception) {
+            if (violatesConstraint(exception, PLATE_CONSTRAINT)) {
+                throw new VehiclePlateAlreadyExistsException(
+                        "The license PLATE provided is already registered.",
+                        exception
+                );
+            }
+            if (violatesConstraint(exception, RENAVAM_CONSTRAINT)) {
+                throw new VehicleRenavamAlreadyExistsException(
+                        "The RENAVAM number provided is already registered.",
+                        exception
+                );
+            }
+            throw exception;
+        }
+    }
+
+    private boolean violatesConstraint(Throwable exception, String constraintName) {
+        Throwable cause = exception;
+
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException violation) {
+                String name = violation.getConstraintName();
+                return name != null
+                        && name.toLowerCase(Locale.ROOT).contains(constraintName);
+            }
+            cause = cause.getCause();
+        }
+
+        return false;
     }
 
     @Override

@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Locale;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -33,7 +34,6 @@ public class Vehicle {
 
     private Instant createdAt;
     private Instant updatedAt;
-    private Instant deletedAt;
 
 
     public static Vehicle create(
@@ -57,8 +57,8 @@ public class Vehicle {
                 null,
                 nickname,
                 photo,
-                plate,
-                renavam,
+                normalizePlate(plate),
+                normalizeRenavam(renavam),
                 brand,
                 model,
                 manufacturingYear,
@@ -71,7 +71,6 @@ public class Vehicle {
                 towing,
                 ownerId,
                 createdAt,
-                null,
                 null
         );
 
@@ -95,15 +94,14 @@ public class Vehicle {
             Boolean towing,
             Long ownerId,
             Instant createdAt,
-            Instant updatedAt,
-            Instant disabledAt
+            Instant updatedAt
     ) {
         Vehicle vehicle = new Vehicle();
         vehicle.id = id;
         vehicle.nickname = nickname;
         vehicle.photo = photo;
-        vehicle.plate = plate;
-        vehicle.renavam = renavam;
+        vehicle.plate = normalizePlate(plate);
+        vehicle.renavam = normalizeRenavam(renavam);
         vehicle.brand = brand;
         vehicle.model = model;
         vehicle.manufacturingYear = manufacturingYear;
@@ -117,15 +115,7 @@ public class Vehicle {
         vehicle.ownerId = ownerId;
         vehicle.createdAt = createdAt;
         vehicle.updatedAt = updatedAt;
-        vehicle.deletedAt = disabledAt;
         return vehicle;
-    }
-
-    public Vehicle softDelete(Instant now) {
-        this.status = VehicleStatus.SOFT_DELETED;
-        this.updatedAt = now;
-        this.deletedAt = now;
-        return this;
     }
 
     public void update(
@@ -141,13 +131,13 @@ public class Vehicle {
             int seatingCapacity,
             FuelType fuelType,
             double engineDisplacement,
-            boolean towing,
+            Boolean towing,
             Instant now
     ) {
         this.nickname = nickname;
         this.photo = photo;
-        this.plate = plate;
-        this.renavam = renavam;
+        this.plate = normalizePlate(plate);
+        this.renavam = normalizeRenavam(renavam);
         this.brand = brand;
         this.model = model;
         this.manufacturingYear = manufacturingYear;
@@ -158,5 +148,24 @@ public class Vehicle {
         this.engineDisplacement = engineDisplacement;
         this.towing = towing;
         this.updatedAt = now;
+    }
+
+    /**
+     * Forma canônica de placa: trim + uppercase. Aplicada em create/update/
+     * reconstitute para que persistência, consultas de duplicidade e
+     * comparações no domínio nunca dependam do chamador já enviar a forma
+     * canônica.
+     */
+    public static String normalizePlate(String rawPlate) {
+        return rawPlate == null ? null : rawPlate.trim().toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * Forma canônica de RENAVAM: somente dígitos. O checksum em
+     * {@code RenavamValidator} é calculado sobre este mesmo resultado, então
+     * validação e persistência nunca divergem sobre o que conta como dígito.
+     */
+    public static String normalizeRenavam(String rawRenavam) {
+        return rawRenavam == null ? null : rawRenavam.replaceAll("\\D", "");
     }
 }

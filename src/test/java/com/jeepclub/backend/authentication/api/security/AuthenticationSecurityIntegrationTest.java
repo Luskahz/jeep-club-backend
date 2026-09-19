@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -29,6 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -44,6 +46,7 @@ class AuthenticationSecurityIntegrationTest {
     @Autowired private RoleRepository roleRepository;
     @Autowired private RolePermissionRepository rolePermissionRepository;
     @Autowired private UserRoleRepository userRoleRepository;
+    @Autowired private Clock clock;
 
     @Test
     void publicAuthenticationRoutesReachTheirControllersAnonymously() throws Exception {
@@ -72,8 +75,9 @@ class AuthenticationSecurityIntegrationTest {
 
     @Test
     void authenticatedAndAdministrativeRoutesRemainProtected() throws Exception {
-        mockMvc.perform(get("/authentication/me"))
+        mockMvc.perform(get("/authentication/me").header("X-Request-Id", "security-unauthorized"))
                 .andExpect(status().isUnauthorized())
+                .andExpect(header().string("X-Request-Id", "security-unauthorized"))
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/identity/me"))
                 .andExpect(status().isUnauthorized())
@@ -95,7 +99,7 @@ class AuthenticationSecurityIntegrationTest {
     @Test
     @Transactional
     void identityAdminEndpointsEnforceReadDisableAndEnablePermissions() throws Exception {
-        Instant now = Instant.parse("2026-09-04T12:00:00Z");
+        Instant now = Instant.now(clock);
         String actorCpf = "86420975310";
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
                 new UserRegistrationData(
@@ -114,8 +118,11 @@ class AuthenticationSecurityIntegrationTest {
         );
         String bearer = "Bearer " + tokens.accessToken();
 
-        mockMvc.perform(get("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/identity/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .header("X-Request-Id", "security-forbidden"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().string("X-Request-Id", "security-forbidden"));
         mockMvc.perform(patch("/identity/admin/users/{id}/disable", targetId)
                         .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isForbidden());
@@ -159,6 +166,29 @@ class AuthenticationSecurityIntegrationTest {
     }
 
     @Test
+    @Transactional
+    void positiveAdministrativePathVariableCurrentlyUsesInternalServerError() throws Exception {
+        Instant now = Instant.now(clock);
+        String cpf = "95846031722";
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData(
+                        "Positive Validation", null, "positive-validation@example.com", cpf,
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+        Long userId = userQuery.findByCpf(cpf).orElseThrow().id();
+        Role role = roleRepository.save(Role.create("positive-validation", "Test role", now));
+        userRoleRepository.save(UserRole.create(userId, role.getId(), now));
+        grant(role, PermissionCode.AUTHENTICATION_SESSION_READ, now);
+
+        mockMvc.perform(get("/authentication/admin/sessions/{sessionId}", 0)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken()))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"));
+    }
+
+    @Test
     void openApiKeepsPublishedAuthenticationPaths() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -194,6 +224,50 @@ class AuthenticationSecurityIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['AdminUserResponse']['properties']['createdAt']").exists())
                 .andExpect(jsonPath("$['components']['schemas']['AdminUserResponse']['properties']['disabledAt']").exists())
                 .andExpect(jsonPath("$['components']['schemas']['AdminUserResponse']['properties']['updatedAt']").exists());
+    }
+
+    @Test
+    void openApiDescribesAuthenticationResponsesPrecisely() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminSessionResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/sessions']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/sessions']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminSessionResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminRefreshTokenResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/refresh-tokens']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminRefreshTokenResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminPasswordRecoveryRequestResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests/users/{userId}']['get']['responses']['200']['content']['application/json']['schema']['type']")
+                        .value("array"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/password-recovery/requests/users/{userId}']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")
+                        .value("#/components/schemas/AdminPasswordRecoveryRequestResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/login/password-change']['post']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/me']['get']['responses']['403']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/me']['get']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/logout']['post']['responses']['403']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/logout']['post']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions/{sessionId}/logout']['patch']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions/{sessionId}/logout']['patch']['responses']['409']")
+                        .doesNotExist());
     }
 
     private void assertPublicValidationRoute(String path, String body) throws Exception {

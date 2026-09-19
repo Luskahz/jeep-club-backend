@@ -4,6 +4,8 @@ import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
 import com.jeepclub.backend.health.core.port.DependentOwnershipChecker;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker;
 import com.jeepclub.backend.health.core.repository.MedicalProfileRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +18,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +32,8 @@ class MedicalProfileDeleteServiceTest {
     private MedicalProfileRepository repository;
     @Mock
     private DependentOwnershipChecker dependentOwnershipChecker;
+    @Mock
+    private MedicalProfileOwnerStatusChecker ownerStatusChecker;
 
     private MedicalProfileService service;
     private AdminMedicalProfileService adminService;
@@ -38,12 +44,17 @@ class MedicalProfileDeleteServiceTest {
         service = new MedicalProfileService(
                 repository,
                 dependentOwnershipChecker,
+                ownerStatusChecker,
                 clock
         );
         adminService = new AdminMedicalProfileService(
                 repository,
+                ownerStatusChecker,
+                (ownerType, ownerIds) -> java.util.Set.of(),
                 clock
         );
+        lenient().when(ownerStatusChecker.getStatus(any(), any()))
+                .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
     }
 
     @Test

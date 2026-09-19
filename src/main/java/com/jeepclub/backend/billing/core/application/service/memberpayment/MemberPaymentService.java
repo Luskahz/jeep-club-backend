@@ -11,11 +11,15 @@ import com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod;
 import com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
+import com.jeepclub.backend.billing.core.application.service.paymentreceipt.PaymentReceiptValidator;
+import com.jeepclub.backend.billing.core.application.service.paymentreceipt.PaymentReceiptLifecycle;
+import com.jeepclub.backend.billing.core.application.service.paymentreceipt.ValidatedPaymentReceipt;
 import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile;
-import com.jeepclub.backend.billing.core.port.payment.PaymentReceiptStoragePort;
-import com.jeepclub.backend.billing.core.port.payment.StoredPaymentReceipt;
 import com.jeepclub.backend.billing.core.repository.MemberChargeRepository;
 import com.jeepclub.backend.billing.core.repository.MemberPaymentRepository;
+import com.jeepclub.backend.shared.storage.FileStorage;
+import com.jeepclub.backend.shared.storage.StorageFile;
+import com.jeepclub.backend.shared.storage.StoredFile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class MemberPaymentService {
 
+    private static final String PAYMENT_RECEIPT_NAMESPACE = "billing/payment-receipts";
+
     private static final List<MemberPaymentStatus> EDITABLE_PAYMENT_STATUSES = List.of(
             MemberPaymentStatus.PENDING_VALIDATION,
             MemberPaymentStatus.REJECTED
@@ -38,7 +44,9 @@ public class MemberPaymentService {
 
     private final MemberPaymentRepository memberPaymentRepository;
     private final MemberChargeRepository memberChargeRepository;
-    private final PaymentReceiptStoragePort paymentReceiptStoragePort;
+    private final PaymentReceiptValidator paymentReceiptValidator;
+    private final PaymentReceiptLifecycle paymentReceiptLifecycle;
+    private final FileStorage fileStorage;
     private final Clock clock;
 
     @Transactional
@@ -63,14 +71,14 @@ public class MemberPaymentService {
         ensureChargeCanReceiveNewPaymentSubmission(memberCharge, today);
         ensurePaymentAmountMatchesCharge(amount, memberCharge);
 
-        StoredPaymentReceipt storedReceipt = paymentReceiptStoragePort.store(receiptFile);
+        StoredFile storedReceipt = storeReceipt(receiptFile);
+        paymentReceiptLifecycle.register(storedReceipt.storageKey(), null);
         MemberPayment memberPayment = MemberPayment.submitForValidation(
                 memberCharge.getId(),
                 amount,
                 paymentMethod,
                 paidAt,
                 storedReceipt.storageKey(),
-                storedReceipt.url(),
                 notes,
                 now
         );
@@ -102,17 +110,29 @@ public class MemberPaymentService {
         }
         ensurePaymentAmountMatchesCharge(amount, memberCharge);
 
-        StoredPaymentReceipt storedReceipt = paymentReceiptStoragePort.store(receiptFile);
+        String previousStorageKey = memberPayment.getReceiptStorageKey();
+        StoredFile storedReceipt = storeReceipt(receiptFile);
+        paymentReceiptLifecycle.register(storedReceipt.storageKey(), previousStorageKey);
         memberPayment.updateSubmission(
                 amount,
                 paymentMethod,
                 paidAt,
                 storedReceipt.storageKey(),
-                storedReceipt.url(),
                 notes,
                 now
         );
         return MemberPaymentResult.from(memberPaymentRepository.save(memberPayment));
+    }
+
+    private StoredFile storeReceipt(PaymentReceiptFile receiptFile) {
+        ValidatedPaymentReceipt receipt = paymentReceiptValidator.validate(receiptFile);
+        StorageFile storageFile = new StorageFile(
+                receipt.originalFilename(),
+                receipt.contentType(),
+                receipt.extension(),
+                receipt.content()
+        );
+        return fileStorage.store(storageFile, PAYMENT_RECEIPT_NAMESPACE);
     }
 
     private void ensureNoEditablePaymentExistsForCharge(Long memberChargeId) {

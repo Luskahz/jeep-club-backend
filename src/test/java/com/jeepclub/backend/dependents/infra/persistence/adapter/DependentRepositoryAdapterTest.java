@@ -24,6 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -64,6 +65,10 @@ class DependentRepositoryAdapterTest {
     void deleteSavesHistoryAndRemovesOperationalEntity() {
         Dependent saved = repository.save(dependent(DependentStatus.ACTIVE));
         entityManager.flush();
+
+        assertThat(repository.findActiveIdsByIds(List.of(
+                saved.getId(), 404L
+        ))).containsExactly(saved.getId());
 
         repository.delete(saved, 99L, NOW.plusSeconds(60));
         entityManager.flush();

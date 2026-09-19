@@ -4,9 +4,11 @@ import com.jeepclub.backend.iam.identity.core.domain.exception.UserAlreadyDisabl
 import com.jeepclub.backend.iam.identity.core.domain.exception.UserNotDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.UserAdministration;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
+import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.iam.identity.core.domain.model.User;
 import com.jeepclub.backend.iam.identity.api.module.spi.UserAuthenticationAdministrationPort;
+import com.jeepclub.backend.iam.identity.core.port.UserAuthorizationProtectionPort;
 import com.jeepclub.backend.iam.identity.core.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,11 +22,15 @@ class UserAdministrationService implements UserAdministration {
 
     private final UserRepository userRepository;
     private final UserAuthenticationAdministrationPort authenticationAdministrationPort;
+    private final UserAuthorizationProtectionPort userAuthorizationProtectionPort;
 
     @Override
     @Transactional
     public UserDetails disable(Long userId, Instant now) {
         User user = findForUpdate(userId);
+        if (userAuthorizationProtectionPort.hasRootRole(userId)) {
+            throw new RootUserCannotBeDisabledException(userId);
+        }
         try {
             user.disable(now);
         } catch (UserAlreadyDisabledException exception) {

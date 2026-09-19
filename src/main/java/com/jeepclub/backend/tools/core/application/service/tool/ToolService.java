@@ -37,7 +37,7 @@ public class ToolService {
 
     @Transactional
     public Tool createTool(String name, String description, Long userId) {
-        Tool tool = Tool.create(name, description, userId);
+        Tool tool = Tool.create(name, description, userId, now());
         return toolRepository.save(tool);
     }
 
@@ -49,22 +49,20 @@ public class ToolService {
             Long userId
     ) {
         Tool tool = getToolDetails(id, userId);
-        tool.updateDetails(name, description);
+        tool.updateDetails(name, description, now());
         return toolRepository.save(tool);
     }
 
     @Transactional
     public Tool activateTool(Long id, Long userId) {
         Tool tool = getToolDetails(id, userId);
-        tool.activate();
-        return toolRepository.save(tool);
+        return tool.activate(now()) ? toolRepository.save(tool) : tool;
     }
 
     @Transactional
     public Tool deactivateTool(Long id, Long userId) {
         Tool tool = getToolDetails(id, userId);
-        tool.deactivate();
-        return toolRepository.save(tool);
+        return tool.deactivate(now()) ? toolRepository.save(tool) : tool;
     }
 
     @Transactional
@@ -73,7 +71,11 @@ public class ToolService {
         toolRepository.delete(
                 tool,
                 userId,
-                LocalDateTime.now(clock)
+                now()
         );
+    }
+
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock);
     }
 }

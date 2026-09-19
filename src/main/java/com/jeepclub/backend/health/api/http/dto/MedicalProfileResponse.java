@@ -51,10 +51,10 @@ public record MedicalProfileResponse(
         @Schema(description = "Observações médicas gerais.")
         String observations,
 
-        @Schema(description = "Data e hora de criação do perfil médico.")
+        @Schema(description = "Data e hora de criação do perfil médico.", format = "date-time")
         Instant createdAt,
 
-        @Schema(description = "Data e hora da última atualização do perfil médico.")
+        @Schema(description = "Data e hora da última atualização do perfil médico.", format = "date-time")
         Instant updatedAt
 ) {
     public static MedicalProfileResponse fromDomain(MedicalProfile profile) {
@@ -76,5 +76,13 @@ public record MedicalProfileResponse(
                 profile.getCreatedAt(),
                 profile.getUpdatedAt()
         );
+    }
+
+    @Override
+    public String toString() {
+        return "MedicalProfileResponse[id=" + id
+                + ", ownerType=" + ownerType
+                + ", ownerId=" + ownerId
+                + ", clinicalData=REDACTED]";
     }
 }

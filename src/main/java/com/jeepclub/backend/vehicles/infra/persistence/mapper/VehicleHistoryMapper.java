@@ -38,7 +38,6 @@ public class VehicleHistoryMapper {
         history.setDeletedByUserId(deletedByUserId);
         history.setCreatedAt(source.getCreatedAt());
         history.setUpdatedAt(source.getUpdatedAt());
-        history.setDisabledAt(source.getDisabledAt());
         history.setDeletedAt(deletedAt);
         return history;
     }

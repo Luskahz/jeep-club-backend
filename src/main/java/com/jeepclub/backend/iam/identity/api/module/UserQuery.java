@@ -1,7 +1,9 @@
 package com.jeepclub.backend.iam.identity.api.module;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Read-only contract for identity data used by other modules.
@@ -18,6 +20,8 @@ public interface UserQuery {
     boolean existsById(Long userId);
 
     List<Long> findAdministrativelyActiveUserIds();
+
+    Set<Long> findAdministrativelyActiveUserIdsByIds(Collection<Long> userIds);
 
     boolean isAdministrativelyActive(Long userId);
 

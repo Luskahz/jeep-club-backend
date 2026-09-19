@@ -1,9 +1,12 @@
 package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
+import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
+import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
+import com.jeepclub.backend.vehicles.core.application.service.internal.VehicleEditResolver;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -43,17 +46,23 @@ public class AdminVehicleService {
             Boolean towing,
             Long ownerId
     ) {
-        assertUniquePlateAndRenavam(plate, renavam);
+        String canonicalPlate = Vehicle.normalizePlate(plate);
+        String canonicalRenavam = Vehicle.normalizeRenavam(renavam);
+        assertUniquePlateAndRenavam(canonicalPlate, canonicalRenavam);
 
         if (!userPort.existsById(ownerId)) {
             throw new UserNotFoundException("User id not found.");
         }
 
+        if (!userPort.existsActiveById(ownerId)) {
+            throw new UserNotActiveException("User is not administratively active.");
+        }
+
         Vehicle vehicle = Vehicle.create(
                 nickname,
                 photo,
-                plate,
-                renavam,
+                canonicalPlate,
+                canonicalRenavam,
                 brand,
                 model,
                 manufacturingYear,
@@ -81,39 +90,27 @@ public class AdminVehicleService {
     }
 
     @Transactional
-    public void update(
-            Long vehicleId,
-            String nickname,
-            String photo,
-            String plate,
-            String renavam,
-            String brand,
-            String model,
-            int manufacturingYear,
-            int modelYear,
-            String color,
-            int seatingCapacity,
-            FuelType fuelType,
-            double engineDisplacement,
-            boolean towing
-    ) {
+    public void update(Long vehicleId, VehicleEditFields updates) {
         Vehicle vehicle = findActiveVehicle(vehicleId);
-        assertUniqueChangedIdentifiers(vehicle, plate, renavam);
+        VehicleEditResolver.Resolved resolved = VehicleEditResolver.resolve(vehicle, updates);
+        String canonicalPlate = Vehicle.normalizePlate(resolved.plate());
+        String canonicalRenavam = Vehicle.normalizeRenavam(resolved.renavam());
+        assertUniqueChangedIdentifiers(vehicle, canonicalPlate, canonicalRenavam);
 
         vehicle.update(
-                nickname,
-                photo,
-                plate,
-                renavam,
-                brand,
-                model,
-                manufacturingYear,
-                modelYear,
-                color,
-                seatingCapacity,
-                fuelType,
-                engineDisplacement,
-                towing,
+                resolved.nickname(),
+                resolved.photo(),
+                canonicalPlate,
+                canonicalRenavam,
+                resolved.brand(),
+                resolved.model(),
+                resolved.manufacturingYear(),
+                resolved.modelYear(),
+                resolved.color(),
+                resolved.seatingCapacity(),
+                resolved.fuelType(),
+                resolved.engineDisplacement(),
+                resolved.towing(),
                 Instant.now(clock)
         );
 

@@ -4,7 +4,7 @@ import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import io.swagger.v3.oas.annotations.media.Schema;
 
-@Schema(description = "Objeto de resposta com os dados completos de uma ferramenta.")
+@Schema(description = "Dados completos da ferramenta operacional.")
 public record ToolResponseDTO(
 
         @Schema(description = "Identificador único da ferramenta no sistema.", example = "1")
@@ -16,7 +16,7 @@ public record ToolResponseDTO(
         @Schema(description = "Descrição detalhada da ferramenta.", example = "Macaco tipo jacaré, cor vermelha, ideal para troca de pneus.")
         String description,
 
-        @Schema(description = "Status atual de disponibilidade da ferramenta.", example = "AVAILABLE")
+        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE"})
         ToolStatus status,
 
         @Schema(description = "Identificador único do usuário dono da ferramenta.", example = "42")

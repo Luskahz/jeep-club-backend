@@ -29,9 +29,15 @@ public class CurrentAuthorizationController {
             description = "Retorna o userId e as authorities efetivas presentes na autenticação atual.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Authorities retornadas.",
-                            content = @Content(schema = @Schema(implementation = CurrentAuthorizationResponseDTO.class))),
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    schema = @Schema(implementation = CurrentAuthorizationResponseDTO.class)
+                            )),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.",
-                            content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            ))
             }
     )
     public ResponseEntity<CurrentAuthorizationResponseDTO> getMe(

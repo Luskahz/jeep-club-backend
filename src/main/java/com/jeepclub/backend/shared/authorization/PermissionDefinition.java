@@ -366,6 +366,43 @@ public enum PermissionDefinition {
             "Permite reenviar o convite de ativação para um solicitante aprovado"
     ),
 
+    // TOOLS
+        TOOLS_TOOL_CREATE(
+        PermissionCode.TOOLS_TOOL_CREATE,
+        ModuleCode.TOOLS,
+        "Permite cadastrar ferramentas em nome de um usuário"
+        ),
+
+        TOOLS_TOOL_READ(
+        PermissionCode.TOOLS_TOOL_READ,
+        ModuleCode.TOOLS,
+        "Permite consultar ferramentas de qualquer usuário"
+        ),
+
+        TOOLS_TOOL_UPDATE(
+        PermissionCode.TOOLS_TOOL_UPDATE,
+        ModuleCode.TOOLS,
+        "Permite atualizar ferramentas de qualquer usuário"
+        ),
+
+        TOOLS_TOOL_DELETE(
+        PermissionCode.TOOLS_TOOL_DELETE,
+        ModuleCode.TOOLS,
+        "Permite excluir ferramentas de qualquer usuário"
+        ),
+
+        TOOLS_TOOL_ACTIVATE(
+        PermissionCode.TOOLS_TOOL_ACTIVATE,
+        ModuleCode.TOOLS,
+        "Permite ativar ferramentas de qualquer usuário"
+        ),
+
+        TOOLS_TOOL_DEACTIVATE(
+        PermissionCode.TOOLS_TOOL_DEACTIVATE,
+        ModuleCode.TOOLS,
+        "Permite desativar ferramentas de qualquer usuário"
+        ),
+
     // VEHICLES
     VEHICLES_VEHICLE_CREATE(
             PermissionCode.VEHICLES_VEHICLE_CREATE,

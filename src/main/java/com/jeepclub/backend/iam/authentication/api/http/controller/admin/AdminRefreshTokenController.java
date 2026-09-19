@@ -7,9 +7,11 @@ import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,24 @@ import java.util.List;
 )
 @RequiredArgsConstructor
 @Validated
+@ApiResponses({
+        @ApiResponse(
+                responseCode = "401",
+                description = "Autenticação ausente ou access token inválido.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        ),
+        @ApiResponse(
+                responseCode = "403",
+                description = "Usuário autenticado não possui a authority exigida.",
+                content = @Content(
+                        mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                        schema = @Schema(implementation = ApiErrorResponse.class)
+                )
+        )
+})
 @Tag(
         name = "Authentication - Refresh Tokens",
         description = "Operações públicas e administrativas para renovação, consulta e gerenciamento de refresh tokens."
@@ -53,7 +73,9 @@ public class AdminRefreshTokenController {
                             description = "Refresh tokens retornados com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = AdminRefreshTokenResponseDTO.class)
+                                    array = @ArraySchema(
+                                            schema = @Schema(implementation = AdminRefreshTokenResponseDTO.class)
+                                    )
                             )
                     )
             }
@@ -84,7 +106,15 @@ public class AdminRefreshTokenController {
                             responseCode = "404",
                             description = "Refresh token não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -111,14 +141,24 @@ public class AdminRefreshTokenController {
                             description = "Refresh tokens do usuário retornados com sucesso.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = AdminRefreshTokenResponseDTO.class)
+                                    array = @ArraySchema(
+                                            schema = @Schema(implementation = AdminRefreshTokenResponseDTO.class)
+                                    )
                             )
                     ),
                     @ApiResponse(
                             responseCode = "404",
                             description = "Usuário não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -152,7 +192,7 @@ public class AdminRefreshTokenController {
                             responseCode = "404",
                             description = "Refresh token não encontrado.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -160,7 +200,15 @@ public class AdminRefreshTokenController {
                             responseCode = "409",
                             description = "Refresh token já está revogado ou não pode ser revogado no estado atual.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "500",
+                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )

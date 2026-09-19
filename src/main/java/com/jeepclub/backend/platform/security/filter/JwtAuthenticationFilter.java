@@ -73,6 +73,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     new UserPrincipal(
                             jwtUser.userId(),
                             jwtUser.sessionId(),
+                            jwtUser.userName(),
                             jwtUser.expiresAt()
                     );
 

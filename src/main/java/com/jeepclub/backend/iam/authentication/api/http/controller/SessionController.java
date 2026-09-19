@@ -70,7 +70,7 @@ public class SessionController {
                             responseCode = "400",
                             description = "Requisição inválida ou credenciais em formato inconsistente.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -78,7 +78,15 @@ public class SessionController {
                             responseCode = "401",
                             description = "Credenciais inválidas.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "Conta desabilitada administrativamente ou bloqueada por tentativas inválidas.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -122,7 +130,7 @@ public class SessionController {
                             responseCode = "400",
                             description = "Requisição inválida, token de troca inválido ou nova senha inconsistente.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     ),
@@ -130,7 +138,31 @@ public class SessionController {
                             responseCode = "401",
                             description = "Token de troca expirado, inválido ou não autorizado para concluir o fluxo.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "Conta desabilitada administrativamente ou bloqueada por tentativas inválidas.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "A troca obrigatória não está mais pendente para a conta.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Conta de autenticação ou solicitação de recuperação exigida pelo desafio não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -164,7 +196,23 @@ public class SessionController {
                             responseCode = "401",
                             description = "Usuário não autenticado ou token de acesso inválido.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "A sessão não pertence ao usuário autenticado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Sessão autenticada não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )
@@ -196,7 +244,23 @@ public class SessionController {
                             responseCode = "401",
                             description = "Usuário não autenticado ou token de acesso inválido.",
                             content = @Content(
-                                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "403",
+                            description = "A sessão não pertence ao usuário autenticado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Sessão autenticada não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
                             )
                     )

@@ -1,9 +1,13 @@
 package com.jeepclub.backend.health.api.http.exception;
 
 import com.jeepclub.backend.health.core.application.exceptions.DependentOwnershipValidationUnavailableException;
-import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileConflictException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerInactiveException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerNotFoundException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfilePersistenceException;
+import com.jeepclub.backend.health.core.application.exceptions.MedicalProfilePersistenceUnavailableException;
 import com.jeepclub.backend.health.core.domain.exception.InvalidMedicalProfileException;
 import com.jeepclub.backend.health.core.domain.exception.MedicalProfileAlreadyDeletedException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
@@ -27,10 +31,7 @@ public class MedicalProfileExceptionHandler extends ApiExceptionHandler {
         );
     }
 
-    @ExceptionHandler({
-            InvalidMedicalProfileDataException.class,
-            InvalidMedicalProfileException.class
-    })
+    @ExceptionHandler(InvalidMedicalProfileException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidMedicalProfileData(
             RuntimeException exception
     ) {
@@ -71,6 +72,61 @@ public class MedicalProfileExceptionHandler extends ApiExceptionHandler {
                 "MEDICAL_PROFILE_ALREADY_DELETED",
                 exception.getMessage(),
                 HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MedicalProfileConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleMedicalProfileConflict(
+            MedicalProfileConflictException exception
+    ) {
+        return buildErrorResponse(
+                "MEDICAL_PROFILE_CONFLICT",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MedicalProfileOwnerNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMedicalProfileOwnerNotFound(
+            MedicalProfileOwnerNotFoundException exception
+    ) {
+        return buildErrorResponse(
+                "MEDICAL_PROFILE_OWNER_NOT_FOUND",
+                exception.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(MedicalProfileOwnerInactiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleMedicalProfileOwnerInactive(
+            MedicalProfileOwnerInactiveException exception
+    ) {
+        return buildErrorResponse(
+                "MEDICAL_PROFILE_OWNER_INACTIVE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(MedicalProfilePersistenceUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handlePersistenceUnavailable(
+            MedicalProfilePersistenceUnavailableException exception
+    ) {
+        return buildErrorResponse(
+                "MEDICAL_PROFILE_PERSISTENCE_UNAVAILABLE",
+                exception.getMessage(),
+                HttpStatus.SERVICE_UNAVAILABLE
+        );
+    }
+
+    @ExceptionHandler(MedicalProfilePersistenceException.class)
+    public ResponseEntity<ApiErrorResponse> handlePersistenceFailure(
+            MedicalProfilePersistenceException exception
+    ) {
+        return buildErrorResponse(
+                "MEDICAL_PROFILE_PERSISTENCE_FAILURE",
+                exception.getMessage(),
+                HttpStatus.INTERNAL_SERVER_ERROR
         );
     }
 }
