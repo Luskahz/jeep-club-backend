@@ -37,6 +37,11 @@ minúsculas. CPF, RG e telefone são persistidos somente com dígitos. CPF tem
 exatamente 11 dígitos e CPF, e-mail e RG são únicos na persistência. Campos
 opcionais em branco se tornam ausentes.
 
+O User pode existir permanentemente sem e-mail. O próprio usuário autenticado
+pode cadastrar ou substituir um endereço por `PATCH /identity/me/email`; a
+operação usa o `UserPrincipal`, exige um e-mail válido, normaliza o valor,
+protege a unicidade e atualiza `updatedAt` sem alterar Membership ou Authentication.
+
 O nome do campo HTTP de nascimento é `birthDate`. Não há alias `birthData` no
 DTO ou na serialização atual. Formatos aceitos, limites e exemplos do request,
 bem como o formato canônico retornado, pertencem aos schemas OpenAPI.

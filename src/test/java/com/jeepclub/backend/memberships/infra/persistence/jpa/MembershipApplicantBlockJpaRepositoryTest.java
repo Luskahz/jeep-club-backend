@@ -84,6 +84,17 @@ class MembershipApplicantBlockJpaRepositoryTest {
         assertThat(applicationJpaRepository.count()).isEqualTo(2);
     }
 
+    @Test
+    void membershipApplicationPersistsWithoutEmail() {
+        MembershipApplicationEntity saved = applicationJpaRepository.saveAndFlush(
+                application(null, MembershipApplicationStatus.PENDING)
+        );
+
+        assertThat(applicationJpaRepository.findById(saved.getId())).get()
+                .extracting(MembershipApplicationEntity::getEmail)
+                .isNull();
+    }
+
     private MembershipApplicantBlock block(Instant blockedAt, Long userId) {
         return MembershipApplicantBlock.create(
                 CPF,

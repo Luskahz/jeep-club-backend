@@ -28,6 +28,7 @@ import com.jeepclub.backend.iam.authentication.core.repository.RefreshTokenRepos
 import com.jeepclub.backend.iam.authentication.core.repository.SessionRepository;
 import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
+import com.jeepclub.backend.memberships.api.module.MembershipOnboardingCompletion;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,7 @@ public class SessionService {
     private final PasswordChangeChallengeIssuer challengeIssuer;
     private final TokenIssuanceService tokenIssuanceService;
     private final UserQuery userQuery;
+    private final MembershipOnboardingCompletion membershipOnboardingCompletion;
     private final Clock clock;
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
@@ -129,6 +131,9 @@ public class SessionService {
         AuthTokens tokens = tokenIssuanceService.issue(account, userName, now);
         account.recordSuccessfulLogin(now);
         accountRepository.save(account);
+        if (request == null) {
+            membershipOnboardingCompletion.completeApprovedApplicationForIdentity(userId, now);
+        }
         if (request != null) {
             recoveryRequestRepository.save(request);
         }

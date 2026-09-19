@@ -93,4 +93,13 @@ public class MembershipApplicationRepositoryAdapter implements MembershipApplica
     ) {
         return jpaRepository.existsByEmailAndStatus(email, status);
     }
+
+    @Override
+    public Optional<MembershipApplication> findByCreatedUserIdAndStatus(
+            Long createdUserId,
+            MembershipApplicationStatus status
+    ) {
+        return jpaRepository.findByCreatedUserIdAndStatus(createdUserId, status)
+                .map(MembershipApplicationMapper::toDomain);
+    }
 }

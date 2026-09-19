@@ -26,10 +26,8 @@ public interface CreateUserWithPendingFirstAccessPort {
             String phoneNumber
     );
 
-    /**
-     * Cria um usuário pendente e gera um link que autoriza a definição da senha.
-     */
-    PendingFirstAccessLink createPendingUserWithAccessLink(
+    /** Cria o User e a conta pendente; Membership emite seu próprio convite. */
+    PendingFirstAccessIdentity createPendingUserForActivationLink(
             String name,
             String email,
             String cpf,

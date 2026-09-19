@@ -36,6 +36,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public User saveAndFlush(User user) {
+        return persist(user, true);
+    }
+
+    @Override
     public Optional<User> findById(Long id) {
         return jpaRepository.findById(id).map(mapper::toDomain);
     }
@@ -66,6 +71,11 @@ public class UserRepositoryAdapter implements UserRepository {
     @Override
     public boolean existsByEmail(String email) {
         return email != null && jpaRepository.existsByEmail(email);
+    }
+
+    @Override
+    public boolean existsByEmailAndIdNot(String email, Long id) {
+        return email != null && id != null && jpaRepository.existsByEmailAndIdNot(email, id);
     }
 
     @Override

@@ -97,4 +97,14 @@ public class MembershipExceptionHandler extends ApiExceptionHandler {
                 HttpStatus.CONFLICT
         );
     }
+
+    @ExceptionHandler(MembershipEmailRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailRequired(MembershipEmailRequiredException ex) {
+        return buildErrorResponse("MEMBERSHIP_EMAIL_REQUIRED", ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MembershipFirstAccessConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleFirstAccessConflict(MembershipFirstAccessConflictException ex) {
+        return buildErrorResponse("MEMBERSHIP_FIRST_ACCESS_CONFLICT", ex.getMessage(), HttpStatus.CONFLICT);
+    }
 }

@@ -2,12 +2,14 @@ package com.jeepclub.backend.memberships.core.application.service.membershipappl
 
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyProcessedException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipEmailRequiredException;
+import com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenService;
 import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.AdminMembershipApplicantBlockService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
 import com.jeepclub.backend.memberships.core.port.MemberActivationMailSender;
-import com.jeepclub.backend.memberships.core.port.PendingFirstAccessLink;
+import com.jeepclub.backend.memberships.core.port.PendingFirstAccessIdentity;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,7 @@ public class AdminMembershipApplicationService {
     private final AdminMembershipApplicantBlockService adminMembershipApplicantBlockService;
     private final CreateUserWithPendingFirstAccessPort createUserPort;
     private final MemberActivationMailSender mailSender;
+    private final MemberActivationTokenService activationTokenService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -68,14 +71,17 @@ public class AdminMembershipApplicationService {
     }
 
     @Transactional
-    public PendingFirstAccessLink approveWithAccessLink(
+    public PendingFirstAccessIdentity approveWithAccessLink(
             Long applicationId,
             Long reviewedByUserId
     ) {
         Instant now = Instant.now(clock);
         MembershipApplication application = findPendingApplication(applicationId);
+        if (application.getEmail() == null || application.getEmail().isBlank()) {
+            throw new MembershipEmailRequiredException();
+        }
 
-        PendingFirstAccessLink pendingUser = createUserPort.createPendingUserWithAccessLink(
+        PendingFirstAccessIdentity pendingUser = createUserPort.createPendingUserForActivationLink(
                 application.getName(),
                 application.getEmail(),
                 application.getCpf(),
@@ -83,7 +89,22 @@ public class AdminMembershipApplicationService {
         );
 
         approve(application, reviewedByUserId, pendingUser.userId(), now);
+        activationTokenService.issueAndSend(application);
         return pendingUser;
+    }
+
+    @Transactional
+    public void resendActivationLink(Long applicationId) {
+        MembershipApplication application = membershipApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new MembershipApplicationNotFoundException(applicationId));
+        if (application.getStatus() != MembershipApplicationStatus.APPROVED
+                || application.getCreatedUserId() == null) {
+            throw new MembershipApplicationAlreadyProcessedException(
+                    applicationId,
+                    application.getStatus().name()
+            );
+        }
+        activationTokenService.issueAndSend(application);
     }
 
     @Transactional
@@ -136,7 +157,10 @@ public class AdminMembershipApplicationService {
         application.reject(reviewedByUserId, reason, now);
         membershipApplicationRepository.save(application);
 
-        if (reason != null && !reason.isBlank()) {
+        if (application.getEmail() != null
+                && !application.getEmail().isBlank()
+                && reason != null
+                && !reason.isBlank()) {
             mailSender.sendRejectionNotice(
                     application.getEmail(),
                     application.getName(),

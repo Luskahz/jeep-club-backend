@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -26,7 +27,7 @@ class MembershipOpenApiIntegrationTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$['paths']['/membership-applications']['post']['responses']['201']['content']['application/json']['schema']['$ref']")
-                        .value("#/components/schemas/MembershipApplicationResponseDTO"))
+                        .value("#/components/schemas/MembershipApplicationSubmissionResponseDTO"))
                 .andExpect(jsonPath("$['paths']['/membership-applications']['post']['security']")
                         .doesNotExist())
                 .andExpect(jsonPath("$['paths']['/membership-applications']['post']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
@@ -37,6 +38,8 @@ class MembershipOpenApiIntegrationTest {
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/membership-applications/activate']['get']['security']")
                         .doesNotExist())
+                .andExpect(jsonPath("$['paths']['/membership-applications/activate']['post']['responses']['204']")
+                        .exists())
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications']['get']['x-required-permissions'][0]")
                         .value("MEMBERSHIP_MEMBERSHIP_REQUEST_READ"))
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications']['get']['parameters'][?(@.name == 'page')]")
@@ -62,6 +65,8 @@ class MembershipOpenApiIntegrationTest {
                         .value("#/components/schemas/TemporaryPasswordApprovalResponseDTO"))
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications/{id}/approve/access-link']['post']['responses']['200']['content']['application/json']['schema']['$ref']")
                         .value("#/components/schemas/AccessLinkApprovalResponseDTO"))
+                .andExpect(jsonPath("$['paths']['/admin/membership-applications/{id}/activation-link/resend']['post']['responses']['204']")
+                        .exists())
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications/{id}/reject']['post']['x-required-permissions'][0]")
                         .value("MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT"))
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications/{id}/reject-and-block']['post']['x-required-permissions'][0]")
@@ -85,5 +90,36 @@ class MembershipOpenApiIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("ACTIVATION_TOKEN_NOT_FOUND"));
+    }
+
+    @Test
+    @Transactional
+    void repeatedPendingRequestIsIdempotentWithoutLeakingStoredPersonalData() throws Exception {
+        String firstRequest = """
+                {"name":"Original Name","cpf":"529.982.247-25","email":null,
+                 "phoneNumber":"(11) 99999-9999","message":"private message"}
+                """;
+        mockMvc.perform(post("/membership-applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(firstRequest))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.created").value(true))
+                .andExpect(jsonPath("$.name").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.phoneNumber").doesNotExist())
+                .andExpect(jsonPath("$.message").doesNotExist());
+
+        mockMvc.perform(post("/membership-applications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Attacker Input","cpf":"52998224725","email":"attacker@example.com",
+                                 "phoneNumber":"11988888888","message":"probe"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(false))
+                .andExpect(jsonPath("$.name").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.phoneNumber").doesNotExist())
+                .andExpect(jsonPath("$.message").doesNotExist());
     }
 }

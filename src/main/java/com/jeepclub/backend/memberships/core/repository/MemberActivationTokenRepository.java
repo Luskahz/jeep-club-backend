@@ -11,6 +11,8 @@ public interface MemberActivationTokenRepository {
 
     Optional<MemberActivationToken> findByTokenHash(String tokenHash);
 
+    Optional<MemberActivationToken> findByTokenHashForUpdate(String tokenHash);
+
     Optional<MemberActivationToken> findLatestByApplicationId(Long applicationId);
 
     void invalidateAllByApplicationId(Long applicationId, Instant now);

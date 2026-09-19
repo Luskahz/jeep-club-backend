@@ -5,6 +5,7 @@ import com.jeepclub.backend.iam.identity.api.module.exception.UserAlreadyDisable
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserRegistrationConflictException;
+import com.jeepclub.backend.iam.identity.api.module.exception.UserEmailAlreadyInUseException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -32,6 +33,11 @@ public class IdentityUserExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(UserRegistrationConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleRegistrationConflict(UserRegistrationConflictException exception) {
         return buildErrorResponse("REGISTRATION_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(UserEmailAlreadyInUseException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailAlreadyInUse(UserEmailAlreadyInUseException exception) {
+        return buildErrorResponse("USER_EMAIL_ALREADY_IN_USE", exception.getMessage(), HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(RootUserCannotBeDisabledException.class)

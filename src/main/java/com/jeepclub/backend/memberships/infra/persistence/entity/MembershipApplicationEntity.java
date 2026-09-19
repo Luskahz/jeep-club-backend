@@ -25,7 +25,7 @@ public class MembershipApplicationEntity {
     @Column(nullable = false, length = 11)
     private String cpf;
 
-    @Column(nullable = false, length = 200)
+    @Column(length = 180)
     private String email;
 
     @Column(name = "phone_number", length = 20)

@@ -13,6 +13,8 @@ public interface UserRepository {
 
     User save(User user);
 
+    User saveAndFlush(User user);
+
     Optional<User> findById(Long id);
 
     Optional<User> findByCpf(String cpf);
@@ -24,6 +26,8 @@ public interface UserRepository {
     boolean existsByCpf(String cpf);
 
     boolean existsByEmail(String email);
+
+    boolean existsByEmailAndIdNot(String email, Long id);
 
     boolean existsByRg(String rg);
 
