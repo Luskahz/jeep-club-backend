@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.api.http.exceptions;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
@@ -48,6 +49,15 @@ public class VehicleExceptionHandler extends ApiExceptionHandler {
                 "USER_NOT_FOUND",
                 exception.getMessage(),
                 HttpStatus.NOT_FOUND
+        );
+    }
+
+    @ExceptionHandler(UserNotActiveException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotActiveException(UserNotActiveException exception) {
+        return buildErrorResponse(
+                "USER_NOT_ACTIVE",
+                exception.getMessage(),
+                HttpStatus.CONFLICT
         );
     }
 

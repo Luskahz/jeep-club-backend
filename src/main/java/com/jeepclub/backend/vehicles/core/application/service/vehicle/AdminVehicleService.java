@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
@@ -47,6 +48,10 @@ public class AdminVehicleService {
 
         if (!userPort.existsById(ownerId)) {
             throw new UserNotFoundException("User id not found.");
+        }
+
+        if (!userPort.existsActiveById(ownerId)) {
+            throw new UserNotActiveException("User is not administratively active.");
         }
 
         Vehicle vehicle = Vehicle.create(
