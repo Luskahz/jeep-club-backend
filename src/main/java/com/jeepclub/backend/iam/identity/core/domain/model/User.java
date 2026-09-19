@@ -117,6 +117,16 @@ public class User {
         updatedAt = now;
     }
 
+    public void updateEmail(String newEmail, Instant now) {
+        validateMutationInstant(now);
+        String normalizedEmail = normalizeEmail(newEmail);
+        if (normalizedEmail == null) {
+            throw new IllegalArgumentException("email is required");
+        }
+        email = normalizedEmail;
+        updatedAt = now;
+    }
+
     public boolean isActive() {
         return status == UserStatus.ACTIVE;
     }

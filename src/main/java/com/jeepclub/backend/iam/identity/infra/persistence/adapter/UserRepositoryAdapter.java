@@ -69,6 +69,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public boolean existsByEmailAndIdNot(String email, Long id) {
+        return email != null && id != null && jpaRepository.existsByEmailAndIdNot(email, id);
+    }
+
+    @Override
     public boolean existsByRg(String rg) {
         return rg != null && jpaRepository.existsByRg(rg);
     }
