@@ -1,7 +1,6 @@
-package com.jeepclub.backend.iam.authentication.infra.config.security;
+package com.jeepclub.backend.memberships.infra.config;
 
-
-import com.jeepclub.backend.iam.authentication.core.port.ApplicationUrlProperties;
+import com.jeepclub.backend.memberships.core.port.MembershipActivationUrlProperties;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -12,13 +11,12 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @Setter
 @ConfigurationProperties(prefix = "app.user-facing")
-public class ApplicationUrlPropertiesImpl implements ApplicationUrlProperties {
-
+public class MembershipActivationUrlPropertiesImpl implements MembershipActivationUrlProperties {
     @NotBlank
-    private String passwordResetUrl;
+    private String membershipActivationUrl;
 
     @Override
-    public String passwordResetUrl() {
-        return passwordResetUrl;
+    public String activationUrl() {
+        return membershipActivationUrl;
     }
 }

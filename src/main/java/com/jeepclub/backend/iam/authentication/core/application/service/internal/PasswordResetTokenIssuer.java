@@ -6,6 +6,7 @@ import com.jeepclub.backend.iam.authentication.core.port.RefreshTokenGenerator;
 import com.jeepclub.backend.iam.authentication.core.port.RefreshTokenHashService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 @RequiredArgsConstructor
@@ -19,7 +20,11 @@ public class PasswordResetTokenIssuer {
         return new IssuedPasswordResetToken(
                 rawToken,
                 tokenHashService.hash(rawToken),
-                urlProperties.baseUrl() + "/password-recovery/reset?token=" + rawToken
+                UriComponentsBuilder.fromUriString(urlProperties.passwordResetUrl())
+                        .queryParam("token", rawToken)
+                        .build()
+                        .encode()
+                        .toUriString()
         );
     }
 }
