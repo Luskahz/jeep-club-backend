@@ -1,5 +1,7 @@
 package com.jeepclub.backend.vehicles.infra.persistence.adapter;
 
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -86,6 +88,37 @@ class VehicleRepositoryAdapterTest {
         assertThat(replacement.getId()).isNotEqualTo(saved.getId());
         assertThat(replacement.getPlate()).isEqualTo(saved.getPlate());
         assertThat(replacement.getRenavam()).isEqualTo(saved.getRenavam());
+    }
+
+    @Test
+    void concurrentDuplicatePlateOnSaveIsTranslatedToBusinessConflict() {
+        repository.save(vehicle("ABC1D23", "38249206428"));
+        entityManager.flush();
+
+        // Simula duas requisições que passaram na pré-checagem antes de qualquer
+        // uma commitar: a constraint de banco é quem efetivamente decide.
+        assertThatThrownBy(() -> repository.save(vehicle("ABC1D23", "12345678901")))
+                .isInstanceOf(VehiclePlateAlreadyExistsException.class);
+    }
+
+    @Test
+    void concurrentDuplicateRenavamOnSaveIsTranslatedToBusinessConflict() {
+        repository.save(vehicle("ABC1D23", "38249206428"));
+        entityManager.flush();
+
+        assertThatThrownBy(() -> repository.save(vehicle("XYZ9Z99", "38249206428")))
+                .isInstanceOf(VehicleRenavamAlreadyExistsException.class);
+    }
+
+    @Test
+    void savePersistsCanonicalPlateAndRenavamEvenWhenDomainAlreadyNormalized() {
+        Vehicle saved = repository.save(vehicle("ABC1D23", "38249206428"));
+        entityManager.flush();
+        entityManager.clear();
+
+        VehicleEntity persisted = vehicleJpaRepository.findById(saved.getId()).orElseThrow();
+        assertThat(persisted.getPlate()).isEqualTo("ABC1D23");
+        assertThat(persisted.getRenavam()).isEqualTo("38249206428");
     }
 
     private Vehicle vehicle(String plate, String renavam) {

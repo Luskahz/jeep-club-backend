@@ -76,6 +76,25 @@ class AdminVehicleServiceTest {
     }
 
     @Test
+    void canonicalizesPlateAndRenavamBeforeDuplicateCheckAndPersistence() {
+        when(userPort.existsById(7L)).thenReturn(true);
+        when(userPort.existsActiveById(7L)).thenReturn(true);
+        when(vehicleRepository.save(any(Vehicle.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Vehicle vehicle = service.createForOwner(
+                "Trovão", "photo", "  abc1d23  ", "382.492.064-28", "Jeep",
+                "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
+                2.0, true, 7L
+        );
+
+        verify(vehicleRepository).existsByPlate("ABC1D23");
+        verify(vehicleRepository).existsByRenavam("38249206428");
+        assertThat(vehicle.getPlate()).isEqualTo("ABC1D23");
+        assertThat(vehicle.getRenavam()).isEqualTo("38249206428");
+    }
+
+    @Test
     void rejectsAdministrativelyDisabledOwner() {
         when(userPort.existsById(7L)).thenReturn(true);
         when(userPort.existsActiveById(7L)).thenReturn(false);
@@ -132,6 +151,27 @@ class AdminVehicleServiceTest {
                 vehicle.getNickname().equals("Atualizado")
                         && vehicle.getModel().equals("Wrangler")
                         && vehicle.getPlate().equals("ABC1D23")
+        ));
+    }
+
+    @Test
+    void canonicalizesPlateAndRenavamOnUpdateBeforeDuplicateCheck() {
+        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+
+        VehicleEditFields updates = fullEditFields(
+                FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.of("  xyz9z99  "),
+                FieldUpdate.of("123.456.789-01"), FieldUpdate.omitted(), FieldUpdate.omitted(),
+                FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.omitted(),
+                FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.omitted(),
+                FieldUpdate.omitted()
+        );
+
+        service.update(1L, updates);
+
+        verify(vehicleRepository).existsByPlate("XYZ9Z99");
+        verify(vehicleRepository).existsByRenavam("12345678901");
+        verify(vehicleRepository).save(argThat(vehicle ->
+                vehicle.getPlate().equals("XYZ9Z99") && vehicle.getRenavam().equals("12345678901")
         ));
     }
 

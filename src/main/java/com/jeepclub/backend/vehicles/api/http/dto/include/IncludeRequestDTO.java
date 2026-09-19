@@ -27,31 +27,29 @@ public record IncludeRequestDTO(
         String photo,
 
         @Schema(
-                description = "Placa do veículo.",
+                description = "Placa do veículo, no padrão Mercosul (ABC1D23) ou antigo (ABC1234). "
+                        + "Espaços nas bordas e minúsculas são aceitos; o valor é persistido e "
+                        + "consultado na forma canônica (trim + maiúsculas).",
                 example = "ABC1D23",
-                minLength = 7,
-                maxLength = 7,
-                pattern = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$",
+                pattern = "^\\s*[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}\\s*$",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @NotBlank(message = "A placa é obrigatória.")
         @Pattern(
-                regexp = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$",
+                regexp = "^\\s*[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}\\s*$",
                 message = "Formato de placa inválido. Use o padrão Mercosul (ABC1D23) ou Antigo (ABC1234)."
         )
-        @Size(min = 7, max = 8, message = "A placa deve ter entre 7 e 8 caracteres.")
         String plate,
 
         @Schema(
-                description = "Código RENAVAM do veículo (específico para o Brasil).",
+                description = "Código RENAVAM do veículo (específico para o Brasil). Pontuação "
+                        + "entre os dígitos é aceita; o valor é persistido e consultado somente "
+                        + "com dígitos, após validação do dígito verificador.",
                 example = "38249206428",
-                minLength = 11,
-                maxLength = 11,
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         @NotBlank(message = "O RENAVAM é obrigatório.")
         @ValidRenavam
-        @Size(min = 11, max = 11, message = "O RENAVAM deve conter exatamente 11 dígitos.")
         String renavam,
 
         @Schema(
