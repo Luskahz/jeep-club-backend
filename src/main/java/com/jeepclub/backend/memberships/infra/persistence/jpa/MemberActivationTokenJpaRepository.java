@@ -4,6 +4,8 @@ import com.jeepclub.backend.memberships.infra.persistence.entity.MemberActivatio
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
@@ -13,6 +15,12 @@ public interface MemberActivationTokenJpaRepository
         extends JpaRepository<MemberActivationTokenEntity, Long> {
 
     Optional<MemberActivationTokenEntity> findByTokenHash(String tokenHash);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM MemberActivationTokenEntity t WHERE t.tokenHash = :tokenHash")
+    Optional<MemberActivationTokenEntity> findByTokenHashForUpdate(
+            @Param("tokenHash") String tokenHash
+    );
 
     // O metodo derivado do JPA não suporta LIMIT com ORDER BY de forma portável,
     // portanto o @Query é necessário e mantido aqui intencionalmente.

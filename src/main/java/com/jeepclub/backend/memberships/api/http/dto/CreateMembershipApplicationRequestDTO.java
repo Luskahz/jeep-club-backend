@@ -40,4 +40,10 @@ public record CreateMembershipApplicationRequestDTO(
         @Size(max = 2000, message = "Mensagem deve ter no máximo 2000 caracteres.")
         @Schema(description = "Mensagem opcional enviada com a solicitação.", example = "Gostaria de participar dos próximos encontros.", nullable = true, maxLength = 2000)
         String message
-) {}
+) {
+    public CreateMembershipApplicationRequestDTO {
+        if (email != null) {
+            email = email.trim();
+        }
+    }
+}

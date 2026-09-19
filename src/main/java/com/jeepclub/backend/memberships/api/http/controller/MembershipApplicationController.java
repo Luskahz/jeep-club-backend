@@ -1,7 +1,7 @@
 package com.jeepclub.backend.memberships.api.http.controller;
 
 import com.jeepclub.backend.memberships.api.http.dto.CreateMembershipApplicationRequestDTO;
-import com.jeepclub.backend.memberships.api.http.dto.MembershipApplicationResponseDTO;
+import com.jeepclub.backend.memberships.api.http.dto.MembershipApplicationSubmissionResponseDTO;
 import com.jeepclub.backend.memberships.core.application.result.EnsureMembershipRequestResult;
 import com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipApplicationService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
@@ -31,16 +31,17 @@ public class MembershipApplicationController {
             summary = "Solicitar adesão ao clube",
             description = """
                 Rota pública. Se já existir uma solicitação aberta para o CPF informado,
-                retorna a solicitação existente. Caso contrário, cria uma nova.
+                confirma a solicitação existente sem expor os dados previamente persistidos.
+                Caso contrário, cria uma nova.
                 """,
             security = {},
             responses = {
                     @ApiResponse(responseCode = "201", description = "Solicitação criada.",
                             content = @Content(mediaType = "application/json",
-                                    schema = @Schema(implementation = MembershipApplicationResponseDTO.class))),
-                    @ApiResponse(responseCode = "200", description = "Solicitação pendente existente retornada.",
+                                    schema = @Schema(implementation = MembershipApplicationSubmissionResponseDTO.class))),
+                    @ApiResponse(responseCode = "200", description = "Solicitação pendente existente confirmada sem exposição de dados pessoais.",
                             content = @Content(mediaType = "application/json",
-                                    schema = @Schema(implementation = MembershipApplicationResponseDTO.class))),
+                                    schema = @Schema(implementation = MembershipApplicationSubmissionResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Dados da solicitação inválidos.",
                             content = @Content(mediaType = "application/problem+json",
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -52,7 +53,7 @@ public class MembershipApplicationController {
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<MembershipApplicationResponseDTO> create(
+    public ResponseEntity<MembershipApplicationSubmissionResponseDTO> create(
             @Valid @RequestBody CreateMembershipApplicationRequestDTO request
     ) {
         EnsureMembershipRequestResult result = membershipApplicationService.ensure(
@@ -63,10 +64,8 @@ public class MembershipApplicationController {
                 request.message()
         );
 
-        MembershipApplicationResponseDTO response =
-                MembershipApplicationResponseDTO.fromDomain(
-                        result.application()
-                );
+        MembershipApplicationSubmissionResponseDTO response =
+                MembershipApplicationSubmissionResponseDTO.from(result);
 
         return ResponseEntity
                 .status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)

@@ -31,6 +31,12 @@ public class MemberActivationTokenRepositoryAdapter implements MemberActivationT
     }
 
     @Override
+    public Optional<MemberActivationToken> findByTokenHashForUpdate(String tokenHash) {
+        return jpaRepository.findByTokenHashForUpdate(tokenHash)
+                .map(MemberActivationTokenMapper::toDomain);
+    }
+
+    @Override
     public Optional<MemberActivationToken> findLatestByApplicationId(Long applicationId) {
         return jpaRepository.findLatestByApplicationId(applicationId)
                 .map(MemberActivationTokenMapper::toDomain);

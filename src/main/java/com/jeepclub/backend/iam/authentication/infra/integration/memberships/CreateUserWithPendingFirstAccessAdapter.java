@@ -1,12 +1,10 @@
 package com.jeepclub.backend.iam.authentication.infra.integration.memberships;
 
-import com.jeepclub.backend.iam.authentication.core.application.result.PasswordResetLinkAdminResult;
-import com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService;
 import com.jeepclub.backend.iam.authentication.core.port.RandomPasswordGenerator;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
-import com.jeepclub.backend.memberships.core.port.PendingFirstAccessLink;
+import com.jeepclub.backend.memberships.core.port.PendingFirstAccessIdentity;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -21,7 +19,6 @@ public class CreateUserWithPendingFirstAccessAdapter
 
     private final UserRegistration userRegistration;
     private final RandomPasswordGenerator passwordGenerator;
-    private final AdminPasswordRecoveryService adminPasswordRecoveryService;
     private final Clock clock;
 
     @Override
@@ -44,7 +41,7 @@ public class CreateUserWithPendingFirstAccessAdapter
     }
 
     @Override
-    public PendingFirstAccessLink createPendingUserWithAccessLink(
+    public PendingFirstAccessIdentity createPendingUserForActivationLink(
             String name,
             String email,
             String cpf,
@@ -59,10 +56,7 @@ public class CreateUserWithPendingFirstAccessAdapter
                 internalPassword
         );
 
-        PasswordResetLinkAdminResult resetLink =
-                adminPasswordRecoveryService.generateResetLink(identityId);
-
-        return new PendingFirstAccessLink(identityId, resetLink.resetLink());
+        return new PendingFirstAccessIdentity(identityId);
     }
 
     private Long createPendingUser(

@@ -172,7 +172,7 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Aprovar solicitação com link de acesso",
-            description = "Cria o usuário com PENDING_FIRST_ACCESS e retorna um link com token para definição da senha.",
+            description = "Cria o usuário com PENDING_FIRST_ACCESS, emite o token próprio de Membership e envia o convite por e-mail sem retornar o segredo.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Solicitação aprovada e usuário criado.",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
@@ -189,7 +189,7 @@ public class AdminMembershipApplicationController {
                     @ApiResponse(responseCode = "404", description = "Solicitação não encontrada.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
-                    @ApiResponse(responseCode = "409", description = "Solicitação não está pendente para aprovação.",
+                    @ApiResponse(responseCode = "409", description = "Solicitação não está pendente ou o User não possui e-mail.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
@@ -205,6 +205,34 @@ public class AdminMembershipApplicationController {
         );
 
         return ResponseEntity.ok(AccessLinkApprovalResponseDTO.from(result));
+    }
+
+    @PostMapping("/{id}/activation-link/resend")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE')")
+    @RequiredPermission("MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE")
+    @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
+    @Operation(
+            summary = "Reenviar convite de ativação",
+            description = "Invalida convites ativos, emite um novo token sem recriar User ou AuthenticationAccount e envia ao e-mail atual do User.",
+            responses = {
+                    @ApiResponse(responseCode = "204", description = "Novo convite emitido e enviado."),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Usuário sem permissão de aprovação.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Solicitação não encontrada.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Solicitação incompatível ou User sem e-mail.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
+    )
+    public ResponseEntity<Void> resendActivationLink(@PathVariable Long id) {
+        adminMembershipApplicationService.resendActivationLink(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/reject")

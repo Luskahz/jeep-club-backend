@@ -38,4 +38,9 @@ public interface MembershipApplicationRepository {
             MembershipApplicationStatus status
     );
 
+    Optional<MembershipApplication> findByCreatedUserIdAndStatus(
+            Long createdUserId,
+            MembershipApplicationStatus status
+    );
+
 }
