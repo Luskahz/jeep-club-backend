@@ -42,8 +42,8 @@ public record IncludeRequestDTO(
         String plate,
 
         @Schema(
-                description = "Código RENAVAM do veículo (específico para o Brasil). Pontuação "
-                        + "entre os dígitos é aceita; o valor é persistido e consultado somente "
+                description = "Código RENAVAM do veículo (específico para o Brasil): 11 dígitos "
+                        + "ou o formato documentado ###.###.###-##. O valor é persistido e consultado somente "
                         + "com dígitos, após validação do dígito verificador.",
                 example = "38249206428",
                 requiredMode = Schema.RequiredMode.REQUIRED

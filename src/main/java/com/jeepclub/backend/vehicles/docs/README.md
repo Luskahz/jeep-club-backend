@@ -33,13 +33,16 @@ O domínio ainda não normaliza a maioria dos seus argumentos, mas placa e
 RENAVAM são exceção: `Vehicle.normalizePlate` (trim + uppercase) e
 `Vehicle.normalizeRenavam` (somente dígitos) são chamados internamente por
 `create`, `update` e `reconstitute`, então a forma persistida é sempre
-canônica independentemente do que o chamador enviou. `RenavamValidator`
-reutiliza `Vehicle.normalizeRenavam` para calcular o checksum, então validação
+canônica independentemente do que o chamador enviou. `RenavamValidator` aceita
+somente 11 dígitos ou o formato documentado `###.###.###-##` antes de
+reutilizar `Vehicle.normalizeRenavam` para calcular o checksum, então validação
 e persistência nunca divergem sobre o que conta como dígito. No cadastro e na
 edição, a placa aceita espaços nas bordas e minúsculas no DTO (o `@Pattern` é
-case-insensitive e tolera espaços); o RENAVAM aceita pontuação entre os
-dígitos. As garantias de formato continuam vindo principalmente dos DTOs HTTP
-mais essa canonicalização de domínio.
+case-insensitive e tolera espaços); o RENAVAM aceita apenas a pontuação do
+formato documentado. Dados legados lidos via `reconstitute` recebem a forma
+canônica apenas em memória; esta Story não executa migração nem grava
+automaticamente essa canonicalização. As garantias de formato continuam vindo
+principalmente dos DTOs HTTP mais essa canonicalização de domínio.
 
 Antes de criar ou trocar identificadores, os services canonicalizam o valor
 recebido e só então fazem a consulta de existência (`existsByPlate`/

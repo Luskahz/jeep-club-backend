@@ -6,10 +6,16 @@ import jakarta.validation.ConstraintValidatorContext;
 
 public class RenavamValidator implements ConstraintValidator<ValidRenavam, String> {
 
+    private static final String ACCEPTED_RENAVAM_SYNTAX = "^(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})$";
+
     @Override
     public boolean isValid(String value, ConstraintValidatorContext context) {
         if (value == null || value.isBlank()) {
             return true;
+        }
+
+        if (!value.matches(ACCEPTED_RENAVAM_SYNTAX)) {
+            return false;
         }
 
         String renavam = Vehicle.normalizeRenavam(value);

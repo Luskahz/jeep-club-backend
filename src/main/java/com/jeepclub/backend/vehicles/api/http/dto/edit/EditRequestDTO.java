@@ -55,8 +55,8 @@ public record EditRequestDTO(
         String plate,
 
         @Schema(
-                description = "RENAVAM válido. Pontuação entre os dígitos é aceita; o valor é "
-                        + "persistido e consultado somente com dígitos, após validação do dígito "
+                description = "RENAVAM válido com 11 dígitos ou no formato documentado "
+                        + "###.###.###-##. O valor é persistido e consultado somente com dígitos, após validação do dígito "
                         + "verificador. Omitir preserva o valor atual; o campo não pode ser "
                         + "limpo, então null explícito é rejeitado com 400.",
                 example = "38249206428",
