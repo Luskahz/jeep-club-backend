@@ -50,24 +50,24 @@ tradução específica no módulo.
 Todo veículo criado começa `ACTIVE`. A rota de membro usa diretamente o
 `userId` já autenticado e não consulta `UserPort`; a validação do token vigente
 já exige User administrativamente ativo, mas Vehicles não repete essa consulta
-no caso de uso. A criação administrativa usa `UserPort.existsById` e rejeita
-somente proprietário inexistente; ela não distingue User `ACTIVE` de
-`DISABLED`.
+no caso de uso. A criação administrativa usa `UserPort.existsById` para
+rejeitar proprietário inexistente e `UserPort.existsActiveById` para rejeitar
+proprietário existente porém administrativamente `DISABLED`.
 
-A edição HTTP é um `PUT` que chama `Vehicle.update` com todos os valores do
-DTO e substitui todos os campos editáveis. Ela **não possui semântica parcial
-uniforme**:
-
-- ausência de qualquer primitive (`manufacturingYear`, `modelYear`,
-  `seatingCapacity`, `engineDisplacement` ou `towing`) é rejeitada durante a
-  leitura do JSON como `400 HTTP_400`, antes de chamar o service;
-- campos de referência omitidos chegam como `null`; os opcionais podem ser
-  limpos, enquanto omitir campos exigidos pela persistência pode terminar em
-  falha não controlada.
-
-Por isso, nenhuma feature deve tratar o payload atual como patch nem assumir
-que “somente campos enviados” serão alterados. A evolução da parcialidade é
-acompanhada pela BACK-326.
+A edição HTTP continua um `PUT`, agora com semântica de atualização parcial:
+campo omitido do JSON preserva o valor atual do veículo; campo presente com
+valor aplica esse valor após validação de formato; campo presente como `null`
+só é aceito para os campos realmente anuláveis (`nickname`, `photo`, `color`,
+`towing`) e limpa o valor, sendo rejeitado com `400` para os demais campos
+(`plate`, `renavam`, `brand`, `model`, `manufacturingYear`, `modelYear`,
+`seatingCapacity`, `fuelType`, `engineDisplacement`). O controller lê o corpo
+como `JsonNode` (não mais `@Valid EditRequestDTO` direto) via
+`EditRequestFieldReader`, que converte e valida os valores presentes contra
+`EditRequestDTO` e monta um `VehicleEditFields` com um `FieldUpdate<T>` por
+campo. `VehicleEditResolver` (`service.internal`), compartilhado pelas edições
+de membro e administrador, resolve esse feixe contra o `Vehicle` atual antes
+de chamar `Vehicle.update`, que segue sem qualquer dependência de Jackson ou
+DTO HTTP.
 
 ## Status, exclusão e histórico
 
@@ -99,11 +99,11 @@ BACK-330.
 
 ## Integração e persistência
 
-`UserPort` é uma porta consumer-owned de Vehicles. O
-`VehicleIdentityAdapter` a implementa por meio de
-`identity.api.module.UserQuery.existsById`; hoje ela é consumida somente na
-criação administrativa. Não existe contrato Java público em `vehicles.api.module`
-nem acesso direto a repository, entity ou service interno de Identity.
+`UserPort` é uma porta consumer-owned de Vehicles. O `VehicleIdentityAdapter`
+a implementa por meio de `identity.api.module.UserQuery.existsById` e
+`UserQuery.isAdministrativelyActive`; hoje ela é consumida somente na criação
+administrativa. Não existe contrato Java público em `vehicles.api.module` nem
+acesso direto a repository, entity ou service interno de Identity.
 
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter
 de persistência ficam em `infra.persistence`. A entidade operacional mantém
@@ -115,8 +115,6 @@ entities/Hibernate, sem migration versionada introduzida por este módulo.
 
 ## Limitações funcionais já rastreadas
 
-- BACK-326: tornar coerente a semântica de edição parcial;
-- BACK-327: validar de forma explícita a existência e atividade do owner;
 - BACK-328: uniformizar placa/RENAVAM e proteger duplicidade concorrente;
 - BACK-329: mover e reforçar invariantes no domínio;
 - BACK-330: eliminar a ambiguidade entre `SOFT_DELETED` e hard delete histórico;
@@ -129,6 +127,9 @@ implementadas.
 ## Testes
 
 Os testes existentes cobrem services de membro/admin e o adapter de exclusão
-histórica. Testes focais de contrato caracterizam o binding do `PUT` e o
-OpenAPI. Ampliações funcionais permanecem na BACK-332 e devem seguir os
+histórica. `VehicleEditResolverTest` cobre, campo a campo, ausência, valor
+presente, `false`/`0` explícitos e null permitido/proibido na resolução da
+edição parcial. Testes de contrato caracterizam o binding do `PUT` via
+`JsonNode` e o OpenAPI. Ampliações funcionais permanecem na BACK-332 e devem
+seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
