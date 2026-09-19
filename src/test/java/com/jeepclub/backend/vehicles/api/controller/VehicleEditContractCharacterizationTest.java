@@ -10,11 +10,14 @@ import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestFieldReader;
 import com.jeepclub.backend.vehicles.api.http.exceptions.VehicleExceptionHandler;
 import com.jeepclub.backend.vehicles.core.application.FieldUpdate;
 import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
+import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleFieldRequiredException;
 import com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleService;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -35,7 +38,9 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -181,31 +186,39 @@ class VehicleEditContractCharacterizationTest {
     }
 
     @Test
-    void explicitNullOnRequiredFieldIsForwardedAsExplicitNullToTheService() throws Exception {
-        // A rejeição de null em campo obrigatório é decidida pelo VehicleEditResolver
-        // dentro do service (coberto por VehicleServiceTest/VehicleEditResolverTest);
-        // aqui, com o service mockado, só é possível caracterizar que o parsing HTTP
-        // distingue corretamente "null explícito" de "ausente" e encaminha ao service.
+    void explicitNullOnRequiredFieldUsesControlledBadRequest() throws Exception {
+        VehicleEditFields updates = new VehicleEditFields(
+                FieldUpdate.of("Trovão"), FieldUpdate.of("photo"), FieldUpdate.explicitNull(),
+                FieldUpdate.of("38249206428"), FieldUpdate.of("Jeep"), FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023), FieldUpdate.of(2024), FieldUpdate.of("Verde"), FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL), FieldUpdate.of(2.0), FieldUpdate.of(true)
+        );
+        doThrow(new VehicleFieldRequiredException("plate cannot be cleared to null."))
+                .when(vehicleService).update(42L, 7L, updates);
+
         mockMvc.perform(put("/vehicles/edit/member/42")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(withNullField(FULL_EDIT, "plate")))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VEHICLE_FIELD_REQUIRED"));
+    }
 
-        verify(vehicleService).update(eq(42L), eq(7L), eq(new VehicleEditFields(
-                FieldUpdate.of("Trovão"),
-                FieldUpdate.of("photo"),
-                FieldUpdate.explicitNull(),
-                FieldUpdate.of("38249206428"),
-                FieldUpdate.of("Jeep"),
-                FieldUpdate.of("Wrangler"),
-                FieldUpdate.of(2023),
-                FieldUpdate.of(2024),
-                FieldUpdate.of("Verde"),
-                FieldUpdate.of(5),
-                FieldUpdate.of(FuelType.DIESEL),
-                FieldUpdate.of(2.0),
-                FieldUpdate.of(true)
-        )));
+    @Test
+    void explicitNullOnTowingUsesControlledBadRequest() throws Exception {
+        VehicleEditFields updates = new VehicleEditFields(
+                FieldUpdate.of("Trovão"), FieldUpdate.of("photo"), FieldUpdate.of("ABC1D23"),
+                FieldUpdate.of("38249206428"), FieldUpdate.of("Jeep"), FieldUpdate.of("Wrangler"),
+                FieldUpdate.of(2023), FieldUpdate.of(2024), FieldUpdate.of("Verde"), FieldUpdate.of(5),
+                FieldUpdate.of(FuelType.DIESEL), FieldUpdate.of(2.0), FieldUpdate.explicitNull()
+        );
+        doThrow(new VehicleFieldRequiredException("towing cannot be cleared to null."))
+                .when(vehicleService).update(42L, 7L, updates);
+
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withNullField(FULL_EDIT, "towing")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VEHICLE_FIELD_REQUIRED"));
     }
 
     @Test
@@ -273,6 +286,18 @@ class VehicleEditContractCharacterizationTest {
                         .content(withField(FULL_EDIT, "manufacturingYear", "\"not-a-number\"")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "\"abc\"", "123"})
+    void nonObjectBodyIsRejectedWithControlledBadRequest(String body) throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
+
+        verifyNoInteractions(vehicleService);
     }
 
     private VehicleEditFields argThatManufacturingYearIsOmitted() {

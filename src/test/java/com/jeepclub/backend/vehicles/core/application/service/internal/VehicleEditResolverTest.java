@@ -82,13 +82,12 @@ class VehicleEditResolverTest {
     }
 
     @Test
-    void explicitNullClearsNullableFields() {
+    void explicitNullClearsOnlyNullableFields() {
         Vehicle current = currentVehicle();
         VehicleEditFields updates = allOmittedBuilder()
                 .nickname(FieldUpdate.explicitNull())
                 .photo(FieldUpdate.explicitNull())
                 .color(FieldUpdate.explicitNull())
-                .towing(FieldUpdate.explicitNull())
                 .build();
 
         VehicleEditResolver.Resolved resolved = VehicleEditResolver.resolve(current, updates);
@@ -96,7 +95,19 @@ class VehicleEditResolverTest {
         assertThat(resolved.nickname()).isNull();
         assertThat(resolved.photo()).isNull();
         assertThat(resolved.color()).isNull();
-        assertThat(resolved.towing()).isNull();
+        assertThat(resolved.towing()).isEqualTo(current.getTowing());
+    }
+
+    @Test
+    void explicitNullOnTowingIsRejectedBecauseItIsRequired() {
+        Vehicle current = currentVehicle();
+        VehicleEditFields updates = allOmittedBuilder()
+                .towing(FieldUpdate.explicitNull())
+                .build();
+
+        assertThatThrownBy(() -> VehicleEditResolver.resolve(current, updates))
+                .isInstanceOf(VehicleFieldRequiredException.class)
+                .hasMessage("towing cannot be cleared to null.");
     }
 
     @Test

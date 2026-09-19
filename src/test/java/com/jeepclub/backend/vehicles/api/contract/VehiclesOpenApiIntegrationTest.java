@@ -75,7 +75,7 @@ class VehiclesOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['EditRequestDTO']['properties']['engineDisplacement']['description']")
                         .value(org.hamcrest.Matchers.containsString("Zero é um valor válido")))
                 .andExpect(jsonPath("$['components']['schemas']['EditRequestDTO']['properties']['towing']['description']")
-                        .value(org.hamcrest.Matchers.containsString("null explícito limpa o campo")))
+                        .value(org.hamcrest.Matchers.containsString("null explícito é rejeitado")))
                 .andExpect(jsonPath("$['components']['schemas']['DetailResponseDTO']['properties']['status']['enum']")
                         .value(hasItems("ACTIVE", "SOFT_DELETED")))
                 .andExpect(jsonPath("$['paths']['/vehicles/edit/admin/{vehicleId}']['put']['responses']['409']['content']['application/json']")

@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "Payload de atualização parcial dos dados editáveis do veículo. Um campo "
-        + "omitido preserva o valor atual. Nickname, photo, color e towing podem ser "
+        + "omitido preserva o valor atual. Nickname, photo e color podem ser "
         + "limpos enviando null explícito. Plate, renavam, brand, model, "
         + "manufacturingYear, modelYear, seatingCapacity, fuelType e engineDisplacement "
         + "não podem ser limpos: se enviados como null, o request é rejeitado com 400.")
@@ -160,10 +160,10 @@ public record EditRequestDTO(
 
         @Schema(
                 description = "Indica se o veículo possui guincho/reboque. Omitir preserva o "
-                        + "valor atual; null explícito limpa o campo; false é aplicado "
+                        + "valor atual; null explícito é rejeitado; false é aplicado "
                         + "normalmente quando enviado.",
                 example = "true",
-                nullable = true,
+                nullable = false,
                 requiredMode = Schema.RequiredMode.NOT_REQUIRED
         )
         Boolean towing

@@ -32,7 +32,7 @@ public final class VehicleEditResolver {
                 resolveRequired(updates.seatingCapacity(), current.getSeatingCapacity(), "seatingCapacity"),
                 resolveRequired(updates.fuelType(), current.getFuelType(), "fuelType"),
                 resolveRequired(updates.engineDisplacement(), current.getEngineDisplacement(), "engineDisplacement"),
-                resolveNullable(updates.towing(), current.getTowing())
+                resolveRequired(updates.towing(), current.getTowing(), "towing")
         );
     }
 

@@ -57,10 +57,10 @@ proprietário existente porém administrativamente `DISABLED`.
 A edição HTTP continua um `PUT`, agora com semântica de atualização parcial:
 campo omitido do JSON preserva o valor atual do veículo; campo presente com
 valor aplica esse valor após validação de formato; campo presente como `null`
-só é aceito para os campos realmente anuláveis (`nickname`, `photo`, `color`,
-`towing`) e limpa o valor, sendo rejeitado com `400` para os demais campos
+só é aceito para os campos realmente anuláveis (`nickname`, `photo`, `color`)
+e limpa o valor, sendo rejeitado com `400` para os demais campos
 (`plate`, `renavam`, `brand`, `model`, `manufacturingYear`, `modelYear`,
-`seatingCapacity`, `fuelType`, `engineDisplacement`). O controller lê o corpo
+`seatingCapacity`, `fuelType`, `engineDisplacement`, `towing`). O controller lê o corpo
 como `JsonNode` (não mais `@Valid EditRequestDTO` direto) via
 `EditRequestFieldReader`, que converte e valida os valores presentes contra
 `EditRequestDTO` e monta um `VehicleEditFields` com um `FieldUpdate<T>` por

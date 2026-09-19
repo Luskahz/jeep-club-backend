@@ -28,6 +28,13 @@ public class EditRequestFieldReader {
     private final Validator validator;
 
     public VehicleEditFields read(JsonNode raw) {
+        if (raw == null || raw.isNull() || !raw.isObject()) {
+            throw new MalformedEditPayloadException(
+                    "The request body must be a JSON object.",
+                    null
+            );
+        }
+
         EditRequestDTO dto = toDto(raw);
         validate(dto);
 
