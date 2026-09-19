@@ -26,6 +26,7 @@ import java.time.Clock;
 import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,6 +54,8 @@ class IdentityOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/identity/register']['post']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/identity/me']['get']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me/email']['patch']['responses']['409']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['components']['schemas']['UserRegistrationRequest']['properties']['birthDate']['format']")
                         .value("date"))
@@ -124,6 +127,46 @@ class IdentityOpenApiIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("HTTP_400"));
+    }
+
+    @Test
+    @Transactional
+    void authenticatedUserCanOnlyUpdateOwnEmailWithValidationAndUniqueness() throws Exception {
+        Instant now = Instant.now(clock);
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData(
+                        "Email Owner", null, null, "39053344705",
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+        userRegistration.createWithPermanentCredential(
+                new UserRegistrationData(
+                        "Existing Email", null, "used@example.com", "86288366705",
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+
+        mockMvc.perform(patch("/identity/me/email")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"  NEW@Example.COM  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("new@example.com"));
+
+        mockMvc.perform(patch("/identity/me/email")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"used@example.com\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("USER_EMAIL_ALREADY_IN_USE"));
+
+        mockMvc.perform(patch("/identity/me/email")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\" \"}"))
+                .andExpect(status().isBadRequest());
     }
 
     private void grant(Role role, PermissionCode code, Instant now) {

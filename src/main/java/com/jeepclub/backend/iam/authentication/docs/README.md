@@ -65,7 +65,8 @@ temporários e de uso único.
   troca obrigatória.
 - A conclusão da troca obrigatória valida e consome o desafio, atualiza a
   senha, resolve a solicitação de senha provisória quando aplicável, revoga
-  credenciais anteriores e emite novos tokens.
+  credenciais anteriores e emite novos tokens. Quando era primeiro acesso de
+  Membership, notifica seu boundary público para concluir a solicitação.
 - A renovação valida token, sessão, conta e atividade administrativa do User;
   ela emite um novo refresh token e marca o anterior como `ROTATED` na mesma
   transação.
@@ -91,9 +92,9 @@ existência e atividade administrativa. Identity publica os SPIs
 os adapters em `infra.integration.identity` criam contas, emitem tokens e
 aplicam disable/enable sem expor internals de Authentication a Identity.
 
-O adapter de Memberships é consumidor de `UserRegistration` e de serviços de
-recuperação para criar usuário pendente de primeiro acesso com senha provisória
-ou link. Authentication não possui `api.module` próprio nesta revisão; suas
+O adapter de Memberships usa `UserRegistration` para criar usuário pendente e
+implementa o port consumer-owned que define a senha do convite; onboarding não
+reutiliza password recovery. Authentication não possui `api.module` próprio nesta revisão; suas
 integrações publicadas são implementações dos contratos proprietários de
 Identity e Memberships. A validação de access token é usada pela infraestrutura
 de segurança da plataforma para montar o `UserPrincipal`; authorities são

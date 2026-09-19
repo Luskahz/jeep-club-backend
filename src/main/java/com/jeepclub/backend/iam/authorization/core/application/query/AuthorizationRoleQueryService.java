@@ -13,7 +13,7 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-class AuthorizationRoleQueryService implements RoleQuery {
+public class AuthorizationRoleQueryService implements RoleQuery {
 
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;

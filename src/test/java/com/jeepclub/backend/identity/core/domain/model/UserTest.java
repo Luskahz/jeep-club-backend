@@ -124,6 +124,24 @@ class UserTest {
         ));
     }
 
+    @Test
+    void updateEmailNormalizesAndUpdatesTimestamp() {
+        User identity = persistedIdentity(UserStatus.ACTIVE, null, null);
+        Instant updatedAt = CREATED_AT.plusSeconds(30);
+
+        identity.updateEmail("  NEW@Example.COM ", updatedAt);
+
+        assertThat(identity.getEmail()).isEqualTo("new@example.com");
+        assertThat(identity.getUpdatedAt()).isEqualTo(updatedAt);
+    }
+
+    @Test
+    void updateEmailDoesNotAllowRemoval() {
+        User identity = persistedIdentity(UserStatus.ACTIVE, null, null);
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> identity.updateEmail("  ", CREATED_AT.plusSeconds(30)));
+    }
+
     private User persistedIdentity(
             UserStatus status,
             Instant disabledAt,

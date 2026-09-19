@@ -91,6 +91,20 @@ class MembershipApplicationServiceTest {
         assertThat(result.application().getEmail()).isEqualTo("candidate@example.com");
     }
 
+    @Test
+    void applicationWithoutEmailSkipsAllEmailConflictQueries() {
+        when(applicationRepository.findByCpfAndStatus(CPF, MembershipApplicationStatus.PENDING))
+                .thenReturn(Optional.empty());
+        when(applicationRepository.save(any(MembershipApplication.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        EnsureMembershipRequestResult result = ensure(FORMATTED_CPF, "   ");
+
+        assertThat(result.application().getEmail()).isNull();
+        verify(applicationRepository, never()).existsByEmailAndStatus(any(), any());
+        verify(userExistencePort, never()).existsByEmail(any());
+    }
+
     private EnsureMembershipRequestResult ensure(String cpf, String email) {
         return service.ensure(
                 "Candidate",
