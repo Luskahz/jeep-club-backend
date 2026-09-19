@@ -71,6 +71,23 @@ class VehicleServiceTest {
     }
 
     @Test
+    void canonicalizesPlateAndRenavamBeforeDuplicateCheckAndPersistence() {
+        when(vehicleRepository.save(any(Vehicle.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Vehicle vehicle = service.create(
+                "Trovão", "photo", "  abc1d23  ", "382.492.064-28", "Jeep",
+                "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
+                2.0, true, 7L
+        );
+
+        verify(vehicleRepository).existsByPlate("ABC1D23");
+        verify(vehicleRepository).existsByRenavam("38249206428");
+        assertThat(vehicle.getPlate()).isEqualTo("ABC1D23");
+        assertThat(vehicle.getRenavam()).isEqualTo("38249206428");
+    }
+
+    @Test
     void listsAndFindsOnlyActiveOwnedVehicles() {
         var pageable = PageRequest.of(0, 10);
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
@@ -152,6 +169,29 @@ class VehicleServiceTest {
         service.update(1L, 7L, clearNickname);
 
         verify(vehicleRepository).save(argThat(saved -> saved.getNickname() == null));
+    }
+
+    @Test
+    void canonicalizesPlateAndRenavamOnUpdateBeforeDuplicateCheck() {
+        Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
+        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+                .thenReturn(Optional.of(vehicle));
+
+        VehicleEditFields updates = new VehicleEditFields(
+                FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.of("  xyz9z99  "),
+                FieldUpdate.of("123.456.789-01"), FieldUpdate.omitted(), FieldUpdate.omitted(),
+                FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.omitted(),
+                FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.omitted(),
+                FieldUpdate.omitted()
+        );
+
+        service.update(1L, 7L, updates);
+
+        verify(vehicleRepository).existsByPlate("XYZ9Z99");
+        verify(vehicleRepository).existsByRenavam("12345678901");
+        verify(vehicleRepository).save(argThat(saved ->
+                saved.getPlate().equals("XYZ9Z99") && saved.getRenavam().equals("12345678901")
+        ));
     }
 
     @Test

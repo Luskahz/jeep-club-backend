@@ -39,20 +39,25 @@ public record EditRequestDTO(
 
         @Schema(
                 description = "Placa do veículo no formato Mercosul (ABC1D23) ou antigo (ABC1234). "
-                        + "Omitir preserva o valor atual; o campo não pode ser limpo, então null "
-                        + "explícito é rejeitado com 400.",
+                        + "Espaços nas bordas e minúsculas são aceitos; o valor é persistido e "
+                        + "consultado na forma canônica (trim + maiúsculas). Omitir preserva o "
+                        + "valor atual; o campo não pode ser limpo, então null explícito é "
+                        + "rejeitado com 400.",
                 example = "ABC1D23",
                 nullable = false,
-                pattern = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$",
+                pattern = "^\\s*[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}\\s*$",
                 requiredMode = Schema.RequiredMode.NOT_REQUIRED
         )
-        @Pattern(regexp = "^[A-Z]{3}[0-9][A-Z0-9][0-9]{2}$", message = "Placa inválida")
+        @Pattern(
+                regexp = "^\\s*[A-Za-z]{3}[0-9][A-Za-z0-9][0-9]{2}\\s*$",
+                message = "Placa inválida"
+        )
         String plate,
 
         @Schema(
-                description = "RENAVAM válido. Na edição, o checksum ignora caracteres não "
-                        + "numéricos, mas o texto recebido é encaminhado sem normalização para "
-                        + "persistência. Omitir preserva o valor atual; o campo não pode ser "
+                description = "RENAVAM válido. Pontuação entre os dígitos é aceita; o valor é "
+                        + "persistido e consultado somente com dígitos, após validação do dígito "
+                        + "verificador. Omitir preserva o valor atual; o campo não pode ser "
                         + "limpo, então null explícito é rejeitado com 400.",
                 example = "38249206428",
                 nullable = false,
