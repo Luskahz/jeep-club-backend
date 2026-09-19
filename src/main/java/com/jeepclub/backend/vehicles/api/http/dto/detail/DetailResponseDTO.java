@@ -57,9 +57,10 @@ public class DetailResponseDTO {
         private double engineDisplacement;
 
         @Schema(
-                description = "Status persistido. As consultas HTTP atuais retornam somente veículos ACTIVE.",
+                description = "Status persistido do veículo. A única política de exclusão vigente é hard "
+                        + "delete com histórico; nenhuma rota atual produz ou expõe outro valor.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE", "SOFT_DELETED"}
+                allowableValues = {"ACTIVE"}
         )
         private VehicleStatus status;
 
@@ -74,9 +75,6 @@ public class DetailResponseDTO {
 
         @Schema(description = "Data e hora da última atualização (UTC)", example = "2024-06-01T08:00:00Z", nullable = true)
         private Instant updatedAt;
-
-        @Schema(description = "Timestamp legado associado a SOFT_DELETED. É nulo nos veículos ACTIVE retornados pelas rotas atuais.", example = "2025-01-10T12:00:00Z", nullable = true)
-        private Instant disabledAt;
 
         public static DetailResponseDTO from(Vehicle vehicle) {
                 return DetailResponseDTO.builder()
@@ -98,7 +96,6 @@ public class DetailResponseDTO {
                         .ownerId(vehicle.getOwnerId())
                         .createdAt(vehicle.getCreatedAt())
                         .updatedAt(vehicle.getUpdatedAt())
-                        .disabledAt(vehicle.getDeletedAt())
                         .build();
         }
 }

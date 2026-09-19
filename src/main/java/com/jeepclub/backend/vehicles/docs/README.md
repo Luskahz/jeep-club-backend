@@ -82,31 +82,48 @@ DTO HTTP.
 
 ## Status, exclusão e histórico
 
-`VehicleStatus` possui `ACTIVE` e `SOFT_DELETED`.
+Existe uma única política operacional de exclusão: hard delete transacional
+com snapshot histórico. Nenhum outro lifecycle é suportado.
 
 ```text
 create -> ACTIVE --update--> ACTIVE
                   |
                   +--delete HTTP--> snapshot histórico + remoção operacional
-
-ACTIVE --softDelete()--> SOFT_DELETED   (método legado, sem fluxo HTTP atual)
 ```
 
-Os services e listagens atuais só expõem `ACTIVE`. `softDelete(Instant)` ainda
-define `SOFT_DELETED`, `updatedAt` e `deletedAt`, e o mapper mantém esse instante
-na coluna `disabled_at`; porém nenhum caso de uso ou endpoint atual chama esse
-método. Um registro legado reconstituído como `SOFT_DELETED` é ocultado como
-`404` e não pode ser editado ou excluído pelas operações atuais.
+Dentro da transação do service, o adapter obtém lock pessimista pela ID, cria
+um snapshot completo em `vehicles_vehicle_history` com `deletedByUserId` e
+`deletedAt`, e remove a linha de `vehicles_vehicle`. Falha no snapshot desfaz
+a remoção. O histórico não tem API de consulta e não reserva placa ou
+RENAVAM; após a remoção operacional, os identificadores podem ser usados por
+um novo veículo. Uma segunda exclusão que perde a corrida pelo lock recebe
+conflito de veículo já removido (`VehicleAlreadyDeletedException`, 409). Os
+services e listagens só expõem `ACTIVE`; `DetailResponseDTO.status` documenta
+`ACTIVE` como único valor no contrato público.
 
-O delete efetivamente usado é hard delete com histórico. Dentro da transação do
-service, o adapter obtém lock pessimista pela ID, cria um snapshot completo em
-`vehicles_vehicle_history` com `deletedByUserId` e `deletedAt`, e remove a linha
-de `vehicles_vehicle`. Falha no snapshot desfaz a remoção. O histórico não tem
-API de consulta e não reserva placa ou RENAVAM; após a remoção operacional, os
-identificadores podem ser usados por um novo veículo. Uma segunda exclusão que
-perde a corrida pelo lock recebe conflito de veículo já removido. A coexistência
-desse fluxo com o estado e método legados é a ambiguidade acompanhada pela
-BACK-330.
+`VehicleStatus` ainda declara `SOFT_DELETED`, mas exclusivamente como legado
+de compatibilidade de leitura: nenhum caso de uso grava esse valor (o método
+de domínio que o produzia, `Vehicle.softDelete(Instant)`, foi removido por
+não ter mais nenhum caller), e não existe campo `deletedAt`/`disabledAt` na
+operação atual — esses campos foram removidos do domínio (`Vehicle`), da
+entidade operacional (`VehicleEntity`) e da entidade de histórico
+(`VehicleHistoryEntity`, que já tinha seu próprio `deletedAt` do hard delete,
+correto e preservado; o `disabledAt` copiado da entidade operacional era
+puro peso morto). A única razão para manter o valor no enum é não quebrar a
+leitura de uma linha pré-existente que porventura ainda tenha
+`status = 'SOFT_DELETED'` no banco: `@Enumerated(EnumType.STRING)` falharia
+ao desserializar essa linha se o valor fosse removido do enum, e uma consulta
+por ID que a alcançasse quebraria com erro não controlado em vez do 404 atual.
+Como hoje nenhuma constraint impede a leitura de uma linha assim por ID,
+`findActiveVehicle` (member e admin) já trata qualquer status diferente de
+`ACTIVE` — incluindo esse legado — como veículo não encontrado, então o
+registro nunca fica visível, editável ou reativável pelas rotas atuais.
+`VehicleRepositoryAdapterTest.legacySoftDeletedRowIsReadWithoutMappingFailure`
+e `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
+caracterizam essa compatibilidade explicitamente. Como o projeto não usa
+migrations versionadas, não há cleanup automático de linhas legadas; o banco
+de desenvolvimento pode ser recriado quando necessário, e a estratégia acima
+cobre o caso de uma instância que não seja recriada.
 
 ## Integração e persistência
 
@@ -131,7 +148,6 @@ necessário em vez de introduzir migrations.
 ## Limitações funcionais já rastreadas
 
 - BACK-329: mover e reforçar invariantes no domínio;
-- BACK-330: eliminar a ambiguidade entre `SOFT_DELETED` e hard delete histórico;
 - BACK-331: endurecer constraints, tamanhos e índices JPA;
 - BACK-332: ampliar a matriz funcional, MVC, segurança, rollback e concorrência.
 
@@ -147,7 +163,13 @@ edição parcial. `VehicleTest` cobre a canonicalização de placa/RENAVAM em
 `create`/`update`/`reconstitute`. `VehicleRepositoryAdapterTest` simula
 duplicidade concorrente chamando `save` duas vezes com o mesmo valor canônico
 sem pré-checagem entre as chamadas, caracterizando a tradução de
-`DataIntegrityViolationException` para os erros de negócio de placa/RENAVAM.
-Testes de contrato caracterizam o binding do `PUT` via `JsonNode` e o OpenAPI.
-Ampliações funcionais permanecem na BACK-332 e devem seguir os
+`DataIntegrityViolationException` para os erros de negócio de placa/RENAVAM, e
+`legacySoftDeletedRowIsReadWithoutMappingFailure` prova que uma linha
+pré-existente com `status = SOFT_DELETED` inserida diretamente via JPA (sem
+passar por `Vehicle.create`) ainda é lida sem falha de mapeamento;
+`AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
+e `VehicleServiceTest.hidesSoftDeletedVehicle` provam que esse registro é
+tratado como 404 pelos dois services. Testes de contrato caracterizam o
+binding do `PUT` via `JsonNode` e o OpenAPI. Ampliações funcionais permanecem
+na BACK-332 e devem seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
