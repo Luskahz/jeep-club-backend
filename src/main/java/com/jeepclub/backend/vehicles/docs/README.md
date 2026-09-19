@@ -29,21 +29,32 @@ anos de fabricação e modelo, cor, capacidade, combustível, cilindrada,
 capacidade de reboque, `ownerId`, status e timestamps. `FuelType` possui
 `GASOLINE`, `ETHANOL`, `FLEX`, `DIESEL`, `ELECTRIC` e `HYBRID`.
 
-O domínio atual não normaliza nem valida seus argumentos em `create`,
-`reconstitute` ou `update`; as garantias de formato hoje vêm principalmente
-dos DTOs HTTP e da persistência. No cadastro, a placa deve ter sete caracteres
-em formato antigo ou Mercosul e já chegar em maiúsculas; o RENAVAM deve chegar
-com onze dígitos e checksum válido. Na edição, o validador de RENAVAM ignora
-caracteres não numéricos para calcular o checksum, mas o valor original é
-encaminhado à persistência. Não existe canonicalização uniforme de placa ou
-RENAVAM no core.
+O domínio ainda não normaliza a maioria dos seus argumentos, mas placa e
+RENAVAM são exceção: `Vehicle.normalizePlate` (trim + uppercase) e
+`Vehicle.normalizeRenavam` (somente dígitos) são chamados internamente por
+`create`, `update` e `reconstitute`, então a forma persistida é sempre
+canônica independentemente do que o chamador enviou. `RenavamValidator` aceita
+somente 11 dígitos ou o formato documentado `###.###.###-##` antes de
+reutilizar `Vehicle.normalizeRenavam` para calcular o checksum, então validação
+e persistência nunca divergem sobre o que conta como dígito. No cadastro e na
+edição, a placa aceita espaços nas bordas e minúsculas no DTO (o `@Pattern` é
+case-insensitive e tolera espaços); o RENAVAM aceita apenas a pontuação do
+formato documentado. Dados legados lidos via `reconstitute` recebem a forma
+canônica apenas em memória; esta Story não executa migração nem grava
+automaticamente essa canonicalização. As garantias de formato continuam vindo
+principalmente dos DTOs HTTP mais essa canonicalização de domínio.
 
-Antes de criar ou trocar identificadores, os services fazem consultas de
-existência por igualdade exata. A tabela operacional também possui unicidade
-sem nomes explícitos para placa e RENAVAM. Essa combinação não serializa duas
-criações concorrentes: a checagem prévia e a constraint podem produzir
-resultados diferentes, e uma violação de integridade concorrente não possui
-tradução específica no módulo.
+Antes de criar ou trocar identificadores, os services canonicalizam o valor
+recebido e só então fazem a consulta de existência (`existsByPlate`/
+`existsByRenavam`) — a checagem nunca usa o valor bruto. A tabela operacional
+tem as constraints nomeadas `uk_vehicle_plate` e `uk_vehicle_renavam`
+(`VehicleEntity`), e essa checagem prévia continua sem serializar duas
+criações/edições concorrentes: `VehicleRepositoryAdapter.save` usa
+`saveAndFlush` dentro de um try/catch que inspeciona a cadeia de causas de
+`DataIntegrityViolationException` por esses nomes de constraint e traduz uma
+violação concorrente para `VehiclePlateAlreadyExistsException`/
+`VehicleRenavamAlreadyExistsException` (mesmo 409 RFC 9457 da pré-checagem),
+em vez de vazar `DataIntegrityViolationException`/SQL para o cliente.
 
 ## Criação e edição atuais
 
@@ -107,15 +118,18 @@ acesso direto a repository, entity ou service interno de Identity.
 
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter
 de persistência ficam em `infra.persistence`. A entidade operacional mantém
-placa e RENAVAM únicos, campos obrigatórios para marca, modelo, combustível,
-status, owner e criação, mas não define nomes para essas constraints nem índices
-explícitos. O histórico tem unicidade por `vehicleId` e índices por owner,
+placa e RENAVAM únicos com constraints nomeadas (`uk_vehicle_plate`,
+`uk_vehicle_renavam`) e campos obrigatórios para marca, modelo, combustível,
+status, owner e criação, mas ainda sem índices explícitos além dessas
+constraints. O histórico tem unicidade por `vehicleId` e índices por owner,
 placa, RENAVAM e data de exclusão. O schema atual continua representado pelas
-entities/Hibernate, sem migration versionada introduzida por este módulo.
+entities/Hibernate, sem migration versionada introduzida por este módulo; não
+há backfill de dados legados eventualmente não canônicos, consistente com a
+política atual do projeto de recriar o banco de desenvolvimento quando
+necessário em vez de introduzir migrations.
 
 ## Limitações funcionais já rastreadas
 
-- BACK-328: uniformizar placa/RENAVAM e proteger duplicidade concorrente;
 - BACK-329: mover e reforçar invariantes no domínio;
 - BACK-330: eliminar a ambiguidade entre `SOFT_DELETED` e hard delete histórico;
 - BACK-331: endurecer constraints, tamanhos e índices JPA;
@@ -129,7 +143,11 @@ implementadas.
 Os testes existentes cobrem services de membro/admin e o adapter de exclusão
 histórica. `VehicleEditResolverTest` cobre, campo a campo, ausência, valor
 presente, `false`/`0` explícitos e null permitido/proibido na resolução da
-edição parcial. Testes de contrato caracterizam o binding do `PUT` via
-`JsonNode` e o OpenAPI. Ampliações funcionais permanecem na BACK-332 e devem
-seguir os
+edição parcial. `VehicleTest` cobre a canonicalização de placa/RENAVAM em
+`create`/`update`/`reconstitute`. `VehicleRepositoryAdapterTest` simula
+duplicidade concorrente chamando `save` duas vezes com o mesmo valor canônico
+sem pré-checagem entre as chamadas, caracterizando a tradução de
+`DataIntegrityViolationException` para os erros de negócio de placa/RENAVAM.
+Testes de contrato caracterizam o binding do `PUT` via `JsonNode` e o OpenAPI.
+Ampliações funcionais permanecem na BACK-332 e devem seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).

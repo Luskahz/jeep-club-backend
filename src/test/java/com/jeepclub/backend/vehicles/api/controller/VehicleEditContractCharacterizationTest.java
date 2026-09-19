@@ -288,6 +288,17 @@ class VehicleEditContractCharacterizationTest {
                 .andExpect(jsonPath("$.code").value("INVALID_REQUEST_BODY"));
     }
 
+    @Test
+    void renavamWithUndocumentedCharactersIsRejectedBeforeCanonicalization() throws Exception {
+        mockMvc.perform(put("/vehicles/edit/member/42")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(withField(FULL_EDIT, "renavam", "\"3x8249206428\"")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verifyNoInteractions(vehicleService);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"null", "[]", "\"abc\"", "123"})
     void nonObjectBodyIsRejectedWithControlledBadRequest(String body) throws Exception {

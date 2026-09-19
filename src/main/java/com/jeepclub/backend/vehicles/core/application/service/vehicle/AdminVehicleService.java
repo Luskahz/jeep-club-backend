@@ -46,7 +46,9 @@ public class AdminVehicleService {
             Boolean towing,
             Long ownerId
     ) {
-        assertUniquePlateAndRenavam(plate, renavam);
+        String canonicalPlate = Vehicle.normalizePlate(plate);
+        String canonicalRenavam = Vehicle.normalizeRenavam(renavam);
+        assertUniquePlateAndRenavam(canonicalPlate, canonicalRenavam);
 
         if (!userPort.existsById(ownerId)) {
             throw new UserNotFoundException("User id not found.");
@@ -59,8 +61,8 @@ public class AdminVehicleService {
         Vehicle vehicle = Vehicle.create(
                 nickname,
                 photo,
-                plate,
-                renavam,
+                canonicalPlate,
+                canonicalRenavam,
                 brand,
                 model,
                 manufacturingYear,
@@ -91,13 +93,15 @@ public class AdminVehicleService {
     public void update(Long vehicleId, VehicleEditFields updates) {
         Vehicle vehicle = findActiveVehicle(vehicleId);
         VehicleEditResolver.Resolved resolved = VehicleEditResolver.resolve(vehicle, updates);
-        assertUniqueChangedIdentifiers(vehicle, resolved.plate(), resolved.renavam());
+        String canonicalPlate = Vehicle.normalizePlate(resolved.plate());
+        String canonicalRenavam = Vehicle.normalizeRenavam(resolved.renavam());
+        assertUniqueChangedIdentifiers(vehicle, canonicalPlate, canonicalRenavam);
 
         vehicle.update(
                 resolved.nickname(),
                 resolved.photo(),
-                resolved.plate(),
-                resolved.renavam(),
+                canonicalPlate,
+                canonicalRenavam,
                 resolved.brand(),
                 resolved.model(),
                 resolved.manufacturingYear(),
