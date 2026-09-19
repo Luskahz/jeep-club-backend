@@ -7,9 +7,11 @@ import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.vehicles.api.http.dto.detail.DetailResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestFieldReader;
 import com.jeepclub.backend.vehicles.api.http.dto.include.IncludeRequestDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.list.ListResponseDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.list.VehiclePageResponseSchema;
+import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
 import com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -48,6 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminVehicleController {
 
     private final AdminVehicleService adminVehicleService;
+    private final EditRequestFieldReader editRequestFieldReader;
 
     @PostMapping("/include/admin/{memberId}")
     @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_CREATE')")
@@ -162,10 +166,19 @@ public class AdminVehicleController {
     @RequiredPermission("VEHICLES_VEHICLE_UPDATE")
     @Operation(
             summary = "Editar qualquer veículo",
-            description = "Substitui os dados de um veículo ACTIVE. O payload atual não possui semântica parcial uniforme; consulte o schema de EditRequestDTO.",
+            description = "Atualiza parcialmente os dados de um veículo ACTIVE. Um campo omitido "
+                    + "do JSON preserva o valor atual; consulte o schema de EditRequestDTO para "
+                    + "saber quais campos aceitam null explícito para limpeza.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = EditRequestDTO.class)
+                    )
+            ),
             responses = {
                     @ApiResponse(responseCode = "204", description = "Veículo atualizado."),
-                    @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "400", description = "Payload inválido, campo com formato inválido, ou campo obrigatório enviado como null.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_UPDATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "404", description = "Veículo ativo não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -175,24 +188,10 @@ public class AdminVehicleController {
     public ResponseEntity<Void> editVehicle(
             @Parameter(description = "Identificador do veículo.", example = "42", required = true)
             @PathVariable Long vehicleId,
-            @RequestBody @Valid EditRequestDTO request
+            @RequestBody JsonNode request
     ) {
-        adminVehicleService.update(
-                vehicleId,
-                request.nickname(),
-                request.photo(),
-                request.plate(),
-                request.renavam(),
-                request.brand(),
-                request.model(),
-                request.manufacturingYear(),
-                request.modelYear(),
-                request.color(),
-                request.seatingCapacity(),
-                request.fuelType(),
-                request.engineDisplacement(),
-                request.towing()
-        );
+        VehicleEditFields updates = editRequestFieldReader.read(request);
+        adminVehicleService.update(vehicleId, updates);
 
         return ResponseEntity.noContent().build();
     }

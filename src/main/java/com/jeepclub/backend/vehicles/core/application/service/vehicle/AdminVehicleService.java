@@ -1,10 +1,12 @@
 package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
+import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
+import com.jeepclub.backend.vehicles.core.application.service.internal.VehicleEditResolver;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
@@ -86,39 +88,25 @@ public class AdminVehicleService {
     }
 
     @Transactional
-    public void update(
-            Long vehicleId,
-            String nickname,
-            String photo,
-            String plate,
-            String renavam,
-            String brand,
-            String model,
-            int manufacturingYear,
-            int modelYear,
-            String color,
-            int seatingCapacity,
-            FuelType fuelType,
-            double engineDisplacement,
-            boolean towing
-    ) {
+    public void update(Long vehicleId, VehicleEditFields updates) {
         Vehicle vehicle = findActiveVehicle(vehicleId);
-        assertUniqueChangedIdentifiers(vehicle, plate, renavam);
+        VehicleEditResolver.Resolved resolved = VehicleEditResolver.resolve(vehicle, updates);
+        assertUniqueChangedIdentifiers(vehicle, resolved.plate(), resolved.renavam());
 
         vehicle.update(
-                nickname,
-                photo,
-                plate,
-                renavam,
-                brand,
-                model,
-                manufacturingYear,
-                modelYear,
-                color,
-                seatingCapacity,
-                fuelType,
-                engineDisplacement,
-                towing,
+                resolved.nickname(),
+                resolved.photo(),
+                resolved.plate(),
+                resolved.renavam(),
+                resolved.brand(),
+                resolved.model(),
+                resolved.manufacturingYear(),
+                resolved.modelYear(),
+                resolved.color(),
+                resolved.seatingCapacity(),
+                resolved.fuelType(),
+                resolved.engineDisplacement(),
+                resolved.towing(),
                 Instant.now(clock)
         );
 
