@@ -117,6 +117,28 @@ class VehicleTest {
     }
 
     @Test
+    void createRejectsRenavamThatCanonicalizesToBlank() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new CreateArgs().renavam("---abc---").build());
+    }
+
+    @Test
+    void reconstituteRejectsRenavamThatCanonicalizesToBlank() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new CreateArgs().reconstituteArgs().renavam("---abc---").build());
+    }
+
+    @Test
+    void updateRejectsRenavamThatCanonicalizesToBlank() {
+        Vehicle vehicle = new CreateArgs().reconstituteArgs().build();
+
+        assertThatIllegalArgumentException().isThrownBy(() -> vehicle.update(
+                "Novo", "photo", "ABC1D23", "---abc---", "Jeep", "Wrangler",
+                2023, 2024, "Preto", 5, FuelType.FLEX, 1.8, true, NOW.plusSeconds(60)
+        ));
+    }
+
+    @Test
     void createRejectsBlankBrand() {
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> new CreateArgs().brand(" ").build());
@@ -442,6 +464,7 @@ class VehicleTest {
         }
 
         ReconstituteArgs id(Long value) { this.id = value; return this; }
+        ReconstituteArgs renavam(String value) { this.renavam = value; return this; }
         ReconstituteArgs ownerId(Long value) { this.ownerId = value; return this; }
         ReconstituteArgs brand(String value) { this.brand = value; return this; }
         ReconstituteArgs manufacturingYear(int value) { this.manufacturingYear = value; return this; }

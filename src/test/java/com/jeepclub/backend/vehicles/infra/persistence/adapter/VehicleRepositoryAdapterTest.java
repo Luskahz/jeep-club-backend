@@ -23,6 +23,8 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -54,6 +56,8 @@ class VehicleRepositoryAdapterTest {
     private EntityManager entityManager;
     @Autowired
     private DataSource dataSource;
+    @Autowired
+    private PlatformTransactionManager transactionManager;
 
     @Test
     void operationalColumnMetadataReflectsHardenedNullabilityAndLength() throws SQLException {
@@ -155,30 +159,34 @@ class VehicleRepositoryAdapterTest {
 
     @Test
     void deleteRollsBackOperationalRemovalWhenHistorySnapshotFails() {
-        // Prova a garantia transacional real (não um mock de service, dados
-        // reais em H2): se a gravação do histórico falhar, a remoção
-        // operacional emitida na mesma transação não pode ter efeito.
-        Vehicle saved = repository.save(vehicle("ABC1D23", "38249206428"));
-        entityManager.flush();
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
 
-        // "Envenena" a unicidade de vehicle_id no histórico: quando delete()
-        // tentar gravar o snapshot do mesmo veículo, a constraint
-        // uk_vehicle_history_vehicle_id será violada dentro da mesma
-        // transação usada pelo delete abaixo.
-        historyJpaRepository.saveAndFlush(history(saved.getId(), "POISON1", "00000000000"));
+        Long vehicleId = transaction.execute(status -> {
+            Vehicle saved = repository.save(vehicle("ABC1D23", "38249206428"));
+            historyJpaRepository.saveAndFlush(
+                    history(saved.getId(), "POISON1", "00000000000")
+            );
+            return saved.getId();
+        });
 
-        assertThatThrownBy(() -> {
+        assertThat(vehicleId).isNotNull();
+
+        assertThatThrownBy(() -> transaction.executeWithoutResult(status -> {
+            Vehicle saved = repository.findById(vehicleId).orElseThrow();
             repository.delete(saved, 99L, NOW.plusSeconds(60));
             entityManager.flush();
-        }).isInstanceOf(DataIntegrityViolationException.class);
+        })).isInstanceOf(DataIntegrityViolationException.class);
 
-        entityManager.clear();
-        assertThat(vehicleJpaRepository.findById(saved.getId()))
-                .as("o veículo operacional não pode ter sido removido quando o snapshot falhou")
-                .isPresent();
-        assertThat(historyJpaRepository.findAll())
-                .as("nenhum snapshot novo deve ter sido persistido além do que já existia")
-                .hasSize(1);
+        transaction.executeWithoutResult(status -> {
+            entityManager.clear();
+            assertThat(vehicleJpaRepository.findById(vehicleId))
+                    .as("o veículo operacional deve continuar existindo após o rollback")
+                    .isPresent();
+            assertThat(historyJpaRepository.findAll())
+                    .as("a transação que falhou não pode persistir estado parcial")
+                    .singleElement()
+                    .satisfies(history -> assertThat(history.getVehicleId()).isEqualTo(vehicleId));
+        });
     }
 
     @Test

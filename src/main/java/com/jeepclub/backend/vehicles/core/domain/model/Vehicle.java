@@ -211,17 +211,19 @@ public class Vehicle {
     }
 
     private static String requireCanonicalPlate(String rawPlate) {
-        if (rawPlate == null || rawPlate.isBlank()) {
+        String canonicalPlate = normalizePlate(rawPlate);
+        if (canonicalPlate == null || canonicalPlate.isBlank()) {
             throw new IllegalArgumentException("plate is required.");
         }
-        return normalizePlate(rawPlate);
+        return canonicalPlate;
     }
 
     private static String requireCanonicalRenavam(String rawRenavam) {
-        if (rawRenavam == null || rawRenavam.isBlank()) {
+        String canonicalRenavam = normalizeRenavam(rawRenavam);
+        if (canonicalRenavam == null || canonicalRenavam.isBlank()) {
             throw new IllegalArgumentException("renavam is required.");
         }
-        return normalizeRenavam(rawRenavam);
+        return canonicalRenavam;
     }
 
     private static void requireText(String value, String field) {
