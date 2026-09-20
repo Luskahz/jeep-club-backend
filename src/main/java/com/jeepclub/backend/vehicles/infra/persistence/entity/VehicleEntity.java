@@ -19,6 +19,9 @@ import java.time.Instant;
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_vehicle_plate", columnNames = "plate"),
                 @UniqueConstraint(name = "uk_vehicle_renavam", columnNames = "renavam")
+        },
+        indexes = {
+                @Index(name = "idx_vehicle_owner_id_status", columnList = "owner_id, status")
         }
 )
 public class VehicleEntity {
@@ -27,22 +30,22 @@ public class VehicleEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column
+    @Column(length = 100)
     private String nickname;
 
-    @Column
+    @Column(length = 500)
     private String photo;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 7)
     private String plate;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 11)
     private String renavam;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String brand;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String model;
 
     @Column(name = "manufacturing_year", nullable = false)
@@ -51,24 +54,24 @@ public class VehicleEntity {
     @Column(name = "model_year", nullable = false)
     private int modelYear;
 
-    @Column
+    @Column(length = 30)
     private String color;
 
-    @Column(name = "seating_capacity")
+    @Column(name = "seating_capacity", nullable = false)
     private int seatingCapacity;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "fuel_type", nullable = false)
     private FuelType fuelType;
 
-    @Column(name = "engine_displacement")
+    @Column(name = "engine_displacement", nullable = false)
     private double engineDisplacement;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private VehicleStatus status;
 
-    @Column
+    @Column(nullable = false)
     private Boolean towing;
 
     @Column(name = "owner_id", nullable = false)
