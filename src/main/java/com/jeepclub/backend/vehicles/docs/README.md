@@ -219,13 +219,6 @@ histórico (`idx_vehicle_history_owner_id`, `idx_vehicle_history_plate`,
 `idx_vehicle_history_renavam`, `idx_vehicle_history_deleted_at`) não foram
 alterados.
 
-## Limitações funcionais já rastreadas
-
-- BACK-332: ampliar a matriz funcional, MVC, segurança, rollback e concorrência.
-
-Essas limitações descrevem o estado atual; os tickets não são regras já
-implementadas.
-
 ## Testes
 
 Os testes existentes cobrem services de membro/admin e o adapter de exclusão
@@ -252,6 +245,58 @@ consultam `INFORMATION_SCHEMA.COLUMNS` do H2 de teste para caracterizar o
 `length`/`nullable` reais gerados pelo mapeamento endurecido na BACK-331; e
 `.savingEntityWithNullTowingViolatesNotNullConstraint` prova que a coluna
 `towing`, agora `NOT NULL`, rejeita a persistência mesmo quando o domínio é
-contornado e a entity é salva diretamente com o campo nulo. Ampliações
-funcionais permanecem na BACK-332 e devem seguir os
+contornado e a entity é salva diretamente com o campo nulo.
+
+### Matriz final (BACK-332)
+
+A BACK-332 substitui formalmente o backlog antigo (BACK-293/294..300,
+encerrado como *superseded*: aquelas subtasks partiam de premissas já
+inválidas, como soft delete operacional e metas fixas de cobertura/PIT) e
+fecha as lacunas concretas restantes após a suíte já ampliada por
+BACK-326/327/328/329/330/331, sem duplicar nenhuma delas:
+
+- **Rollback transacional do snapshot histórico** — lacuna explicitamente
+  identificada e antes sem nenhum teste: `VehicleRepositoryAdapterTest
+  .deleteRollsBackOperationalRemovalWhenHistorySnapshotFails` prova, com H2
+  real (sem mock de service), que uma falha na gravação do histórico
+  (constraint `uk_vehicle_history_vehicle_id` violada) não deixa o veículo
+  operacional removido nem qualquer estado parcial persistido;
+- **Delete repetido/concorrente** — `VehicleAlreadyDeletedException` não
+  tinha nenhum teste; `.repeatedDeleteLosingTheLockRaceIsTranslatedToAlreadyDeletedConflict`
+  prova, de forma determinística (sem sleep/probabilístico), que uma segunda
+  exclusão sobre um veículo já removido é tratada como conflito de negócio,
+  não erro genérico;
+- **Segurança administrativa real** — antes desta Story, `@PreAuthorize`/
+  `@RequiredPermission` das rotas `/vehicles/*/admin/**` só era caracterizado
+  estaticamente no OpenAPI (`VehiclesOpenApiIntegrationTest`), nunca aplicado
+  de fato em runtime. `VehicleAdminSecurityIntegrationTest` carrega a cadeia
+  de segurança real (não `addFilters = false`, não contexto fatiado) e prova,
+  para cada uma das quatro authorities (`VEHICLES_VEHICLE_CREATE/READ/
+  UPDATE/DELETE`): 401 sem autenticação, 403 `ACCESS_DENIED` sem a authority
+  específica (inclusive uma authority *diferente* das quatro não é
+  suficiente — não existe "authority de admin genérica"), e sucesso com a
+  authority correta. Segue o mesmo padrão já usado em
+  `DependentSecurityIntegrationTest`/`PaymentReceiptSecurityIntegrationTest`
+  (mock de `JwtTokenParser`/`UserAuthoritiesProvider`), sem inventar
+  mecanismo de teste novo;
+- **Fluxo completo real** — nenhum teste existente exercitava o módulo
+  inteiro (controller → `VehicleService` real → `VehicleRepositoryAdapter`
+  real → H2) de ponta a ponta; os testes MVC existentes mockam o service.
+  `VehicleLifecycleIntegrationTest` cobre criar → listar → consultar →
+  editar → consultar novamente → excluir → consultar (404) pela pilha real,
+  uma única vez, sem duplicar a matriz campo a campo já coberta por
+  `VehicleEditContractCharacterizationTest`.
+
+Áreas revisadas e já adequadamente cobertas por Stories anteriores, portanto
+não duplicadas: edição parcial campo a campo (BACK-326,
+`VehicleEditResolverTest`/`VehicleEditContractCharacterizationTest`);
+ownership/desabilitação administrativa do membro (BACK-327,
+`VehicleOwnerAuthenticationIntegrationTest`, services de membro/admin);
+canonicalização e duplicidade concorrente de placa/RENAVAM sem 500 genérico
+(BACK-328, `VehicleRepositoryAdapterTest.concurrentDuplicate*`); hard delete
+feliz, reuso de identificadores e compatibilidade de leitura legada
+(BACK-330); invariantes de domínio e metadata de schema (BACK-329/331,
+`VehicleTest`, `VehicleRepositoryAdapterTest.*ColumnMetadata*`). Ampliações
+funcionais além dessas lacunas permanecem na BACK-332 original apenas onde
+ainda fizerem sentido, e devem seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).

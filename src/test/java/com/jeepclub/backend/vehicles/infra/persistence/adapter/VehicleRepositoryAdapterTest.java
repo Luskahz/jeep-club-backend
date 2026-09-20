@@ -4,6 +4,7 @@ import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlr
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
+import com.jeepclub.backend.vehicles.core.domain.exception.VehicleAlreadyDeletedException;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleEntity;
 import com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleHistoryEntity;
@@ -150,6 +151,54 @@ class VehicleRepositoryAdapterTest {
                     assertThat(history.getDeletedAt()).isEqualTo(NOW.plusSeconds(60));
                     assertThat(history.getStatus()).isEqualTo(VehicleStatus.ACTIVE);
                 });
+    }
+
+    @Test
+    void deleteRollsBackOperationalRemovalWhenHistorySnapshotFails() {
+        // Prova a garantia transacional real (não um mock de service, dados
+        // reais em H2): se a gravação do histórico falhar, a remoção
+        // operacional emitida na mesma transação não pode ter efeito.
+        Vehicle saved = repository.save(vehicle("ABC1D23", "38249206428"));
+        entityManager.flush();
+
+        // "Envenena" a unicidade de vehicle_id no histórico: quando delete()
+        // tentar gravar o snapshot do mesmo veículo, a constraint
+        // uk_vehicle_history_vehicle_id será violada dentro da mesma
+        // transação usada pelo delete abaixo.
+        historyJpaRepository.saveAndFlush(history(saved.getId(), "POISON1", "00000000000"));
+
+        assertThatThrownBy(() -> {
+            repository.delete(saved, 99L, NOW.plusSeconds(60));
+            entityManager.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
+
+        entityManager.clear();
+        assertThat(vehicleJpaRepository.findById(saved.getId()))
+                .as("o veículo operacional não pode ter sido removido quando o snapshot falhou")
+                .isPresent();
+        assertThat(historyJpaRepository.findAll())
+                .as("nenhum snapshot novo deve ter sido persistido além do que já existia")
+                .hasSize(1);
+    }
+
+    @Test
+    void repeatedDeleteLosingTheLockRaceIsTranslatedToAlreadyDeletedConflict() {
+        Vehicle saved = repository.save(vehicle("ABC1D23", "38249206428"));
+        entityManager.flush();
+
+        repository.delete(saved, 99L, NOW.plusSeconds(60));
+        entityManager.flush();
+        entityManager.clear();
+
+        // Simula uma segunda requisição de exclusão que perdeu a corrida pelo
+        // lock: quando ela tenta localizar a linha operacional para excluir,
+        // o veículo já não existe mais.
+        assertThatThrownBy(() -> repository.delete(saved, 99L, NOW.plusSeconds(120)))
+                .isInstanceOf(VehicleAlreadyDeletedException.class);
+
+        assertThat(historyJpaRepository.findAll())
+                .as("a segunda tentativa não deve gravar um segundo snapshot")
+                .hasSize(1);
     }
 
     @Test
