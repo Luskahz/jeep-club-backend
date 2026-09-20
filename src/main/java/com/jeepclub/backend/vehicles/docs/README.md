@@ -125,6 +125,45 @@ migrations versionadas, não há cleanup automático de linhas legadas; o banco
 de desenvolvimento pode ser recriado quando necessário, e a estratégia acima
 cobre o caso de uma instância que não seja recriada.
 
+## Invariantes do agregado
+
+`Vehicle.create`, `Vehicle.reconstitute` e `Vehicle.update` protegem, no próprio
+domínio, as invariantes já sustentadas pelo contrato HTTP/JPA atual,
+independentemente de quem chama (service, adapter, teste ou integração
+futura): `ownerId` obrigatório e positivo; `id` reconstituído obrigatório e
+positivo; `plate`/`renavam` obrigatórios (a checagem usa o mesmo
+`normalizePlate`/`normalizeRenavam` já existente, sem duplicar formato ou
+checksum, que continuam exclusivos de `RenavamValidator`); `brand`/`model`
+obrigatórios e não brancos nas três operações, inclusive em `update` — antes
+só o DTO de criação (`@NotBlank`) garantia isso, e o `EditRequestDTO` aceitava
+string vazia por não repetir a anotação; `color` obrigatório e não branco
+somente em `create`, já que a edição parcial (BACK-326) pode legitimamente
+limpá-lo para `null`; `fuelType`, `towing` e `createdAt` obrigatórios
+(`NullPointerException` via `Objects.requireNonNull`) nas três operações;
+`status` obrigatório em `reconstitute`; ano de fabricação e ano do modelo não
+anteriores a 1900; capacidade de assentos de pelo menos 1; cilindrada não
+negativa; e `updatedAt`, quando presente, nunca anterior a `createdAt`
+(`IllegalStateException`), validado tanto em `reconstitute` quanto no `now`
+recebido por `update`.
+
+O contrato HTTP atual é inconsistente quanto a limites superiores: apenas
+`EditRequestDTO` declara `@Max` para ano de fabricação/modelo (2100) e
+capacidade de assentos (50); `IncludeRequestDTO` (criação, usada por membro e
+admin) não declara limite superior para nenhum dos dois. O domínio protege
+somente o limite inferior comum às duas entradas (1900 e 1, respectivamente)
+para não inventar, silenciosamente, uma regra de negócio mais restritiva para
+`create` do que o contrato atual permite. Unificar esses limites é uma
+evolução de contrato HTTP fora do escopo desta consolidação.
+
+Campos sem regra observável no contrato atual (`nickname`, `photo`, e
+comprimento máximo de string) permanecem sem validação de domínio, também
+para não inventar regra nova; essas garantias continuam vindo do Bean
+Validation dos DTOs.
+
+`VehicleEditResolver` continua resolvendo presença/ausência/null explícito
+antes de chamar `Vehicle.update`; as invariantes acima são a segunda camada
+de proteção do agregado, não uma duplicata da semântica de edição parcial.
+
 ## Integração e persistência
 
 `UserPort` é uma porta consumer-owned de Vehicles. O `VehicleIdentityAdapter`
@@ -147,8 +186,9 @@ necessário em vez de introduzir migrations.
 
 ## Limitações funcionais já rastreadas
 
-- BACK-329: mover e reforçar invariantes no domínio;
-- BACK-331: endurecer constraints, tamanhos e índices JPA;
+- BACK-331: endurecer constraints, tamanhos e índices JPA, e resolver a
+  inconsistência de limite superior de ano/capacidade entre criação e edição
+  descrita em "Invariantes do agregado";
 - BACK-332: ampliar a matriz funcional, MVC, segurança, rollback e concorrência.
 
 Essas limitações descrevem o estado atual; os tickets não são regras já
@@ -170,6 +210,10 @@ passar por `Vehicle.create`) ainda é lida sem falha de mapeamento;
 `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
 e `VehicleServiceTest.hidesSoftDeletedVehicle` provam que esse registro é
 tratado como 404 pelos dois services. Testes de contrato caracterizam o
-binding do `PUT` via `JsonNode` e o OpenAPI. Ampliações funcionais permanecem
-na BACK-332 e devem seguir os
+binding do `PUT` via `JsonNode` e o OpenAPI. `VehicleTest` cobre, além da
+canonicalização de placa/RENAVAM, as invariantes descritas em "Invariantes do
+agregado": criação, reconstituição e atualização válidas e inválidas para
+cada campo obrigatório, limite numérico e a consistência de
+`createdAt`/`updatedAt`. Ampliações funcionais permanecem na BACK-332 e devem
+seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).

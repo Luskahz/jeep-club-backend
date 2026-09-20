@@ -9,11 +9,15 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Objects;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class Vehicle {
+
+    private static final int MIN_YEAR = 1900;
+
     private Long id;
     private String nickname;            // Nome que o membro da para o proprio veiculo
     private String photo;               // Foto unica
@@ -53,12 +57,24 @@ public class Vehicle {
             Long ownerId,
             Instant createdAt
     ) {
+        validateOwnerId(ownerId);
+        requireText(brand, "brand");
+        requireText(model, "model");
+        requireText(color, "color");
+        validateYear(manufacturingYear, "manufacturingYear");
+        validateYear(modelYear, "modelYear");
+        validateSeatingCapacity(seatingCapacity);
+        validateEngineDisplacement(engineDisplacement);
+        Objects.requireNonNull(fuelType, "fuelType is required.");
+        Objects.requireNonNull(towing, "towing is required.");
+        Objects.requireNonNull(createdAt, "createdAt is required.");
+
         return new Vehicle(
                 null,
                 nickname,
                 photo,
-                normalizePlate(plate),
-                normalizeRenavam(renavam),
+                requireCanonicalPlate(plate),
+                requireCanonicalRenavam(renavam),
                 brand,
                 model,
                 manufacturingYear,
@@ -96,12 +112,26 @@ public class Vehicle {
             Instant createdAt,
             Instant updatedAt
     ) {
+        validateId(id);
+        validateOwnerId(ownerId);
+        requireText(brand, "brand");
+        requireText(model, "model");
+        validateYear(manufacturingYear, "manufacturingYear");
+        validateYear(modelYear, "modelYear");
+        validateSeatingCapacity(seatingCapacity);
+        validateEngineDisplacement(engineDisplacement);
+        Objects.requireNonNull(fuelType, "fuelType is required.");
+        Objects.requireNonNull(status, "status is required.");
+        Objects.requireNonNull(towing, "towing is required.");
+        Objects.requireNonNull(createdAt, "createdAt is required.");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, updatedAt);
+
         Vehicle vehicle = new Vehicle();
         vehicle.id = id;
         vehicle.nickname = nickname;
         vehicle.photo = photo;
-        vehicle.plate = normalizePlate(plate);
-        vehicle.renavam = normalizeRenavam(renavam);
+        vehicle.plate = requireCanonicalPlate(plate);
+        vehicle.renavam = requireCanonicalRenavam(renavam);
         vehicle.brand = brand;
         vehicle.model = model;
         vehicle.manufacturingYear = manufacturingYear;
@@ -134,10 +164,21 @@ public class Vehicle {
             Boolean towing,
             Instant now
     ) {
+        requireText(brand, "brand");
+        requireText(model, "model");
+        validateYear(manufacturingYear, "manufacturingYear");
+        validateYear(modelYear, "modelYear");
+        validateSeatingCapacity(seatingCapacity);
+        validateEngineDisplacement(engineDisplacement);
+        Objects.requireNonNull(fuelType, "fuelType is required.");
+        Objects.requireNonNull(towing, "towing is required.");
+        Objects.requireNonNull(now, "now is required.");
+        validateUpdatedAtNotBeforeCreatedAt(this.createdAt, now);
+
         this.nickname = nickname;
         this.photo = photo;
-        this.plate = normalizePlate(plate);
-        this.renavam = normalizeRenavam(renavam);
+        this.plate = requireCanonicalPlate(plate);
+        this.renavam = requireCanonicalRenavam(renavam);
         this.brand = brand;
         this.model = model;
         this.manufacturingYear = manufacturingYear;
@@ -167,5 +208,61 @@ public class Vehicle {
      */
     public static String normalizeRenavam(String rawRenavam) {
         return rawRenavam == null ? null : rawRenavam.replaceAll("\\D", "");
+    }
+
+    private static String requireCanonicalPlate(String rawPlate) {
+        if (rawPlate == null || rawPlate.isBlank()) {
+            throw new IllegalArgumentException("plate is required.");
+        }
+        return normalizePlate(rawPlate);
+    }
+
+    private static String requireCanonicalRenavam(String rawRenavam) {
+        if (rawRenavam == null || rawRenavam.isBlank()) {
+            throw new IllegalArgumentException("renavam is required.");
+        }
+        return normalizeRenavam(rawRenavam);
+    }
+
+    private static void requireText(String value, String field) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(field + " is required.");
+        }
+    }
+
+    private static void validateId(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("id must be positive.");
+        }
+    }
+
+    private static void validateOwnerId(Long ownerId) {
+        if (ownerId == null || ownerId <= 0) {
+            throw new IllegalArgumentException("ownerId must be positive.");
+        }
+    }
+
+    private static void validateYear(int year, String field) {
+        if (year < MIN_YEAR) {
+            throw new IllegalArgumentException(field + " must not be before " + MIN_YEAR + ".");
+        }
+    }
+
+    private static void validateSeatingCapacity(int seatingCapacity) {
+        if (seatingCapacity < 1) {
+            throw new IllegalArgumentException("seatingCapacity must be at least 1.");
+        }
+    }
+
+    private static void validateEngineDisplacement(double engineDisplacement) {
+        if (engineDisplacement < 0) {
+            throw new IllegalArgumentException("engineDisplacement cannot be negative.");
+        }
+    }
+
+    private static void validateUpdatedAtNotBeforeCreatedAt(Instant createdAt, Instant updatedAt) {
+        if (updatedAt != null && updatedAt.isBefore(createdAt)) {
+            throw new IllegalStateException("updatedAt cannot be before createdAt.");
+        }
     }
 }
