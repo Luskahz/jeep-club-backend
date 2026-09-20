@@ -175,20 +175,52 @@ acesso direto a repository, entity ou service interno de Identity.
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter
 de persistência ficam em `infra.persistence`. A entidade operacional mantém
 placa e RENAVAM únicos com constraints nomeadas (`uk_vehicle_plate`,
-`uk_vehicle_renavam`) e campos obrigatórios para marca, modelo, combustível,
-status, owner e criação, mas ainda sem índices explícitos além dessas
-constraints. O histórico tem unicidade por `vehicleId` e índices por owner,
-placa, RENAVAM e data de exclusão. O schema atual continua representado pelas
-entities/Hibernate, sem migration versionada introduzida por este módulo; não
-há backfill de dados legados eventualmente não canônicos, consistente com a
-política atual do projeto de recriar o banco de desenvolvimento quando
-necessário em vez de introduzir migrations.
+`uk_vehicle_renavam`, preservadas sem alteração desde a BACK-328). O schema
+atual continua representado pelas entities/Hibernate, sem migration
+versionada introduzida por este módulo; não há backfill de dados legados
+eventualmente não canônicos, consistente com a política atual do projeto de
+recriar o banco de desenvolvimento quando necessário em vez de introduzir
+migrations.
+
+### Mapeamento JPA endurecido pela BACK-331
+
+`VehicleEntity` e `VehicleHistoryEntity` (o histórico reflete o mesmo
+snapshot final do hard delete, então segue a mesma lógica de nullability e
+length da tabela operacional) declaram explicitamente:
+
+- `length` das colunas textuais alinhado ao maior limite já aceito pelo
+  contrato entre `IncludeRequestDTO` (criação) e `EditRequestDTO` (edição
+  parcial), para nunca truncar um valor que algum dos dois DTOs já aceitava:
+  `nickname` 100, `photo` 500, `brand` 50, `model` 100, `color` 30. `plate` e
+  `renavam` usam o tamanho exato da forma canônica sempre persistida pelo
+  domínio (`Vehicle.normalizePlate`/`normalizeRenavam`, BACK-328/BACK-329): 7
+  e 11, respectivamente;
+- `nullable = false` explícito nas colunas que a BACK-329 tornou
+  obrigatórias no domínio para as três operações — `plate`, `renavam`,
+  `brand`, `model`, `manufacturingYear`, `modelYear`, `seatingCapacity`,
+  `fuelType`, `engineDisplacement`, `status`, `towing`, `ownerId`,
+  `createdAt` — incluindo `seatingCapacity`/`engineDisplacement` (já eram
+  `int`/`double` obrigatórios no contrato, mas a coluna não declarava a
+  constraint) e `towing` (tornou-se obrigatório com a BACK-326/BACK-329 mas a
+  coluna ainda aceitava `NULL`);
+- `nickname`, `photo`, `color` e `updated_at` permanecem `nullable` nas duas
+  tabelas, refletindo opcionalidade real: os três primeiros podem ser
+  limpos por edição parcial (BACK-326) e `updated_at` só existe após a
+  primeira atualização.
+
+Índice novo: `idx_vehicle_owner_id_status` (`owner_id`, `status`) na tabela
+operacional, sustentado por `VehicleRepository.findAllByOwnerIdAndStatus`
+(listagem de membro, paginada). Nenhum índice dedicado foi criado para
+`findAllByStatus` (listagem admin): `status` tem baixa cardinalidade — hoje
+praticamente todo registro operacional é `ACTIVE` —, então um índice
+só nessa coluna não reduziria I/O de forma relevante; `findByIdAndOwnerId` já
+resolve pela PK (`id`) e não se beneficia de índice adicional. Os índices do
+histórico (`idx_vehicle_history_owner_id`, `idx_vehicle_history_plate`,
+`idx_vehicle_history_renavam`, `idx_vehicle_history_deleted_at`) não foram
+alterados.
 
 ## Limitações funcionais já rastreadas
 
-- BACK-331: endurecer constraints, tamanhos e índices JPA, e resolver a
-  inconsistência de limite superior de ano/capacidade entre criação e edição
-  descrita em "Invariantes do agregado";
 - BACK-332: ampliar a matriz funcional, MVC, segurança, rollback e concorrência.
 
 Essas limitações descrevem o estado atual; os tickets não são regras já
@@ -214,6 +246,12 @@ binding do `PUT` via `JsonNode` e o OpenAPI. `VehicleTest` cobre, além da
 canonicalização de placa/RENAVAM, as invariantes descritas em "Invariantes do
 agregado": criação, reconstituição e atualização válidas e inválidas para
 cada campo obrigatório, limite numérico e a consistência de
-`createdAt`/`updatedAt`. Ampliações funcionais permanecem na BACK-332 e devem
-seguir os
+`createdAt`/`updatedAt`. `VehicleRepositoryAdapterTest.operationalColumnMetadataReflectsHardenedNullabilityAndLength`
+e `.historyColumnMetadataReflectsHardenedSnapshotNullabilityAndLength`
+consultam `INFORMATION_SCHEMA.COLUMNS` do H2 de teste para caracterizar o
+`length`/`nullable` reais gerados pelo mapeamento endurecido na BACK-331; e
+`.savingEntityWithNullTowingViolatesNotNullConstraint` prova que a coluna
+`towing`, agora `NOT NULL`, rejeita a persistência mesmo quando o domínio é
+contornado e a entity é salva diretamente com o campo nulo. Ampliações
+funcionais permanecem na BACK-332 e devem seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
