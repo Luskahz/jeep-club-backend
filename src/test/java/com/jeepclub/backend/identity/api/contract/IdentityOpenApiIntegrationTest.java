@@ -135,7 +135,7 @@ class IdentityOpenApiIntegrationTest {
         Instant now = Instant.now(clock);
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
                 new UserRegistrationData(
-                        "Email Owner", null, null, "39053344705",
+                        "Email Owner", null, null, "12345678909",
                         null, null, null, now
                 ),
                 "security-password"
