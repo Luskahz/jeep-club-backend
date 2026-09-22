@@ -22,8 +22,12 @@ originou muda.
 - Credenciais, usuários, roles e o provider físico de arquivos não pertencem a
   Billing.
 
-O módulo não expõe contrato Java em `api.module`. Sua superfície externa atual é
-HTTP; as integrações consumidas estão descritas em [Fluxos](flows.md).
+O módulo expõe dois contratos Java read-only mínimos em `api.module` para a
+política de membritude: `ChargeDefinitionQuery`, que informa se uma definição
+está ativa, e `MembershipChargeQuery`, que recebe somente definição e usuário e
+devolve um resultado financeiro sem expor entities, repositories, valores ou
+ciclos. A superfície externa de administração financeira continua HTTP; as
+integrações consumidas estão descritas em [Fluxos](flows.md).
 
 ## Modelo conceitual
 
@@ -49,6 +53,20 @@ Consulte:
 - [Fluxos](flows.md) para geração, pagamento, reembolso e comprovante;
 - [Concorrência](concurrency.md) para locks e compensação transacional;
 - [Glossário](glossary.md) para a linguagem do contexto.
+
+Para `MembershipChargeQuery`, Billing resolve primeiro o ciclo aplicável da
+definição. Ciclos `ARCHIVED` são históricos; ciclos mensais precisam pertencer
+ao mês corrente e ciclos anuais ao ano corrente. Um ciclo `ONE_TIME` permanece
+aplicável enquanto não for arquivado. Se houver mais de um ciclo no período,
+vence o vencimento mais recente já alcançado; sem ciclo vencido, vence o futuro
+mais próximo. Só então Billing procura a cobrança do usuário por `chargeCycleId`
+e usa a mesma data de referência capturada para a seleção do ciclo ao calcular
+`MemberCharge.effectiveStatusAt(referenceDate)`.
+O resultado público distingue prazo vigente, obrigação satisfeita, cancelamento,
+pagamento necessário e cobrança inexistente. A ausência do ciclo recorrente do
+período atual ou da cobrança do usuário nesse ciclo resulta em
+`CHARGE_NOT_FOUND`. Membership decide a política de acesso; Billing não conhece
+`@RequiresMembership`.
 
 ## Comprovantes
 
