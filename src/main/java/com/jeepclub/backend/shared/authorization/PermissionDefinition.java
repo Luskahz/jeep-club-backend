@@ -366,6 +366,18 @@ public enum PermissionDefinition {
             "Permite reenviar o convite de ativação para um solicitante aprovado"
     ),
 
+    MEMBERSHIP_BILLING_CONFIGURATION_READ(
+            PermissionCode.MEMBERSHIP_BILLING_CONFIGURATION_READ,
+            ModuleCode.MEMBERSHIP,
+            "Permite consultar a configuração financeira da membritude"
+    ),
+
+    MEMBERSHIP_BILLING_CONFIGURATION_UPDATE(
+            PermissionCode.MEMBERSHIP_BILLING_CONFIGURATION_UPDATE,
+            ModuleCode.MEMBERSHIP,
+            "Permite configurar e habilitar a exigência financeira da membritude"
+    ),
+
     // TOOLS
         TOOLS_TOOL_CREATE(
         PermissionCode.TOOLS_TOOL_CREATE,

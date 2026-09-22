@@ -4,6 +4,7 @@ import com.jeepclub.backend.billing.api.module.MembershipChargeQuery;
 import com.jeepclub.backend.billing.api.module.MembershipChargeResult;
 import com.jeepclub.backend.memberships.api.module.MembershipAccessQuery;
 import com.jeepclub.backend.memberships.api.module.MembershipAccessResult;
+import com.jeepclub.backend.memberships.api.module.exception.MembershipAccessUnavailableException;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipBillingConfiguration;
 import com.jeepclub.backend.memberships.core.repository.MembershipBillingConfigurationRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +37,21 @@ public class MembershipAccessQueryService implements MembershipAccessQuery {
             MembershipBillingConfiguration configuration,
             Long userId
     ) {
-        MembershipChargeResult result = membershipChargeQuery.evaluate(
-                configuration.getChargeDefinitionId(),
-                userId
-        );
+        MembershipChargeResult result;
+        try {
+            result = membershipChargeQuery.evaluate(
+                    configuration.getChargeDefinitionId(),
+                    userId
+            );
+        } catch (RuntimeException exception) {
+            log.error(
+                    "membership_access_unavailable chargeDefinitionId={} userId={} cause={}",
+                    configuration.getChargeDefinitionId(),
+                    userId,
+                    exception.getClass().getSimpleName()
+            );
+            throw new MembershipAccessUnavailableException(exception);
+        }
 
         return switch (result) {
             case WITHIN_PAYMENT_PERIOD, SATISFIED, CANCELED -> MembershipAccessResult.ALLOWED;

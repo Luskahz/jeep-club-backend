@@ -3,6 +3,7 @@ package com.jeepclub.backend.memberships.core.application.query;
 import com.jeepclub.backend.billing.api.module.MembershipChargeQuery;
 import com.jeepclub.backend.billing.api.module.MembershipChargeResult;
 import com.jeepclub.backend.memberships.api.module.MembershipAccessResult;
+import com.jeepclub.backend.memberships.api.module.exception.MembershipAccessUnavailableException;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipBillingConfiguration;
 import com.jeepclub.backend.memberships.core.repository.MembershipBillingConfigurationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +16,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -63,6 +65,15 @@ class MembershipAccessQueryServiceTest {
     @Test
     void shouldDenyOperationallyWhenExpectedChargeIsMissing() {
         assertFinancialResult(MembershipChargeResult.CHARGE_NOT_FOUND, MembershipAccessResult.CHARGE_NOT_FOUND);
+    }
+
+    @Test
+    void shouldTranslateUnexpectedBillingFailure() {
+        when(configurationRepository.findCurrent()).thenReturn(Optional.of(configuration(true)));
+        when(chargeQuery.evaluate(10L, 20L)).thenThrow(new IllegalStateException("database detail"));
+
+        assertThatThrownBy(() -> service.evaluate(20L))
+                .isInstanceOf(MembershipAccessUnavailableException.class);
     }
 
     private void assertFinancialResult(

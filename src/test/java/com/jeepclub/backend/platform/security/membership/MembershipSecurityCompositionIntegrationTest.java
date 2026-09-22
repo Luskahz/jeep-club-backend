@@ -25,6 +25,7 @@ import java.util.List;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -83,6 +84,32 @@ class MembershipSecurityCompositionIntegrationTest {
                         .header("Authorization", "Bearer admin"))
                 .andExpect(status().isOk())
                 .andExpect(content().string("combined"));
+    }
+
+    @Test
+    void shouldReturnPaymentRequiredProblemWithoutFinancialDetails() throws Exception {
+        authenticate("overdue", List.of());
+        when(membershipAccessQuery.evaluate(42L)).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
+
+        mockMvc.perform(get("/test-membership/only")
+                        .header("Authorization", "Bearer overdue"))
+                .andExpect(status().isPaymentRequired())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("MEMBERSHIP_PAYMENT_REQUIRED"))
+                .andExpect(jsonPath("$.amount").doesNotExist())
+                .andExpect(jsonPath("$.chargeDefinitionId").doesNotExist());
+    }
+
+    @Test
+    void shouldReturnOperationalProblemWhenExpectedChargeIsMissing() throws Exception {
+        authenticate("missing-charge", List.of());
+        when(membershipAccessQuery.evaluate(42L)).thenReturn(MembershipAccessResult.CHARGE_NOT_FOUND);
+
+        mockMvc.perform(get("/test-membership/only")
+                        .header("Authorization", "Bearer missing-charge"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("MEMBERSHIP_CHARGE_UNAVAILABLE"));
     }
 
     @Test
