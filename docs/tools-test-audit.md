@@ -28,3 +28,7 @@ O primeiro `./mvnw test` executou 589 testes: os 2 novos testes HTTP e os 4 test
 ## Resultado informado após a correção
 
 `test` e `verify`: BUILD SUCCESS (589 testes, 0 falhas, 0 erros, 1 ignorado). O resumo do PIT selecionado informa 62/78 linhas (79%), 37 mutações, 24 eliminadas (65%), 11 sem cobertura e 2 sobreviventes do mutador `BooleanFalseReturnVals` (força dos testes: 92%). O resumo não contém os locais individuais de `NO_COVERAGE`, portanto não é possível atribuí-los a métodos específicos sem `target/pit-reports/mutations.xml`. No escopo selecionado, os únicos métodos booleanos explícitos são `Tool.activate` e `Tool.deactivate`. A characterization passa a verificar diretamente os retornos verdadeiro/falso de transição real e idempotente, além da preservação de `updatedAt`. Reexecutar PIT para confirmar a eliminação dos dois sobreviventes. O log não inclui métricas JaCoCo por pacote; consultar `target/site/jacoco/index.html` para análise quantitativa de Tools.
+
+## Reexecução final informada
+
+`test` e `verify` reportaram BUILD SUCCESS. O PIT selecionado passou de 2 sobreviventes para **0 sobreviventes**: 37 mutações geradas, 26 eliminadas, 11 sem cobertura; força dos testes de 100%. A cobertura de linhas medida pelo PIT nas classes selecionadas foi 63/78 (81%). As 11 mutações sem cobertura não são sobreviventes e o log resumido não traz classe/linha para priorização; o relatório XML completo permite essa triagem. O índice JaCoCo por pacote também não foi anexado, então não há porcentagem JaCoCo de Tools a registrar.
