@@ -20,3 +20,7 @@ Executar PIT apenas para domínio/serviços selecionados com `./mvnw -Ptools-mut
 Neste workspace, `test`, `verify` e PIT param antes da compilação: o Maven Central não resolve `spring-boot-starter-parent:4.0.4`. Nenhum resultado de JaCoCo/PIT foi inferido nem alegado como aprovado. Após executar em ambiente com dependências, registrar aqui o resumo dos relatórios e eventuais sobreviventes relevantes.
 
 Esta página registra a cobertura preexistente, os gaps e o incremento para revisão da branch, sem abrir PR.
+
+## Reexecução recebida
+
+O `./mvnw test` executou 589 testes: os 2 novos testes HTTP e os 4 testes JPA de Tools passaram. O único erro ocorreu em `IdentityOpenApiIntegrationTest`, por reutilizar o CPF `39053344705` em outro teste. O fixture desse teste foi isolado com CPF válido diferente (`47831962573`); aguarda nova execução da suíte inteira.
