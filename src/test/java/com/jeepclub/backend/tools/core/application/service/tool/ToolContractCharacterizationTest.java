@@ -96,6 +96,21 @@ class ToolContractCharacterizationTest {
     }
 
     @Test
+    void transitionsReportWhetherStatusActuallyChanged() {
+        Tool tool = tool(1L, ToolStatus.ACTIVE);
+        LocalDateTime changedAt = CREATED_AT.plusMinutes(1);
+
+        assertThat(tool.activate(changedAt)).isFalse();
+        assertThat(tool.getUpdatedAt()).isEqualTo(CREATED_AT);
+        assertThat(tool.deactivate(changedAt)).isTrue();
+        assertThat(tool.getUpdatedAt()).isEqualTo(changedAt);
+        assertThat(tool.deactivate(changedAt.plusMinutes(1))).isFalse();
+        assertThat(tool.getUpdatedAt()).isEqualTo(changedAt);
+        assertThat(tool.activate(changedAt.plusMinutes(2))).isTrue();
+        assertThat(tool.getStatus()).isEqualTo(ToolStatus.ACTIVE);
+    }
+
+    @Test
     void administrativeCreationAcceptsTheSuppliedScalarUserIdWithoutIdentityValidation() {
         when(repository.save(any(Tool.class))).thenAnswer(invocation -> invocation.getArgument(0));
         AdminToolService service = new AdminToolService(repository, CLOCK);

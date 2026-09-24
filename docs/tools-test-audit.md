@@ -23,4 +23,8 @@ Esta página registra a cobertura preexistente, os gaps e o incremento para revi
 
 ## Reexecução recebida
 
-O `./mvnw test` executou 589 testes: os 2 novos testes HTTP e os 4 testes JPA de Tools passaram. O único erro ocorreu em `IdentityOpenApiIntegrationTest`, por reutilizar o CPF `39053344705` em outro teste. O fixture desse teste foi isolado com CPF válido diferente (`47831962573`); aguarda nova execução da suíte inteira.
+O primeiro `./mvnw test` executou 589 testes: os 2 novos testes HTTP e os 4 testes JPA de Tools passaram. O único erro ocorreu em `IdentityOpenApiIntegrationTest`, por reutilizar o CPF `39053344705` em outro teste. O fixture desse teste foi isolado com CPF válido diferente (`47831962573`); a suíte foi reexecutada com sucesso antes da análise PIT abaixo.
+
+## Resultado informado após a correção
+
+`test` e `verify`: BUILD SUCCESS (589 testes, 0 falhas, 0 erros, 1 ignorado). O resumo do PIT selecionado informa 62/78 linhas (79%), 37 mutações, 24 eliminadas (65%), 11 sem cobertura e 2 sobreviventes do mutador `BooleanFalseReturnVals` (força dos testes: 92%). O resumo não contém os locais individuais de `NO_COVERAGE`, portanto não é possível atribuí-los a métodos específicos sem `target/pit-reports/mutations.xml`. No escopo selecionado, os únicos métodos booleanos explícitos são `Tool.activate` e `Tool.deactivate`. A characterization passa a verificar diretamente os retornos verdadeiro/falso de transição real e idempotente, além da preservação de `updatedAt`. Reexecutar PIT para confirmar a eliminação dos dois sobreviventes. O log não inclui métricas JaCoCo por pacote; consultar `target/site/jacoco/index.html` para análise quantitativa de Tools.
