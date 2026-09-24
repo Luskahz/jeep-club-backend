@@ -42,3 +42,7 @@ O `jacoco.xml` mostra, nas classes selecionadas, `Tool` com 34/34 linhas e 12/12
 ## Mutante da reexecução após cobertura administrativa
 
 O novo log apresentou 595 testes verdes, PIT com 37 mutações, 36 eliminadas, nenhuma sem cobertura e uma sobrevivente; cobertura das classes selecionadas: 76/78 linhas (97%). O XML da mesma execução identifica `AdminToolService.deactivateTool`, linha 56 (`NegateConditionalsMutator`). O teste anterior verificava apenas o total final de duas gravações após desativar duas vezes e reativar. A mutação trocava *qual* desativação persistia e mantinha o mesmo total. O teste agora verifica a gravação imediatamente após a primeira desativação e sua ausência na segunda. Reexecutar a suíte e o PIT para confirmar que a mutação foi eliminada.
+
+## Validação final após o ajuste de idempotência
+
+O último log confirma `verify` com BUILD SUCCESS: 595 testes, 0 falhas, 0 erros e 1 ignorado. O PIT selecionado também terminou com BUILD SUCCESS: **37/37 mutações eliminadas (100%)**, nenhuma sobrevivente, nenhuma sem cobertura e força dos testes de 100%. A cobertura de linhas nas três classes selecionadas pelo PIT foi 76/78 (97%). A auditoria acima registra os gaps pré-existentes, os testes adicionados e a resolução do último sobrevivente. Nenhuma regra de produção foi alterada.
