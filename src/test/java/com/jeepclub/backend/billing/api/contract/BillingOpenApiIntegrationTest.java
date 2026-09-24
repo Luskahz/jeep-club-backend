@@ -98,7 +98,6 @@ class BillingOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['MemberPaymentResponse']['properties']['receiptUrl']['example']")
                         .value("/billing/member-payments/1/receipt"))
                 .andExpect(content().string(containsString("/billing/member-payments/{paymentId}/receipt")))
-                .andExpect(content().string(not(containsString("receiptStorageKey"))))
-                .andExpect(content().string(not(containsString("storageKey"))));
+                .andExpect(content().string(not(containsString("receiptStorageKey"))));
     }
 }

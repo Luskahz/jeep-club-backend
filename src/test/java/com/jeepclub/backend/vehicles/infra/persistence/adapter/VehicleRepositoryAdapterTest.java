@@ -62,7 +62,7 @@ class VehicleRepositoryAdapterTest {
     @Test
     void operationalColumnMetadataReflectsHardenedNullabilityAndLength() throws SQLException {
         assertColumn("VEHICLES_VEHICLE", "NICKNAME", true, 100);
-        assertColumn("VEHICLES_VEHICLE", "PHOTO", true, 500);
+        assertColumn("VEHICLES_VEHICLE", "PHOTO_STORAGE_KEY", true, 255);
         assertColumn("VEHICLES_VEHICLE", "PLATE", false, 7);
         assertColumn("VEHICLES_VEHICLE", "RENAVAM", false, 11);
         assertColumn("VEHICLES_VEHICLE", "BRAND", false, 50);
@@ -79,7 +79,7 @@ class VehicleRepositoryAdapterTest {
     @Test
     void historyColumnMetadataReflectsHardenedSnapshotNullabilityAndLength() throws SQLException {
         assertColumn("VEHICLES_VEHICLE_HISTORY", "NICKNAME", true, 100);
-        assertColumn("VEHICLES_VEHICLE_HISTORY", "PHOTO", true, 500);
+        assertColumn("VEHICLES_VEHICLE_HISTORY", "PHOTO_STORAGE_KEY", true, 255);
         assertColumn("VEHICLES_VEHICLE_HISTORY", "PLATE", false, 7);
         assertColumn("VEHICLES_VEHICLE_HISTORY", "RENAVAM", false, 11);
         assertColumn("VEHICLES_VEHICLE_HISTORY", "BRAND", false, 50);
