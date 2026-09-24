@@ -1,6 +1,7 @@
 package com.jeepclub.backend.tools.core.application.service.tool;
 
 import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
@@ -19,6 +20,15 @@ public class AdminToolService {
 
     private final ToolRepository toolRepository;
     private final Clock clock;
+    private final ImageMediaService images;
+
+    @Transactional
+    public Tool updatePhoto(Long id, String storageKey) {
+        Tool tool = getToolDetails(id);
+        images.requireExisting(storageKey);
+        tool.updatePhoto(storageKey, now());
+        return toolRepository.save(tool);
+    }
 
     @Transactional(readOnly = true)
     public Page<Tool> listAllTools(String name, ToolStatus status, Pageable pageable) {

@@ -149,7 +149,7 @@ public class AdminUserJpaQueryRepository {
                 get(tuple, fields, AdminUserField.CPF, "cpf", String.class),
                 get(tuple, fields, AdminUserField.RG, "rg", String.class),
                 get(tuple, fields, AdminUserField.PHONE_NUMBER, "phoneNumber", String.class),
-                get(tuple, fields, AdminUserField.PROFILE_PHOTO_URL, "profilePhotoUrl", String.class),
+                get(tuple, fields, AdminUserField.PROFILE_PHOTO_STORAGE_KEY, "profilePhotoStorageKey", String.class),
                 get(tuple, fields, AdminUserField.STATUS, "status", UserStatus.class),
                 get(tuple, fields, AdminUserField.CREATED_AT, "createdAt", Instant.class),
                 get(tuple, fields, AdminUserField.DISABLED_AT, "disabledAt", Instant.class),
@@ -176,7 +176,7 @@ public class AdminUserJpaQueryRepository {
             case CPF -> "cpf";
             case RG -> "rg";
             case PHONE_NUMBER -> "phoneNumber";
-            case PROFILE_PHOTO_URL -> "profilePhotoUrl";
+            case PROFILE_PHOTO_STORAGE_KEY -> "profilePhotoStorageKey";
             case STATUS -> "status";
             case CREATED_AT -> "createdAt";
             case DISABLED_AT -> "disabledAt";

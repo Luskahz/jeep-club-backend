@@ -1,6 +1,7 @@
 package com.jeepclub.backend.iam.identity.core.domain.model;
 
 import com.jeepclub.backend.iam.identity.api.module.UserStatus;
+import com.jeepclub.backend.shared.storage.ImageReference;
 import com.jeepclub.backend.iam.identity.core.domain.exception.UserAlreadyDisabledException;
 import com.jeepclub.backend.iam.identity.core.domain.exception.UserNotDisabledException;
 import lombok.AccessLevel;
@@ -20,7 +21,7 @@ public class User {
     private static final int MAX_EMAIL_LENGTH = 180;
     private static final int MAX_RG_LENGTH = 20;
     private static final int MAX_PHONE_NUMBER_LENGTH = 20;
-    private static final int MAX_PROFILE_PHOTO_URL_LENGTH = 255;
+    private static final int MAX_PROFILE_PHOTO_STORAGE_KEY_LENGTH = 255;
 
     private Long id;
     private String name;
@@ -29,7 +30,7 @@ public class User {
     private String cpf;
     private String rg;
     private String phoneNumber;
-    private String profilePhotoUrl;
+    private String profilePhotoStorageKey;
     private UserStatus status;
     private Instant createdAt;
     private Instant disabledAt;
@@ -42,7 +43,7 @@ public class User {
             String cpf,
             String rg,
             String phoneNumber,
-            String profilePhotoUrl,
+            String profilePhotoStorageKey,
             Instant now
     ) {
         Objects.requireNonNull(now, "now cannot be null");
@@ -54,7 +55,7 @@ public class User {
         user.cpf = normalizeCpf(cpf);
         user.rg = normalizeRg(rg);
         user.phoneNumber = normalizePhoneNumber(phoneNumber);
-        user.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
+        user.profilePhotoStorageKey = normalizeProfilePhotoStorageKey(profilePhotoStorageKey);
         user.status = UserStatus.ACTIVE;
         user.createdAt = now;
         return user;
@@ -68,7 +69,7 @@ public class User {
             String cpf,
             String rg,
             String phoneNumber,
-            String profilePhotoUrl,
+            String profilePhotoStorageKey,
             UserStatus status,
             Instant createdAt,
             Instant disabledAt,
@@ -87,7 +88,7 @@ public class User {
         user.cpf = normalizeCpf(cpf);
         user.rg = normalizeRg(rg);
         user.phoneNumber = normalizePhoneNumber(phoneNumber);
-        user.profilePhotoUrl = normalizeProfilePhotoUrl(profilePhotoUrl);
+        user.profilePhotoStorageKey = normalizeProfilePhotoStorageKey(profilePhotoStorageKey);
         user.status = status;
         user.createdAt = createdAt;
         user.disabledAt = disabledAt;
@@ -124,6 +125,12 @@ public class User {
             throw new IllegalArgumentException("email is required");
         }
         email = normalizedEmail;
+        updatedAt = now;
+    }
+
+    public void updateProfilePhoto(String storageKey, Instant now) {
+        validateMutationInstant(now);
+        profilePhotoStorageKey = normalizeProfilePhotoStorageKey(storageKey);
         updatedAt = now;
     }
 
@@ -164,12 +171,13 @@ public class User {
         );
     }
 
-    private static String normalizeProfilePhotoUrl(String rawProfilePhotoUrl) {
-        return normalizeOptionalText(
-                rawProfilePhotoUrl,
-                "profilePhotoUrl",
-                MAX_PROFILE_PHOTO_URL_LENGTH
+    private static String normalizeProfilePhotoStorageKey(String rawProfilePhotoStorageKey) {
+        String key = normalizeOptionalText(
+                rawProfilePhotoStorageKey,
+                "profilePhotoStorageKey",
+                MAX_PROFILE_PHOTO_STORAGE_KEY_LENGTH
         );
+        return key == null ? null : ImageReference.require(key);
     }
 
     private void validateMutationInstant(Instant now) {

@@ -2,6 +2,7 @@ package com.jeepclub.backend.iam.identity.api.http.controller;
 
 import com.jeepclub.backend.iam.identity.api.http.dto.user.CurrentUserResponseDTO;
 import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserEmailRequestDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserPhotoRequestDTO;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
@@ -85,6 +86,18 @@ public class CurrentUserController {
     ) {
         return ResponseEntity.ok(CurrentUserResponseDTO.from(
                 currentUserProfileService.updateEmail(principal.getUserId(), request.email())
+        ));
+    }
+
+    @PatchMapping(value = "/me/photo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
+    @Operation(summary = "Associar foto de perfil", description = "Recebe storageKey de POST /media/images, confirma que o objeto existe e devolve a chave no perfil. null desassocia sem excluir o objeto do storage.")
+    public ResponseEntity<CurrentUserResponseDTO> updatePhoto(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody UpdateCurrentUserPhotoRequestDTO request
+    ) {
+        return ResponseEntity.ok(CurrentUserResponseDTO.from(
+                currentUserProfileService.updateProfilePhoto(principal.getUserId(), request.storageKey())
         ));
     }
 }

@@ -32,6 +32,14 @@ public class AdminToolController {
 
     private final AdminToolService adminToolService;
 
+    @PatchMapping(value = "/{id}/photo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAuthority('TOOLS_TOOL_UPDATE')")
+    @RequiredPermission("TOOLS_TOOL_UPDATE")
+    @Operation(summary = "Associar foto à ferramenta administrativamente", description = "Recebe chave de POST /media/images; null remove a associação sem excluir o objeto no storage.")
+    public ResponseEntity<ToolResponseDTO> updatePhoto(@PathVariable Long id, @RequestBody ToolPhotoRequestDTO request) {
+        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.updatePhoto(id, request.storageKey())));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('TOOLS_TOOL_READ')")
     @RequiredPermission("TOOLS_TOOL_READ")

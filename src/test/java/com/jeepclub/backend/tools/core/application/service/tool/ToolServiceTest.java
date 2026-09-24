@@ -4,6 +4,8 @@ import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.exception.ToolAccessDeniedException;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
+import com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +35,7 @@ class ToolServiceTest {
 
     @Mock
     private ToolRepository toolRepository;
+    @Mock private ImageMediaService images;
 
     private ToolService service;
 
@@ -40,7 +43,8 @@ class ToolServiceTest {
     void setUp() {
         service = new ToolService(
                 toolRepository,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                images
         );
     }
 
@@ -75,6 +79,23 @@ class ToolServiceTest {
 
         assertThatThrownBy(() -> service.getToolDetails(1L, 8L))
                 .isInstanceOf(ToolAccessDeniedException.class);
+    }
+
+    @Test
+    void replacesPhotoOnlyWhenGlobalReferenceExists() {
+        String key = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png";
+        Tool tool = tool(7L);
+        when(toolRepository.findById(1L)).thenReturn(Optional.of(tool));
+        when(toolRepository.save(tool)).thenReturn(tool);
+
+        service.updatePhoto(1L, 7L, key);
+        verify(images).requireExisting(key);
+        assertThat(tool.getPhotoStorageKey()).isEqualTo(key);
+
+        org.mockito.Mockito.doThrow(new StorageObjectNotFoundException()).when(images).requireExisting(key);
+        assertThatThrownBy(() -> service.updatePhoto(1L, 7L, key))
+                .isInstanceOf(StorageObjectNotFoundException.class);
+        verify(toolRepository).save(tool);
     }
 
     @Test

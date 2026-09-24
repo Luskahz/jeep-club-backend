@@ -33,7 +33,7 @@ public class VehicleEntity {
     @Column(length = 100)
     private String nickname;
 
-    @Column(length = 500)
+    @Column(name = "photo_storage_key", length = 255)
     private String photo;
 
     @Column(nullable = false, length = 7)

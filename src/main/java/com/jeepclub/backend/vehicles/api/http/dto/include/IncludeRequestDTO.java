@@ -18,8 +18,8 @@ public record IncludeRequestDTO(
         String nickname,
 
         @Schema(
-                description = "URL ou caminho da foto única do veículo.",
-                example = "https://jeepclub.com",
+                description = "Chave estável retornada por POST /media/images; GET /media/images?key=... resolve a imagem.",
+                example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png",
                 maxLength = 255,
                 requiredMode = Schema.RequiredMode.NOT_REQUIRED
         )

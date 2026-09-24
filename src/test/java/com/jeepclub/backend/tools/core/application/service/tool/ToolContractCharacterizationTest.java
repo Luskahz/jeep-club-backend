@@ -39,7 +39,7 @@ class ToolContractCharacterizationTest {
         Tool inactive = tool(2L, ToolStatus.INACTIVE);
         when(repository.findByUserId(7L, pageable)).thenReturn(new PageImpl<>(List.of(active, inactive)));
 
-        ToolService service = new ToolService(repository, CLOCK);
+        ToolService service = new ToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         assertThat(service.listUserTools(7L, pageable).getContent())
                 .extracting(Tool::getStatus)
@@ -51,7 +51,7 @@ class ToolContractCharacterizationTest {
         Tool inactive = tool(1L, ToolStatus.INACTIVE);
         when(repository.findById(1L)).thenReturn(Optional.of(inactive));
         when(repository.save(any(Tool.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        ToolService service = new ToolService(repository, CLOCK);
+        ToolService service = new ToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         assertThat(service.getToolDetails(1L, 7L).getStatus()).isEqualTo(ToolStatus.INACTIVE);
         assertThat(service.updateTool(1L, "  Novo nome  ", null, 7L).getName()).isEqualTo("Novo nome");
@@ -87,7 +87,7 @@ class ToolContractCharacterizationTest {
         Tool inactive = tool(2L, ToolStatus.INACTIVE);
         when(repository.findById(1L)).thenReturn(Optional.of(active));
         when(repository.findById(2L)).thenReturn(Optional.of(inactive));
-        ToolService service = new ToolService(repository, CLOCK);
+        ToolService service = new ToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         assertThat(service.activateTool(1L, 7L)).isSameAs(active);
         assertThat(service.deactivateTool(2L, 7L)).isSameAs(inactive);
@@ -98,7 +98,7 @@ class ToolContractCharacterizationTest {
     @Test
     void administrativeCreationAcceptsTheSuppliedScalarUserIdWithoutIdentityValidation() {
         when(repository.save(any(Tool.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        AdminToolService service = new AdminToolService(repository, CLOCK);
+        AdminToolService service = new AdminToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         Tool created = service.createToolForUser(999L, "Macaco", "Hidráulico");
 

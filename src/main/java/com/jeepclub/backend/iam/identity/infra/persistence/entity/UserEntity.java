@@ -69,8 +69,8 @@ public class UserEntity {
     @Column(name = "phone_number", length = 20)
     private String phoneNumber;
 
-    @Column(name = "profile_photo_url", length = 255)
-    private String profilePhotoUrl;
+    @Column(name = "profile_photo_storage_key", length = 255)
+    private String profilePhotoStorageKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
