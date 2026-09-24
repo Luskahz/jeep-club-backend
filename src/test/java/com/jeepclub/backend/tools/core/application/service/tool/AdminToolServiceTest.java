@@ -81,7 +81,9 @@ class AdminToolServiceTest {
         assertThat(service().activateTool(1L)).isSameAs(tool);
         verify(repository, never()).save(any(Tool.class));
         assertThat(service().deactivateTool(1L).getStatus()).isEqualTo(ToolStatus.INACTIVE);
+        verify(repository).save(tool);
         assertThat(service().deactivateTool(1L)).isSameAs(tool);
+        verify(repository).save(tool);
         assertThat(service().activateTool(1L).getStatus()).isEqualTo(ToolStatus.ACTIVE);
         verify(repository, org.mockito.Mockito.times(2)).save(tool);
 
