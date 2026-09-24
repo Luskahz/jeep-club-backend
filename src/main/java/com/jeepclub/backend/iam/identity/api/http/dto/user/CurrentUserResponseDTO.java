@@ -25,8 +25,8 @@ public record CurrentUserResponseDTO(
         String rg,
         @Schema(description = "Telefone canônico.", example = "5511999999999", nullable = true)
         String phoneNumber,
-        @Schema(description = "URL da foto de perfil.", format = "uri", nullable = true)
-        String profilePhotoUrl,
+        @Schema(description = "Chave da foto no storage global; resolva via GET /media/images?key=...", nullable = true)
+        String profilePhotoStorageKey,
         @Schema(description = "Estado administrativo do usuário.", requiredMode = Schema.RequiredMode.REQUIRED)
         UserStatus status,
         @Schema(description = "Instante de criação.", format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
@@ -40,7 +40,7 @@ public record CurrentUserResponseDTO(
         Objects.requireNonNull(user, "user cannot be null");
         return new CurrentUserResponseDTO(
                 user.id(), user.name(), user.birthDate(), user.email(), user.cpf(), user.rg(),
-                user.phoneNumber(), user.profilePhotoUrl(),
+                user.phoneNumber(), user.profilePhotoStorageKey(),
                 user.administrativelyActive() ? UserStatus.ACTIVE : UserStatus.DISABLED,
                 user.createdAt(), user.disabledAt(), user.updatedAt()
         );

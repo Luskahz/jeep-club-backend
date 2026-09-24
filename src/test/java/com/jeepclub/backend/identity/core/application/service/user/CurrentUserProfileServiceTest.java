@@ -5,6 +5,8 @@ import com.jeepclub.backend.iam.identity.core.application.exception.UserConflict
 import com.jeepclub.backend.iam.identity.core.application.service.user.CurrentUserProfileService;
 import com.jeepclub.backend.iam.identity.core.domain.model.User;
 import com.jeepclub.backend.iam.identity.core.repository.UserRepository;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
+import com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,11 +26,13 @@ import static org.mockito.Mockito.*;
 class CurrentUserProfileServiceTest {
     private static final Instant NOW = Instant.parse("2026-09-19T12:00:00Z");
     @Mock UserRepository repository;
+    @Mock ImageMediaService images;
     private CurrentUserProfileService service;
 
     @BeforeEach
     void setUp() {
-        service = new CurrentUserProfileService(repository, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new CurrentUserProfileService(repository, Clock.fixed(NOW, ZoneOffset.UTC),
+                images);
     }
 
     @Test
@@ -43,6 +47,22 @@ class CurrentUserProfileServiceTest {
         assertThat(result.email()).isEqualTo("user@example.com");
         assertThat(result.updatedAt()).isEqualTo(NOW);
         verify(repository).existsByEmailAndIdNot("user@example.com", 42L);
+    }
+
+    @Test
+    void profilePhotoRequiresStoredObjectBeforeReplacingReference() {
+        String key = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png";
+        User user = user(null);
+        when(repository.findByIdForUpdate(42L)).thenReturn(Optional.of(user));
+        doThrow(new StorageObjectNotFoundException()).when(images).requireExisting(key);
+
+        assertThatThrownBy(() -> service.updateProfilePhoto(42L, key))
+                .isInstanceOf(StorageObjectNotFoundException.class);
+        verify(repository, never()).saveAndFlush(any());
+
+        doReturn(key).when(images).requireExisting(key);
+        when(repository.saveAndFlush(user)).thenReturn(user);
+        assertThat(service.updateProfilePhoto(42L, key).profilePhotoStorageKey()).isEqualTo(key);
     }
 
     @Test

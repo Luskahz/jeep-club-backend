@@ -1,6 +1,7 @@
 package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
 import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
@@ -28,6 +29,7 @@ public class AdminVehicleService {
     private final VehicleRepository vehicleRepository;
     private final UserPort userPort;
     private final Clock clock;
+    private final ImageMediaService images;
 
     @Transactional
     public Vehicle createForOwner(
@@ -49,6 +51,7 @@ public class AdminVehicleService {
         String canonicalPlate = Vehicle.normalizePlate(plate);
         String canonicalRenavam = Vehicle.normalizeRenavam(renavam);
         assertUniquePlateAndRenavam(canonicalPlate, canonicalRenavam);
+        images.requireExisting(photo);
 
         if (!userPort.existsById(ownerId)) {
             throw new UserNotFoundException("User id not found.");
@@ -96,6 +99,7 @@ public class AdminVehicleService {
         String canonicalPlate = Vehicle.normalizePlate(resolved.plate());
         String canonicalRenavam = Vehicle.normalizeRenavam(resolved.renavam());
         assertUniqueChangedIdentifiers(vehicle, canonicalPlate, canonicalRenavam);
+        images.requireExisting(resolved.photo());
 
         vehicle.update(
                 resolved.nickname(),

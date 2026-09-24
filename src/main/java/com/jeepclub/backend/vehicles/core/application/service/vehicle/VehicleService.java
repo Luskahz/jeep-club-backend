@@ -1,6 +1,7 @@
 package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
 import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehiclePlateAlreadyExistsException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleRenavamAlreadyExistsException;
@@ -24,6 +25,7 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final Clock clock;
+    private final ImageMediaService images;
 
     @Transactional
     public Vehicle create(
@@ -45,6 +47,7 @@ public class VehicleService {
         String canonicalPlate = Vehicle.normalizePlate(plate);
         String canonicalRenavam = Vehicle.normalizeRenavam(renavam);
         assertUniquePlateAndRenavam(canonicalPlate, canonicalRenavam);
+        images.requireExisting(photo);
 
         Vehicle vehicle = Vehicle.create(
                 nickname,
@@ -88,6 +91,7 @@ public class VehicleService {
         String canonicalPlate = Vehicle.normalizePlate(resolved.plate());
         String canonicalRenavam = Vehicle.normalizeRenavam(resolved.renavam());
         assertUniqueChangedIdentifiers(vehicle, canonicalPlate, canonicalRenavam);
+        images.requireExisting(resolved.photo());
 
         vehicle.update(
                 resolved.nickname(),

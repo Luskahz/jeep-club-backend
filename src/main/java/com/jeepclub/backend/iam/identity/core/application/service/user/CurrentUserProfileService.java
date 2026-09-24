@@ -1,6 +1,7 @@
 package com.jeepclub.backend.iam.identity.core.application.service.user;
 
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserEmailAlreadyInUseException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.iam.identity.core.application.exception.UserConflictException;
@@ -19,6 +20,16 @@ public class CurrentUserProfileService {
 
     private final UserRepository userRepository;
     private final Clock clock;
+    private final ImageMediaService images;
+
+    @Transactional
+    public UserDetails updateProfilePhoto(Long userId, String key) {
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new UserNotFoundException(userId));
+        images.requireExisting(key);
+        user.updateProfilePhoto(key, Instant.now(clock));
+        return UserQueryService.toDetails(userRepository.saveAndFlush(user));
+    }
 
     @Transactional
     public UserDetails updateEmail(Long userId, String email) {

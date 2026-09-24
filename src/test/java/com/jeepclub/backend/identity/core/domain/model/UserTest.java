@@ -26,7 +26,7 @@ class UserTest {
                 "529.982.247-25",
                 "12.345.678-9",
                 "+55 (12) 99999-9999",
-                "  https://example.com/profile.jpg  ",
+                "  images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg  ",
                 CREATED_AT
         );
 
@@ -35,8 +35,8 @@ class UserTest {
         assertThat(identity.getCpf()).isEqualTo("52998224725");
         assertThat(identity.getRg()).isEqualTo("123456789");
         assertThat(identity.getPhoneNumber()).isEqualTo("5512999999999");
-        assertThat(identity.getProfilePhotoUrl())
-                .isEqualTo("https://example.com/profile.jpg");
+        assertThat(identity.getProfilePhotoStorageKey())
+                .isEqualTo("images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg");
         assertThat(identity.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(identity.getCreatedAt()).isEqualTo(CREATED_AT);
         assertThat(identity.getDisabledAt()).isNull();
