@@ -32,3 +32,9 @@ O primeiro `./mvnw test` executou 589 testes: os 2 novos testes HTTP e os 4 test
 ## Reexecução final informada
 
 `test` e `verify` reportaram BUILD SUCCESS. O PIT selecionado passou de 2 sobreviventes para **0 sobreviventes**: 37 mutações geradas, 26 eliminadas, 11 sem cobertura; força dos testes de 100%. A cobertura de linhas medida pelo PIT nas classes selecionadas foi 63/78 (81%). As 11 mutações sem cobertura não são sobreviventes e o log resumido não traz classe/linha para priorização; o relatório XML completo permite essa triagem. O índice JaCoCo por pacote também não foi anexado, então não há porcentagem JaCoCo de Tools a registrar.
+
+## Triagem dos relatórios XML recebidos
+
+O `mutations.xml` confirmou exatamente 26 `KILLED`, 11 `NO_COVERAGE` e nenhum `SURVIVED`. Dez `NO_COVERAGE` pertencem a `AdminToolService`: listagem (1), leitura ausente e presente (2), atualização (2), ativação (2), desativação (2) e exclusão (1). O outro está no caminho de ausência de `ToolService.getToolDetails` (1). Todos representam comportamentos relevantes; foram acrescentados `AdminToolServiceTest` e um teste de ausência em `ToolServiceTest`. A análise dos novos resultados depende de nova execução de `test`, `verify` e PIT.
+
+O `jacoco.xml` mostra, nas classes selecionadas, `Tool` com 34/34 linhas e 12/12 branches, `ToolService` com 19/19 linhas e 4/4 branches, `AdminToolService` com 11/16 linhas e 1/4 branches. No restante de Tools: o adapter tem 18/18 linhas; `ToolSpecifications` tem 8/8 linhas e 3/6 branches; `ToolExceptionHandler` tem 3/6 linhas. Os branches ainda descobertos de `ToolSpecifications` pertencem às combinações de filtros já parcialmente cobertas pelo repositório, e `InvalidToolStatusException` permanece sem uso no lifecycle vigente. A prioridade foi a lacuna administrativa confirmada por PIT e JaCoCo; endpoints e autorização são cobertos por `ToolsHttpIntegrationTest`.

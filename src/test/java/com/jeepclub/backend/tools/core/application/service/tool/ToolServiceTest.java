@@ -1,6 +1,7 @@
 package com.jeepclub.backend.tools.core.application.service.tool;
 
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
 import com.jeepclub.backend.tools.core.domain.exception.ToolAccessDeniedException;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
@@ -75,6 +76,17 @@ class ToolServiceTest {
 
         assertThatThrownBy(() -> service.getToolDetails(1L, 8L))
                 .isInstanceOf(ToolAccessDeniedException.class);
+    }
+
+    @Test
+    void missingToolCannotBeReadOrUpdated() {
+        when(toolRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getToolDetails(1L, 7L))
+                .isInstanceOf(ToolNotFoundException.class);
+        assertThatThrownBy(() -> service.updateTool(1L, "Novo", null, 7L))
+                .isInstanceOf(ToolNotFoundException.class);
+        verify(toolRepository, org.mockito.Mockito.never()).save(any(Tool.class));
     }
 
     @Test
