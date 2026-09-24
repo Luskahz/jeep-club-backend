@@ -82,10 +82,11 @@ estado operacional reativável.
 
 ## Administração, filtros e paginação
 
-A criação administrativa para `/admin/tools/users/{userId}` grava o `userId`
-recebido como escalar. Tools não possui `api.module`, `core.port` ou
-`infra.integration`, não consulta Identity e não valida se o User existe ou
-está `ACTIVE`/`DISABLED`. Também não há FK declarada para Identity neste módulo.
+A criação administrativa para `/admin/tools/users/{userId}` consulta o contrato
+público `UserQuery` de Identity através de um port de Tools. Usuário inexistente
+retorna `404` (`TOOL_OWNER_NOT_FOUND`); usuário administrativamente `DISABLED`
+retorna `409` (`TOOL_OWNER_DISABLED`). Somente o usuário existente e ativo recebe
+uma nova ferramenta. A criação de membro usa o `UserPrincipal` autenticado.
 
 A listagem administrativa aceita `name` e `status`. `name` não vazio aplica
 busca por trecho case-insensitive; `status` compara exatamente `ACTIVE` ou

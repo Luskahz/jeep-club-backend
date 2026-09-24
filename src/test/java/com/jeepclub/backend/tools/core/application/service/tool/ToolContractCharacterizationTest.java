@@ -1,6 +1,9 @@
 package com.jeepclub.backend.tools.core.application.service.tool;
 
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerDisabledException;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerNotFoundException;
+import com.jeepclub.backend.tools.core.port.ToolOwnerQuery;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -31,6 +35,9 @@ class ToolContractCharacterizationTest {
 
     @Mock
     private ToolRepository repository;
+
+    @Mock
+    private ToolOwnerQuery ownerQuery;
 
     @Test
     void memberListingDoesNotFilterInactiveTools() {
@@ -96,15 +103,38 @@ class ToolContractCharacterizationTest {
     }
 
     @Test
-    void administrativeCreationAcceptsTheSuppliedScalarUserIdWithoutIdentityValidation() {
+    void administrativeCreationPersistsForActiveOwner() {
+        when(ownerQuery.existsById(999L)).thenReturn(true);
+        when(ownerQuery.isAdministrativelyActive(999L)).thenReturn(true);
         when(repository.save(any(Tool.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        AdminToolService service = new AdminToolService(repository, CLOCK);
+        AdminToolService service = new AdminToolService(repository, CLOCK, ownerQuery);
 
         Tool created = service.createToolForUser(999L, "Macaco", "Hidráulico");
 
         assertThat(created.getUserId()).isEqualTo(999L);
         assertThat(created.getStatus()).isEqualTo(ToolStatus.ACTIVE);
         verify(repository).save(created);
+    }
+
+    @Test
+    void administrativeCreationRejectsMissingOwnerWithoutPersisting() {
+        AdminToolService service = new AdminToolService(repository, CLOCK, ownerQuery);
+
+        assertThatThrownBy(() -> service.createToolForUser(999L, "Macaco", "Hidráulico"))
+                .isInstanceOf(ToolOwnerNotFoundException.class);
+        verify(repository, never()).save(any(Tool.class));
+        verify(ownerQuery, never()).isAdministrativelyActive(999L);
+    }
+
+    @Test
+    void administrativeCreationRejectsDisabledOwnerWithoutPersisting() {
+        when(ownerQuery.existsById(999L)).thenReturn(true);
+        AdminToolService service = new AdminToolService(repository, CLOCK, ownerQuery);
+
+        assertThatThrownBy(() -> service.createToolForUser(999L, "Macaco", "Hidráulico"))
+                .isInstanceOf(ToolOwnerDisabledException.class);
+        verify(ownerQuery).isAdministrativelyActive(999L);
+        verify(repository, never()).save(any(Tool.class));
     }
 
     private Tool tool(Long id, ToolStatus status) {
