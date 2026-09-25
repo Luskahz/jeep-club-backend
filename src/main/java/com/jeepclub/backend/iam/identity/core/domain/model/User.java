@@ -134,6 +134,22 @@ public class User {
         updatedAt = now;
     }
 
+    public void updateProfile(String name, LocalDate birthDate, String rg, String phoneNumber,
+                              String profilePhotoStorageKey, Instant now) {
+        validateMutationInstant(now);
+        // Validate every value before mutating any field, including when called without a transaction.
+        String normalizedName = normalizeName(name);
+        String normalizedRg = normalizeRg(rg);
+        String normalizedPhone = normalizePhoneNumber(phoneNumber);
+        String normalizedPhoto = normalizeProfilePhotoStorageKey(profilePhotoStorageKey);
+        this.name = normalizedName;
+        this.birthDate = birthDate;
+        this.rg = normalizedRg;
+        this.phoneNumber = normalizedPhone;
+        this.profilePhotoStorageKey = normalizedPhoto;
+        this.updatedAt = now;
+    }
+
     public boolean isActive() {
         return status == UserStatus.ACTIVE;
     }

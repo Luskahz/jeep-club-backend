@@ -162,4 +162,35 @@ class UserTest {
                 updatedAt
         );
     }
+
+    @Test
+    void profileUpdatePreservesCriticalFieldsAndCanonicalizesMutableValues() {
+        User user = persistedIdentity(UserStatus.ACTIVE, null, null);
+        user.updateProfile(" New Name ", LocalDate.of(1995, 1, 2), "22.333.444-5", "+55 (11) 98888-7777",
+                null, CREATED_AT.plusSeconds(30));
+        assertThat(user.getName()).isEqualTo("New Name");
+        assertThat(user.getRg()).isEqualTo("223334445");
+        assertThat(user.getPhoneNumber()).isEqualTo("5511988887777");
+        assertThat(user.getBirthDate()).isEqualTo(LocalDate.of(1995, 1, 2));
+        assertThat(user.getId()).isEqualTo(1L);
+        assertThat(user.getCpf()).isEqualTo("52998224725");
+        assertThat(user.getEmail()).isEqualTo("lucas@example.com");
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.getCreatedAt()).isEqualTo(CREATED_AT);
+        assertThat(user.getDisabledAt()).isNull();
+        assertThat(user.getUpdatedAt()).isEqualTo(CREATED_AT.plusSeconds(30));
+    }
+
+    @Test
+    void invalidProfileUpdateDoesNotPartiallyMutateDomain() {
+        User user = persistedIdentity(UserStatus.ACTIVE, null, null);
+        assertThatThrownBy(() -> user.updateProfile("New name", null, "555", "invalid", null, CREATED_AT))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(user.getName()).isEqualTo("Lucas Alves");
+        assertThat(user.getRg()).isEqualTo("123456789");
+        assertThat(user.getUpdatedAt()).isNull();
+        assertThatThrownBy(() -> user.updateProfile("New name", null, null, null, null, CREATED_AT.minusSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(user.getName()).isEqualTo("Lucas Alves");
+    }
 }

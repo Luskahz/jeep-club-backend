@@ -6,6 +6,7 @@ import com.jeepclub.backend.iam.identity.api.module.exception.UserNotDisabledExc
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserRegistrationConflictException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserEmailAlreadyInUseException;
+import com.jeepclub.backend.iam.identity.core.application.exception.UserRgAlreadyInUseException;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.identity")
 public class IdentityUserExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(UserRgAlreadyInUseException.class)
+    public ResponseEntity<ApiErrorResponse> handleRgAlreadyInUse(UserRgAlreadyInUseException exception) {
+        return buildErrorResponse("USER_RG_ALREADY_IN_USE", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(UserNotFoundException exception) {
         return buildErrorResponse("USER_ID_NOT_FOUND", exception.getMessage(), HttpStatus.NOT_FOUND);
