@@ -84,6 +84,12 @@ snapshot e a remoção. `createdAt` representa a criação, `updatedAt` a últim
 alteração operacional e `deletedAt` pertence exclusivamente ao snapshot de
 histórico.
 
+Na criação, `updatedAt` é nulo. Quando informado, deve ser maior ou igual a
+`createdAt`: reconstrução e operações `update`, `disable` e `enable` rejeitam
+instantes anteriores à criação. Transições de status repetidas preservam o
+timestamp da última alteração; não há regra adicional de monotonicidade entre
+duas atualizações posteriores à criação.
+
 Os testes existentes caracterizam normalização, ownership, atividade,
 unicidade de CPF, transições do domínio, persistência de histórico e fluxo de
 sistema. Ao alterar o módulo, escolha cobertura proporcional conforme as

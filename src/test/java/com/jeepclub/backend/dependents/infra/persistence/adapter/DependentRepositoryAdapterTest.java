@@ -3,6 +3,7 @@ package com.jeepclub.backend.dependents.infra.persistence.adapter;
 import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
+import com.jeepclub.backend.dependents.core.domain.exception.DependentAlreadyDeletedException;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentHistoryEntity;
@@ -11,20 +12,19 @@ import com.jeepclub.backend.dependents.infra.persistence.jpa.DependentJpaReposit
 import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentHistoryMapper;
 import com.jeepclub.backend.dependents.infra.persistence.mapper.DependentMapper;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.persistence.autoconfigure.EntityScan;
+import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
-
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -110,6 +110,60 @@ class DependentRepositoryAdapterTest {
             dependent.disable(NOW.plusSeconds(30));
         }
         return dependent;
+    }
+
+    @Test
+    void deletingDisabledDependentReleasesCpfButPreservesCompleteSnapshot() {
+        Dependent saved = repository.save(dependent(DependentStatus.DISABLED));
+        repository.delete(saved, 99L, NOW.plusSeconds(60));
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(repository.existsByCpf(saved.getCpf())).isFalse();
+        Dependent replacement = repository.save(dependent(DependentStatus.ACTIVE));
+        assertThat(replacement.getId()).isNotEqualTo(saved.getId());
+        assertThat(historyJpaRepository.findAll()).singleElement().satisfies(history -> {
+            assertThat(history.getName()).isEqualTo(saved.getName());
+            assertThat(history.getCpf()).isEqualTo(saved.getCpf());
+            assertThat(history.getBirthDate()).isEqualTo(saved.getBirthDate());
+            assertThat(history.getRelationshipType()).isEqualTo(saved.getRelationshipType());
+            assertThat(history.getPhoneNumber()).isEqualTo(saved.getPhoneNumber());
+            assertThat(history.getUserId()).isEqualTo(saved.getUserId());
+            assertThat(history.getCreatedAt()).isEqualTo(saved.getCreatedAt());
+            assertThat(history.getUpdatedAt()).isEqualTo(saved.getUpdatedAt());
+            assertThat(history.getStatus()).isEqualTo(DependentStatus.DISABLED);
+        });
+        repository.delete(replacement, 99L, NOW.plusSeconds(90));
+        entityManager.flush();
+        assertThat(historyJpaRepository.findAll()).hasSize(2);
+    }
+
+    @Test
+    void repeatedDeleteReturnsConflictWithoutAnotherSnapshot() {
+        Dependent saved = repository.save(dependent(DependentStatus.ACTIVE));
+        repository.delete(saved, 99L, NOW.plusSeconds(60));
+        entityManager.flush();
+        entityManager.clear();
+        assertThatThrownBy(() -> repository.delete(saved, 99L, NOW.plusSeconds(61)))
+                .isInstanceOf(DependentAlreadyDeletedException.class);
+        assertThat(historyJpaRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    void queriesFilterByOwnerStatusAndExcludedIdentifier() {
+        Dependent active = repository.save(dependent(DependentStatus.ACTIVE));
+        Dependent other = repository.save(Dependent.create("Other", "98765432100", LocalDate.of(2010, 5, 20),
+                RelationshipType.GUEST, null, 2L, NOW));
+        other.disable(NOW);
+        repository.save(other);
+        entityManager.clear();
+        assertThat(repository.findAllByUserId(2L)).extracting(Dependent::getId).containsExactly(other.getId());
+        assertThat(repository.findAllActiveByUserId(2L)).isEmpty();
+        assertThat(repository.findActiveById(other.getId())).isEmpty();
+        assertThat(repository.findActiveIdsByIds(List.of(active.getId(), other.getId(), -1L))).containsExactly(active.getId());
+        assertThat(repository.findActiveIdsByIds(null)).isEmpty();
+        assertThat(repository.findActiveIdsByIds(List.of())).isEmpty();
+        assertThat(repository.existsByCpfAndIdNot(active.getCpf(), active.getId())).isFalse();
+        assertThat(repository.existsByCpfAndIdNot(active.getCpf(), other.getId())).isTrue();
     }
 
     private DependentHistoryEntity history(Long dependentId) {

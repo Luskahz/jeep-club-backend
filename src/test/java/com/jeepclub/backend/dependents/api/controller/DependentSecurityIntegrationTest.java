@@ -1,25 +1,32 @@
 package com.jeepclub.backend.dependents.api.controller;
 
-import com.jeepclub.backend.iam.authentication.core.application.service.security.AccessTokenAuthenticationService;
 import com.jeepclub.backend.dependents.core.application.result.DependentResult;
 import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
 import com.jeepclub.backend.dependents.core.application.service.dependent.DependentService;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
+import com.jeepclub.backend.iam.authentication.core.application.service.security.AccessTokenAuthenticationService;
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.JwtAuthenticatedUser;
 import com.jeepclub.backend.platform.security.jwt.JwtTokenParser;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.MockMvc;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -45,10 +52,19 @@ class DependentSecurityIntegrationTest {
     @MockitoBean
     private AccessTokenAuthenticationService accessTokenAuthenticationService;
 
-    @Test
-    void unauthenticatedRequestIsRejected() throws Exception {
-        mockMvc.perform(get("/dependents"))
-                .andExpect(status().isUnauthorized());
+    @ParameterizedTest
+    @CsvSource({
+            "GET,/dependents", "POST,/dependents", "GET,/dependents/10",
+            "PUT,/dependents/10", "DELETE,/dependents/10",
+            "GET,/users/1/dependents", "GET,/users/1/dependents/10"
+    })
+    void unauthenticatedRequestIsRejected(String method, String path) throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.request(
+                        HttpMethod.valueOf(method), path))
+                .andExpect(status().isUnauthorized())
+                .andExpect(MockMvcResultMatchers.content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        Mockito.verifyNoInteractions(dependentService, adminDependentService);
     }
 
     @Test
@@ -66,16 +82,22 @@ class DependentSecurityIntegrationTest {
     void adminAuthorityCanListDependentsByUser() throws Exception {
         authenticate("admin-token", 99L, List.of("DEPENDENTS_DEPENDENT_READ"));
         when(adminDependentService.findAllByUserId(1L)).thenReturn(List.of(result()));
+        when(adminDependentService.findByUserIdAndId(1L, 10L)).thenReturn(result());
 
         mockMvc.perform(get("/users/1/dependents")
                         .header("Authorization", "Bearer admin-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].userId").value(1L));
+        mockMvc.perform(get("/users/1/dependents/10")
+                        .header("Authorization", "Bearer admin-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10L));
     }
 
-    @Test
-    void authenticatedUserWithoutReadAuthorityCannotAccessAdministrativeEndpoints() throws Exception {
-        authenticate("user-token", 2L, List.of());
+    @ParameterizedTest
+    @ValueSource(strings = {"", "VEHICLES_VEHICLE_READ"})
+    void authenticatedUserWithoutReadAuthorityCannotAccessAdministrativeEndpoints(String authority) throws Exception {
+        authenticate("user-token", 2L, authority.isEmpty() ? List.of() : List.of(authority));
 
         mockMvc.perform(get("/users/1/dependents")
                         .header("Authorization", "Bearer user-token"))
@@ -90,7 +112,7 @@ class DependentSecurityIntegrationTest {
 
     private void authenticate(String token, Long userId, List<String> authorities) {
         when(jwtTokenParser.parseAndValidate(token)).thenReturn(
-                new JwtAuthenticatedUser(userId, 100L + userId, "Test User", Instant.now().plusSeconds(3600))
+                new JwtAuthenticatedUser(userId, 100L + userId, "Test User", Instant.parse("2100-01-01T00:00:00Z"))
         );
         when(userAuthoritiesProvider.findAuthorityCodesByUserId(userId))
                 .thenReturn(authorities);
