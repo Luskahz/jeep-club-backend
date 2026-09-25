@@ -42,6 +42,18 @@ public class MemberChargeAdapter implements MemberChargeRepository {
     }
 
     @Override
+    public Optional<MemberCharge> findByChargeCycleIdAndUserId(
+            Long chargeCycleId,
+            Long userId
+    ) {
+        return jpa.findByChargeCycleIdAndUserId(
+                        chargeCycleId,
+                        userId
+                )
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public Page<MemberCharge> findAll(Pageable pageable) {
         return jpa.findAll(pageable)
                 .map(mapper::toDomain);

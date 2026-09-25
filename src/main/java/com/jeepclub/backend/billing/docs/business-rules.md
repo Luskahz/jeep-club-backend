@@ -38,6 +38,16 @@
     `UNTIL_DAYS_AFTER_DUE_DATE` até a data calculada de tolerância;
     `AFTER_DUE_DATE` não possui limite final.
 
+### Consulta pública para Membership
+
+`MembershipChargeQuery` recebe definição e usuário e resolve primeiro o ciclo
+não arquivado aplicável ao período atual: mês para `MONTHLY`, ano para `YEARLY`
+e ciclo não arquivado para `ONE_TIME`. Entre múltiplos candidatos, prefere o
+vencimento mais recente já alcançado; se todos forem futuros, o mais próximo.
+Depois localiza a cobrança daquele usuário pelo ciclo e calcula o estado efetivo
+com o `Clock`. Ciclo recorrente atual ausente ou cobrança ausente nesse ciclo
+resultam em `CHARGE_NOT_FOUND`; `OVERDUE` e `EXPIRED` não são persistidos.
+
 ## Pagamentos
 
 15. A submissão exige cobrança própria, aberta na data atual, valor exatamente

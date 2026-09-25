@@ -16,6 +16,11 @@ public interface MemberChargeJpaRepository extends JpaRepository<MemberChargeEnt
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<MemberChargeEntity> findWithLockingById(Long id);
 
+    Optional<MemberChargeEntity> findByChargeCycleIdAndUserId(
+            Long chargeCycleId,
+            Long userId
+    );
+
     Page<MemberChargeEntity> findByStatus(
             MemberChargeStatus status,
             Pageable pageable

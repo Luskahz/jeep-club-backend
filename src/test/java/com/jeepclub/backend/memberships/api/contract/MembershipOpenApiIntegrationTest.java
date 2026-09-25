@@ -74,6 +74,14 @@ class MembershipOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications/blocks/{cpf}/unblock']['post']['x-required-permissions'][0]")
                         .value("MEMBERSHIP_MEMBERSHIP_APPLICANT_UNBLOCK"))
                 .andExpect(jsonPath("$['paths']['/admin/membership-applications/blocks/{cpf}/unblock']['post']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/admin/membership-billing-configuration']['get']['x-required-permissions'][0]")
+                        .value("MEMBERSHIP_BILLING_CONFIGURATION_READ"))
+                .andExpect(jsonPath("$['paths']['/admin/membership-billing-configuration']['put']['x-required-permissions'][0]")
+                        .value("MEMBERSHIP_BILLING_CONFIGURATION_UPDATE"))
+                .andExpect(jsonPath("$['paths']['/admin/membership-billing-configuration/enforcement']['patch']['x-required-permissions'][0]")
+                        .value("MEMBERSHIP_BILLING_CONFIGURATION_UPDATE"))
+                .andExpect(jsonPath("$['paths']['/admin/membership-billing-configuration']['put']['responses']['422']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"));
     }
 

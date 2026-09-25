@@ -1,9 +1,11 @@
 # Memberships
 
-Memberships é o bounded context do processo de admissão ao Jeep Club. Ele é
-proprietário da `MembershipApplication`, da decisão administrativa sobre a
-solicitação e dos bloqueios de novos pedidos por CPF. Não é proprietário do
-cadastro do `User`, de credenciais, sessões ou permissões.
+Memberships é o bounded context do processo de admissão e da política de acesso
+de membros do Jeep Club. Ele é proprietário da `MembershipApplication`, da
+decisão administrativa sobre a solicitação, dos bloqueios de novos pedidos por
+CPF e da configuração que indica qual cobrança de Billing representa a
+membritude. Não é proprietário do cadastro do `User`, de credenciais, sessões,
+permissions ou fatos financeiros.
 
 Antes de alterar este módulo, leia a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md) e as
@@ -97,11 +99,52 @@ contratos consumidores são definidos no próprio módulo:
   credencial a Authentication.
 - `MemberActivationMailSender` possui dummy restrito a dev/test e implementação
   SMTP para os demais ambientes; nenhum deles registra token ou link.
+- `MembershipAccessQuery` é o contrato público read-only de decisão de acesso.
+  A implementação consulta `MembershipChargeQuery`, contrato público de
+  Billing, sem acessar ciclos, cobranças, repositories ou entities desse módulo.
 
 As entidades JPA e mappers permanecem em `infra.persistence`. A aplicação usa
 versionamento otimista em `MembershipApplication`. O bloqueio ativo tem
 unicidade persistida por CPF; a solicitação pendente é protegida atualmente por
 consulta e fluxo transacional, sem uma constraint de unicidade equivalente.
+
+## Membritude paga
+
+`MembershipBillingConfiguration` é uma configuração singleton opcional com
+`chargeDefinitionId`, `enforcementEnabled`, `createdAt` e `updatedAt`. Membership
+não copia valor, recorrência, vencimento, tolerância ou lifecycle da cobrança.
+A definição só pode ser configurada enquanto estiver ativa em Billing; nenhuma
+recorrência, flag `required` ou política de pagamento específica é imposta.
+
+Zero configurações é um estado válido e libera recursos protegidos. Desabilitar
+o enforcement também libera acesso, preservando a referência configurada para
+reativação posterior. A superfície administrativa permite consultar, criar ou
+substituir a configuração e alternar o enforcement; seus paths, payloads,
+permissions e respostas são documentados no OpenAPI.
+
+Quando o enforcement está ativo, Membership envia somente
+`chargeDefinitionId` e o `UserPrincipal.userId` para Billing. A matriz de
+decisão é:
+
+| Resultado financeiro | Decisão de Membership |
+| --- | --- |
+| `WITHIN_PAYMENT_PERIOD` (`PENDING` válido) | permitir |
+| `SATISFIED` (`PAID`) | permitir |
+| `CANCELED` | permitir intencionalmente nesta versão |
+| `PAYMENT_REQUIRED` (`OVERDUE` ou `EXPIRED`) | bloquear com `402 MEMBERSHIP_PAYMENT_REQUIRED` |
+| `CHARGE_NOT_FOUND` | bloquear com `503 MEMBERSHIP_CHARGE_UNAVAILABLE` e emitir warning operacional |
+
+Falhas inesperadas ao consultar Billing também usam o erro operacional 503,
+sem serem apresentadas como dívida. O log de cobrança ausente contém somente
+identificadores técnicos (`chargeDefinitionId` e `userId`) e herda a correlação
+do MDC global.
+
+`@RequiresMembership` declara essa exigência em métodos ou classes. Um advisor
+dedicado de Spring Method Security obtém o principal já autenticado e chama
+`MembershipAccessQuery`; ele executa cumulativamente com `@PreAuthorize`.
+Assim, ausência de autenticação permanece 401, bloqueio financeiro permanece
+402, indisponibilidade operacional permanece 503 e permission ausente após uma
+membritude válida permanece 403. Endpoints não anotados não executam essa regra.
 
 ## Token de ativação
 
