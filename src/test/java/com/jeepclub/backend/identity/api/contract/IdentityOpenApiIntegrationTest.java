@@ -135,7 +135,7 @@ class IdentityOpenApiIntegrationTest {
         Instant now = Instant.now(clock);
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
                 new UserRegistrationData(
-                        "Email Owner", null, null, "12345678909",
+                        "Email Owner", null, null, "47831962573",
                         null, null, null, now
                 ),
                 "security-password"
@@ -172,5 +172,29 @@ class IdentityOpenApiIntegrationTest {
     private void grant(Role role, PermissionCode code, Instant now) {
         Long permissionId = permissionRepository.findByCode(code).orElseThrow().getId();
         rolePermissionRepository.save(RolePermission.create(role.getId(), permissionId, now));
+    }
+
+    @Test
+    void openApiDescribesSelfProfilePatchAndProtectedFields() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['requestBody']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/UpdateCurrentUserProfileRequest"))
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['200']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/CurrentIdentityUserResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['401']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['404']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['409']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['additionalProperties']").value(false))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties'].length()").value(5))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['name']['maxLength']").value(150))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['birthDate']['format']").value("date"))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['cpf']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['profilePhotoUrl']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['CurrentIdentityUserResponse']['properties']['cpf']['readOnly']").value(true))
+                .andExpect(jsonPath("$['components']['schemas']['CurrentIdentityUserResponse']['properties']['status']['readOnly']").value(true))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['description']")
+                        .value(org.hamcrest.Matchers.containsString("null limpa")));
     }
 }

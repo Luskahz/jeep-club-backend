@@ -26,7 +26,7 @@ class UserTest {
                 "529.982.247-25",
                 "12.345.678-9",
                 "+55 (12) 99999-9999",
-                "  https://example.com/profile.jpg  ",
+                "  images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg  ",
                 CREATED_AT
         );
 
@@ -35,8 +35,8 @@ class UserTest {
         assertThat(identity.getCpf()).isEqualTo("52998224725");
         assertThat(identity.getRg()).isEqualTo("123456789");
         assertThat(identity.getPhoneNumber()).isEqualTo("5512999999999");
-        assertThat(identity.getProfilePhotoUrl())
-                .isEqualTo("https://example.com/profile.jpg");
+        assertThat(identity.getProfilePhotoStorageKey())
+                .isEqualTo("images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg");
         assertThat(identity.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(identity.getCreatedAt()).isEqualTo(CREATED_AT);
         assertThat(identity.getDisabledAt()).isNull();
@@ -125,6 +125,35 @@ class UserTest {
     }
 
     @Test
+    void reconstitutionPreservesLegacyProfilePhotoUntilExplicitReplacement() {
+        User identity = User.reconstitute(
+                1L,
+                "Lucas Alves",
+                null,
+                "lucas@example.com",
+                "52998224725",
+                null,
+                null,
+                "https://legacy.example.com/profile.jpg",
+                UserStatus.ACTIVE,
+                CREATED_AT,
+                null,
+                null
+        );
+
+        assertThat(identity.getProfilePhotoStorageKey())
+                .isEqualTo("https://legacy.example.com/profile.jpg");
+
+        identity.updateProfilePhoto(
+                "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg",
+                CREATED_AT.plusSeconds(30)
+        );
+
+        assertThat(identity.getProfilePhotoStorageKey())
+                .isEqualTo("images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg");
+    }
+
+    @Test
     void updateEmailNormalizesAndUpdatesTimestamp() {
         User identity = persistedIdentity(UserStatus.ACTIVE, null, null);
         Instant updatedAt = CREATED_AT.plusSeconds(30);
@@ -161,5 +190,36 @@ class UserTest {
                 disabledAt,
                 updatedAt
         );
+    }
+
+    @Test
+    void profileUpdatePreservesCriticalFieldsAndCanonicalizesMutableValues() {
+        User user = persistedIdentity(UserStatus.ACTIVE, null, null);
+        user.updateProfile(" New Name ", LocalDate.of(1995, 1, 2), "22.333.444-5", "+55 (11) 98888-7777",
+                null, CREATED_AT.plusSeconds(30));
+        assertThat(user.getName()).isEqualTo("New Name");
+        assertThat(user.getRg()).isEqualTo("223334445");
+        assertThat(user.getPhoneNumber()).isEqualTo("5511988887777");
+        assertThat(user.getBirthDate()).isEqualTo(LocalDate.of(1995, 1, 2));
+        assertThat(user.getId()).isEqualTo(1L);
+        assertThat(user.getCpf()).isEqualTo("52998224725");
+        assertThat(user.getEmail()).isEqualTo("lucas@example.com");
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.getCreatedAt()).isEqualTo(CREATED_AT);
+        assertThat(user.getDisabledAt()).isNull();
+        assertThat(user.getUpdatedAt()).isEqualTo(CREATED_AT.plusSeconds(30));
+    }
+
+    @Test
+    void invalidProfileUpdateDoesNotPartiallyMutateDomain() {
+        User user = persistedIdentity(UserStatus.ACTIVE, null, null);
+        assertThatThrownBy(() -> user.updateProfile("New name", null, "555", "invalid", null, CREATED_AT))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(user.getName()).isEqualTo("Lucas Alves");
+        assertThat(user.getRg()).isEqualTo("123456789");
+        assertThat(user.getUpdatedAt()).isNull();
+        assertThatThrownBy(() -> user.updateProfile("New name", null, null, null, null, CREATED_AT.minusSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(user.getName()).isEqualTo("Lucas Alves");
     }
 }

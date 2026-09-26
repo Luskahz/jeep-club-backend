@@ -42,6 +42,7 @@ class AdminVehicleServiceTest {
     private VehicleRepository vehicleRepository;
     @Mock
     private UserPort userPort;
+    @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaService images;
 
     private AdminVehicleService service;
 
@@ -50,7 +51,7 @@ class AdminVehicleServiceTest {
         service = new AdminVehicleService(
                 vehicleRepository,
                 userPort,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC), images
         );
     }
 

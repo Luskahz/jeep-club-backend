@@ -20,7 +20,10 @@ public record ToolResponseDTO(
         ToolStatus status,
 
         @Schema(description = "Identificador único do usuário dono da ferramenta.", example = "42")
-        Long userId
+        Long userId,
+
+        @Schema(description = "Chave da imagem no storage global; GET /media/images?key=... resolve a imagem.", nullable = true)
+        String photoStorageKey
 
 ) {
     public ToolResponseDTO(Tool tool) {
@@ -29,7 +32,8 @@ public record ToolResponseDTO(
                 tool.getName(),
                 tool.getDescription(),
                 tool.getStatus(),
-                tool.getUserId()
+                tool.getUserId(),
+                tool.getPhotoStorageKey()
         );
     }
 }

@@ -76,7 +76,7 @@ class UserQueryService implements UserQuery {
         return new UserDetails(
                 user.getId(), user.getName(), user.getBirthDate(),
                 user.getEmail(), user.getCpf(), user.getRg(),
-                user.getPhoneNumber(), user.getProfilePhotoUrl(),
+                user.getPhoneNumber(), user.getProfilePhotoStorageKey(),
                 user.isActive(), user.getCreatedAt(), user.getDisabledAt(),
                 user.getUpdatedAt()
         );
