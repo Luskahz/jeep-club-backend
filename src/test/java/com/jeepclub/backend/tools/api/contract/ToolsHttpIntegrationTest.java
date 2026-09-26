@@ -87,11 +87,13 @@ class ToolsHttpIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
         mvc.perform(get("/tools/{id}", id).header(AUTHORIZATION, owner))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
+        mvc.perform(patch("/tools/{id}/activate", id).header(AUTHORIZATION, owner))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE"));
         mvc.perform(delete("/tools/{id}", id).header(AUTHORIZATION, owner))
                 .andExpect(status().isNoContent());
         assertThat(history.findAll()).anySatisfy(snapshot -> {
             assertThat(snapshot.getToolId()).isEqualTo(id);
-            assertThat(snapshot.getStatus().name()).isEqualTo("INACTIVE");
+            assertThat(snapshot.getStatus().name()).isEqualTo("ACTIVE");
         });
         mvc.perform(get("/tools/{id}", id).header(AUTHORIZATION, owner))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("TOOL_NOT_FOUND"));
