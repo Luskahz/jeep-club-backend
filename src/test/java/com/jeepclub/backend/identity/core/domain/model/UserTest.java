@@ -125,6 +125,35 @@ class UserTest {
     }
 
     @Test
+    void reconstitutionPreservesLegacyProfilePhotoUntilExplicitReplacement() {
+        User identity = User.reconstitute(
+                1L,
+                "Lucas Alves",
+                null,
+                "lucas@example.com",
+                "52998224725",
+                null,
+                null,
+                "https://legacy.example.com/profile.jpg",
+                UserStatus.ACTIVE,
+                CREATED_AT,
+                null,
+                null
+        );
+
+        assertThat(identity.getProfilePhotoStorageKey())
+                .isEqualTo("https://legacy.example.com/profile.jpg");
+
+        identity.updateProfilePhoto(
+                "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg",
+                CREATED_AT.plusSeconds(30)
+        );
+
+        assertThat(identity.getProfilePhotoStorageKey())
+                .isEqualTo("images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg");
+    }
+
+    @Test
     void updateEmailNormalizesAndUpdatesTimestamp() {
         User identity = persistedIdentity(UserStatus.ACTIVE, null, null);
         Instant updatedAt = CREATED_AT.plusSeconds(30);

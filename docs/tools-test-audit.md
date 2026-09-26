@@ -50,3 +50,10 @@ O novo log apresentou 595 testes verdes, PIT com 37 mutações, 36 eliminadas, n
 ## Validação final após o ajuste de idempotência
 
 O último log confirma `verify` com BUILD SUCCESS: 595 testes, 0 falhas, 0 erros e 1 ignorado. O PIT selecionado também terminou com BUILD SUCCESS: **37/37 mutações eliminadas (100%)**, nenhuma sobrevivente, nenhuma sem cobertura e força dos testes de 100%. A cobertura de linhas nas três classes selecionadas pelo PIT foi 76/78 (97%). A auditoria acima registra os gaps pré-existentes, os testes adicionados e a resolução do último sobrevivente. Nenhuma regra de produção foi alterada.
+
+
+## Reconciliação com develop após o PR #68
+
+Esta branch foi reconciliada com `develop@05bcf667`, preservando o enforcement de membritude paga introduzido pelo PR #68. O único arquivo modificado pelos dois PRs foi `IdentityOpenApiIntegrationTest`; a resolução mantém o conteúdo atual da develop e preserva o CPF isolado necessário à suíte desta branch.
+
+As métricas PIT registradas acima pertencem às execuções anteriores a esta reconciliação e não são apresentadas como uma nova execução da árvore final. O perfil `tools-mutation` permanece configurado para a validação final de `Tool`, `ToolService` e `AdminToolService`.

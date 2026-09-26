@@ -87,11 +87,13 @@ public class VehicleService {
     @Transactional
     public void update(Long vehicleId, Long ownerId, VehicleEditFields updates) {
         Vehicle vehicle = findActiveVehicle(vehicleId, ownerId);
+        if (updates.photo().isPresentValue()) {
+            images.requireExisting(updates.photo().value());
+        }
         VehicleEditResolver.Resolved resolved = VehicleEditResolver.resolve(vehicle, updates);
         String canonicalPlate = Vehicle.normalizePlate(resolved.plate());
         String canonicalRenavam = Vehicle.normalizeRenavam(resolved.renavam());
         assertUniqueChangedIdentifiers(vehicle, canonicalPlate, canonicalRenavam);
-        images.requireExisting(resolved.photo());
 
         vehicle.update(
                 resolved.nickname(),

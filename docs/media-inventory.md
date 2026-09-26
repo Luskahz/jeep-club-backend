@@ -4,8 +4,8 @@ Auditoria em `src/main/java` (entidades, DTOs, serviços e controladores) e nos 
 
 | Consumidor | Antes | Contrato atual |
 | --- | --- | --- |
-| Identity `User` | `profilePhotoUrl` string e coluna `profile_photo_url` | `profilePhotoStorageKey` em `profile_photo_storage_key`; `PATCH /identity/me/photo` associa chave validada |
-| Vehicles `Vehicle` e histórico | `photo` string com URL/caminho na coluna `photo` | `photo` contém somente chave existente, persistida em `photo_storage_key`; create/update de membro e admin verificam a referência |
+| Identity `User` | `profilePhotoUrl` string e coluna `profile_photo_url` | Novas associações usam `profilePhotoStorageKey`, mantendo fisicamente `profile_photo_url` para preservar registros existentes; `PATCH /identity/me/photo` só aceita chave validada |
+| Vehicles `Vehicle` e histórico | `photo` string com URL/caminho na coluna `photo` | Novas associações usam somente storageKey validada, preservando fisicamente a coluna `photo` e seus valores legados até substituição |
 | Tools `Tool` e histórico | Nenhum campo de imagem | `photoStorageKey` em `photo_storage_key`; `PATCH /tools/{id}/photo` e `/admin/tools/{id}/photo` |
 | Billing `MemberPayment` | Já guarda `receipt_storage_key` | Mantido: multipart, validação própria de comprovante (PDF e imagens), `FileStorage`, rollback e rota autorizada de download |
 | Outros módulos V2 | Nenhum campo de imagem/comprovante persistido encontrado nesta revisão | Novos campos devem seguir o mesmo contrato; Publications não está presente neste checkout |
@@ -16,6 +16,14 @@ Para fotos, `POST /media/images` recebe `multipart/form-data` (`file`), aceita J
 
 O upload precede a associação. Antes de persistir uma chave, o serviço verifica que o objeto existe. A exclusão de User/Vehicle/Tool e a substituição de foto **retêm o objeto**: uma chave pode ser reutilizada por vários recursos, então a aplicação não presume propriedade exclusiva. Uploads sem associação e chaves substituídas são possíveis órfãos; uma limpeza futura deverá verificar referências em todos os consumidores antes de remover o objeto. O endpoint de mídia não oferece delete público.
 
-## Migração de dados existentes
+## Compatibilidade com dados existentes
 
-`hibernate.ddl-auto=update` cria as novas colunas, mas **não converte** valores antigos de URL em chaves. Se houver fotos antigas em `profile_photo_url` ou `photo`, elas devem ser migradas por operação de dados separada: obter o objeto original, enviar pela API de mídia e associar a chave ao recurso correspondente; URLs temporárias ou inacessíveis não podem ser transformadas automaticamente. Até essa migração, as fotos antigas não aparecem nos novos campos. Nenhum esquema de Billing foi alterado.
+O projeto não possui política de migrations versionadas e a arquitetura atual orienta não introduzir Flyway/Liquibase sem decisão própria. Esta integração, portanto, não renomeia fisicamente as colunas já implantadas: `identity_users.profile_photo_url` e `vehicles_vehicle.photo` (inclusive o snapshot histórico) são preservadas.
+
+A partir desta versão, novas associações continuam obrigatoriamente passando por `ImageMediaService` e gravam referências `images/...`. Valores antigos em formato URL permanecem legíveis até substituição explícita; nenhuma nova URL de provider é aceita pelos fluxos de criação/alteração de foto.
+
+Em Vehicles, update parcial valida storage somente quando `photo` foi realmente enviado com um novo valor. Campo omitido preserva o valor existente — inclusive legado — e `null` explícito limpa a associação. Assim uma edição de outro atributo não falha apenas porque o registro foi criado antes da adoção do storage global.
+
+Em Identity, create/update de foto permanecem estritos; somente a reconstituição de uma linha já persistida tolera a antiga URL. Ao substituir a foto, o estado passa naturalmente para storageKey.
+
+Nenhum esquema de Billing foi alterado.

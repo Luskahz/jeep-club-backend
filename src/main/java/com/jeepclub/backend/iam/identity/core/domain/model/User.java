@@ -88,7 +88,7 @@ public class User {
         user.cpf = normalizeCpf(cpf);
         user.rg = normalizeRg(rg);
         user.phoneNumber = normalizePhoneNumber(phoneNumber);
-        user.profilePhotoStorageKey = normalizeProfilePhotoStorageKey(profilePhotoStorageKey);
+        user.profilePhotoStorageKey = normalizePersistedProfilePhotoReference(profilePhotoStorageKey);
         user.status = status;
         user.createdAt = createdAt;
         user.disabledAt = disabledAt;
@@ -178,6 +178,20 @@ public class User {
                 MAX_PROFILE_PHOTO_STORAGE_KEY_LENGTH
         );
         return key == null ? null : ImageReference.require(key);
+    }
+
+    /**
+     * Existing rows may still contain the former provider URL. Reconstitution
+     * preserves that value so reads and unrelated updates do not destroy
+     * legacy data. New creates and explicit photo changes remain strict and
+     * only accept provider-neutral images/... keys.
+     */
+    private static String normalizePersistedProfilePhotoReference(String rawReference) {
+        return normalizeOptionalText(
+                rawReference,
+                "profilePhotoStorageKey",
+                MAX_PROFILE_PHOTO_STORAGE_KEY_LENGTH
+        );
     }
 
     private void validateMutationInstant(Instant now) {

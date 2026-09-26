@@ -61,7 +61,7 @@ public class VehicleHistoryEntity {
     @Column(length = 100)
     private String nickname;
 
-    @Column(name = "photo_storage_key", length = 255)
+    @Column(length = 500)
     private String photo;
 
     @Column(nullable = false, length = 7)
