@@ -31,6 +31,8 @@ public interface UserRepository {
 
     boolean existsByRg(String rg);
 
+    boolean existsByRgAndIdNot(String rg, Long id);
+
     boolean existsActiveById(Long id);
 
     List<Long> findActiveIds();

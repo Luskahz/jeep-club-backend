@@ -10,16 +10,17 @@ import java.util.Objects;
 
 @Schema(name = "CurrentIdentityUserResponse", description = "Dados cadastrais do usuário autenticado.")
 public record CurrentUserResponseDTO(
-        @Schema(description = "ID estável do usuário.", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "ID estável, imutável pelo membro.", example = "1", requiredMode = Schema.RequiredMode.REQUIRED,
+                accessMode = Schema.AccessMode.READ_ONLY)
         Long id,
         @Schema(description = "Nome do usuário.", example = "Maria da Silva", requiredMode = Schema.RequiredMode.REQUIRED)
         String name,
         @Schema(description = "Data de nascimento.", example = "2000-05-17", format = "date", nullable = true)
         LocalDate birthDate,
-        @Schema(description = "E-mail cadastral.", example = "maria@example.com", format = "email", nullable = true)
+        @Schema(description = "E-mail cadastral; alterado somente pelo fluxo /identity/me/email.", example = "maria@example.com", format = "email", nullable = true)
         String email,
-        @Schema(description = "CPF canônico com 11 dígitos.", example = "52998224725",
-                requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "CPF canônico com 11 dígitos, imutável pelo membro.", example = "52998224725",
+                requiredMode = Schema.RequiredMode.REQUIRED, accessMode = Schema.AccessMode.READ_ONLY)
         String cpf,
         @Schema(description = "RG canônico.", example = "123456789", nullable = true)
         String rg,
@@ -27,13 +28,17 @@ public record CurrentUserResponseDTO(
         String phoneNumber,
         @Schema(description = "Chave da foto no storage global; resolva via GET /media/images?key=...", nullable = true)
         String profilePhotoStorageKey,
-        @Schema(description = "Estado administrativo do usuário.", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "Estado administrativo, não editável pelo membro.", requiredMode = Schema.RequiredMode.REQUIRED,
+                accessMode = Schema.AccessMode.READ_ONLY)
         UserStatus status,
-        @Schema(description = "Instante de criação.", format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED)
+        @Schema(description = "Instante de criação.", format = "date-time", requiredMode = Schema.RequiredMode.REQUIRED,
+                accessMode = Schema.AccessMode.READ_ONLY)
         Instant createdAt,
-        @Schema(description = "Instante de desativação administrativa.", format = "date-time", nullable = true)
+        @Schema(description = "Instante de desativação administrativa.", format = "date-time", nullable = true,
+                accessMode = Schema.AccessMode.READ_ONLY)
         Instant disabledAt,
-        @Schema(description = "Instante da última alteração.", format = "date-time", nullable = true)
+        @Schema(description = "Instante da última alteração.", format = "date-time", nullable = true,
+                accessMode = Schema.AccessMode.READ_ONLY)
         Instant updatedAt
 ) {
     public static CurrentUserResponseDTO from(UserDetails user) {

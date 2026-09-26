@@ -33,6 +33,8 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByRg(String rg);
 
+    boolean existsByRgAndIdNot(String rg, Long id);
+
     boolean existsByIdAndStatus(Long id, UserStatus status);
 
     @Query("""

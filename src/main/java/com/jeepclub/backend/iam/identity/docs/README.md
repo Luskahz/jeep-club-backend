@@ -9,7 +9,7 @@ gerado pelos controllers e DTOs do módulo é a fonte de verdade do contrato HTT
 ## Responsabilidade e limites
 
 Identity é proprietário do agregado `User`: identificador estável, nome,
-`birthDate`, e-mail, CPF, RG, telefone, URL de foto de perfil, estado
+`birthDate`, e-mail, CPF, RG, telefone, referência global de foto de perfil, estado
 administrativo e timestamps de criação, desativação e atualização. Também é
 proprietário do cadastro, das consultas cadastrais e do lifecycle administrativo
 do usuário.
@@ -41,6 +41,41 @@ O User pode existir permanentemente sem e-mail. O próprio usuário autenticado
 pode cadastrar ou substituir um endereço por `PATCH /identity/me/email`; a
 operação usa o `UserPrincipal`, exige um e-mail válido, normaliza o valor,
 protege a unicidade e atualiza `updatedAt` sem alterar Membership ou Authentication.
+
+### Atualização cadastral própria — BACK-424 / BACK-391
+
+O perfil próprio permite editar nome, nascimento, RG, telefone e
+`profilePhotoStorageKey`, usando exclusivamente o ID do `UserPrincipal` autenticado.
+A edição pertence a Identity e não reescreve a solicitação histórica de Membership,
+credenciais, sessões ou vínculos de Authorization. Alterar o nome não exige novos
+tokens: o claim `userName` é apenas contexto de exibição; a consulta de perfil lê o
+cadastro atualizado pelo ID estável.
+
+Campos omitidos preservam o valor atual; `null` remove nascimento, RG, telefone ou a
+associação da foto. Nome não aceita `null` nem branco. RG/telefone em branco continuam
+normalizados para ausência; pontuação é removida e o limite vigente de 20 dígitos
+canônicos é preservado. Nome é aparado e limitado a 150 caracteres. Nascimento usa
+data ISO e conserva a semântica atual do modelo: não se introduz regra nova de idade
+ou bloqueio de datas futuras. Um objeto vazio não salva nem altera `updatedAt`.
+
+CPF, IDs, estado administrativo, roles, permissions e timestamps não são editáveis.
+O novo contrato rejeita campos desconhecidos/proibidos, inclusive `email` (que possui
+fluxo próprio) e a antiga `profilePhotoUrl`, evitando ignorar silenciosamente uma
+tentativa de escrita. O schema OpenAPI é a fonte dos campos, erros e exemplos HTTP.
+
+O service toma lock pessimista do próprio User antes de resolver os campos omitidos.
+RG canônico é verificado contra outros usuários; a constraint de unicidade no banco
+permanece como proteção contra corrida. Conflitos de edição retornam 409
+`USER_RG_ALREADY_IN_USE`. Todos os valores são validados antes da mutação do agregado.
+
+Fotos referenciam a chave retornada pela API global de mídia, sem upload específico
+em Identity. `ProfileImagePort` isola a necessidade de verificar a imagem existente;
+seu adapter usa `platform.storage.image.ImageMediaService`. Uma chave enviada é
+validada e resolvida antes de salvar o perfil; URLs arbitrárias ou chaves inválidas
+não são aceitas. Omitir a foto preserva a associação sem consultar o arquivo;
+`null` a remove sem excluir bytes potencialmente compartilhados. O endpoint de foto
+dedicado preexistente continua disponível. Essa capacidade depende da integração
+global de mídia entregue no PR #69.
 
 O nome do campo HTTP de nascimento é `birthDate`. Não há alias `birthData` no
 DTO ou na serialização atual. Formatos aceitos, limites e exemplos do request,

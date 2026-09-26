@@ -84,6 +84,11 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public boolean existsByRgAndIdNot(String rg, Long id) {
+        return rg != null && id != null && jpaRepository.existsByRgAndIdNot(rg, id);
+    }
+
+    @Override
     public boolean existsActiveById(Long id) {
         return jpaRepository.existsByIdAndStatus(id, UserStatus.ACTIVE);
     }
