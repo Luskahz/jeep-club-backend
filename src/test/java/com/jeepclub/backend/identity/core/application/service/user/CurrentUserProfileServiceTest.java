@@ -110,6 +110,25 @@ class CurrentUserProfileServiceTest {
     }
 
     @Test
+    void profileUpdatePreservesLegacyPhotoWhenPhotoFieldIsOmitted() {
+        User user = User.reconstitute(
+                42L, "User", null, null, "52998224725", null, null,
+                "https://legacy.example.com/profile.jpg",
+                com.jeepclub.backend.iam.identity.api.module.UserStatus.ACTIVE,
+                NOW.minusSeconds(3600), null, null
+        );
+        when(repository.findByIdForUpdate(42L)).thenReturn(Optional.of(user));
+        when(repository.saveAndFlush(user)).thenReturn(user);
+
+        var result = service.updateProfile(42L,
+                new ProfileUpdate(provided("Renamed"), omitted(), omitted(), omitted(), omitted()));
+
+        assertThat(result.name()).isEqualTo("Renamed");
+        assertThat(result.profilePhotoStorageKey()).isEqualTo("https://legacy.example.com/profile.jpg");
+        verifyNoInteractions(images);
+    }
+
+    @Test
     void missingIdentityIsNotFoundBeforeMediaOrPersistence() {
         assertThatThrownBy(() -> service.updateProfile(404L,
                 new ProfileUpdate(provided("Name"), omitted(), omitted(), omitted(), omitted())))
