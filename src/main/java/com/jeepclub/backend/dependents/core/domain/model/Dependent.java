@@ -140,7 +140,7 @@ public class Dependent {
             Instant now
     ) {
         assertActive();
-        validateNow(now);
+        validateMutationTime(now);
 
         requireText(name, "name");
 
@@ -163,7 +163,7 @@ public class Dependent {
     }
 
     public void disable(Instant now) {
-        validateNow(now);
+        validateMutationTime(now);
 
         if (isDisabled()) {
             return;
@@ -174,7 +174,7 @@ public class Dependent {
     }
 
     public void enable(Instant now) {
-        validateNow(now);
+        validateMutationTime(now);
 
         if (isActive()) {
             return;
@@ -277,6 +277,13 @@ public class Dependent {
             throw new IllegalArgumentException(
                     "now is required."
             );
+        }
+    }
+
+    private void validateMutationTime(Instant now) {
+        validateNow(now);
+        if (now.isBefore(createdAt)) {
+            throw new IllegalArgumentException("updatedAt cannot be before createdAt.");
         }
     }
 }

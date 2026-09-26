@@ -1,16 +1,17 @@
 package com.jeepclub.backend.dependents.core.application.service;
 
+import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
 import com.jeepclub.backend.dependents.core.application.service.dependent.AdminDependentService;
+import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Test;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mock;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,11 +40,24 @@ class AdminDependentServiceTest {
     }
 
     @Test
-    void preservesBadRequestForMismatchedSocio() {
+    void hidesDependentOfAnotherOwnerAsNotFound() {
         when(dependentRepository.findById(10L))
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
         assertThatThrownBy(() -> service.findByUserIdAndId(5L, 10L))
-                .isInstanceOf(com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException.class);
+                .isInstanceOf(DependentNotFoundException.class);
+    }
+
+    @Test
+    void administrativeReadIncludesDisabledDependentAndRejectsMissingId() {
+        Dependent dependent = DependentsFixture.dependent(10L, 5L,
+                DependentStatus.DISABLED);
+        when(dependentRepository.findAllByUserId(5L)).thenReturn(List.of(dependent));
+        when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
+        assertThat(service.findAllByUserId(5L)).extracting(result -> result.status())
+                .containsExactly(DependentStatus.DISABLED);
+        assertThat(service.findByUserIdAndId(5L, 10L).status()).isEqualTo(dependent.getStatus());
+        assertThatThrownBy(() -> service.findByUserIdAndId(5L, 404L))
+                .isInstanceOf(DependentNotFoundException.class);
     }
 }
