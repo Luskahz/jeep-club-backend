@@ -27,9 +27,9 @@ public record EditRequestDTO(
         String nickname,
 
         @Schema(
-                description = "URL pública da foto do veículo. Omitir preserva o valor atual; "
+                description = "Chave de POST /media/images. Omitir preserva o valor atual; "
                         + "null explícito limpa o campo.",
-                example = "https://example.com/foto.jpg",
+                example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png",
                 nullable = true,
                 requiredMode = Schema.RequiredMode.NOT_REQUIRED,
                 maxLength = 500

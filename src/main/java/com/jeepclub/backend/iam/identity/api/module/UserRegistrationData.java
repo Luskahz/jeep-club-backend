@@ -10,7 +10,7 @@ public record UserRegistrationData(
         String cpf,
         String rg,
         String phoneNumber,
-        String profilePhotoUrl,
+        String profilePhotoStorageKey,
         Instant now
 ) {
 }

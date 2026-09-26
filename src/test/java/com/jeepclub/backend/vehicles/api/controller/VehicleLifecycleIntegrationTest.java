@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -23,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -47,7 +49,7 @@ class VehicleLifecycleIntegrationTest {
     private static final String INCLUDE_REQUEST = """
             {
               "nickname": "Trovão",
-              "photo": "photo",
+              "photo": "%s",
               "plate": "LIF1D23",
               "renavam": "38249206428",
               "brand": "Jeep",
@@ -77,11 +79,20 @@ class VehicleLifecycleIntegrationTest {
     @Transactional
     void createListDetailEditAndDeleteVehicleThroughTheRealStack() throws Exception {
         String bearer = authenticateNewMember();
+        MockMultipartFile photo = new MockMultipartFile("file", "vehicle.png", "image/png",
+                new byte[]{(byte) 137, 80, 78, 71, 13, 10, 26, 10, 1});
+        MvcResult uploaded = mockMvc.perform(multipart("/media/images")
+                        .file(photo).header(AUTHORIZATION, bearer))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.storageKey").exists())
+                .andReturn();
+        String photoKey = objectMapper.readTree(uploaded.getResponse().getContentAsString())
+                .get("storageKey").asText();
 
         mockMvc.perform(post("/vehicles/include/member")
                         .header(AUTHORIZATION, bearer)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(INCLUDE_REQUEST))
+                        .content(INCLUDE_REQUEST.formatted(photoKey)))
                 .andExpect(status().isCreated());
 
         MvcResult listResult = mockMvc.perform(get("/vehicles/list/member")
@@ -95,7 +106,14 @@ class VehicleLifecycleIntegrationTest {
                         .header(AUTHORIZATION, bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.plate").value("LIF1D23"))
-                .andExpect(jsonPath("$.status").value("ACTIVE"));
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.photo").value(photoKey));
+
+        mockMvc.perform(get("/media/images").param("key", photoKey)
+                        .header(AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(result -> assertThat(result.getResponse().getContentAsByteArray())
+                        .containsExactly(photo.getBytes()));
 
         mockMvc.perform(put("/vehicles/edit/member/" + vehicleId)
                         .header(AUTHORIZATION, bearer)

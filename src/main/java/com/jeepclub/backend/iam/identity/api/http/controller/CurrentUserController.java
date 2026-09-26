@@ -2,6 +2,8 @@ package com.jeepclub.backend.iam.identity.api.http.controller;
 
 import com.jeepclub.backend.iam.identity.api.http.dto.user.CurrentUserResponseDTO;
 import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserEmailRequestDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserProfileRequestDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserPhotoRequestDTO;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import tools.jackson.databind.JsonNode;
 
 @RestController
 @RequestMapping(value = "/identity", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -57,6 +60,39 @@ public class CurrentUserController {
         return ResponseEntity.ok(CurrentUserResponseDTO.from(user));
     }
 
+    @PatchMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
+    @Operation(
+            summary = "Atualizar meus dados cadastrais",
+            description = "Edita somente name, birthDate, rg, phoneNumber e profilePhotoStorageKey do principal autenticado. "
+                    + "Campo omitido preserva o valor; null limpa opcionais, mas name não aceita null/branco. "
+                    + "Objeto vazio não altera updatedAt. CPF, IDs, status, roles, permissions, timestamps e campos desconhecidos "
+                    + "são rejeitados. E-mail tem fluxo próprio em /identity/me/email. "
+                    + "Foto exige storageKey existente de /media/images; não aceita URL arbitrária. Remover a associação não apaga o arquivo.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = UpdateCurrentUserProfileRequestDTO.class))),
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Cadastro atualizado, ou preservado para objeto vazio.",
+                            content = @Content(schema = @Schema(implementation = CurrentUserResponseDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Campo proibido/desconhecido, tipo inválido, nome ausente em campo enviado ou referência de imagem inválida.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "401", description = "Usuário não autenticado.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Usuário ou imagem não encontrado.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "RG já utilizado por outro usuário.",
+                            content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            }
+    )
+    public ResponseEntity<CurrentUserResponseDTO> updateProfile(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody JsonNode request
+    ) {
+        return ResponseEntity.ok(CurrentUserResponseDTO.from(currentUserProfileService.updateProfile(
+                principal.getUserId(), UpdateCurrentUserProfileRequestDTO.read(request))));
+    }
+
     @PatchMapping(value = "/me/email", consumes = MediaType.APPLICATION_JSON_VALUE)
     @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
     @Operation(
@@ -85,6 +121,18 @@ public class CurrentUserController {
     ) {
         return ResponseEntity.ok(CurrentUserResponseDTO.from(
                 currentUserProfileService.updateEmail(principal.getUserId(), request.email())
+        ));
+    }
+
+    @PatchMapping(value = "/me/photo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
+    @Operation(summary = "Associar foto de perfil", description = "Recebe storageKey de POST /media/images, confirma que o objeto existe e devolve a chave no perfil. null desassocia sem excluir o objeto do storage.")
+    public ResponseEntity<CurrentUserResponseDTO> updatePhoto(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody UpdateCurrentUserPhotoRequestDTO request
+    ) {
+        return ResponseEntity.ok(CurrentUserResponseDTO.from(
+                currentUserProfileService.updateProfilePhoto(principal.getUserId(), request.storageKey())
         ));
     }
 }

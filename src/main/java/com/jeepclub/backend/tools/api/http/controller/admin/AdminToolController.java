@@ -32,6 +32,14 @@ public class AdminToolController {
 
     private final AdminToolService adminToolService;
 
+    @PatchMapping(value = "/{id}/photo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAuthority('TOOLS_TOOL_UPDATE')")
+    @RequiredPermission("TOOLS_TOOL_UPDATE")
+    @Operation(summary = "Associar foto à ferramenta administrativamente", description = "Recebe chave de POST /media/images; null remove a associação sem excluir o objeto no storage.")
+    public ResponseEntity<ToolResponseDTO> updatePhoto(@PathVariable Long id, @RequestBody ToolPhotoRequestDTO request) {
+        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.updatePhoto(id, request.storageKey())));
+    }
+
     @GetMapping
     @PreAuthorize("hasAuthority('TOOLS_TOOL_READ')")
     @RequiredPermission("TOOLS_TOOL_READ")
@@ -81,16 +89,18 @@ public class AdminToolController {
     @RequiredPermission("TOOLS_TOOL_CREATE")
     @Operation(
             summary = "Criar ferramenta para um userId",
-            description = "Cria uma ferramenta ACTIVE com o userId informado. Tools não valida existência ou status administrativo do usuário nesta implementação.",
+            description = "Cria uma ferramenta ACTIVE para um usuário existente e administrativamente ativo. Usuários DISABLED não podem receber novas ferramentas.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "Ferramenta criada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ToolResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
-                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão TOOLS_TOOL_CREATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+                    @ApiResponse(responseCode = "403", description = "Usuário sem a permissão TOOLS_TOOL_CREATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "Proprietário não encontrado (TOOL_OWNER_NOT_FOUND).", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "Proprietário desabilitado (TOOL_OWNER_DISABLED).", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
     public ResponseEntity<ToolResponseDTO> createToolForUser(
-            @Parameter(description = "Identificador escalar do proprietário a ser persistido, sem validação de Identity.", example = "7", required = true)
+            @Parameter(description = "Identificador do proprietário existente e administrativamente ativo.", example = "7", required = true)
             @PathVariable Long userId,
             @Valid @RequestBody ToolCreateRequestDTO request) {
         var tool = adminToolService.createToolForUser(userId, request.name(), request.description());

@@ -1,6 +1,9 @@
 package com.jeepclub.backend.tools.core.application.service.tool;
 
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerDisabledException;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerNotFoundException;
+import com.jeepclub.backend.tools.core.port.ToolOwnerQuery;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
 import org.junit.jupiter.api.Test;
@@ -18,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -32,6 +36,9 @@ class ToolContractCharacterizationTest {
     @Mock
     private ToolRepository repository;
 
+    @Mock
+    private ToolOwnerQuery ownerQuery;
+
     @Test
     void memberListingDoesNotFilterInactiveTools() {
         var pageable = PageRequest.of(0, 20);
@@ -39,7 +46,7 @@ class ToolContractCharacterizationTest {
         Tool inactive = tool(2L, ToolStatus.INACTIVE);
         when(repository.findByUserId(7L, pageable)).thenReturn(new PageImpl<>(List.of(active, inactive)));
 
-        ToolService service = new ToolService(repository, CLOCK);
+        ToolService service = new ToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         assertThat(service.listUserTools(7L, pageable).getContent())
                 .extracting(Tool::getStatus)
@@ -51,7 +58,7 @@ class ToolContractCharacterizationTest {
         Tool inactive = tool(1L, ToolStatus.INACTIVE);
         when(repository.findById(1L)).thenReturn(Optional.of(inactive));
         when(repository.save(any(Tool.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        ToolService service = new ToolService(repository, CLOCK);
+        ToolService service = new ToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         assertThat(service.getToolDetails(1L, 7L).getStatus()).isEqualTo(ToolStatus.INACTIVE);
         assertThat(service.updateTool(1L, "  Novo nome  ", null, 7L).getName()).isEqualTo("Novo nome");
@@ -87,7 +94,7 @@ class ToolContractCharacterizationTest {
         Tool inactive = tool(2L, ToolStatus.INACTIVE);
         when(repository.findById(1L)).thenReturn(Optional.of(active));
         when(repository.findById(2L)).thenReturn(Optional.of(inactive));
-        ToolService service = new ToolService(repository, CLOCK);
+        ToolService service = new ToolService(repository, CLOCK, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         assertThat(service.activateTool(1L, 7L)).isSameAs(active);
         assertThat(service.deactivateTool(2L, 7L)).isSameAs(inactive);
@@ -96,15 +103,53 @@ class ToolContractCharacterizationTest {
     }
 
     @Test
-    void administrativeCreationAcceptsTheSuppliedScalarUserIdWithoutIdentityValidation() {
+    void transitionsReportWhetherStatusActuallyChanged() {
+        Tool tool = tool(1L, ToolStatus.ACTIVE);
+        LocalDateTime changedAt = CREATED_AT.plusMinutes(1);
+
+        assertThat(tool.activate(changedAt)).isFalse();
+        assertThat(tool.getUpdatedAt()).isEqualTo(CREATED_AT);
+        assertThat(tool.deactivate(changedAt)).isTrue();
+        assertThat(tool.getUpdatedAt()).isEqualTo(changedAt);
+        assertThat(tool.deactivate(changedAt.plusMinutes(1))).isFalse();
+        assertThat(tool.getUpdatedAt()).isEqualTo(changedAt);
+        assertThat(tool.activate(changedAt.plusMinutes(2))).isTrue();
+        assertThat(tool.getStatus()).isEqualTo(ToolStatus.ACTIVE);
+    }
+
+    @Test
+    void administrativeCreationPersistsForActiveOwner() {
+        when(ownerQuery.existsById(999L)).thenReturn(true);
+        when(ownerQuery.isAdministrativelyActive(999L)).thenReturn(true);
         when(repository.save(any(Tool.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        AdminToolService service = new AdminToolService(repository, CLOCK);
+        AdminToolService service = new AdminToolService(repository, CLOCK, ownerQuery, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
 
         Tool created = service.createToolForUser(999L, "Macaco", "Hidráulico");
 
         assertThat(created.getUserId()).isEqualTo(999L);
         assertThat(created.getStatus()).isEqualTo(ToolStatus.ACTIVE);
         verify(repository).save(created);
+    }
+
+    @Test
+    void administrativeCreationRejectsMissingOwnerWithoutPersisting() {
+        AdminToolService service = new AdminToolService(repository, CLOCK, ownerQuery, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
+
+        assertThatThrownBy(() -> service.createToolForUser(999L, "Macaco", "Hidráulico"))
+                .isInstanceOf(ToolOwnerNotFoundException.class);
+        verify(repository, never()).save(any(Tool.class));
+        verify(ownerQuery, never()).isAdministrativelyActive(999L);
+    }
+
+    @Test
+    void administrativeCreationRejectsDisabledOwnerWithoutPersisting() {
+        when(ownerQuery.existsById(999L)).thenReturn(true);
+        AdminToolService service = new AdminToolService(repository, CLOCK, ownerQuery, org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaService.class));
+
+        assertThatThrownBy(() -> service.createToolForUser(999L, "Macaco", "Hidráulico"))
+                .isInstanceOf(ToolOwnerDisabledException.class);
+        verify(ownerQuery).isAdministrativelyActive(999L);
+        verify(repository, never()).save(any(Tool.class));
     }
 
     private Tool tool(Long id, ToolStatus status) {

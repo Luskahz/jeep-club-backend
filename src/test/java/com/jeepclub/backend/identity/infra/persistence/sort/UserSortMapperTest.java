@@ -17,7 +17,7 @@ class UserSortMapperTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "id", "name", "birthDate", "email", "cpf", "rg", "phoneNumber",
-            "profilePhotoUrl", "status", "createdAt", "disabledAt", "updatedAt"
+            "profilePhotoStorageKey", "status", "createdAt", "disabledAt", "updatedAt"
     })
     void acceptsEveryPublishedSortField(String field) {
         Pageable mapped = UserSortMapper.map(PageRequest.of(

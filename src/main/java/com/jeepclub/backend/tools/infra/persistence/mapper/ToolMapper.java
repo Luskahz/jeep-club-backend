@@ -10,7 +10,7 @@ public class ToolMapper {
     public Tool toDomain(ToolEntity entity) {
         if (entity == null) return null;
 
-        return Tool.reconstitute(
+        Tool tool = Tool.reconstitute(
                 entity.getId(),
                 entity.getName(),
                 entity.getDescription(),
@@ -19,6 +19,8 @@ public class ToolMapper {
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
+        tool.restorePhoto(entity.getPhotoStorageKey());
+        return tool;
     }
 
     public ToolEntity toEntity(Tool domain) {
@@ -30,6 +32,7 @@ public class ToolMapper {
         entity.setDescription(domain.getDescription());
         entity.setStatus(domain.getStatus());
         entity.setUserId(domain.getUserId());
+        entity.setPhotoStorageKey(domain.getPhotoStorageKey());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
 

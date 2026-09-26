@@ -68,6 +68,9 @@ public class ToolHistoryEntity {
     )
     private Long userId;
 
+    @Column(name = "photo_storage_key", length = 255)
+    private String photoStorageKey;
+
     @Column(
             name = "deleted_by_user_id",
             nullable = false

@@ -20,7 +20,7 @@ public class UserMapper {
         entity.setCpf(domain.getCpf());
         entity.setRg(domain.getRg());
         entity.setPhoneNumber(domain.getPhoneNumber());
-        entity.setProfilePhotoUrl(domain.getProfilePhotoUrl());
+        entity.setProfilePhotoStorageKey(domain.getProfilePhotoStorageKey());
         entity.setStatus(domain.getStatus());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setDisabledAt(domain.getDisabledAt());
@@ -41,7 +41,7 @@ public class UserMapper {
                 entity.getCpf(),
                 entity.getRg(),
                 entity.getPhoneNumber(),
-                entity.getProfilePhotoUrl(),
+                entity.getProfilePhotoStorageKey(),
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getDisabledAt(),

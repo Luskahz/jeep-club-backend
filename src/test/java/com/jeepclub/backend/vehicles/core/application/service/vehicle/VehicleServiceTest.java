@@ -9,6 +9,7 @@ import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import com.jeepclub.backend.vehicles.core.domain.model.Vehicle;
 import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
+import com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +39,7 @@ class VehicleServiceTest {
 
     @Mock
     private VehicleRepository vehicleRepository;
+    @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaService images;
 
     private VehicleService service;
 
@@ -45,7 +47,7 @@ class VehicleServiceTest {
     void setUp() {
         service = new VehicleService(
                 vehicleRepository,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC), images
         );
     }
 
@@ -59,6 +61,16 @@ class VehicleServiceTest {
         assertThat(vehicle.getOwnerId()).isEqualTo(7L);
         assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.ACTIVE);
         assertThat(vehicle.getCreatedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void doesNotPersistVehicleWithMissingPhoto() {
+        org.mockito.Mockito.doThrow(new StorageObjectNotFoundException())
+                .when(images).requireExisting("photo");
+
+        assertThatThrownBy(this::createVehicle)
+                .isInstanceOf(StorageObjectNotFoundException.class);
+        verify(vehicleRepository, never()).save(any(Vehicle.class));
     }
 
     @Test
