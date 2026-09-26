@@ -141,7 +141,9 @@ public class User {
         String normalizedName = normalizeName(name);
         String normalizedRg = normalizeRg(rg);
         String normalizedPhone = normalizePhoneNumber(phoneNumber);
-        String normalizedPhoto = normalizeProfilePhotoStorageKey(profilePhotoStorageKey);
+        String normalizedPhoto = Objects.equals(profilePhotoStorageKey, this.profilePhotoStorageKey)
+                ? this.profilePhotoStorageKey
+                : normalizeProfilePhotoStorageKey(profilePhotoStorageKey);
         this.name = normalizedName;
         this.birthDate = birthDate;
         this.rg = normalizedRg;
