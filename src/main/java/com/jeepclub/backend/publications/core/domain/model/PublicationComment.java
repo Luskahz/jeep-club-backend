@@ -22,11 +22,14 @@ public final class PublicationComment {
         this.id = id;
         this.publicationId = publicationId;
         this.authorUserId = authorUserId;
-        this.content = Publication.required(content, "content");
+        this.content = content == null ? "" : content.trim();
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
         if (updatedAt.isBefore(createdAt)) throw new IllegalArgumentException("updatedAt cannot precede createdAt.");
         this.images = validateImages(images);
+        if (this.content.isEmpty() && this.images.isEmpty()) {
+            throw new IllegalArgumentException("Comment needs text or at least one image.");
+        }
     }
 
     public static PublicationComment create(Long publicationId, Long authorUserId, String content,

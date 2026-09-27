@@ -41,6 +41,19 @@ public class PublicationCommentRepositoryAdapter implements PublicationCommentRe
         return comments.findById(id).map(this::toDomain);
     }
 
+    @Override
+    public org.springframework.data.domain.Page<PublicationComment> findByPublication(Long publicationId, org.springframework.data.domain.Pageable pageable) {
+        return comments.findByPublication_Id(publicationId, pageable).map(this::toDomain);
+    }
+
+    @Override
+    public java.util.Map<Long, Long> counts(java.util.Collection<Long> publicationIds) {
+        if (publicationIds.isEmpty()) return java.util.Map.of();
+        var result = new java.util.HashMap<Long, Long>();
+        comments.countByPublicationIds(publicationIds).forEach(row -> result.put((Long) row[0], (Long) row[1]));
+        return java.util.Map.copyOf(result);
+    }
+
     private PublicationComment toDomain(PublicationCommentEntity entity) {
         var images = entity.getImages().stream()
                 .map(image -> new PublicationCommentImage(image.getStorageKey(), image.getPosition()))
