@@ -1,6 +1,9 @@
 package com.jeepclub.backend.publications.infra.persistence.adapter;
 
 import com.jeepclub.backend.publications.core.domain.model.ServicePublicationRequest;
+import com.jeepclub.backend.publications.core.domain.enums.ServicePublicationRequestStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.jeepclub.backend.publications.core.repository.ServicePublicationRequestRepository;
 import com.jeepclub.backend.publications.infra.persistence.jpa.ServicePublicationRequestJpaRepository;
 import com.jeepclub.backend.publications.infra.persistence.mapper.ServicePublicationRequestMapper;
@@ -27,5 +30,10 @@ public class ServicePublicationRequestRepositoryAdapter implements ServicePublic
     @Override
     public Optional<ServicePublicationRequest> findByIdForUpdate(Long id) {
         return requests.lockId(id).flatMap(requests::findById).map(mapper::toDomain);
+    }
+
+    @Override
+    public Page<ServicePublicationRequest> findAll(ServicePublicationRequestStatus status, Pageable pageable) {
+        return (status == null ? requests.findAll(pageable) : requests.findAllByStatus(status, pageable)).map(mapper::toDomain);
     }
 }

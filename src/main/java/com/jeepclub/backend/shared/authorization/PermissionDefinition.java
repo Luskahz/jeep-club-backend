@@ -470,7 +470,21 @@ public enum PermissionDefinition {
             PermissionCode.PUBLICATIONS_NOTICE_DELETE,
             ModuleCode.PUBLICATIONS,
             "Permite excluir avisos com snapshot histórico"
-    );
+    ),
+    PUBLICATIONS_SERVICE_REQUEST_CREATE(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_CREATE, ModuleCode.PUBLICATIONS, "Permite solicitar publicação de serviço"),
+    PUBLICATIONS_SERVICE_REQUEST_READ(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_READ, ModuleCode.PUBLICATIONS, "Permite consultar solicitações próprias de serviço"),
+    PUBLICATIONS_SERVICE_REQUEST_ADMIN_READ(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_ADMIN_READ, ModuleCode.PUBLICATIONS, "Permite consultar solicitações de serviço administrativamente"),
+    PUBLICATIONS_SERVICE_REQUEST_APPROVE(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_APPROVE, ModuleCode.PUBLICATIONS, "Permite aprovar solicitação inicial de serviço"),
+    PUBLICATIONS_SERVICE_REQUEST_REJECT(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_REJECT, ModuleCode.PUBLICATIONS, "Permite rejeitar solicitação inicial de serviço"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_CREATE(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_CREATE, ModuleCode.PUBLICATIONS, "Permite solicitar alteração de serviço próprio"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_READ(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_READ, ModuleCode.PUBLICATIONS, "Permite consultar alteração própria de serviço"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_ADMIN_READ(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_ADMIN_READ, ModuleCode.PUBLICATIONS, "Permite consultar alterações de serviço administrativamente"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_APPROVE(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_APPROVE, ModuleCode.PUBLICATIONS, "Permite aprovar alteração de serviço"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_REJECT(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_REJECT, ModuleCode.PUBLICATIONS, "Permite rejeitar alteração de serviço"),
+    PUBLICATIONS_SERVICE_READ(PermissionCode.PUBLICATIONS_SERVICE_READ, ModuleCode.PUBLICATIONS, "Permite consultar serviço publicado"),
+    PUBLICATIONS_SERVICE_DELETE(PermissionCode.PUBLICATIONS_SERVICE_DELETE, ModuleCode.PUBLICATIONS, "Permite excluir serviço próprio"),
+    PUBLICATIONS_SERVICE_ADMIN_READ(PermissionCode.PUBLICATIONS_SERVICE_ADMIN_READ, ModuleCode.PUBLICATIONS, "Permite consultar serviços administrativamente"),
+    PUBLICATIONS_SERVICE_ADMIN_DELETE(PermissionCode.PUBLICATIONS_SERVICE_ADMIN_DELETE, ModuleCode.PUBLICATIONS, "Permite excluir qualquer serviço com histórico");
 
     private final PermissionCode code;
     private final ModuleCode module;

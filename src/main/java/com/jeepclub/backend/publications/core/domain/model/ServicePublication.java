@@ -8,8 +8,8 @@ import java.util.Objects;
 
 public final class ServicePublication extends Publication {
     private final Long sourceRequestId;
-    private final BigDecimal amount;
-    private final String contactPhone;
+    private BigDecimal amount;
+    private String contactPhone;
 
     private ServicePublication(Long id, Long authorUserId, String title, String content, PublicationStatus status,
                                Instant createdAt, Instant updatedAt, Instant publishedAt, Instant archivedAt,
@@ -45,6 +45,19 @@ public final class ServicePublication extends Publication {
         positive(id, "id");
         return new ServicePublication(id, authorUserId, title, content, status, createdAt, updatedAt,
                 publishedAt, archivedAt, images, sourceRequestId, amount, contactPhone);
+    }
+
+    public void applyApprovedChange(ServicePublicationChangeRequest change, Instant now) {
+        Objects.requireNonNull(change, "change").requirePending();
+        if (!Objects.equals(getId(), change.getServicePublicationId())
+                || !Objects.equals(getAuthorUserId(), change.getRequestedByUserId())) {
+            throw new IllegalArgumentException("Change request does not belong to this service.");
+        }
+        BigDecimal validatedAmount = ServicePublicationRequest.requireAmount(change.getProposedAmount());
+        String validatedPhone = ServicePublicationRequest.required(change.getProposedContactPhone(), "contactPhone", 30);
+        applyApprovedEditorialChange(change.getProposedTitle(), change.getProposedContent(), change.getProposedImages(), now);
+        amount = validatedAmount;
+        contactPhone = validatedPhone;
     }
 
     public Long getSourceRequestId() { return sourceRequestId; }

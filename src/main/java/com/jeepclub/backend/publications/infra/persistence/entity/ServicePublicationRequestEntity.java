@@ -4,6 +4,7 @@ import com.jeepclub.backend.publications.core.domain.enums.ServicePublicationReq
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -12,7 +13,8 @@ import java.util.List;
 @Entity
 @Table(name = "service_publication_requests", indexes = {
         @Index(name = "idx_service_requests_requester", columnList = "requested_by_user_id"),
-        @Index(name = "idx_service_requests_status", columnList = "status")
+        @Index(name = "idx_service_requests_status", columnList = "status"),
+        @Index(name = "idx_service_requests_requested_at", columnList = "requested_at")
 })
 @Getter
 @Setter
@@ -46,6 +48,7 @@ public class ServicePublicationRequestEntity {
     @Version
     private Long version;
     @ElementCollection
+    @BatchSize(size = 20)
     @CollectionTable(name = "service_publication_request_images", joinColumns = @JoinColumn(name = "request_id"),
             uniqueConstraints = {
                     @UniqueConstraint(name = "uk_service_request_image_position", columnNames = {"request_id", "position"}),

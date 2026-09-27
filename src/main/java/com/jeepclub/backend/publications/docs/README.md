@@ -260,10 +260,53 @@ O Service real possui `sourceRequestId` imutável, `amount` e `contactPhone`. Su
 são a galeria revisada na request. `publishedAt` é o instante da aprovação, sem um estado
 intermediário de Service pendente. Somente o Service já criado recebe interações sociais.
 
+Na BACK-438, a API de membro para Service exige membership ativa com `@RequiresMembership`,
+authority específica por ação e ownership para solicitações privadas, alteração e delete.
+A API administrativa exige authorities próprias e não usa o guard de membership. O
+requester e o executor do delete vêm de `UserPrincipal.userId`. O membro consulta apenas
+suas requests; requests de terceiros são tratadas como não encontradas. A leitura
+`GET /services/{id}` mostra somente Services `PUBLISHED`; a superfície administrativa
+pode ler qualquer estado editorial. As respostas usam `storageKey` para resolver imagens
+pelo endpoint global de mídia.
+
+Alterações públicas posteriores seguem outro agregado, independente da Publication:
+
+```text
+ServicePublication PUBLISHED (última versão aprovada)
+    └── PATCH do owner -> ServicePublicationChangeRequest PENDING
+                            ├── reject -> REJECTED (Service inalterado)
+                            └── approve -> APPROVED (mesma ServicePublication atualizada)
+```
+
+O PATCH aceita título, conteúdo, valor, telefone e galeria. Campo omitido conserva o
+valor atual; `null` explícito, campo desconhecido e corpo vazio são inválidos. Galeria
+enviada substitui a anterior e suas novas chaves são verificadas pelo `ImageMediaService`
+antes de persistir. A change request guarda o snapshot completo proposto: dados públicos,
+`servicePublicationId`, requester, status, motivo, reviewer e timestamps. Ela não recebe
+likes/comments, não aparece no feed e não possui `PublicationStatus`. Enquanto PENDING,
+o Service permanece publicado com a última versão aprovada.
+
+Na aprovação, a aplicação trava a change request PENDING e depois a raiz da Publication
+alvo, confere existência e owner, aplica todos os campos ao mesmo Service, salva o Service,
+registra reviewer/timestamp e salva a change request numa transação. `publicationId`,
+`authorUserId`, `sourceRequestId`, `createdAt` e `publishedAt` permanecem; `updatedAt`
+avança. Assim curtidas, comentários e links continuam ligados ao mesmo ID. Rejeição não
+altera o Service. Apenas um change request PENDING por Service é permitido: a criação
+trava a raiz, consulta pendência, e `UNIQUE(pending_service_publication_id)` protege o
+invariante no banco; a coluna fica nula em requests terminais. Locks e `@Version`
+impedem aplicação dupla. Depois de APPROVED/REJECTED pode nascer outra request.
+
+O proprietário pode hard deletar apenas seu Service; administrador com permission
+específica pode deletar qualquer Service. A request inicial e todas as change requests
+permanecem como trilha operacional. Uma change request PENDING de Service deletado
+permanece PENDING, mas sua aprovação retorna erro de Service inexistente. O snapshot do
+hard delete preserva a última versão aprovada, incluindo `sourceRequestId`, valor,
+telefone e galeria. Objetos do storage global permanecem.
+
 As demais regras estáveis são:
 
 - o serviço pertence ao membro criador;
-- as permissions HTTP específicas serão definidas na BACK-438;
+- permissions HTTP são distintas para request inicial, change request, leitura e delete de Service;
 - pode receber imagens, curtidas e comentários por ser uma Publication;
 - creator e administrador autorizado poderão possuir fluxos de exclusão conforme contrato
   da Story;
@@ -272,9 +315,9 @@ As demais regras estáveis são:
 ServicePublication não cria `ChargeDefinition`, `MemberCharge`, `MemberPayment`,
 checkout, comissão ou qualquer fluxo financeiro interno.
 
-Os controllers, permissions, contratos OpenAPI, listagens, edição, exclusão por owner/admin
-e eventual regra de reenvio pertencem à BACK-438. Billing não participa da request nem da
-aprovação.
+Os contratos de HTTP, permissions, paginação e erros estão nos controllers/DTOs OpenAPI.
+As listagens administrativas paginadas aceitam filtro opcional por status e retornam
+`PageResponse<T>`. Billing não participa da request, aprovação ou alteração.
 
 ## Permissions
 
@@ -320,6 +363,12 @@ autor, conteúdo, valor, telefone, dados da revisão e ID da Publication criada.
 `publication_services` guarda `source_request_id` único, `amount` e `contact_phone`.
 O lock da linha da request serializa revisões concorrentes; a versão fornece proteção
 adicional contra gravação de estado obsoleto.
+
+`service_publication_change_requests` também fica fora da herança JOINED e contém o
+snapshot proposto, reviewer, estado e `@Version`. Sua galeria está em
+`service_publication_change_request_images`, somente com `storageKey`, posição e principal.
+O índice único em `pending_service_publication_id` impede duas propostas PENDING para
+o mesmo Service sem impedir várias propostas aprovadas/rejeitadas ao longo do tempo.
 
 O projeto continua seguindo a política global vigente de schema derivado das entities /
 Hibernate; não introduzir Flyway/Liquibase isoladamente neste módulo.
@@ -414,8 +463,9 @@ ServicePublication
 ```
 
 Não existe item de Publication genérica.
-`ServicePublicationRequest` não é item do feed; apenas Services materializados após
-aprovação podem participar da consulta futura.
+`ServicePublicationRequest` e `ServicePublicationChangeRequest` não são itens do feed;
+apenas Services materializados após aprovação podem participar da consulta futura, sempre
+com a última versão aprovada enquanto houver proposta pendente.
 
 A consulta final, filtros, paginação, detalhe polimórfico, contagens de interação e
 otimizações contra N+1 pertencem à BACK-400.
