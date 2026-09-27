@@ -7,19 +7,21 @@ import java.util.List;
 import java.util.Objects;
 
 @Component
-public class UnavailableBillingEventAdapter implements BillingEventPort {
+@lombok.RequiredArgsConstructor
+public class PublicationsBillingEventAdapter implements BillingEventPort {
+    private final com.jeepclub.backend.publications.api.module.EventQuery events;
 
     @Override
     public boolean existsEventById(Long eventId) {
         Objects.requireNonNull(eventId, "eventId cannot be null");
 
-        return false;
+        return events.exists(eventId);
     }
 
     @Override
     public List<Long> findConfirmedParticipantUserIdsByEventId(Long eventId) {
         Objects.requireNonNull(eventId, "eventId cannot be null");
 
-        return List.of();
+        return events.confirmedParticipants(eventId);
     }
 }

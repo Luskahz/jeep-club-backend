@@ -12,6 +12,8 @@ public class PublicationHistoryMapper {
         else if (source instanceof EventEntity event) {
             var eventHistory = new EventHistoryEntity();
             eventHistory.setStartsAt(event.getStartsAt());
+            eventHistory.setEndsAt(event.getEndsAt());
+            eventHistory.setEventStatus(event.getEventStatus());
             history = eventHistory;
         } else if (source instanceof ServicePublicationEntity service) {
             var serviceHistory = new ServicePublicationHistoryEntity();
