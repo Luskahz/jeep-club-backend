@@ -20,6 +20,10 @@ public class MemberChargeAdapter implements MemberChargeRepository {
 
     private final MemberChargeJpaRepository jpa;
     private final MemberChargeMapper mapper;
+    @Override
+    public java.util.List<MemberCharge> findByChargeCycleIdIn(java.util.Collection<Long> ids) {
+        return ids.isEmpty() ? java.util.List.of() : jpa.findByChargeCycleIdIn(ids).stream().map(mapper::toDomain).toList();
+    }
 
     @Override
     public MemberCharge save(MemberCharge memberCharge) {

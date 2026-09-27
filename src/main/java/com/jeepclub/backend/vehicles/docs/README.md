@@ -169,8 +169,11 @@ de proteção do agregado, não uma duplicata da semântica de edição parcial.
 `UserPort` é uma porta consumer-owned de Vehicles. O `VehicleIdentityAdapter`
 a implementa por meio de `identity.api.module.UserQuery.existsById` e
 `UserQuery.isAdministrativelyActive`; hoje ela é consumida somente na criação
-administrativa. Não existe contrato Java público em `vehicles.api.module` nem
-acesso direto a repository, entity ou service interno de Identity.
+administrativa. `vehicles.api.module.EventVehicleQuery` expõe somente ID, ownerId
+e `seatingCapacity` de veículos ativos, incluindo consulta em lote. A capacidade
+canônica existente representa todas as pessoas, incluindo motorista; não foi
+criado campo paralelo. Publications valida alocação usando esse contrato.
+Não há acesso direto a repository, entity ou service interno de Identity.
 
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter
 de persistência ficam em `infra.persistence`. A entidade operacional mantém

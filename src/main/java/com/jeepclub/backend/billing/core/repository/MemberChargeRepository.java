@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberChargeRepository {
+    java.util.List<MemberCharge> findByChargeCycleIdIn(java.util.Collection<Long> ids);
 
     MemberCharge save(MemberCharge memberCharge);
 

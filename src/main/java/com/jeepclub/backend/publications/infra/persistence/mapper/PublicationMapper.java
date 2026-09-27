@@ -17,7 +17,7 @@ public class PublicationMapper {
         if (entity instanceof EventEntity event) {
             return Event.reconstitute(entity.getId(), entity.getAuthorUserId(), entity.getTitle(), entity.getContent(),
                     entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getPublishedAt(), entity.getArchivedAt(), images,
-                    event.getStartsAt());
+                    event.getStartsAt(), event.getEndsAt(), event.getEventStatus());
         }
         if (entity instanceof ServicePublicationEntity service) {
             return ServicePublication.reconstitute(entity.getId(), entity.getAuthorUserId(), entity.getTitle(), entity.getContent(),
@@ -38,7 +38,11 @@ public class PublicationMapper {
     }
 
     public void copy(Publication domain, PublicationEntity entity) {
-        if (domain instanceof Event event && entity instanceof EventEntity target) target.setStartsAt(event.getStartsAt());
+        if (domain instanceof Event event && entity instanceof EventEntity target) {
+            target.setStartsAt(event.getStartsAt());
+            target.setEndsAt(event.getEndsAt());
+            target.setEventStatus(event.getEventStatus());
+        }
         if (domain instanceof ServicePublication service && entity instanceof ServicePublicationEntity target) {
             target.setSourceRequestId(service.getSourceRequestId());
             target.setAmount(service.getAmount());

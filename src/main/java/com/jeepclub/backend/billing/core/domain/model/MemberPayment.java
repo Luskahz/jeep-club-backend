@@ -31,6 +31,7 @@ public class MemberPayment {
     private String notes;
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant submittedAt;
 
     private MemberPayment(
             Long id,
@@ -66,6 +67,7 @@ public class MemberPayment {
         this.notes = normalizeNullableText(notes);
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt cannot be null");
         this.updatedAt = updatedAt;
+        this.submittedAt = createdAt;
 
         validateStatusConsistency();
     }
@@ -218,6 +220,7 @@ public class MemberPayment {
         this.notes = normalizeNullableText(notes);
 
         this.status = MemberPaymentStatus.PENDING_VALIDATION;
+        this.submittedAt = now;
 
         this.rejectedAt = null;
         this.rejectedByUserId = null;
@@ -231,6 +234,12 @@ public class MemberPayment {
 
     public boolean isPendingValidation() {
         return status == MemberPaymentStatus.PENDING_VALIDATION;
+    }
+
+    public static MemberPayment reconstitute(Long id, Long memberChargeId, BigDecimal amount, PaymentMethod paymentMethod, MemberPaymentStatus status, Instant paidAt, String receiptStorageKey, Instant confirmedAt, Long confirmedByUserId, Instant rejectedAt, Long rejectedByUserId, String rejectionReason, Instant canceledAt, String notes, Instant createdAt, Instant updatedAt, Instant submittedAt) {
+        var payment = reconstitute(id, memberChargeId, amount, paymentMethod, status, paidAt, receiptStorageKey, confirmedAt, confirmedByUserId, rejectedAt, rejectedByUserId, rejectionReason, canceledAt, notes, createdAt, updatedAt);
+        payment.submittedAt = submittedAt == null ? createdAt : submittedAt;
+        return payment;
     }
 
     public boolean isConfirmed() {

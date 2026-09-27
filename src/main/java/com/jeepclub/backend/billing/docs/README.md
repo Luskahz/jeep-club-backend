@@ -17,17 +17,31 @@ originou muda.
 - Identity informa usuários administrativamente ativos; Authorization informa
   roles e seus usuários. Billing consome esses contratos por portas próprias e
   adapters em `infra.integration`.
-- A integração de eventos ainda é um adapter indisponível: atribuições para
-  participantes de evento não podem ser criadas no estado atual.
+- A integração de eventos usa `publications.api.module.EventQuery`. A geração
+  incremental de dívida não exige confirmação prévia da inscrição.
 - Credenciais, usuários, roles e o provider físico de arquivos não pertencem a
   Billing.
 
-O módulo expõe dois contratos Java read-only mínimos em `api.module` para a
+O módulo expõe contratos Java read-only mínimos em `api.module` para a
 política de membritude: `ChargeDefinitionQuery`, que informa se uma definição
 está ativa, e `MembershipChargeQuery`, que recebe somente definição e usuário e
 devolve um resultado financeiro sem expor entities, repositories, valores ou
 ciclos. A superfície externa de administração financeira continua HTTP; as
 integrações consumidas estão descritas em [Fluxos](flows.md).
+
+Para Event, `EventChargeCatalogQuery` consulta definições ACTIVE/ONE_TIME,
+`EventBillingCommand` cria definição inline, garante assignment/ciclo/cobrança
+e cancela somente os ciclos daquele Event; `EventFinancialQuery` consulta
+estado efetivo, estado de pagamento e instante da submissão, em lote.
+`evaluate` distingue também `CHARGE_NOT_FOUND`. Nenhum desses contratos expõe
+entity ou repository. Criação inline força ONE_TIME e AFTER_DUE_DATE.
+
+`EventChargeContext` mantém a identidade estruturada Event + definição +
+assignment + ciclo. A tabela retida tem unicidade de Event/definição,
+assignment e ciclo. O código textual do ciclo não é sua chave de idempotência.
+MemberCharges usam os snapshots do ciclo, inclusive para inscrições posteriores.
+Ciclos com contexto Event são excluídos da seleção de `MembershipChargeQuery`;
+a reutilização da definição não substitui a obrigação normal de membership.
 
 ## Modelo conceitual
 

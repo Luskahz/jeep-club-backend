@@ -21,6 +21,10 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     private final PublicationCommentJpaRepository comments;
     private final PublicationMapper mapper;
     private final PublicationHistoryMapper historyMapper;
+    @Override
+    public org.springframework.data.domain.Page<com.jeepclub.backend.publications.core.domain.model.Event> findEvents(org.springframework.data.domain.Pageable pageable) {
+        return publications.findEvents(pageable).map(e -> (com.jeepclub.backend.publications.core.domain.model.Event) mapper.toDomain(e));
+    }
 
     @Override
     public Publication save(Publication publication) {

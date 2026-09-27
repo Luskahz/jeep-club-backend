@@ -16,4 +16,8 @@ import java.time.Instant;
 public class EventHistoryEntity extends PublicationHistoryEntity {
     @Column(name = "starts_at", nullable = false)
     private Instant startsAt;
+    private Instant endsAt;
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    @org.hibernate.annotations.ColumnDefault("'OPEN'")
+    private com.jeepclub.backend.publications.core.domain.enums.EventStatus eventStatus;
 }

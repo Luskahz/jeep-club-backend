@@ -88,7 +88,7 @@ public class AdminMemberPaymentController {
     @ApiResponse(responseCode = "409", description = "Pagamento não está pendente de validação ou cobrança não pode ser quitada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Confirmar pagamento",
-            description = "Confirma um pagamento pendente de validação e marca a cobrança vinculada como paga."
+            description = "Confirma um pagamento pendente de validação e marca a cobrança aberta como paga. Se o ciclo foi cancelado, preserva a cobrança cancelada e garante elegibilidade de refund na janela original de 30 dias."
     )
     public ResponseEntity<MemberPaymentResponse> confirm(
             @PathVariable @Positive(message = "ID do pagamento deve ser maior que zero.") Long paymentId,
@@ -109,7 +109,7 @@ public class AdminMemberPaymentController {
     @ApiResponse(responseCode = "409", description = "Pagamento não está pendente de validação.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Rejeitar pagamento",
-            description = "Rejeita um pagamento pendente de validação, mantendo a cobrança vinculada em aberto."
+            description = "Rejeita um pagamento pendente de validação sem gerar refund; preserva o estado da cobrança, inclusive cancelamento prévio do ciclo."
     )
     public ResponseEntity<MemberPaymentResponse> reject(
             @PathVariable @Positive(message = "ID do pagamento deve ser maior que zero.") Long paymentId,

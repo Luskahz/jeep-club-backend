@@ -16,6 +16,13 @@ public class SystemLogServiceAdapter implements SystemLogService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SystemLogServiceAdapter.class);
     private static final int QUEUE_CAPACITY = 5_000;
+    private final SystemLogJpaRepository repository;
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void recordRequired(SystemLogEvent event) {
+        repository.saveAndFlush(new SystemLogEntity(event));
+    }
     private final BlockingQueue<SystemLogEvent> queue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 
     @Override

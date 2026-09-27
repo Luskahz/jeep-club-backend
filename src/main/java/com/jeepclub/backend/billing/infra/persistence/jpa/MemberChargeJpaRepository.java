@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberChargeJpaRepository extends JpaRepository<MemberChargeEntity, Long> {
+    java.util.List<MemberChargeEntity> findByChargeCycleIdIn(java.util.Collection<Long> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<MemberChargeEntity> findWithLockingById(Long id);

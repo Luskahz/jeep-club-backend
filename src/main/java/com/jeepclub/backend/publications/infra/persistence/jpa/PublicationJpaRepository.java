@@ -7,6 +7,8 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface PublicationJpaRepository extends JpaRepository<PublicationEntity, Long> {
+    @Query("select e from EventEntity e")
+    org.springframework.data.domain.Page<PublicationEntity> findEvents(org.springframework.data.domain.Pageable pageable);
     // Lock the root row first. Hibernate's follow-on locking of a polymorphic JOINED
     // select can fail when a concurrent delete removes the row while it waits.
     @Query(value = "select id from publications where id = :id for update", nativeQuery = true)

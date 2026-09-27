@@ -2,10 +2,11 @@
 
 ## Locks existentes
 
-Os únicos contratos explícitos de lock pessimista do módulo são
+Os contratos de lock pessimista financeiro incluem
 `MemberChargeRepository.findByIdForUpdate` e
 `MemberPaymentRepository.findByIdForUpdate`. Os adapters JPA usam
-`PESSIMISTIC_WRITE`.
+`PESSIMISTIC_WRITE`. `ChargeDefinitionRepository.findByIdForUpdate` protege
+a criação/incremento de contextos financeiros de Event.
 
 | Operação | Locks e ordem |
 |---|---|
@@ -21,10 +22,17 @@ exemplo, confirmação e substituição não podem validar simultaneamente uma v
 obsoleta do mesmo pagamento; alteração de valor e submissão também se coordenam
 pela cobrança.
 
-`ChargeDefinition`, `ChargeAssignment`, `ChargeCycle` e `MemberRefund` não usam
-hoje um método `findForUpdate`. Unicidade de definição, atribuição e ciclo também
-é apoiada por constraints JPA. Este documento não presume locks ou schedulers
-futuros.
+A inscrição no Event bloqueia a raiz da Publication e depois definições em ordem crescente.
+Dentro do Billing, a definição existente é bloqueada antes de consultar/criar
+assignment, contexto, ciclo e MemberCharge. Assim há uma linha estável para
+serializar inclusive duas primeiras criações. `uk_event_charge_context`,
+`uk_event_charge_context_cycle`, `uk_event_charge_context_assignment` e
+`uk_billing_member_charges_user_cycle` complementam a proteção em banco.
+
+Cancelamento bloqueia pagamentos existentes por ID e depois cobranças, relendo
+seu estado sob lock. A criação de elegibilidade e o request direto também usam
+o lock do pagamento. Confirmação tardia preserva essa ordem e garante somente
+um refund ativo/concluído. Não existe retry invisível de submissão financeira.
 
 ## Comprovante e transação
 

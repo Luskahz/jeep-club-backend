@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface ChargeCycleRepository {
+    java.util.List<ChargeCycle> findMembershipCycles(Long chargeDefinitionId);
 
     ChargeCycle save(ChargeCycle chargeCycle);
 

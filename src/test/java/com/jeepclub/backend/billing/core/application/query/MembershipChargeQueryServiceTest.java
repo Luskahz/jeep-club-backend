@@ -116,8 +116,8 @@ class MembershipChargeQueryServiceTest {
     }
 
     private void givenCycles(ChargeCycle... cycles) {
-        when(cycleRepository.findByChargeDefinitionId(10L, Pageable.unpaged()))
-                .thenReturn(new PageImpl<>(List.of(cycles)));
+        when(cycleRepository.findMembershipCycles(10L))
+                .thenReturn(List.of(cycles));
     }
 
     private static ChargeCycle cycle(Long id, LocalDate dueDate, ChargeRecurrenceType recurrence) {

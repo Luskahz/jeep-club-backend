@@ -12,6 +12,10 @@ public interface ChargeDefinitionRepository {
 
     Optional<ChargeDefinition> findById(Long id);
 
+    Optional<ChargeDefinition> findByIdForUpdate(Long id);
+
+    Page<ChargeDefinition> findEventEligible(Pageable pageable);
+
     Page<ChargeDefinition> findAll(Pageable pageable);
 
     boolean existsByName(String name);

@@ -50,6 +50,7 @@ public class AdminChargeCycleService {
     private final BillingAuthorizationPort billingAuthorizationPort;
     private final BillingEventPort billingEventPort;
     private final Clock clock;
+    private final com.jeepclub.backend.billing.core.repository.MemberPaymentRepository memberPaymentRepository;
 
     @Transactional
     public GenerateChargeCycleResult generate(
@@ -139,6 +140,12 @@ public class AdminChargeCycleService {
 
         chargeCycle.cancel(canceledByUserId, now);
 
+        // Match confirmation lock order: payments before charges. Never overwrite a concurrent payment.
+        var chargeIds = memberChargeRepository.findByChargeCycleId(id).stream().map(MemberCharge::getId).toList();
+        memberPaymentRepository.findByMemberChargeIdIn(chargeIds).stream()
+                .sorted(java.util.Comparator.comparing(com.jeepclub.backend.billing.core.domain.model.MemberPayment::getId))
+                .forEach(payment -> memberPaymentRepository.findByIdForUpdate(payment.getId()));
+
         cancelOpenMemberCharges(id, now);
 
         ChargeCycle savedChargeCycle = chargeCycleRepository.save(chargeCycle);
@@ -197,6 +204,8 @@ public class AdminChargeCycleService {
         List<MemberCharge> openMemberCharges = memberChargeRepository.findOpenByChargeCycleId(chargeCycleId);
 
         for (MemberCharge memberCharge : openMemberCharges) {
+            memberCharge = memberChargeRepository.findByIdForUpdate(memberCharge.getId()).orElseThrow();
+            if (!memberCharge.isPending()) continue;
             memberCharge.cancel(now);
 
             memberChargeRepository.save(memberCharge);

@@ -18,6 +18,10 @@ public class ChargeCycleAdapter implements ChargeCycleRepository {
 
     private final ChargeCycleJpaRepository jpa;
     private final ChargeCycleMapper mapper;
+    @Override
+    public java.util.List<ChargeCycle> findMembershipCycles(Long id) {
+        return jpa.findMembershipCycles(id).stream().map(mapper::toDomain).toList();
+    }
 
     @Override
     public ChargeCycle save(ChargeCycle chargeCycle) {
