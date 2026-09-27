@@ -87,6 +87,14 @@ class EventOperationsIntegrationTest {
         var event = admin.create(99L, "Trail", "Route", List.of(new PublicationImage("images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg", 0, true)), START, START.plusSeconds(3600), List.of());
         return admin.publish(event.getId());
     }
+    Event eventWithFinancialDueDate(boolean required, LocalDate financialDueDate) {
+        var rule = new AdminEventService.ChargeConfiguration(null, "Event " + UUID.randomUUID(), null,
+            AMOUNT, false, required, START.minusSeconds(3600), financialDueDate);
+        var event = admin.create(99L, "Trail", "Route",
+            List.of(new PublicationImage("images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg", 0, true)),
+            START, START.plusSeconds(3600), List.of(rule));
+        return admin.publish(event.getId());
+    }
     List<EventRegistration.Allocation> allocation() { return List.of(new EventRegistration.Allocation(101L, true, List.of(201L))); }
     <T> T tx(Supplier<T> work) { return new TransactionTemplate(transactionManager).execute(s -> work.get()); }
     Long receipt(Long eventId, Long user) {
@@ -111,6 +119,76 @@ class EventOperationsIntegrationTest {
         var e = event(false);
         assertThat(member.register(e.getId(), 10L, List.of()).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
         assertThat(financial.findByEvent(e.getId())).singleElement().satisfies(s -> assertThat(s.effectiveStatus()).isEqualTo("PENDING"));
+    }
+    @Test void explicitFinancialDueDateRoundTripsAndAppliesToOptionalMemberCharge() {
+        var due = LocalDate.of(2026, 11, 30);
+        var e = eventWithFinancialDueDate(false, due);
+        var rule = tx(() -> operations.rules(e.getId()).get(0));
+        assertThat(rule.financialDueDate()).isEqualTo(due);
+        assertThat(rule.participationCutoff()).isEqualTo(START.minusSeconds(3600));
+        assertThat(member.register(e.getId(), 10L, List.of()).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        var chargeId = financial.findByEvent(e.getId()).get(0).memberChargeId();
+        var charge = tx(() -> charges.findById(chargeId).orElseThrow());
+        assertThat(charge.getDueDate()).isEqualTo(due);
+        assertThat(charge.getPaymentAcceptancePolicy()).isEqualTo(PaymentAcceptancePolicy.AFTER_DUE_DATE);
+    }
+    @Test void nullFinancialDueDateRoundTripsAndOptionalDebtRemainsPayableAfterReferenceDate() {
+        var e = eventWithFinancialDueDate(false, null);
+        assertThat(tx(() -> operations.rules(e.getId()).get(0).financialDueDate())).isNull();
+        assertThat(member.register(e.getId(), 10L, List.of()).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        var chargeId = financial.findByEvent(e.getId()).get(0).memberChargeId();
+        var charge = tx(() -> charges.findById(chargeId).orElseThrow());
+        assertThat(charge.getDueDate()).isEqualTo(START.atZone(ZoneOffset.UTC).toLocalDate());
+        assertThat(charge.getPaymentAcceptancePolicy()).isEqualTo(PaymentAcceptancePolicy.AFTER_DUE_DATE);
+        assertThat(charge.acceptsPaymentOn(charge.getDueDate().plusMonths(2))).isTrue();
+    }
+    @Test void requiredReceiptBeforeCutoffStaysConfirmedAndCanBeResubmittedAfterFinancialDueDate() {
+        var due = LocalDate.of(2026, 11, 30);
+        var e = eventWithFinancialDueDate(true, due);
+        assertThat(member.register(e.getId(), 10L, List.of()).status()).isEqualTo(EventRegistration.Status.PENDING_PAYMENT);
+        var state = financial.findByEvent(e.getId()).get(0);
+        var file = new com.jeepclub.backend.billing.core.port.payment.PaymentReceiptFile("receipt.pdf", "application/pdf", new byte[]{1});
+        var payment = paymentMember.submitForValidation(10L, state.memberChargeId(), AMOUNT, PaymentMethod.PIX, NOW, file, null);
+        clock.now = START;
+        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        clock.now = Instant.parse("2026-12-01T12:00:00Z");
+        paymentAdmin.reject(payment.id(), 99L, "Correct receipt");
+        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        assertThat(tx(() -> charges.findById(state.memberChargeId()).orElseThrow().acceptsPaymentOn(LocalDate.now(clock)))).isTrue();
+        paymentMember.updateSubmission(10L, payment.id(), AMOUNT, PaymentMethod.PIX, clock.now, file, null);
+        paymentAdmin.confirm(payment.id(), 99L);
+        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("PAID");
+    }
+    @Test void financialDueDateCannotChangeAfterRegistration() {
+        var e = eventWithFinancialDueDate(false, LocalDate.of(2026, 11, 30));
+        member.register(e.getId(), 10L, List.of());
+        var original = tx(() -> operations.rules(e.getId()).get(0));
+        var replacement = new AdminEventService.ChargeConfiguration(original.chargeDefinitionId(), null, null,
+            null, false, false, original.participationCutoff(), LocalDate.of(2026, 12, 1));
+        assertThatThrownBy(() -> admin.update(e.getId(), null, null, null, null, false, null, List.of(replacement)))
+            .isInstanceOf(EventOperationException.class).satisfies(ex ->
+                assertThat(((EventOperationException) ex).getCode()).isEqualTo("EVENT_CHARGE_CONFIGURATION_LOCKED"));
+        assertThat(tx(() -> operations.rules(e.getId()).get(0).financialDueDate())).isEqualTo(original.financialDueDate());
+    }
+    @Test void existingOptionalChargeWithLimitedBillingPolicyRequiresExplicitFinancialDueDate() {
+        var definition = tx(() -> definitions.save(ChargeDefinition.create("Existing " + UUID.randomUUID(), null,
+            AMOUNT, ChargeRecurrenceType.ONE_TIME, false, PaymentAcceptancePolicy.UNTIL_DUE_DATE, null, NOW)));
+        var e = freeEvent();
+        var noFinalDate = new AdminEventService.ChargeConfiguration(definition.getId(), null, null, null,
+            false, false, null, null);
+        assertThatThrownBy(() -> admin.update(e.getId(), null, null, null, null, false, null, List.of(noFinalDate)))
+            .isInstanceOf(EventOperationException.class).hasMessageContaining("charge invalid");
+        var due = LocalDate.of(2026, 11, 30);
+        var withDueDate = new AdminEventService.ChargeConfiguration(definition.getId(), null, null, null,
+            false, false, null, due);
+        admin.update(e.getId(), null, null, null, null, false, null, List.of(withDueDate));
+        assertThat(tx(() -> operations.rules(e.getId()).get(0).financialDueDate())).isEqualTo(due);
+        assertThat(member.register(e.getId(), 10L, List.of()).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        var chargeId = financial.findByEvent(e.getId()).get(0).memberChargeId();
+        var charge = tx(() -> charges.findById(chargeId).orElseThrow());
+        assertThat(charge.getDueDate()).isEqualTo(due);
+        assertThat(charge.getPaymentAcceptancePolicy()).isEqualTo(PaymentAcceptancePolicy.UNTIL_DUE_DATE);
     }
     @Test void requiredReceiptConfirmsAndLateRejectionDoesNotDowngrade() {
         var e = event(true);

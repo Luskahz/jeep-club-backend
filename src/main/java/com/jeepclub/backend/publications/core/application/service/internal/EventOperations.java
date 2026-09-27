@@ -48,8 +48,12 @@ public class EventOperations {
         validateAllocations(user, allocations);
         registration = operations.save(registration);
         for (var rule : rules.stream().sorted(Comparator.comparing(EventChargeRule::chargeDefinitionId)).toList())
-            billing.ensureEventMemberCharge(event.getId(), rule.chargeDefinitionId(), user, event.getStartsAt().atZone(ZoneOffset.UTC).toLocalDate(), user);
+            billing.ensureEventMemberCharge(event.getId(), rule.chargeDefinitionId(), user, resolveFinancialDueDate(rule, event), user);
         return refresh(registration, financial.findByEvent(event.getId()));
+    }
+    private LocalDate resolveFinancialDueDate(EventChargeRule rule, Event event) {
+        return rule.financialDueDate() != null ? rule.financialDueDate()
+            : event.getStartsAt().atZone(ZoneOffset.UTC).toLocalDate();
     }
     public void validateAllocations(Long user, List<EventRegistration.Allocation> allocations) {
         for (var allocation : allocations) {

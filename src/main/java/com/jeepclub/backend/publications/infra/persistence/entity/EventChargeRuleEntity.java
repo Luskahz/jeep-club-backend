@@ -12,5 +12,6 @@ public class EventChargeRuleEntity {
     @Column(name="charge_definition_id", nullable=false) private Long chargeDefinitionId;
     @Column(name="required_for_participation", nullable=false) private boolean requiredForParticipation;
     @Column(name="participation_cutoff", nullable=false) private java.time.Instant participationCutoff;
+    @Column(name="financial_due_date") private java.time.LocalDate financialDueDate;
 
 }

@@ -16,13 +16,14 @@ public class EventOperationsAdapter implements EventOperationsRepository {
     private final EventRideOfferJpaRepository offers;
 
     public List<EventChargeRule> rules(Long eventId) {
-        return rules.findByEventId(eventId).stream().map(e -> new EventChargeRule(e.getEventId(), e.getChargeDefinitionId(), e.isRequiredForParticipation(), e.getParticipationCutoff())).toList();
+        return rules.findByEventId(eventId).stream().map(e -> new EventChargeRule(e.getEventId(), e.getChargeDefinitionId(), e.isRequiredForParticipation(), e.getParticipationCutoff(), e.getFinancialDueDate())).toList();
     }
     public void replaceRules(Long eventId, List<EventChargeRule> values) {
         rules.deleteAll(rules.findByEventId(eventId)); rules.flush();
         for (var value : values) {
             var e = new EventChargeRuleEntity(); e.setEventId(eventId); e.setChargeDefinitionId(value.chargeDefinitionId());
             e.setRequiredForParticipation(value.requiredForParticipation()); e.setParticipationCutoff(value.participationCutoff());
+            e.setFinancialDueDate(value.financialDueDate());
             rules.save(e);
         }
         rules.flush();

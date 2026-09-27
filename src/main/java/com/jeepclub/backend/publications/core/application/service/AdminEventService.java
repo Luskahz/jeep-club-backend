@@ -34,7 +34,12 @@ public class AdminEventService {
     private final SystemLogService audit;
 
     public record ChargeConfiguration(Long chargeDefinitionId, String name, String description, BigDecimal amount,
-        boolean billingRequired, boolean requiredForParticipation, Instant participationCutoff) {}
+        boolean billingRequired, boolean requiredForParticipation, Instant participationCutoff, LocalDate financialDueDate) {
+        public ChargeConfiguration(Long chargeDefinitionId, String name, String description, BigDecimal amount,
+                boolean billingRequired, boolean requiredForParticipation, Instant participationCutoff) {
+            this(chargeDefinitionId, name, description, amount, billingRequired, requiredForParticipation, participationCutoff, null);
+        }
+    }
     public Event create(Long actor, String title, String content, List<PublicationImage> images,
                         Instant startsAt, Instant endsAt, List<ChargeConfiguration> charges) {
         if (startsAt == null || !startsAt.isAfter(events.now())) throw new IllegalArgumentException("Future startsAt required.");
@@ -75,12 +80,13 @@ public class AdminEventService {
             Long id = c.chargeDefinitionId() != null ? c.chargeDefinitionId()
                 : billing.createOneTimeEventCharge(event.getId(), c.name(), c.description(), c.amount(), c.billingRequired());
             if (!ids.add(id)) throw error("EVENT_CHARGE_INVALID");
-            if (c.requiredForParticipation() && !"AFTER_DUE_DATE".equals(catalog.getEligible(id).paymentAcceptancePolicy()))
+            if ((c.requiredForParticipation() || c.financialDueDate() == null)
+                    && !"AFTER_DUE_DATE".equals(catalog.getEligible(id).paymentAcceptancePolicy()))
                 throw error("EVENT_CHARGE_INVALID");
             billing.ensureAssignment(event.getId(), id);
             Instant cutoff = c.participationCutoff() == null ? event.getStartsAt() : c.participationCutoff();
             if (cutoff.isAfter(event.getStartsAt()) || !cutoff.isAfter(events.now())) throw error("EVENT_CHARGE_INVALID");
-            rules.add(new EventChargeRule(event.getId(), id, c.requiredForParticipation(), cutoff));
+            rules.add(new EventChargeRule(event.getId(), id, c.requiredForParticipation(), cutoff, c.financialDueDate()));
         }
         operations.replaceRules(event.getId(), rules);
     }

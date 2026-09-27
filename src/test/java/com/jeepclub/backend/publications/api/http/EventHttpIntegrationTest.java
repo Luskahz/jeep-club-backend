@@ -102,6 +102,23 @@ class EventHttpIntegrationTest {
             .andExpect(jsonPath("$[0].chargeDefinitionId").isNumber())
             .andExpect(jsonPath("$[0].requiredForParticipation").value(false));
     }
+    @Test @Transactional void httpAcceptsFinancialDueDateAndExplicitNullAndRejectsInvalidDate() throws Exception {
+        auth(99L, "PUBLICATIONS_EVENT_CREATE", "PUBLICATIONS_EVENT_READ_ADMIN");
+        for (String date : List.of("\"2026-11-30\"", "null")) {
+            String body = CREATE.formatted(Instant.now(clock).plusSeconds(86400)).trim();
+            body = body.substring(0, body.length() - 1) + ",\"charges\":[{\"name\":\"HTTP-" + UUID.randomUUID()
+                + "\",\"amount\":20,\"financialDueDate\":" + date + "}]}";
+            var result = mvc.perform(token(post("/admin/events").contentType("application/json").content(body)))
+                .andExpect(status().isCreated()).andReturn();
+            long id = json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+            mvc.perform(token(get("/admin/events/{id}/charges", id))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].financialDueDate").value(date.equals("null") ? null : "2026-11-30"));
+        }
+        String invalid = CREATE.formatted(Instant.now(clock).plusSeconds(86400)).trim();
+        invalid = invalid.substring(0, invalid.length() - 1) + ",\"charges\":[{\"name\":\"Invalid date\",\"amount\":20,\"financialDueDate\":\"30/11/2026\"}]}";
+        mvc.perform(token(post("/admin/events").contentType("application/json").content(invalid)))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("EVENT_INVALID_REQUEST"));
+    }
     @Test void openApiDescribesEveryEventOperationAndTypedCatalogPagination() throws Exception {
         var result = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn();
         var document = json.readTree(result.getResponse().getContentAsString());
@@ -120,5 +137,6 @@ class EventHttpIntegrationTest {
         assertThat(checked).isGreaterThanOrEqualTo(25);
         assertThat(document.get("paths").get("/admin/events/charge-catalog").get("get").get("responses").get("200").get("content").get("*/*").get("schema").get("$ref").asString()).contains("PageResponse");
         assertThat(document.get("components").get("schemas").get("EventResponseDTO").get("properties").get("eventStatus").get("enum").toString()).contains("OPEN", "FINISHED", "CANCELLED");
+        assertThat(document.get("components").get("schemas").get("Charge").get("properties").get("financialDueDate").get("format").asString()).isEqualTo("date");
     }
 }

@@ -47,7 +47,7 @@ public class AdminEventController {
     @PostMapping("")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_CREATE')")
     @RequiredPermission("PUBLICATIONS_EVENT_CREATE")
-    @Operation(summary="Create DRAFT publication and OPEN event", description="Future startsAt is mandatory; endsAt must be later. Inline charges are ACTIVE ONE_TIME with AFTER_DUE_DATE. Selecting an existing required charge also requires AFTER_DUE_DATE for late regularization.",
+    @Operation(summary="Create DRAFT publication and OPEN event", description="Future startsAt is mandatory; endsAt must be later. Inline charges are ACTIVE ONE_TIME with AFTER_DUE_DATE. Each charge may set a financialDueDate (LocalDate) independently of participationCutoff; null uses the Event start date as a technical dueDate with AFTER_DUE_DATE regularization. Required participation charges also require AFTER_DUE_DATE.",
         requestBody=@io.swagger.v3.oas.annotations.parameters.RequestBody(required=true,content=@Content(schema=@Schema(implementation=CreateEventRequestDTO.class))))
     @ApiResponse(responseCode="201", description="Create DRAFT publication and OPEN event")
     @ResponseStatus(HttpStatus.CREATED)
@@ -82,7 +82,7 @@ public class AdminEventController {
     @PatchMapping("/{id}")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_UPDATE')")
     @RequiredPermission("PUBLICATIONS_EVENT_UPDATE")
-    @Operation(summary="Partial update; finance and schedule locked after registration", description="Omitted fields are preserved; explicit null is allowed only for endsAt. Charge configuration is frozen after any registration, including cancelled registrations. No financial snapshots are rewritten.",
+    @Operation(summary="Partial update; finance and schedule locked after registration", description="Omitted top-level fields are preserved; explicit null is allowed for endsAt. When charges is provided it replaces the complete charge configuration: absent or null financialDueDate means no Event-defined final date. Charge configuration, including financialDueDate, is frozen after any registration. No financial snapshots are rewritten.",
         requestBody=@io.swagger.v3.oas.annotations.parameters.RequestBody(required=true,content=@Content(schema=@Schema(implementation=EventRequestDTO.class))))
     @ApiResponse(responseCode="200", description="Partial update; finance and schedule locked after registration")
     public EventResponseDTO update(@PathVariable Long id, @RequestBody JsonNode body) {
@@ -195,6 +195,6 @@ public class AdminEventController {
         return list == null ? null : list.stream().map(i -> new PublicationImage(i.storageKey(), i.position(), i.primary())).toList();
     }
     private List<AdminEventService.ChargeConfiguration> charges(List<EventRequestDTO.Charge> list) {
-        return list == null ? null : list.stream().map(c -> new AdminEventService.ChargeConfiguration(c.chargeDefinitionId(), c.name(), c.description(), c.amount(), Boolean.TRUE.equals(c.billingRequired()), Boolean.TRUE.equals(c.requiredForParticipation()), c.participationCutoff())).toList();
+        return list == null ? null : list.stream().map(c -> new AdminEventService.ChargeConfiguration(c.chargeDefinitionId(), c.name(), c.description(), c.amount(), Boolean.TRUE.equals(c.billingRequired()), Boolean.TRUE.equals(c.requiredForParticipation()), c.participationCutoff(), c.financialDueDate())).toList();
     }
 }

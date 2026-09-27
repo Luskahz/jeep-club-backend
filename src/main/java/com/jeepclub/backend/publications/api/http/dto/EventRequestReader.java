@@ -18,7 +18,7 @@ public class EventRequestReader {
             if (!raw.has(field)) throw new IllegalArgumentException("Required event field missing.");
         if (raw.has("charges")) {
             if (!raw.get("charges").isArray()) throw new IllegalArgumentException("Charges must be an array.");
-            var fields = Set.of("chargeDefinitionId","name","description","amount","billingRequired","requiredForParticipation","participationCutoff");
+            var fields = Set.of("chargeDefinitionId","name","description","amount","billingRequired","requiredForParticipation","participationCutoff","financialDueDate");
             for (var charge : raw.get("charges")) {
                 if (!charge.isObject()) throw new IllegalArgumentException("Charge must be an object.");
                 for (String field : charge.propertyNames()) if (!fields.contains(field)) throw new IllegalArgumentException("Unsupported charge field.");

@@ -255,15 +255,23 @@ capacidade e convidados já aprovados. Não há escolha automática de motorista
 ### Cobranças e cutoff
 
 Cada `EventChargeRule` guarda eventId, chargeDefinitionId,
-requiredForParticipation e participationCutoff. Não deriva obrigatoriedade do
+requiredForParticipation, participationCutoff e financialDueDate opcional (`LocalDate`). Não deriva obrigatoriedade do
 `ChargeDefinition.required`. O catálogo público de Billing permite selecionar
 ACTIVE/ONE_TIME; alternativamente o payload cria uma definição inline, com
 ONE_TIME/ACTIVE/AFTER_DUE_DATE fixos e assignment próprio, na mesma transação.
 Para regras required, seleção exige AFTER_DUE_DATE para permitir regularização
-sem prazo após recusa tardia; uma definição com outra política pode ser opcional.
+sem prazo após recusa tardia. Também se exige AFTER_DUE_DATE quando
+financialDueDate não é configurado. Uma definição com outra política só pode
+ser opcional e ter vencimento financeiro explícito.
 
-Cutoff omitido usa startsAt e não pode ultrapassar o início. DueDate financeiro
-do ciclo é a data UTC do início; não é o instante de cutoff e não é nullable.
+Cutoff omitido usa startsAt e não pode ultrapassar o início. O
+`participationCutoff` decide participação; `financialDueDate` configura o
+vencimento financeiro e pode ocorrer depois do Event. Quando informado, é a
+`dueDate` do ciclo e das MemberCharges. Quando null ou omitido na configuração
+completa de charges, não há limite final de regularização definido pelo Event:
+Billing usa a data UTC de startsAt como dueDate técnica, mantendo
+AFTER_DUE_DATE. MemberCharge.dueDate continua obrigatória. O vencimento
+financeiro não altera o cutoff de participação.
 Toda cobrança, inclusive opcional, é garantida na inscrição. Billing cria um
 ciclo por Event/definição e uma dívida por inscrito, usando snapshots financeiros.
 
@@ -273,7 +281,10 @@ Depois de CONFIRMED, recusa administrativa mantém participação e dívida
 regularizável. A decisão é registrada no momento da avaliação; não existe job
 que confirme inscrições silenciosamente. A superfície pública não contém dívida.
 
-PATCH preserva campos omitidos e rejeita null explícito, exceto endsAt.
+PATCH preserva campos superiores omitidos e rejeita null explícito, exceto
+endsAt. A lista `charges`, quando presente, substitui a configuração completa;
+em cada item, financialDueDate ausente e null têm a mesma semântica de ausência
+de prazo financeiro final.
 Configuração financeira e agenda ficam bloqueadas após qualquer inscrição ou
 dívida do contexto, inclusive inscrições canceladas. Conteúdo editorial permanece
 editável conforme lifecycle de Publication. Nenhum snapshot financeiro é reescrito.
