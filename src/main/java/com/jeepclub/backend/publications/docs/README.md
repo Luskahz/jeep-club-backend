@@ -221,8 +221,107 @@ As capacidades funcionais já definidas para evolução do Event incluem:
 - operação administrativa de participantes, ocupação e vagas;
 - acesso emergencial e permissionado a dados de Health durante o evento.
 
-Essas integrações pertencem à BACK-399 e suas subtasks. A BACK-397 deve apenas garantir que
-a fundação não impossibilite essa evolução.
+Essas integrações são implementadas pela BACK-399 e suas subtasks, sobre a fundação
+polimórfica da BACK-397. As superfícies administrativas e de membro são separadas;
+somente as rotas de membro exigem também `@RequiresMembership`. As authorities
+`PUBLICATIONS_EVENT_*` são específicas por ação, com enforcement e OpenAPI alinhados.
+
+### Agenda, estados e inscrições
+
+Event nasce OPEN e possui startsAt obrigatório/futuro na criação HTTP; endsAt,
+quando presente, precisa ser posterior. `effectiveStatus(now)` resolve OPEN antes
+do início, IN_PROGRESS a partir dele e FINISHED no fim configurado. Finish manual
+aceita IN_PROGRESS; cancel aceita OPEN/IN_PROGRESS. FINISHED/CANCELLED são terminais.
+A leitura usa Clock e não depende de scheduler; o estado temporal é derivado,
+enquanto decisões terminais explícitas são persistidas. Nenhuma transição muda
+PublicationStatus. Um FINISHED publicado continua sendo conteúdo publicado.
+
+Registration possui identidade e unicidade Event + user. O principal identifica
+o membro. Sem regra financeira obrigatória, confirma imediatamente; com requisitos
+pendentes nasce PENDING_PAYMENT. Consultar a própria inscrição, dashboard ou
+operação que exige confirmação reavalia requisitos; CONFIRMED nunca é rebaixado
+pela situação financeira posterior. Cancelamento de inscrição preserva a linha,
+não permite reinscrição duplicada e é limitado ao período OPEN. Cancelar o Event
+preserva as inscrições como fatos e cancela seus ciclos financeiros.
+
+Dependents ativos próprios são validados pelo contrato público de Dependents.
+Podem estar alocados a um veículo ou presentes em `unallocatedDependentIds`.
+Somente IDs são persistidos; a mesma pessoa não pode aparecer em dois lugares.
+Veículos próprios usam `EventVehicleQuery` e a capacidade canônica de Vehicles.
+Alocações relacionam veículo, membro e dependents; o membro ocupa no máximo um
+veículo. Edição de alocação antes do início revalida ownership, dependents,
+capacidade e convidados já aprovados. Não há escolha automática de motorista.
+
+### Cobranças e cutoff
+
+Cada `EventChargeRule` guarda eventId, chargeDefinitionId,
+requiredForParticipation e participationCutoff. Não deriva obrigatoriedade do
+`ChargeDefinition.required`. O catálogo público de Billing permite selecionar
+ACTIVE/ONE_TIME; alternativamente o payload cria uma definição inline, com
+ONE_TIME/ACTIVE/AFTER_DUE_DATE fixos e assignment próprio, na mesma transação.
+Para regras required, seleção exige AFTER_DUE_DATE para permitir regularização
+sem prazo após recusa tardia; uma definição com outra política pode ser opcional.
+
+Cutoff omitido usa startsAt e não pode ultrapassar o início. DueDate financeiro
+do ciclo é a data UTC do início; não é o instante de cutoff e não é nullable.
+Toda cobrança, inclusive opcional, é garantida na inscrição. Billing cria um
+ciclo por Event/definição e uma dívida por inscrito, usando snapshots financeiros.
+
+Todas as required devem estar PAID ou PENDING_VALIDATION com submissão até o
+cutoff. Recibo tardio, mesmo depois confirmado, não cria direito retroativo.
+Depois de CONFIRMED, recusa administrativa mantém participação e dívida
+regularizável. A decisão é registrada no momento da avaliação; não existe job
+que confirme inscrições silenciosamente. A superfície pública não contém dívida.
+
+PATCH preserva campos omitidos e rejeita null explícito, exceto endsAt.
+Configuração financeira e agenda ficam bloqueadas após qualquer inscrição ou
+dívida do contexto, inclusive inscrições canceladas. Conteúdo editorial permanece
+editável conforme lifecycle de Publication. Nenhum snapshot financeiro é reescrito.
+
+### Convidados e transporte
+
+GuestRequest registra CPF normalizado, requester do principal, veículo opcional,
+PENDING/APPROVED/REJECTED, reviewer, timestamps e motivo de rejeição. CPF é único
+por Event, inclusive requests rejeitados. PENDING não ocupa vaga definitiva;
+aprovação exige inscrição confirmada, capacidade atual e no máximo um guest por
+veículo. Histórico de aprovações por CPF permanece consultável como aviso sem bloqueio.
+
+Admin cria request sem transporte. Membros confirmados com vagas consultam os IDs
+e respondem por veículo próprio vinculado à inscrição. RideOffer registra Event,
+guest, registration, user, vehicle, ACCEPTED/DECLINED/SELECTED e timestamps.
+Visualização e aceite não reservam vaga. Admin seleciona oferta aceita e a aprovação
+revalida capacidade sob lock; perda da vaga produz EVENT_RIDE_CAPACITY_CHANGED.
+Cada veículo responde uma vez àquela request. Não há push ou escolha automática.
+
+### Operação, Health e persistência
+
+Dashboard deriva inscrições, dependents, guests, pessoas confirmadas, veículos,
+capacidade, lugares reservados, não pagos, pagamentos em análise e pendências
+pós-cutoff. Inscrições PENDING_PAYMENT reservam sua alocação operacional, mas não
+contam como pessoas confirmadas. Guests só ocupam após aprovação. A próxima leitura
+reflete mutações; dados clínicos não entram no dashboard. Billing e Vehicles são
+consultados em lote para essa projeção; as coleções JPA de alocação usam batch fetch.
+
+Health exige IN_PROGRESS efetivo, participante CONFIRMED USER/DEPENDENT e permission
+emergencial específica. Dependents são novamente validados no módulo proprietário.
+Consulta é individual, read-only, por `EmergencyMedicalProfileQuery`. Perfil ausente
+gera erro controlado. Tentativas que chegam ao caso de uso gravam ator, Event,
+tipo/ID alvo, resultado e instante via `SystemLogService.recordRequired` em transação
+independente. Falha de auditoria impede retorno dos dados; não grava conteúdo clínico.
+
+Mutações bloqueiam a raiz da Publication antes de decidir inscrição ou capacidade.
+Registration, GuestRequest, RideOffer e ChargeRule possuem versões JPA. Constraints
+protegem Event/member, Event/CPF, Event/veículo aprovado, oferta guest/vehicle,
+guest selecionado e ocupante por inscrição. Corridas são exercitadas com transações
+independentes. Handlers Event são limitados aos seus controllers e retornam RFC 9457.
+
+Hard delete exige estado terminal quando há inscrições. Snapshot preserva agenda,
+estado explícito e dados editoriais; registrations, rules, guests e offers permanecem
+congelados por referência escalar ao ID removido. Billing mantém seus contextos e
+fatos sem FK/cascade destrutivo. A mídia física global não é removida.
+Listagens administrativas de Event, guests e ofertas usam PageResponse. Coleções
+operacionais são ordenadas por ID e paginadas depois da resolução de elegibilidade;
+o dashboard é uma projeção completa do Event. Contratos exatos ficam no OpenAPI.
 
 Billing continua dono de cobrança/pagamento; Vehicles continua dono do veículo e sua
 capacidade; Dependents continua dono do dependent; Health continua dono dos dados de saúde.
@@ -349,7 +448,7 @@ A estratégia de persistência deve suportar:
 A fundação usa `@Inheritance(JOINED)` apenas nas entities. `publications` guarda
 conteúdo, estado e timestamps comuns; `publication_notices`, `publication_events`
 e `publication_services` guardam a identidade concreta. `publication_events`
-contém `starts_at`, a agenda mínima do Event nesta Story. O mapper reconstrói
+contém `starts_at`, `ends_at` e estado operacional explícito do Event. O mapper reconstrói
 o subtipo de domínio; a tabela comum sustenta a leitura polimórfica futura sem
 colunas próprias de cada especialização anuláveis. `publication_images` guarda
 somente `storage_key`, posição e principal, com unicidade de posição/chave por

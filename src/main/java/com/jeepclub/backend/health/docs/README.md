@@ -60,8 +60,13 @@ persistência.
 
 `health.api.module.medicalprofile.MedicalProfileQuery` é a API Java pública
 read-only do módulo: `existsByOwner(MedicalProfileOwner, ownerId)` informa se
-existe perfil operacional para um owner `USER` ou `DEPENDENT`. Não há consumo
-externo desse contrato no código atual.
+existe perfil operacional para um owner `USER` ou `DEPENDENT`.
+`EmergencyMedicalProfileQuery` fornece leitura individual mínima para Event,
+validando atividade/existência do owner pelos mesmos ports do módulo. Ausência
+ou owner inacessível resulta em Optional vazio. Publications impõe permission,
+participação confirmada e Event IN_PROGRESS, e audita a consulta com
+`SystemLogService.recordRequired`, persistido sincronamente antes do retorno.
+Nenhum perfil ou snapshot clínico é persistido em Publications.
 
 O contrato HTTP detalhado — rotas do usuário, rotas administrativas, schemas,
 paginação, permissions e respostas RFC 9457 — é o OpenAPI publicado em
