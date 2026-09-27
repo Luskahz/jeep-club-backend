@@ -3,6 +3,7 @@ package com.jeepclub.backend.publications.api.http.exception;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import com.jeepclub.backend.platform.web.exception.ValidationFieldErrorResponse;
+import com.jeepclub.backend.publications.api.http.controller.admin.AdminNoticeController;
 import com.jeepclub.backend.publications.api.http.dto.MalformedNoticePayloadException;
 import com.jeepclub.backend.publications.core.application.exception.InvalidNoticeStateException;
 import com.jeepclub.backend.publications.core.application.exception.NoticeNotFoundException;
@@ -19,7 +20,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Locale;
 
-@RestControllerAdvice(basePackages = "com.jeepclub.backend.publications.api.http.controller")
+@RestControllerAdvice(assignableTypes = AdminNoticeController.class)
 public class NoticeExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler({NoticeNotFoundException.class, PublicationAlreadyDeletedException.class, EntityNotFoundException.class})
     public ResponseEntity<ApiErrorResponse> notFound(RuntimeException exception) {
