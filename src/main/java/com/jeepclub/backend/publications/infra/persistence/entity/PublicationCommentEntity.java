@@ -26,6 +26,7 @@ public class PublicationCommentEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
     @ElementCollection
+    @org.hibernate.annotations.BatchSize(size = 100)
     @CollectionTable(name = "publication_comment_images", joinColumns = @JoinColumn(name = "comment_id"),
             uniqueConstraints = @UniqueConstraint(name = "uk_publication_comment_image_position", columnNames = {"comment_id", "position"}))
     @OrderBy("position ASC")

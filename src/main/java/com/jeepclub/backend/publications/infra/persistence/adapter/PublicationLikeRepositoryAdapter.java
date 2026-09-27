@@ -24,4 +24,25 @@ public class PublicationLikeRepositoryAdapter implements PublicationLikeReposito
         var saved = likes.saveAndFlush(entity);
         return new PublicationLike(saved.getId(), like.publicationId(), saved.getMemberUserId(), saved.getCreatedAt());
     }
+    @Override
+    public java.util.Optional<PublicationLike> findByPublicationAndMember(Long publicationId, Long memberUserId) {
+        return likes.findByPublication_IdAndMemberUserId(publicationId, memberUserId)
+                .map(e -> new PublicationLike(e.getId(), publicationId, e.getMemberUserId(), e.getCreatedAt()));
+    }
+
+    @Override
+    public void delete(PublicationLike like) { likes.deleteById(like.id()); }
+
+    @Override
+    public java.util.Map<Long, Long> counts(java.util.Collection<Long> publicationIds) {
+        if (publicationIds.isEmpty()) return java.util.Map.of();
+        var result = new java.util.HashMap<Long, Long>();
+        likes.countByPublicationIds(publicationIds).forEach(row -> result.put((Long) row[0], (Long) row[1]));
+        return java.util.Map.copyOf(result);
+    }
+
+    @Override
+    public java.util.Set<Long> likedByMember(java.util.Collection<Long> publicationIds, Long memberUserId) {
+        return publicationIds.isEmpty() ? java.util.Set.of() : likes.findLikedPublicationIds(publicationIds, memberUserId);
+    }
 }

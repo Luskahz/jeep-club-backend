@@ -37,6 +37,6 @@ class NoticeOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['CreateNoticeRequestDTO']['properties']['images']['minItems']").value(1))
                 .andExpect(jsonPath("$['components']['schemas']['CreateNoticeRequestDTO']['properties']['images']['maxItems']").value(5))
                 .andExpect(jsonPath("$['components']['schemas']['NoticeResponseDTO']['properties']['status']['enum']").isArray())
-                .andExpect(jsonPath("$['paths']['/publications']").doesNotExist());
+                .andExpect(jsonPath("$['paths']['/publications/feed']").exists());
     }
 }

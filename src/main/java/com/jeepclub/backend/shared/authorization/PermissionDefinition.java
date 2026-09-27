@@ -3,6 +3,11 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    PUBLICATIONS_INTERACTION_LIKE(PermissionCode.PUBLICATIONS_INTERACTION_LIKE, ModuleCode.PUBLICATIONS, "Publication: like and unlike"),
+    PUBLICATIONS_COMMENT_CREATE(PermissionCode.PUBLICATIONS_COMMENT_CREATE, ModuleCode.PUBLICATIONS, "Publication: create comment"),
+    PUBLICATIONS_COMMENT_READ(PermissionCode.PUBLICATIONS_COMMENT_READ, ModuleCode.PUBLICATIONS, "Publication: read comments"),
+    PUBLICATIONS_FEED_READ(PermissionCode.PUBLICATIONS_FEED_READ, ModuleCode.PUBLICATIONS, "Publication: read feed"),
+    PUBLICATIONS_PUBLICATION_READ(PermissionCode.PUBLICATIONS_PUBLICATION_READ, ModuleCode.PUBLICATIONS, "Publication: read detail"),
     PUBLICATIONS_EVENT_CREATE(PermissionCode.PUBLICATIONS_EVENT_CREATE, ModuleCode.PUBLICATIONS, "Event: create"),
     PUBLICATIONS_EVENT_READ(PermissionCode.PUBLICATIONS_EVENT_READ, ModuleCode.PUBLICATIONS, "Event: read"),
     PUBLICATIONS_EVENT_READ_ADMIN(PermissionCode.PUBLICATIONS_EVENT_READ_ADMIN, ModuleCode.PUBLICATIONS, "Event: read admin"),

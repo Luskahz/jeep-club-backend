@@ -54,7 +54,7 @@ class PublicationServiceTest {
 
     @Test void commentAssociationChecksGlobalMedia() {
         PublicationCommentRepository comments = mock(PublicationCommentRepository.class);
-        when(repository.findById(1L)).thenReturn(Optional.of(Notice.create(7L, "Notice", "Body", gallery(), NOW)));
+        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(publishedNotice()));
         when(comments.save(any())).thenAnswer(call -> call.getArgument(0));
         PublicationCommentService commentService = new PublicationCommentService(repository, comments, images, CLOCK);
         PublicationComment result = commentService.create(1L, 9L, "Hello", List.of(new PublicationCommentImage(KEY, 0)));
@@ -65,7 +65,7 @@ class PublicationServiceTest {
 
     @Test void missingCommentMediaPreventsPersistence() {
         PublicationCommentRepository comments = mock(PublicationCommentRepository.class);
-        when(repository.findById(1L)).thenReturn(Optional.of(Notice.create(7L, "Notice", "Body", gallery(), NOW)));
+        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(publishedNotice()));
         doThrow(new IllegalArgumentException("missing")).when(images).requireExisting(KEY);
         var commentService = new PublicationCommentService(repository, comments, images, CLOCK);
         assertThatThrownBy(() -> commentService.create(1L, 9L, "Hello", List.of(new PublicationCommentImage(KEY, 0))))
@@ -75,5 +75,11 @@ class PublicationServiceTest {
 
     private static List<PublicationImage> gallery() {
         return List.of(new PublicationImage(KEY, 0, true));
+    }
+
+    private static Notice publishedNotice() {
+        var notice = Notice.create(7L, "Notice", "Body", gallery(), NOW.minusSeconds(1));
+        notice.publish(NOW);
+        return notice;
     }
 }

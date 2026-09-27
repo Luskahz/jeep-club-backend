@@ -11,10 +11,37 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import com.jeepclub.backend.publications.core.domain.enums.PublicationStatus;
+import com.jeepclub.backend.publications.infra.persistence.entity.NoticeEntity;
+import com.jeepclub.backend.publications.infra.persistence.entity.EventEntity;
+import com.jeepclub.backend.publications.infra.persistence.entity.ServicePublicationEntity;
 
 @Repository
 @RequiredArgsConstructor
 public class PublicationRepositoryAdapter implements PublicationRepository {
+    @Override
+    public Page<Publication> findPublished(String type, Instant from, Instant to, Pageable pageable) {
+        Specification<PublicationEntity> filter = (root, query, cb) -> {
+            var conditions = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            conditions.add(cb.equal(root.get("status"), PublicationStatus.PUBLISHED));
+            if (from != null) conditions.add(cb.greaterThanOrEqualTo(root.get("publishedAt"), from));
+            if (to != null) conditions.add(cb.lessThanOrEqualTo(root.get("publishedAt"), to));
+            if (type != null) {
+                Class<? extends PublicationEntity> subtype = switch (type) {
+                    case "NOTICE" -> NoticeEntity.class;
+                    case "EVENT" -> EventEntity.class;
+                    case "SERVICE" -> ServicePublicationEntity.class;
+                    default -> throw new IllegalArgumentException("Unsupported publication type.");
+                };
+                conditions.add(cb.equal(root.type(), subtype));
+            }
+            return cb.and(conditions.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return publications.findAll(filter, pageable).map(mapper::toDomain);
+    }
     private final PublicationJpaRepository publications;
     private final PublicationHistoryJpaRepository history;
     private final PublicationLikeJpaRepository likes;
