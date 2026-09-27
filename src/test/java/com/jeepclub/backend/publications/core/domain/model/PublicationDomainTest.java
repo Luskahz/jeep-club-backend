@@ -1,7 +1,9 @@
 package com.jeepclub.backend.publications.core.domain.model;
 
 import com.jeepclub.backend.publications.core.domain.enums.PublicationStatus;
+import com.jeepclub.backend.publications.core.domain.enums.ServicePublicationRequestStatus;
 import org.junit.jupiter.api.Test;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,8 +27,8 @@ class PublicationDomainTest {
                 });
         assertThat(Event.create(7L, "Event", "Content", gallery, NOW.plusSeconds(3600), NOW).getStartsAt())
                 .isEqualTo(NOW.plusSeconds(3600));
-        assertThat(ServicePublication.create(7L, "Service", "Content", gallery, NOW))
-                .isInstanceOf(ServicePublication.class);
+        assertThat(ServicePublication.fromApprovedRequest(serviceRequest(), NOW))
+                .satisfies(p -> assertThat(p.getStatus()).isEqualTo(PublicationStatus.PUBLISHED));
     }
 
     @Test void invalidAuthorAndContentAreRejected() {
@@ -90,8 +92,9 @@ class PublicationDomainTest {
         assertThat(event.getStartsAt()).isEqualTo(NOW.plusSeconds(7200));
         assertThat(Notice.reconstitute(1L, 7L, "T", "C", PublicationStatus.DRAFT,
                 NOW, NOW, null, null, gallery(1))).isInstanceOf(Notice.class);
-        assertThat(ServicePublication.reconstitute(2L, 7L, "T", "C", PublicationStatus.DRAFT,
-                NOW, NOW, null, null, gallery(1))).isInstanceOf(ServicePublication.class);
+        assertThat(ServicePublication.reconstitute(2L, 7L, "T", "C", PublicationStatus.PUBLISHED,
+                NOW, NOW, NOW, null, gallery(1), 3L, new BigDecimal("12.00"), "123456789"))
+                .isInstanceOf(ServicePublication.class);
     }
 
     @Test void likeAndCommentValidateAndReconstitute() {
@@ -107,6 +110,12 @@ class PublicationDomainTest {
 
     private static List<PublicationImage> gallery(int count) {
         return IntStream.range(0, count).mapToObj(i -> new PublicationImage(key(i), i, i == 0)).toList();
+    }
+
+    private static ServicePublicationRequest serviceRequest() {
+        return ServicePublicationRequest.reconstitute(3L, 7L, "Service", "Content", new BigDecimal("12.00"),
+                "123456789", gallery(1), ServicePublicationRequestStatus.PENDING, null, null, null,
+                NOW, null, NOW, 0L);
     }
 
     private static String key(int n) {

@@ -3,7 +3,6 @@ package com.jeepclub.backend.publications.core.domain.model;
 import com.jeepclub.backend.publications.core.domain.enums.PublicationStatus;
 
 import java.time.Instant;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,7 +42,7 @@ public abstract class Publication {
                 || (status == PublicationStatus.ARCHIVED && archivedAt == null)) {
             throw new IllegalArgumentException("Inconsistent editorial status and timestamps.");
         }
-        this.images = validateImages(images);
+        this.images = PublicationGallery.of(images).images();
     }
 
     public final void publish(Instant now) {
@@ -65,7 +64,7 @@ public abstract class Publication {
     public final void replaceImages(List<PublicationImage> replacement, Instant now) {
         requireTransitionTime(now);
         if (status == PublicationStatus.ARCHIVED) throw new IllegalStateException("Archived publication cannot be edited.");
-        List<PublicationImage> validated = validateImages(replacement);
+        List<PublicationImage> validated = PublicationGallery.of(replacement).images();
         images = validated;
         updatedAt = now;
     }
@@ -73,27 +72,6 @@ public abstract class Publication {
     private void requireTransitionTime(Instant now) {
         Objects.requireNonNull(now, "now");
         if (now.isBefore(updatedAt)) throw new IllegalArgumentException("now cannot precede updatedAt.");
-    }
-
-    private static List<PublicationImage> validateImages(List<PublicationImage> input) {
-        if (input == null || input.isEmpty() || input.size() > 5) {
-            throw new IllegalArgumentException("Publication requires 1 to 5 images.");
-        }
-        List<PublicationImage> copy = List.copyOf(input);
-        if (copy.stream().filter(PublicationImage::primary).count() != 1) {
-            throw new IllegalArgumentException("Publication requires exactly one primary image.");
-        }
-        var positions = new HashSet<Integer>();
-        var keys = new HashSet<String>();
-        for (PublicationImage image : copy) {
-            if (!positions.add(image.position()) || !keys.add(image.storageKey())) {
-                throw new IllegalArgumentException("Image positions and keys must be unique.");
-            }
-        }
-        for (int position = 0; position < copy.size(); position++) {
-            if (!positions.contains(position)) throw new IllegalArgumentException("Image positions must be contiguous from zero.");
-        }
-        return copy.stream().sorted(java.util.Comparator.comparingInt(PublicationImage::position)).toList();
     }
 
     protected static void positive(Long value, String field) {

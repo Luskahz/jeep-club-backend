@@ -19,9 +19,10 @@ public class PublicationMapper {
                     entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getPublishedAt(), entity.getArchivedAt(), images,
                     event.getStartsAt());
         }
-        if (entity instanceof ServicePublicationEntity) {
+        if (entity instanceof ServicePublicationEntity service) {
             return ServicePublication.reconstitute(entity.getId(), entity.getAuthorUserId(), entity.getTitle(), entity.getContent(),
-                    entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getPublishedAt(), entity.getArchivedAt(), images);
+                    entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getPublishedAt(), entity.getArchivedAt(), images,
+                    service.getSourceRequestId(), service.getAmount(), service.getContactPhone());
         }
         throw new IllegalArgumentException("Unknown publication entity: " + entity.getClass());
     }
@@ -38,6 +39,11 @@ public class PublicationMapper {
 
     public void copy(Publication domain, PublicationEntity entity) {
         if (domain instanceof Event event && entity instanceof EventEntity target) target.setStartsAt(event.getStartsAt());
+        if (domain instanceof ServicePublication service && entity instanceof ServicePublicationEntity target) {
+            target.setSourceRequestId(service.getSourceRequestId());
+            target.setAmount(service.getAmount());
+            target.setContactPhone(service.getContactPhone());
+        }
         if ((domain instanceof Notice && !(entity instanceof NoticeEntity))
                 || (domain instanceof Event && !(entity instanceof EventEntity))
                 || (domain instanceof ServicePublication && !(entity instanceof ServicePublicationEntity))) {

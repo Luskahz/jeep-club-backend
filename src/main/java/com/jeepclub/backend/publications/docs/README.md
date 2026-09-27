@@ -88,7 +88,8 @@ Toda Publication concreta deve possuir **entre 1 e 5 imagens**, inclusive, com:
 Publications não armazena arquivo, path físico, provider, bucket ou URL persistida.
 
 O upload é transversal e ocorre pela infraestrutura global de mídia. O consumidor recebe a
-`storageKey` e Publications associa essa referência à publicação.
+`storageKey` e Publications associa essa referência à publicação ou a uma solicitação
+de Service antes da aprovação.
 
 Conceitualmente:
 
@@ -117,12 +118,15 @@ Transições implementadas na fundação:
 DRAFT -> PUBLISHED -> ARCHIVED
 ```
 
-Uma Publication nasce em `DRAFT` com `createdAt = updatedAt`. `publish(now)` aceita
+Notice e Event nascem em `DRAFT` com `createdAt = updatedAt`. `publish(now)` aceita
 somente `DRAFT`, preenche `publishedAt` e atualiza `updatedAt`; `archive(now)` aceita
 somente `PUBLISHED`, preenche `archivedAt` e atualiza `updatedAt`. O domínio rejeita
 transição repetida, regressão temporal e edição de imagens após arquivamento. Não há
 transição de volta para `DRAFT` nem reativação de `ARCHIVED` nesta fundação. Os
-application services passam `Instant.now(clock)` para essas operações.
+application services passam `Instant.now(clock)` para essas operações. ServicePublication
+nasce diretamente em `PUBLISHED`, com `createdAt = updatedAt = publishedAt`, porque sua
+criação materializa a aprovação da solicitação. `Publication.publish` não conhece essa
+aprovação e não há uma segunda etapa administrativa.
 
 As seguintes regras continuam estáveis:
 
@@ -208,12 +212,38 @@ capacidade; Dependents continua dono do dependent; Health continua dono dos dado
 `ServicePublication` representa um serviço oferecido por um membro à comunidade do Jeep
 Club.
 
-As regras estáveis já definidas são:
+O membro cria uma `ServicePublicationRequest` independente. Ela não estende Publication,
+não ocupa linha em `publications`, não entra no feed e não recebe likes/comments. A
+request contém autor, título, conteúdo, valor informativo (`BigDecimal` com duas casas),
+telefone de contato e galeria de 1 a 5 referências `storageKey` com uma principal e posições
+contínuas. A mesma validação de galeria do domínio é usada nas Publications e nas requests;
+o application service verifica a existência de cada chave pelo `ImageMediaService` antes de
+persistir a solicitação. Rejeitar uma request não remove mídia do storage global.
+
+```text
+ServicePublicationRequest PENDING
+    ├── reject(reason, reviewer, now)  -> REJECTED (sem Publication)
+    └── approve(reviewer, serviceId, now) -> APPROVED
+                                            ↓
+                              ServicePublication PUBLISHED
+```
+
+A aprovação administrativa usa uma transação: carrega a request PENDING sob lock
+pessimista, cria a ServicePublication com os dados aprovados, persiste a Publication para
+obter seu ID, registra `reviewedByUserId`, `createdPublicationId` e `reviewedAt` na request,
+persiste a request e faz commit. Falha em qualquer gravação causa rollback de ambas. A
+unicidade de `publication_services.source_request_id` impede dois Services da mesma request
+mesmo diante de erro de aplicação. Uma request aprovada permanece como trilha operacional;
+não é um snapshot de hard delete.
+
+O Service real possui `sourceRequestId` imutável, `amount` e `contactPhone`. Suas imagens
+são a galeria revisada na request. `publishedAt` é o instante da aprovação, sem um estado
+intermediário de Service pendente. Somente o Service já criado recebe interações sociais.
+
+As demais regras estáveis são:
 
 - o serviço pertence ao membro criador;
-- criação exige permission específica;
-- possui valor e telefone de contato;
-- exige aprovação administrativa antes da exposição no feed;
+- as permissions HTTP específicas serão definidas na BACK-438;
 - pode receber imagens, curtidas e comentários por ser uma Publication;
 - creator e administrador autorizado poderão possuir fluxos de exclusão conforme contrato
   da Story;
@@ -222,11 +252,9 @@ As regras estáveis já definidas são:
 ServicePublication não cria `ChargeDefinition`, `MemberCharge`, `MemberPayment`,
 checkout, comissão ou qualquer fluxo financeiro interno.
 
-A implementação funcional pertence à BACK-438.
-
-Nesta fundação, `ServicePublication` já é um subtipo concreto persistido, ainda sem
-campos próprios. Valor, telefone e aprovação serão modelados no fluxo funcional da
-BACK-438, quando seus contratos de edição e exposição estiverem definidos.
+Os controllers, permissions, contratos OpenAPI, listagens, edição, exclusão por owner/admin
+e eventual regra de reenvio pertencem à BACK-438. Billing não participa da request nem da
+aprovação.
 
 ## Permissions
 
@@ -265,6 +293,13 @@ somente `storage_key`, posição e principal, com unicidade de posição/chave p
 Publication. A constraint `UNIQUE(publication_id, member_user_id)` protege
 `publication_likes`. `publication_comments` e `publication_comment_images` são
 separadas da galeria da Publication, permitindo consultas sociais independentes.
+
+`service_publication_requests` é uma entity independente da herança JOINED, com `@Version`
+e galeria em `service_publication_request_images`. Guarda estado PENDING/APPROVED/REJECTED,
+autor, conteúdo, valor, telefone, dados da revisão e ID da Publication criada.
+`publication_services` guarda `source_request_id` único, `amount` e `contact_phone`.
+O lock da linha da request serializa revisões concorrentes; a versão fornece proteção
+adicional contra gravação de estado obsoleto.
 
 O projeto continua seguindo a política global vigente de schema derivado das entities /
 Hibernate; não introduzir Flyway/Liquibase isoladamente neste módulo.
@@ -315,6 +350,9 @@ O histórico também usa JOINED: `publication_history` guarda o snapshot comum,
 `publication_notice_history`, `publication_event_history` e
 `publication_service_history` preservam o subtipo, e
 `publication_image_history` preserva as chaves, posições e imagem principal.
+`publication_service_history` preserva também `source_request_id`, `amount` e
+`contact_phone`. A `ServicePublicationRequest` continua persistida após o hard delete do
+Service, pois registra a aprovação; o history registra o estado do Service eliminado.
 No delete, o adapter trava primeiro a linha de `publications` com
 `SELECT ... FOR UPDATE`, carrega o subtipo, grava e faz flush do histórico,
 remove comentários/curtidas operacionais e então remove a Publication e sua
@@ -325,7 +363,9 @@ polimórfica JOINED quando outro delete acaba de remover a linha.
 Os testes da fundação cobrem invariantes de domínio e mídia, transições,
 reconstituição dos três subtipos, persistência JOINED, unicidade de Like,
 imagens de comentário, snapshot de cada subtipo, delete repetido, rollback
-quando history falha e corrida de dois deletes com lock pessimista.
+quando history falha e corrida de dois deletes com lock pessimista. Os testes de request
+cobrem aprovação/rejeição, validação de mídia, unicidade de origem, rollback transacional
+e aprovação concorrente sem duplicar Service.
 
 ## Boundaries conhecidos
 
@@ -354,6 +394,8 @@ ServicePublication
 ```
 
 Não existe item de Publication genérica.
+`ServicePublicationRequest` não é item do feed; apenas Services materializados após
+aprovação podem participar da consulta futura.
 
 A consulta final, filtros, paginação, detalhe polimórfico, contagens de interação e
 otimizações contra N+1 pertencem à BACK-400.

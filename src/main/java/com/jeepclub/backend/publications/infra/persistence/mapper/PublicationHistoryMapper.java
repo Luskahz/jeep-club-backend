@@ -13,7 +13,13 @@ public class PublicationHistoryMapper {
             var eventHistory = new EventHistoryEntity();
             eventHistory.setStartsAt(event.getStartsAt());
             history = eventHistory;
-        } else if (source instanceof ServicePublicationEntity) history = new ServicePublicationHistoryEntity();
+        } else if (source instanceof ServicePublicationEntity service) {
+            var serviceHistory = new ServicePublicationHistoryEntity();
+            serviceHistory.setSourceRequestId(service.getSourceRequestId());
+            serviceHistory.setAmount(service.getAmount());
+            serviceHistory.setContactPhone(service.getContactPhone());
+            history = serviceHistory;
+        }
         else throw new IllegalArgumentException("Unknown publication entity: " + source.getClass());
 
         history.setPublicationId(source.getId());

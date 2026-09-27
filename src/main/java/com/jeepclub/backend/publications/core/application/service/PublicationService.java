@@ -33,14 +33,6 @@ public class PublicationService {
     }
 
     @Transactional
-    public ServicePublication createServicePublication(Long authorUserId, String title, String content,
-                                                        List<PublicationImage> gallery) {
-        ServicePublication service = ServicePublication.create(authorUserId, title, content, gallery, Instant.now(clock));
-        requireImages(service.getImages());
-        return (ServicePublication) publications.save(service);
-    }
-
-    @Transactional
     public Publication publish(Long id) {
         Publication publication = find(id);
         publication.publish(Instant.now(clock));
