@@ -22,7 +22,7 @@ exemplo, confirmação e substituição não podem validar simultaneamente uma v
 obsoleta do mesmo pagamento; alteração de valor e submissão também se coordenam
 pela cobrança.
 
-O fluxo Event bloqueia a raiz da Publication e depois definições em ordem crescente.
+A inscrição no Event bloqueia a raiz da Publication e depois definições em ordem crescente.
 Dentro do Billing, a definição existente é bloqueada antes de consultar/criar
 assignment, contexto, ciclo e MemberCharge. Assim há uma linha estável para
 serializar inclusive duas primeiras criações. `uk_event_charge_context`,
