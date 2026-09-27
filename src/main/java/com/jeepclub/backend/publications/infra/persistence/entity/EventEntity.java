@@ -19,5 +19,6 @@ public class EventEntity extends PublicationEntity {
     private Instant endsAt;
     @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
     @Column(nullable = false)
+    @org.hibernate.annotations.ColumnDefault("'OPEN'")
     private com.jeepclub.backend.publications.core.domain.enums.EventStatus eventStatus = com.jeepclub.backend.publications.core.domain.enums.EventStatus.OPEN;
 }

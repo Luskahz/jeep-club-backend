@@ -91,6 +91,17 @@ class EventHttpIntegrationTest {
             .andExpect(status().isNotFound()).andExpect(content().contentTypeCompatibleWith("application/problem+json"))
             .andExpect(jsonPath("$.code").value("EVENT_CHARGE_NOT_FOUND"));
     }
+    @Test @Transactional void inlineHttpChargeDefaultsOptionalFlagsAndReturnsRule() throws Exception {
+        auth(99L, "PUBLICATIONS_EVENT_CREATE", "PUBLICATIONS_EVENT_READ_ADMIN");
+        String body = CREATE.formatted(Instant.now(clock).plusSeconds(86400)).trim();
+        body = body.substring(0, body.length() - 1) + ",\"charges\":[{\"name\":\"HTTP-" + UUID.randomUUID() + "\",\"amount\":20}]}";
+        var result = mvc.perform(token(post("/admin/events").contentType("application/json").content(body)))
+            .andExpect(status().isCreated()).andReturn();
+        long id = json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+        mvc.perform(token(get("/admin/events/{id}/charges",id))).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].chargeDefinitionId").isNumber())
+            .andExpect(jsonPath("$[0].requiredForParticipation").value(false));
+    }
     @Test void openApiDescribesEveryEventOperationAndTypedCatalogPagination() throws Exception {
         var result = mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn();
         var document = json.readTree(result.getResponse().getContentAsString());

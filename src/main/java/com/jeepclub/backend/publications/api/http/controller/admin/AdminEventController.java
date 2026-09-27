@@ -195,6 +195,6 @@ public class AdminEventController {
         return list == null ? null : list.stream().map(i -> new PublicationImage(i.storageKey(), i.position(), i.primary())).toList();
     }
     private List<AdminEventService.ChargeConfiguration> charges(List<EventRequestDTO.Charge> list) {
-        return list == null ? null : list.stream().map(c -> new AdminEventService.ChargeConfiguration(c.chargeDefinitionId(), c.name(), c.description(), c.amount(), c.billingRequired(), c.requiredForParticipation(), c.participationCutoff())).toList();
+        return list == null ? null : list.stream().map(c -> new AdminEventService.ChargeConfiguration(c.chargeDefinitionId(), c.name(), c.description(), c.amount(), Boolean.TRUE.equals(c.billingRequired()), Boolean.TRUE.equals(c.requiredForParticipation()), c.participationCutoff())).toList();
     }
 }

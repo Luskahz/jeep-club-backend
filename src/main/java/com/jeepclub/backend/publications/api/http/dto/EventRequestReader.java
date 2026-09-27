@@ -22,6 +22,8 @@ public class EventRequestReader {
             for (var charge : raw.get("charges")) {
                 if (!charge.isObject()) throw new IllegalArgumentException("Charge must be an object.");
                 for (String field : charge.propertyNames()) if (!fields.contains(field)) throw new IllegalArgumentException("Unsupported charge field.");
+                for (String flag : new String[]{"billingRequired", "requiredForParticipation"})
+                    if (charge.has(flag) && !charge.get(flag).isBoolean()) throw new IllegalArgumentException("Charge flags must be booleans.");
             }
         }
         return mapper.treeToValue(raw, EventRequestDTO.class);

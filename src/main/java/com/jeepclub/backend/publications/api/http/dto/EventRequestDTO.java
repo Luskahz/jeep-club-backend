@@ -10,6 +10,7 @@ public record EventRequestDTO(String title, String content, List<PublicationImag
         Instant startsAt, Instant endsAt, List<Charge> charges) {
     @Schema(description="Select chargeDefinitionId OR provide name/description/amount for inline ONE_TIME creation. Inline policy is AFTER_DUE_DATE. Billing required is independent from requiredForParticipation.")
     public record Charge(Long chargeDefinitionId, String name, String description, BigDecimal amount,
-        boolean billingRequired, boolean requiredForParticipation,
+        @Schema(description="Billing obligation, used only for inline creation; omitted defaults to false.", defaultValue="false") Boolean billingRequired,
+        @Schema(description="Whether this charge gates participation; omitted defaults to false.", defaultValue="false") Boolean requiredForParticipation,
         @Schema(description="Participation deadline, defaults to startsAt; distinct from financial dueDate.") Instant participationCutoff) {}
 }
