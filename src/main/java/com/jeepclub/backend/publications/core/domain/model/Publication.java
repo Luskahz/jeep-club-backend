@@ -80,6 +80,21 @@ public abstract class Publication {
         updatedAt = now;
     }
 
+    /** Applies an approved editorial snapshot only after every field is valid. */
+    protected final void applyApprovedEditorialChange(String title, String content,
+                                                       List<PublicationImage> images, Instant now) {
+        requireTransitionTime(now);
+        if (status != PublicationStatus.PUBLISHED) throw new IllegalStateException("Only a published publication can be changed.");
+        String validatedTitle = required(title, "title");
+        if (validatedTitle.length() > 200) throw new IllegalArgumentException("title exceeds 200 characters.");
+        String validatedContent = required(content, "content");
+        List<PublicationImage> validatedImages = PublicationGallery.of(images).images();
+        this.title = validatedTitle;
+        this.content = validatedContent;
+        this.images = validatedImages;
+        this.updatedAt = now;
+    }
+
     private void requireTransitionTime(Instant now) {
         Objects.requireNonNull(now, "now");
         if (now.isBefore(updatedAt)) throw new IllegalArgumentException("now cannot precede updatedAt.");

@@ -4,6 +4,8 @@ import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.publications.core.domain.model.PublicationImage;
 import com.jeepclub.backend.publications.core.domain.model.ServicePublicationRequest;
 import com.jeepclub.backend.publications.core.repository.ServicePublicationRequestRepository;
+import com.jeepclub.backend.publications.core.application.exception.ServiceOperationException;
+import static com.jeepclub.backend.publications.core.application.exception.ServiceOperationException.Reason.REQUEST_NOT_FOUND;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,5 +28,12 @@ public class ServicePublicationRequestService {
                 amount, contactPhone, gallery, Instant.now(clock));
         request.getImages().forEach(image -> images.requireExisting(image.storageKey()));
         return requests.save(request);
+    }
+
+    @Transactional(readOnly = true)
+    public ServicePublicationRequest findOwn(Long id, Long userId) {
+        var request = requests.findById(id).orElseThrow(() -> new ServiceOperationException(REQUEST_NOT_FOUND));
+        if (!request.getRequestedByUserId().equals(userId)) throw new ServiceOperationException(REQUEST_NOT_FOUND);
+        return request;
     }
 }

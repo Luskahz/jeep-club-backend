@@ -120,14 +120,14 @@ public final class ServicePublicationRequest {
         if (now.isBefore(updatedAt)) throw new IllegalArgumentException("Review time cannot precede updatedAt.");
     }
 
-    private static String required(String value, String name, int maxLength) {
+    static String required(String value, String name, int maxLength) {
         if (value == null || value.isBlank()) throw new IllegalArgumentException(name + " is required.");
         String trimmed = value.trim();
         if (trimmed.length() > maxLength) throw new IllegalArgumentException(name + " is too long.");
         return trimmed;
     }
 
-    private static BigDecimal requireAmount(BigDecimal amount) {
+    static BigDecimal requireAmount(BigDecimal amount) {
         Objects.requireNonNull(amount, "amount");
         if (amount.signum() <= 0) throw new IllegalArgumentException("amount must be positive.");
         if (amount.stripTrailingZeros().scale() > 2) throw new IllegalArgumentException("amount supports at most two decimal places.");
@@ -136,7 +136,7 @@ public final class ServicePublicationRequest {
         return normalized;
     }
 
-    private static String normalizeNullable(String value) {
+    static String normalizeNullable(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
