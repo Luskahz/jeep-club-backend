@@ -10,7 +10,7 @@ class SystemLogServiceAdapterTest {
 
     @Test
     void keepsExplicitPersistentSystemLogEventsAvailableToWorker() {
-        var service = new SystemLogServiceAdapter();
+        var service = new SystemLogServiceAdapter(org.mockito.Mockito.mock(SystemLogJpaRepository.class));
         var event = new SystemLogEvent(
                 42L,
                 "SECURITY_CONFIGURATION_CHANGED",
