@@ -62,6 +62,27 @@ class PublicationDomainTest {
         assertThatThrownBy(() -> notice.publish(NOW.minusSeconds(1))).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Test void noticeContentCanBeEditedInDraftAndPublishedButNotArchived() {
+        Notice notice = Notice.create(7L, "Old", "Old body", gallery(1), NOW);
+        notice.updateContent("  New  ", "  New body  ", NOW.plusSeconds(1));
+        assertThat(notice.getTitle()).isEqualTo("New");
+        assertThat(notice.getContent()).isEqualTo("New body");
+        assertThat(notice.getUpdatedAt()).isEqualTo(NOW.plusSeconds(1));
+        assertThatThrownBy(() -> notice.updateContent(" ", "Body", NOW.plusSeconds(2)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> notice.updateContent("Title", null, NOW.plusSeconds(2)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> notice.updateContent("Title", "Body", NOW.minusSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        notice.publish(NOW.plusSeconds(2));
+        notice.updateContent("Published edit", "Edited", NOW.plusSeconds(3));
+        assertThat(notice.getPublishedAt()).isEqualTo(NOW.plusSeconds(2));
+        assertThat(notice.getUpdatedAt()).isEqualTo(NOW.plusSeconds(3));
+        notice.archive(NOW.plusSeconds(4));
+        assertThatThrownBy(() -> notice.updateContent("After", "Archive", NOW.plusSeconds(5)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     @Test void galleryAcceptsOneOrFiveAndSortsByPosition() {
         assertThat(Notice.create(7L, "Title", "Content", gallery(1), NOW).getImages()).hasSize(1);
         var reversed = new ArrayList<>(gallery(5));
