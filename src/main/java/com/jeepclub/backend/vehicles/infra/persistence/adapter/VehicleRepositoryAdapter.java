@@ -33,6 +33,10 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     private final VehicleJpaRepository jpaRepository;
     private final VehicleHistoryJpaRepository historyJpaRepository;
     private final VehicleHistoryMapper historyMapper;
+    @Override
+    public java.util.List<Vehicle> findAllByIds(java.util.Collection<Long> ids) {
+        return jpaRepository.findAllById(ids).stream().map(VehicleMapper::toDomain).toList();
+    }
 
     @Override
     public Vehicle save(Vehicle vehicle) {
