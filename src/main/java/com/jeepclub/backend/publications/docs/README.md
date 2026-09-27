@@ -111,14 +111,20 @@ responsabilidade transversal e não deve ser presumida por Publications.
 O lifecycle editorial de `Publication` é independente do lifecycle específico de suas
 especializações.
 
-Exemplo conceitual:
+Transições implementadas na fundação:
 
 ```text
 DRAFT -> PUBLISHED -> ARCHIVED
 ```
 
-Os nomes/transições finais devem refletir o código implementado, mas as seguintes regras
-são estáveis:
+Uma Publication nasce em `DRAFT` com `createdAt = updatedAt`. `publish(now)` aceita
+somente `DRAFT`, preenche `publishedAt` e atualiza `updatedAt`; `archive(now)` aceita
+somente `PUBLISHED`, preenche `archivedAt` e atualiza `updatedAt`. O domínio rejeita
+transição repetida, regressão temporal e edição de imagens após arquivamento. Não há
+transição de volta para `DRAFT` nem reativação de `ARCHIVED` nesta fundação. Os
+application services passam `Instant.now(clock)` para essas operações.
+
+As seguintes regras continuam estáveis:
 
 - arquivamento não é delete;
 - `DELETED` não é status operacional;
@@ -218,6 +224,10 @@ checkout, comissão ou qualquer fluxo financeiro interno.
 
 A implementação funcional pertence à BACK-438.
 
+Nesta fundação, `ServicePublication` já é um subtipo concreto persistido, ainda sem
+campos próprios. Valor, telefone e aprovação serão modelados no fluxo funcional da
+BACK-438, quando seus contratos de edição e exposição estiverem definidos.
+
 ## Permissions
 
 Publication não concede uma permission genérica que autorize todas as especializações.
@@ -245,9 +255,16 @@ A estratégia de persistência deve suportar:
 - recuperação polimórfica para consultas futuras de feed;
 - ausência de uma única tabela inflada por dezenas de campos específicos anuláveis.
 
-A estratégia JPA final deve ser escolhida e documentada junto da implementação da BACK-397.
-`JOINED` é uma alternativa natural para o modelo, mas a escolha deve ser confirmada contra
-a implementação real antes de ser tratada como contrato definitivo.
+A fundação usa `@Inheritance(JOINED)` apenas nas entities. `publications` guarda
+conteúdo, estado e timestamps comuns; `publication_notices`, `publication_events`
+e `publication_services` guardam a identidade concreta. `publication_events`
+contém `starts_at`, a agenda mínima do Event nesta Story. O mapper reconstrói
+o subtipo de domínio; a tabela comum sustenta a leitura polimórfica futura sem
+colunas próprias de cada especialização anuláveis. `publication_images` guarda
+somente `storage_key`, posição e principal, com unicidade de posição/chave por
+Publication. A constraint `UNIQUE(publication_id, member_user_id)` protege
+`publication_likes`. `publication_comments` e `publication_comment_images` são
+separadas da galeria da Publication, permitindo consultas sociais independentes.
 
 O projeto continua seguindo a política global vigente de schema derivado das entities /
 Hibernate; não introduzir Flyway/Liquibase isoladamente neste módulo.
@@ -293,6 +310,22 @@ O histórico não é um estado operacional reativável e não substitui a tabela
 
 Hard delete da Publication remove suas associações operacionais do bounded context, mas não
 deve assumir ownership exclusivo do arquivo armazenado no storage global.
+
+O histórico também usa JOINED: `publication_history` guarda o snapshot comum,
+`publication_notice_history`, `publication_event_history` e
+`publication_service_history` preservam o subtipo, e
+`publication_image_history` preserva as chaves, posições e imagem principal.
+No delete, o adapter trava primeiro a linha de `publications` com
+`SELECT ... FOR UPDATE`, carrega o subtipo, grava e faz flush do histórico,
+remove comentários/curtidas operacionais e então remove a Publication e sua
+galeria. Tudo ocorre na transação do application service. O lock direto na
+tabela raiz evita o follow-on locking problemático do Hibernate em uma consulta
+polimórfica JOINED quando outro delete acaba de remover a linha.
+
+Os testes da fundação cobrem invariantes de domínio e mídia, transições,
+reconstituição dos três subtipos, persistência JOINED, unicidade de Like,
+imagens de comentário, snapshot de cada subtipo, delete repetido, rollback
+quando history falha e corrida de dois deletes com lock pessimista.
 
 ## Boundaries conhecidos
 
