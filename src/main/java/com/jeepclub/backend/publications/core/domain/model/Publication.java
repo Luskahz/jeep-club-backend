@@ -9,8 +9,8 @@ import java.util.Objects;
 public abstract class Publication {
     private final Long id;
     private final Long authorUserId;
-    private final String title;
-    private final String content;
+    private String title;
+    private String content;
     private PublicationStatus status;
     private final Instant createdAt;
     private Instant updatedAt;
@@ -66,6 +66,17 @@ public abstract class Publication {
         if (status == PublicationStatus.ARCHIVED) throw new IllegalStateException("Archived publication cannot be edited.");
         List<PublicationImage> validated = PublicationGallery.of(replacement).images();
         images = validated;
+        updatedAt = now;
+    }
+
+    public final void updateContent(String title, String content, Instant now) {
+        requireTransitionTime(now);
+        if (status == PublicationStatus.ARCHIVED) throw new IllegalStateException("Archived publication cannot be edited.");
+        String validatedTitle = required(title, "title");
+        if (validatedTitle.length() > 200) throw new IllegalArgumentException("title exceeds 200 characters.");
+        String validatedContent = required(content, "content");
+        this.title = validatedTitle;
+        this.content = validatedContent;
         updatedAt = now;
     }
 

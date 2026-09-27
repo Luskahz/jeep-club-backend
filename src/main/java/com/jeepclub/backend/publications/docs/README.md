@@ -182,8 +182,28 @@ avisos institucionais, lembrete de evento, aniversário ou informação geral.
 Notice pode inicialmente não possuir atributos exclusivos além da base. Ainda assim deve
 permanecer um tipo concreto próprio para evoluir independentemente.
 
-A criação/edição/publicação/delete HTTP e suas permissions são responsabilidade da
-BACK-398.
+A BACK-398 expõe uma API administrativa própria de Notice. Cada ação tem authority
+específica de Notice; o controller usa `@PreAuthorize` para enforcement e
+`@RequiredPermission` para OpenAPI. Como a superfície é administrativa e permissionada,
+não exige `@RequiresMembership`. A consulta administrativa por ID pode ler DRAFT,
+PUBLISHED e ARCHIVED; não existe leitura pública ou listagem que antecipe o feed.
+
+Na criação, o `authorUserId` vem de `UserPrincipal.userId`, e o domínio cria o Notice em
+DRAFT. O cliente envia apenas título, conteúdo e galeria; estado e timestamps pertencem
+ao servidor. A resposta usa `storageKey`, posição e principal, conforme o contrato global
+em que `GET /media/images?key=...` resolve a imagem. O arquivo global não é removido ao
+substituir a galeria nem ao excluir o aviso.
+
+A edição parcial preserva campos omitidos e rejeita `null` explícito para título,
+conteúdo ou galeria. Enviar galeria substitui integralmente a anterior, depois de validar
+as referências pelo `ImageMediaService`. DRAFT e PUBLISHED aceitam edição de conteúdo e
+imagens; `updatedAt` muda sem alterar `publishedAt`. ARCHIVED é somente leitura e não
+pode ser republicado. Corpo vazio é uma operação sem mudança.
+
+Publicar e arquivar usam as transições editoriais da fundação. Excluir pode ocorrer em
+qualquer estado editorial e reutiliza lock, snapshot histórico e hard delete da BACK-397;
+o executor é o usuário autenticado. O OpenAPI dos controllers/DTOs é a fonte dos paths,
+payloads, statuses e erros HTTP desta superfície.
 
 ## Event
 

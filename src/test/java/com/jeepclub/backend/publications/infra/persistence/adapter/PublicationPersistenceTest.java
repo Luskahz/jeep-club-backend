@@ -98,6 +98,27 @@ class PublicationPersistenceTest {
         assertThat(restored.getImages()).containsExactly(new PublicationImage(OTHER_KEY, 0, true));
     }
 
+    @Test void editedNoticeContentPersistsAndIsPreservedByHardDeleteHistory() {
+        Notice notice = (Notice) repository.save(Notice.create(7L, "Original", "Body", gallery(), NOW));
+        notice.updateContent(" Revised ", " Revised body ", NOW.plusSeconds(1));
+        repository.save(notice);
+        em.clear();
+        Notice restored = (Notice) repository.findById(notice.getId()).orElseThrow();
+        assertThat(restored.getTitle()).isEqualTo("Revised");
+        assertThat(restored.getContent()).isEqualTo("Revised body");
+        assertThat(restored.getUpdatedAt()).isEqualTo(NOW.plusSeconds(1));
+        repository.delete(notice.getId(), 11L, NOW.plusSeconds(2));
+        em.flush();
+        em.clear();
+        assertThat(repository.findById(notice.getId())).isEmpty();
+        var snapshot = history.findAll().stream().filter(item -> item.getPublicationId().equals(notice.getId()))
+                .findFirst().orElseThrow();
+        assertThat(snapshot).isInstanceOf(NoticeHistoryEntity.class);
+        assertThat(snapshot.getTitle()).isEqualTo("Revised");
+        assertThat(snapshot.getContent()).isEqualTo("Revised body");
+        assertThat(snapshot.getDeletedByUserId()).isEqualTo(11L);
+    }
+
     @Test void likesHaveDatabaseUniquenessAndCommentsKeepImages() {
         Publication saved = repository.save(Notice.create(7L, "Notice", "Body", gallery(), NOW));
         PublicationLike like = likeRepository.save(PublicationLike.create(saved.getId(), 9L, NOW));

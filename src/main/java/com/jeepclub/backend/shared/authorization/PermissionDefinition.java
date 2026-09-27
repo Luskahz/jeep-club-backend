@@ -438,6 +438,38 @@ public enum PermissionDefinition {
             PermissionCode.VEHICLES_VEHICLE_DELETE,
             ModuleCode.VEHICLES,
             "Permite remover veículos"
+    ),
+
+    // PUBLICATIONS / NOTICE
+    PUBLICATIONS_NOTICE_CREATE(
+            PermissionCode.PUBLICATIONS_NOTICE_CREATE,
+            ModuleCode.PUBLICATIONS,
+            "Permite criar avisos"
+    ),
+    PUBLICATIONS_NOTICE_READ(
+            PermissionCode.PUBLICATIONS_NOTICE_READ,
+            ModuleCode.PUBLICATIONS,
+            "Permite consultar avisos em qualquer estado editorial"
+    ),
+    PUBLICATIONS_NOTICE_UPDATE(
+            PermissionCode.PUBLICATIONS_NOTICE_UPDATE,
+            ModuleCode.PUBLICATIONS,
+            "Permite editar avisos"
+    ),
+    PUBLICATIONS_NOTICE_PUBLISH(
+            PermissionCode.PUBLICATIONS_NOTICE_PUBLISH,
+            ModuleCode.PUBLICATIONS,
+            "Permite publicar avisos"
+    ),
+    PUBLICATIONS_NOTICE_ARCHIVE(
+            PermissionCode.PUBLICATIONS_NOTICE_ARCHIVE,
+            ModuleCode.PUBLICATIONS,
+            "Permite arquivar avisos"
+    ),
+    PUBLICATIONS_NOTICE_DELETE(
+            PermissionCode.PUBLICATIONS_NOTICE_DELETE,
+            ModuleCode.PUBLICATIONS,
+            "Permite excluir avisos com snapshot histórico"
     );
 
     private final PermissionCode code;
