@@ -155,7 +155,7 @@ Remover a curtida remove a interação operacional. Não manter contador mutáve
 Publication na fundação; contagens podem ser derivadas por query/projeção para evitar
 divergência entre contador e linhas reais.
 
-Os endpoints completos pertencem à Story de interações sociais.
+Os endpoints de interação social estão descritos na seção abaixo.
 
 ## Comentários
 
@@ -168,7 +168,7 @@ O encerramento da regra específica não encerra automaticamente a discussão so
 particular, Event `FINISHED` pode continuar recebendo comentários enquanto sua Publication
 permanecer acessível segundo o lifecycle editorial.
 
-Comentários devem possuir persistência própria e futuramente paginação própria; não carregar
+Comentários possuem persistência e paginação próprias; não carregar
 a coleção completa dentro de toda consulta de Publication/feed.
 
 Threading/replies, reações além de like e política avançada de moderação não fazem parte da
@@ -453,14 +453,14 @@ A estratégia de persistência deve suportar:
 
 - dados comuns em Publication;
 - evolução independente de Notice, Event e ServicePublication;
-- recuperação polimórfica para consultas futuras de feed;
+- recuperação polimórfica para consultas de feed;
 - ausência de uma única tabela inflada por dezenas de campos específicos anuláveis.
 
 A fundação usa `@Inheritance(JOINED)` apenas nas entities. `publications` guarda
 conteúdo, estado e timestamps comuns; `publication_notices`, `publication_events`
 e `publication_services` guardam a identidade concreta. `publication_events`
 contém `starts_at`, `ends_at` e estado operacional explícito do Event. O mapper reconstrói
-o subtipo de domínio; a tabela comum sustenta a leitura polimórfica futura sem
+o subtipo de domínio; a tabela comum sustenta a leitura polimórfica sem
 colunas próprias de cada especialização anuláveis. `publication_images` guarda
 somente `storage_key`, posição e principal, com unicidade de posição/chave por
 Publication. A constraint `UNIQUE(publication_id, member_user_id)` protege
@@ -574,11 +574,34 @@ ServicePublication
 
 Não existe item de Publication genérica.
 `ServicePublicationRequest` e `ServicePublicationChangeRequest` não são itens do feed;
-apenas Services materializados após aprovação podem participar da consulta futura, sempre
+apenas Services materializados após aprovação participam da consulta, sempre
 com a última versão aprovada enquanto houver proposta pendente.
 
-A consulta final, filtros, paginação, detalhe polimórfico, contagens de interação e
-otimizações contra N+1 pertencem à BACK-400.
+`GET /publications/feed` retorna `PageResponse` de Notice, Event e Service publicados,
+ordenados por `publishedAt DESC, id DESC`. Aceita `type=NOTICE|EVENT|SERVICE` e período
+inclusivo `publishedFrom`/`publishedTo`. Rascunhos e arquivados não aparecem. Event
+`FINISHED` continua visível se a Publication permanecer `PUBLISHED`. O item contém
+`authorUserId`, campos editoriais, imagem marcada `primary`, resumo social e `details`
+específico do tipo. `GET /publications/{publicationId}` retorna galeria completa na
+ordem persistida e os mesmos dados públicos, sem DTO administrativo ou dados de
+inscrição, cobrança, saúde ou guest. O feed usa consultas agrupadas de likes/comments,
+consulta de likedByMe por conjunto de IDs e leitura em lote das imagens.
+
+## Interações sociais
+
+Membros autenticados com as permissões específicas podem usar `POST
+/publications/{publicationId}/likes` (200 idempotente), `DELETE
+/publications/{publicationId}/likes/me` (204 idempotente), `POST
+/publications/{publicationId}/comments` (201) e `GET
+/publications/{publicationId}/comments` (PageResponse, `createdAt DESC, id DESC`).
+O autor/curtidor vem sempre do principal. Um comentário pode ter texto, imagens por
+`storageKey` global ou ambos; texto vazio sem imagens é inválido. Cada chave é
+validada por `ImageMediaService` antes da associação. A unicidade de like por membro
+e Publication é protegida por constraint e serialização no registro principal.
+O lifecycle editorial governa a acessibilidade: apenas `PUBLISHED` aceita interações;
+um Event finalizado continua disponível enquanto publicado. Archive conserva os
+registros, mas oculta o acesso de membro. Hard delete grava o histórico da Publication,
+remove likes/comments operacionais antes do registro principal e não apaga mídia global.
 
 ## Escopo da BACK-397
 
@@ -597,8 +620,6 @@ A BACK-397 é responsável por estabelecer:
 Permanecem fora desta Story:
 
 - CRUD HTTP completo de Notice/Event/Service;
-- feed final;
-- endpoints completos de likes/comments;
 - inscrições e operação completa de Event;
 - implementação interna de Billing/Vehicles/Dependents/Health;
 - pagamentos de Service;
@@ -613,6 +634,5 @@ Permanecem fora desta Story:
 - **BACK-438** — ServicePublication com aprovação;
 - **BACK-439** — curtidas e comentários com mídia.
 
-As regras detalhadas de cada capacidade devem ser documentadas quando o runtime
-correspondente for implementado, mantendo este README como entrada principal do bounded
-context e evitando transformar documentação futura em contrato antes do código.
+Este README permanece a entrada principal do bounded context; os contratos públicos
+acima descrevem o runtime implementado.

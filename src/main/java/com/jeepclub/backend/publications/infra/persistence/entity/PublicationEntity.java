@@ -7,6 +7,7 @@ import lombok.Setter;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "publications", indexes = {
@@ -42,5 +43,6 @@ public abstract class PublicationEntity {
                     @UniqueConstraint(name = "uk_publication_image_key", columnNames = {"publication_id", "storage_key"})
             })
     @OrderBy("position ASC")
+    @BatchSize(size = 100)
     private List<PublicationImageEntity> images = new ArrayList<>();
 }

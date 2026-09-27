@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
-public interface PublicationJpaRepository extends JpaRepository<PublicationEntity, Long> {
+public interface PublicationJpaRepository extends JpaRepository<PublicationEntity, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<PublicationEntity> {
     @Query("select e from EventEntity e")
     org.springframework.data.domain.Page<PublicationEntity> findEvents(org.springframework.data.domain.Pageable pageable);
     // Lock the root row first. Hibernate's follow-on locking of a polymorphic JOINED

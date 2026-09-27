@@ -3,6 +3,7 @@ package com.jeepclub.backend.publications.infra.persistence.adapter;
 import com.jeepclub.backend.publications.core.domain.enums.PublicationStatus;
 import com.jeepclub.backend.publications.core.domain.enums.ServicePublicationRequestStatus;
 import com.jeepclub.backend.publications.core.application.service.AdminServicePublicationRequestService;
+import com.jeepclub.backend.publications.core.application.service.PublicationLikeService;
 import com.jeepclub.backend.publications.core.domain.exception.PublicationAlreadyDeletedException;
 import com.jeepclub.backend.publications.core.domain.model.*;
 import com.jeepclub.backend.publications.infra.persistence.entity.*;
@@ -47,7 +48,7 @@ import static org.mockito.Mockito.doThrow;
 @Import({PublicationRepositoryAdapter.class, PublicationLikeRepositoryAdapter.class,
         PublicationCommentRepositoryAdapter.class, PublicationMapper.class, PublicationHistoryMapper.class,
         ServicePublicationRequestRepositoryAdapter.class, ServicePublicationRequestMapper.class,
-        AdminServicePublicationRequestService.class})
+        AdminServicePublicationRequestService.class, PublicationLikeService.class})
 class PublicationPersistenceTest {
     private static final Instant NOW = Instant.parse("2026-09-27T12:00:00Z");
     private static final String KEY = "images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg";
@@ -65,6 +66,115 @@ class PublicationPersistenceTest {
     @MockitoSpyBean private ServicePublicationRequestRepositoryAdapter requestRepository;
     @Autowired private ServicePublicationRequestJpaRepository requestJpa;
     @Autowired private AdminServicePublicationRequestService adminRequests;
+    @Autowired private PublicationLikeService socialLikes;
+
+    @Test void socialCountsAndCommentPageUseDatabaseQueries() {
+        var first = repository.save(Notice.create(7L, "First", "Body", gallery(), NOW));
+        var second = repository.save(Event.create(7L, "Second", "Body", gallery(), NOW.plusSeconds(3600), NOW));
+        likeRepository.save(PublicationLike.create(first.getId(), 9L, NOW));
+        likeRepository.save(PublicationLike.create(first.getId(), 10L, NOW));
+        likeRepository.save(PublicationLike.create(second.getId(), 9L, NOW));
+        commentRepository.save(PublicationComment.create(first.getId(), 9L, "One", List.of(), NOW));
+        commentRepository.save(PublicationComment.create(first.getId(), 10L, null,
+                List.of(new PublicationCommentImage(KEY, 0)), NOW));
+        var ids = List.of(first.getId(), second.getId());
+        assertThat(likeRepository.counts(ids)).containsEntry(first.getId(), 2L).containsEntry(second.getId(), 1L);
+        assertThat(commentRepository.counts(ids)).containsEntry(first.getId(), 2L);
+        assertThat(likeRepository.likedByMember(ids, 9L)).containsExactlyInAnyOrderElementsOf(ids);
+        var page = commentRepository.findByPublication(first.getId(), org.springframework.data.domain.PageRequest.of(0, 1,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Order.desc("createdAt"),
+                        org.springframework.data.domain.Sort.Order.desc("id"))));
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getContent()).singleElement().satisfies(c -> assertThat(c.getImages()).hasSize(1));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void concurrentLikeForSameMemberSerializesAndPersistsOneRow() throws Exception {
+        var transactions = new TransactionTemplate(transactionManager);
+        Long id = transactions.execute(status -> {
+            var notice = Notice.create(7L, "Concurrent like", "Body", gallery(), NOW);
+            notice.publish(NOW.plusSeconds(1));
+            return repository.save(notice).getId();
+        });
+        var firstLiked = new CountDownLatch(1);
+        var releaseFirst = new CountDownLatch(1);
+        var secondEntered = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> transactions.execute(status -> {
+                socialLikes.like(id, 9L);
+                firstLiked.countDown();
+                try {
+                    if (!releaseFirst.await(5, TimeUnit.SECONDS)) throw new AssertionError("Release timed out");
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new AssertionError(exception);
+                }
+                return null;
+            }));
+            assertThat(firstLiked.await(5, TimeUnit.SECONDS)).isTrue();
+            var second = executor.submit(() -> {
+                secondEntered.countDown();
+                return socialLikes.like(id, 9L);
+            });
+            assertThat(secondEntered.await(5, TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> second.get(200, TimeUnit.MILLISECONDS)).isInstanceOf(TimeoutException.class);
+            releaseFirst.countDown();
+            first.get(5, TimeUnit.SECONDS);
+            second.get(5, TimeUnit.SECONDS);
+            List<PublicationLikeEntity> persisted = transactions.execute(status -> likes.findAllByPublication_Id(id));
+            assertThat(persisted).hasSize(1);
+        } finally {
+            releaseFirst.countDown();
+            executor.shutdownNow();
+            transactions.execute(status -> {
+                likes.deleteAll(likes.findAllByPublication_Id(id));
+                likes.flush();
+                jpa.deleteById(id);
+                jpa.flush();
+                return null;
+            });
+        }
+    }
+
+    @Test void publishedFeedFiltersConcreteTypesAndExcludesDraftAndArchived() {
+        var publishedBase = Instant.parse("2050-01-01T00:00:00Z");
+        var notice = repository.save(Notice.create(7L, "Notice", "Body", gallery(), NOW));
+        notice.publish(publishedBase.plusSeconds(1));
+        repository.save(notice);
+        var event = repository.save(Event.create(7L, "Event", "Body", gallery(), NOW.plusSeconds(100), NOW));
+        event.publish(publishedBase.plusSeconds(2));
+        repository.save(event);
+        repository.save(Notice.create(7L, "Draft", "Body", gallery(), NOW));
+        var archived = repository.save(Notice.create(7L, "Archived", "Body", gallery(), NOW));
+        archived.publish(publishedBase.plusSeconds(3));
+        archived.archive(publishedBase.plusSeconds(4));
+        repository.save(archived);
+        em.flush();
+        em.clear();
+        var page = repository.findPublished(null, publishedBase, publishedBase.plusSeconds(10),
+                org.springframework.data.domain.PageRequest.of(0, 10,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Order.desc("publishedAt"),
+                                org.springframework.data.domain.Sort.Order.desc("id"))));
+        assertThat(page.getContent()).extracting(Publication::getId).containsExactly(event.getId(), notice.getId());
+        assertThat(repository.findPublished("EVENT", publishedBase, publishedBase.plusSeconds(10), org.springframework.data.domain.PageRequest.of(0, 10))
+                .getContent()).extracting(Publication::getId).containsExactly(event.getId());
+    }
+
+    @Test void feedShowsApprovedServiceButNotItsRequest() {
+        var pending = requestRepository.save(request(7L));
+        long requestId = pending.getId();
+        var before = repository.findPublished("SERVICE", NOW, NOW.plusSeconds(10),
+                org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(before.getContent()).noneMatch(p -> p instanceof ServicePublication service
+                && service.getSourceRequestId().equals(requestId));
+        var materialized = repository.save(ServicePublication.fromApprovedRequest(pending, NOW.plusSeconds(1)));
+        var after = repository.findPublished("SERVICE", NOW, NOW.plusSeconds(10),
+                org.springframework.data.domain.PageRequest.of(0, 10));
+        assertThat(after.getContent()).anyMatch(p -> p.getId().equals(materialized.getId()));
+        assertThat(after.getContent()).allMatch(ServicePublication.class::isInstance);
+    }
 
     @Test void joinedInheritancePersistsAndReconstructsAllConcreteSubtypes() {
         Publication notice = repository.save(Notice.create(7L, "Notice", "Body", gallery(), NOW));
