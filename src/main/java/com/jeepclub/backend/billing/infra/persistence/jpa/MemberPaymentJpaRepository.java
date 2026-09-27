@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberPaymentJpaRepository extends JpaRepository<MemberPaymentEntity, Long> {
+    java.util.List<MemberPaymentEntity> findByMemberChargeIdIn(java.util.Collection<Long> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<MemberPaymentEntity> findWithLockingById(Long id);

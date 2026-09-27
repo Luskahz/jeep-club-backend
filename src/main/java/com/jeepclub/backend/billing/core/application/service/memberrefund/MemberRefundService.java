@@ -98,7 +98,7 @@ public class MemberRefundService {
 
     private MemberPayment findMemberPaymentOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
-        return memberPaymentRepository.findById(id)
+        return memberPaymentRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new MemberPaymentNotFoundException("Member payment not found."));
     }
 
@@ -117,9 +117,9 @@ public class MemberRefundService {
 
     private static void ensurePaymentCanBeRefunded(MemberPayment payment) {
         Objects.requireNonNull(payment, "memberPayment cannot be null");
-        if (!payment.isConfirmed() && !payment.isPendingValidation()) {
+        if (!payment.isConfirmed()) {
             throw new InvalidRefundPaymentException(
-                    "Only confirmed or pending validation payments can be refunded."
+                    "Only confirmed payments can be refunded."
             );
         }
     }

@@ -60,7 +60,7 @@ public class MembershipChargeQueryService implements MembershipChargeQuery {
                     .compare(left.getId(), right.getId());
         };
 
-        return chargeCycleRepository.findByChargeDefinitionId(chargeDefinitionId, Pageable.unpaged())
+        return chargeCycleRepository.findMembershipCycles(chargeDefinitionId)
                 .stream()
                 .filter(cycle -> cycle.getStatus() != ChargeCycleStatus.ARCHIVED)
                 .filter(cycle -> isInCurrentRecurrencePeriod(cycle, referenceDate))

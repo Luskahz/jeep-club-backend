@@ -26,6 +26,8 @@ public class AdminMemberPaymentService {
     private final MemberPaymentRepository memberPaymentRepository;
     private final MemberChargeRepository memberChargeRepository;
     private final Clock clock;
+    private final com.jeepclub.backend.billing.core.repository.ChargeCycleRepository cycles;
+    private final com.jeepclub.backend.billing.core.application.service.memberrefund.AdminMemberRefundService refunds;
 
     @Transactional(readOnly = true)
     public Page<MemberPaymentResult> findAll(MemberPaymentStatus status, Pageable pageable) {
@@ -49,13 +51,17 @@ public class AdminMemberPaymentService {
         MemberPayment memberPayment = findMemberPaymentForUpdateOrThrow(paymentId);
         MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(memberPayment.getMemberChargeId());
 
-        ensureChargeCanBeMarkedAsPaid(memberCharge);
+        var cycle = cycles.findById(memberCharge.getChargeCycleId()).orElseThrow();
+        boolean canceledCycle = cycle.getCanceledAt() != null;
+        if (!canceledCycle) ensureChargeCanBeMarkedAsPaid(memberCharge);
         ensurePaymentAmountStillMatchesCharge(memberPayment, memberCharge);
         memberPayment.confirm(confirmedByUserId, now);
-        memberCharge.markAsPaid(memberPayment.getPaidAt(), now);
+        if (!canceledCycle) memberCharge.markAsPaid(memberPayment.getPaidAt(), now);
 
         memberChargeRepository.save(memberCharge);
-        return MemberPaymentResult.from(memberPaymentRepository.save(memberPayment));
+        var saved = memberPaymentRepository.save(memberPayment);
+        if (canceledCycle) refunds.ensureLateEligibility(memberCharge, saved, confirmedByUserId, cycle.getCanceledAt());
+        return MemberPaymentResult.from(saved);
     }
 
     @Transactional

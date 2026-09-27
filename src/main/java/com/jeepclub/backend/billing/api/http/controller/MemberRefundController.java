@@ -44,7 +44,7 @@ public class MemberRefundController {
     @PostMapping("/billing/member-payments/{paymentId}/refund-request")
     @Operation(
             summary = "Solicitar reembolso de um pagamento",
-            description = "Solicita reembolso de pagamento próprio CONFIRMED ou PENDING_VALIDATION. Reaproveita elegibilidade ativa existente ou cria solicitação MEMBER_REQUEST.",
+            description = "Solicita reembolso de pagamento próprio CONFIRMED. Comprovante PENDING_VALIDATION não permite reembolso antes da análise. Reaproveita elegibilidade ativa existente ou cria solicitação MEMBER_REQUEST.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Reembolso retornado ou solicitado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MemberRefundResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Status do pagamento não permite reembolso.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
