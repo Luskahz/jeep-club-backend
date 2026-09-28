@@ -16,7 +16,7 @@ public class VehicleExportService {
     public ExportFile export(ExportFormat format, Long id, Long ownerId, String name, String status, java.time.Instant from, java.time.Instant to) {
         if (id != null && id <= 0 || ownerId != null && ownerId <= 0 || from != null && to != null && from.isAfter(to))
             throw new ExportException(ExportException.Reason.INVALID_FILTER);
-        
+
         if (ownerId != null && !users.existsById(ownerId)) throw new ExportException(ExportException.Reason.NOT_FOUND);
         var filters=new ArrayList<String>();
         if(id!=null)filters.add("ID: "+id);

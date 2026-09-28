@@ -176,4 +176,3 @@ Evidência transversal: `ExportHttpIntegrationTest` executa as queries reais dos
 | BACK-476 | Não existem exports finais isolados de UserRole e RolePermission quando sua finalidade já está atendida pela visão agregada. | UserAccessExportService; UserAccessExportJpaQuery; UserQuery | ExportHttpIntegrationTest + inspeção de projeções/contratos | Concluído |
 | BACK-476 | OpenAPI, autorização, headers de download, erros HTTP e testes estão cobertos. | UserAccessExportService; UserAccessExportJpaQuery; UserQuery | ExportHttpIntegrationTest + inspeção de projeções/contratos | Concluído |
 | BACK-476 | ./mvnw test e ./mvnw verify passam. | UserAccessExportService; UserAccessExportJpaQuery; UserQuery | Execuções completas registradas em validation.md | Concluído |
-

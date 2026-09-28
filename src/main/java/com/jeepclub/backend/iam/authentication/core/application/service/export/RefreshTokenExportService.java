@@ -11,13 +11,13 @@ public class RefreshTokenExportService {
     private final RefreshTokenExportQuery query;
     private final ExportRenderer renderer;
     private final com.jeepclub.backend.iam.identity.api.module.UserQuery users;
-    
+
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
     public ExportFile export(ExportFormat format, Long id, Long ownerId, String name, String status, java.time.Instant from, java.time.Instant to) {
         if (id != null && id <= 0 || ownerId != null && ownerId <= 0 || from != null && to != null && from.isAfter(to))
             throw new ExportException(ExportException.Reason.INVALID_FILTER);
         if (status != null && !List.of("ACTIVE", "ROTATED", "REVOKED").contains(status)) throw new ExportException(ExportException.Reason.INVALID_FILTER);
-        
+
         if(ownerId!=null && !users.existsById(ownerId))throw new ExportException(ExportException.Reason.NOT_FOUND);
         var filters=new ArrayList<String>();
         if(id!=null)filters.add("ID: "+id);
