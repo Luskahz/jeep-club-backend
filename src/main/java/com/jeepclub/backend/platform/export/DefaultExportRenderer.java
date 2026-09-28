@@ -10,6 +10,9 @@ import java.util.Locale;
 @Component
 public class DefaultExportRenderer implements ExportRenderer {
     private final Clock clock;
+    private com.jeepclub.backend.platform.logging.SystemLogService audit;
+    @org.springframework.beans.factory.annotation.Autowired
+    void audit(com.jeepclub.backend.platform.logging.SystemLogService audit) { this.audit=audit; }
     private final int csvLimit, pdfLimit, byteLimit;
     public DefaultExportRenderer(Clock clock,
             @Value("${exports.csv-max-rows:20000}") int csvLimit,
@@ -23,12 +26,15 @@ public class DefaultExportRenderer implements ExportRenderer {
         Instant generated = clock.instant();
         var output = new LimitedOutput(byteLimit);
         int[] count = {0};
+        long[] characters={0};
         try {
             if (format == ExportFormat.CSV) {
                 var writer = new OutputStreamWriter(output, StandardCharsets.UTF_8);
                 writer.write('\uFEFF'); CsvExportWriter.line(writer, document.columns());
                 document.rows().read(row -> {
                     check(row, document, ++count[0], csvLimit);
+                    characters[0]+=row.cells().stream().mapToLong(String::length).sum();
+                    if(characters[0]>4_000_000)throw new ExportException(ExportException.Reason.LIMIT);
                     try { CsvExportWriter.line(writer,row.cells()); writer.flush(); }
                     catch (IOException e) { throw new UncheckedIOException(e); }
                 });
@@ -37,6 +43,8 @@ public class DefaultExportRenderer implements ExportRenderer {
                 try (var pdf = new PdfExportWriter(document, generated)) {
                     document.rows().read(row -> {
                         check(row, document, ++count[0], pdfLimit);
+                        characters[0]+=row.cells().stream().mapToLong(String::length).sum();
+                        if(characters[0]>4_000_000)throw new ExportException(ExportException.Reason.LIMIT);
                         try { pdf.row(row); } catch (IOException e) { throw new UncheckedIOException(e); }
                     });
                     pdf.save(output);
@@ -44,6 +52,13 @@ public class DefaultExportRenderer implements ExportRenderer {
             }
         } catch (IOException | UncheckedIOException e) {
             throw new ExportException(ExportException.Reason.GENERATION);
+        }
+        if (audit != null) {
+            var authentication=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            Long actor=authentication!=null && authentication.getPrincipal() instanceof com.jeepclub.backend.platform.security.principal.UserPrincipal principal ? principal.getUserId() : null;
+            if(actor==null) throw new ExportException(ExportException.Reason.GENERATION);
+            audit.recordRequired(new com.jeepclub.backend.platform.logging.SystemLogEvent(actor,"EXPORT_"+document.filename(),"GET","/exports/"+document.filename(),200,
+                com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,generated));
         }
         String stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC).format(generated);
         return new ExportFile(document.filename()+"-"+stamp+"."+format.name().toLowerCase(Locale.ROOT),

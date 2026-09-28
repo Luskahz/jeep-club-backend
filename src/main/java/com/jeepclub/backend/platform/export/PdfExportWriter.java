@@ -45,6 +45,7 @@ final class PdfExportWriter implements AutoCloseable {
         if(y<120) page();
         text("Registro " + (++rows),11,500);
         for(int i=0;i<row.cells().size();i++) {
+            if(row.group()!=null && row.groupedHeaderColumns().contains(i))continue;
             var values=wrap(row.cells().get(i).isEmpty()?"—":row.cells().get(i),335,10);
             var labels=wrap(document.columns().get(i),155,10);
             int count=Math.max(values.size(),labels.size());
