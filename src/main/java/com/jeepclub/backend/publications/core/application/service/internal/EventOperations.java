@@ -99,6 +99,9 @@ public class EventOperations {
         return operations.guests(event).stream().filter(g -> g.id().equals(id)).findFirst().orElseThrow(() -> error("EVENT_GUEST_REQUEST_NOT_FOUND"));
     }
     public EventGuestRequest requestGuest(Event event, Long actor, Long vehicle, String cpf, boolean administrative) {
+        return requestGuest(event,actor,vehicle,cpf,administrative,null);
+    }
+    public EventGuestRequest requestGuest(Event event, Long actor, Long vehicle, String cpf, boolean administrative, String guestName) {
         requireOpen(event);
         if (!administrative) {
             var registration = registration(event.getId(), actor);
@@ -106,7 +109,7 @@ public class EventOperations {
                 throw error("EVENT_VEHICLE_NOT_OWNED");
             guestSpace(event.getId(), vehicle);
         }
-        var guest = new EventGuestRequest(null, event.getId(), actor, vehicle, cpf, EventGuestRequest.Status.PENDING, administrative, null, now(), null, null);
+        var guest = new EventGuestRequest(null, event.getId(), actor, vehicle, cpf, EventGuestRequest.Status.PENDING, administrative, null, now(), null, null, guestName);
         if (operations.guests(event.getId()).stream().anyMatch(g -> g.cpf().equals(guest.cpf()))) throw error("EVENT_GUEST_ALREADY_EXISTS");
         return operations.save(guest);
     }

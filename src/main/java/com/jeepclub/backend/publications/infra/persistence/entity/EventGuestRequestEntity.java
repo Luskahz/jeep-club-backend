@@ -8,6 +8,7 @@ import lombok.*;
 public class EventGuestRequestEntity {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
     @Version private Long version;
+    @Column(name="guest_name",length=150) private String guestName;
     @Column(name="event_id", nullable=false) private Long eventId;
     @Column(name="requester_user_id", nullable=false) private Long requesterUserId;
     @Column(name="vehicle_id", nullable=true) private Long vehicleId;

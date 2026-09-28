@@ -53,6 +53,10 @@ public class EventService {
         for (var allocation : allocations) if (events.spare(id, allocation.vehicleId()) < 0) throw error("EVENT_VEHICLE_CAPACITY_EXCEEDED");
         return replacement;
     }
+    public EventGuestRequest requestGuest(Long id, Long user, Long vehicle, String cpf, String guestName) {
+        if(guestName==null || guestName.isBlank() || guestName.trim().length()>150)throw new IllegalArgumentException("Guest name required.");
+        return events.requestGuest(events.locked(id),user,vehicle,cpf,false,guestName);
+    }
     public EventGuestRequest requestGuest(Long id, Long user, Long vehicle, String cpf) {
         return events.requestGuest(events.locked(id), user, vehicle, cpf, false);
     }

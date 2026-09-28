@@ -53,12 +53,13 @@ public class EventOperationsAdapter implements EventOperationsRepository {
     }
     public List<EventGuestRequest> guests(Long id) {
         return guests.findByEventId(id).stream().map(e -> new EventGuestRequest(e.getId(), e.getEventId(), e.getRequesterUserId(),
-            e.getVehicleId(), e.getCpf(), EventGuestRequest.Status.valueOf(e.getStatus()), e.isAdministrative(), e.getReviewerId(), e.getCreatedAt(), e.getReviewedAt(), e.getRejectionReason())).toList();
+            e.getVehicleId(), e.getCpf(), EventGuestRequest.Status.valueOf(e.getStatus()), e.isAdministrative(), e.getReviewerId(), e.getCreatedAt(), e.getReviewedAt(), e.getRejectionReason(), e.getGuestName())).toList();
     }
     public EventGuestRequest save(EventGuestRequest r) {
         var e = r.id() == null ? new EventGuestRequestEntity() : guests.findById(r.id()).orElseThrow();
         e.setEventId(r.eventId()); e.setRequesterUserId(r.requesterUserId()); e.setVehicleId(r.vehicleId());
         e.setApprovedVehicleId(r.status() == EventGuestRequest.Status.APPROVED ? r.vehicleId() : null);
+        e.setGuestName(r.guestName());
         e.setCpf(r.cpf()); e.setStatus(r.status().name()); e.setAdministrative(r.administrative());
         e.setReviewerId(r.reviewerId()); e.setCreatedAt(r.createdAt()); e.setReviewedAt(r.reviewedAt()); e.setRejectionReason(r.rejectionReason());
         return r.identified(guests.saveAndFlush(e).getId());

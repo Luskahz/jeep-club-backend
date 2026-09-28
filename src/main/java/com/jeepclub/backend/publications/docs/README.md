@@ -226,7 +226,7 @@ As capacidades implementadas do Event incluem:
 - convidados aprovados;
 - referências opcionais a uma ou mais cobranças de Billing;
 - operação administrativa de participantes, ocupação e vagas;
-- acesso emergencial e permissionado a dados de Health durante o evento.
+- acesso emergencial e permissionado a dados de Health para participantes do evento.
 
 Essas integrações foram implementadas pela BACK-399 e suas subtasks, sobre a fundação
 polimórfica da BACK-397. As superfícies administrativas e de membro são separadas;
@@ -322,7 +322,7 @@ contam como pessoas confirmadas. Guests só ocupam após aprovação. A próxima
 reflete mutações; dados clínicos não entram no dashboard. Billing e Vehicles são
 consultados em lote para essa projeção; as coleções JPA de alocação usam batch fetch.
 
-Health exige IN_PROGRESS efetivo, participante CONFIRMED USER/DEPENDENT e permission
+Health exige participante CONFIRMED USER/DEPENDENT e permission
 emergencial específica. Dependents são novamente validados no módulo proprietário.
 Consulta é individual, read-only, por `EmergencyMedicalProfileQuery`. Perfil ausente
 gera erro controlado. Tentativas que chegam ao caso de uso gravam ator, Event,
@@ -648,3 +648,10 @@ Permanecem fora desta Story:
 
 Este README permanece a entrada principal do bounded context; os contratos públicos
 acima descrevem o runtime implementado.
+
+
+## Exportações CSV/PDF — BACK-410
+
+Export cadastral de notices/services/events e históricos separados; solicitações de serviço/alteração são produtos distintos. Events incluem resumo de regras financeiras. EventPresentationQuery oferece ID, título e início em lote. Relatórios por Event: manifesto, transporte, financeiro, controle de acesso, cobertura médica e pós-evento. Reutilizam AdminEventService.dashboard e contratos públicos batch. O manifesto respeita cada alocação e não duplica MEMBER. guestName passa a ser obrigatório nas novas requisições HTTP (1–150 caracteres); registros legados com nome nulo continuam legíveis como nome não informado. O PDF emergencial é individual, exige vínculo confirmado, ownership, permission emergencial e recordRequired; lifecycle não bloqueia a leitura. Novas permissões administrativas são PUBLICATIONS_EXPORT e a emergencial existente.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

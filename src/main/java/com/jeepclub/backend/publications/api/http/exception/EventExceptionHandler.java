@@ -7,7 +7,7 @@ import com.jeepclub.backend.billing.api.module.EventBillingException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.dao.DataAccessException;
-@RestControllerAdvice(assignableTypes={AdminEventController.class, EventController.class})
+@RestControllerAdvice(assignableTypes={AdminEventController.class, com.jeepclub.backend.publications.api.http.controller.admin.AdminEventReportController.class, EventController.class})
 public class EventExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(com.jeepclub.backend.shared.storage.exception.InvalidStorageKeyException.class)
     public ResponseEntity<ApiErrorResponse> imageInvalid(Exception e) {

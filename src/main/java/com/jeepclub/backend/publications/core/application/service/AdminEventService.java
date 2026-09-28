@@ -105,6 +105,10 @@ public class AdminEventService {
     public List<EventGuestRequest> guests(Long id) { events.locked(id); return operations.guests(id); }
     public long visits(String cpf) { return operations.approvedVisits(cpf); }
     public Map<String,Long> visits(Collection<String> cpfs) { return operations.approvedVisits(cpfs); }
+    public EventGuestRequest createGuest(Long id, Long actor, String cpf, String guestName) {
+        if(guestName==null || guestName.isBlank() || guestName.trim().length()>150)throw new IllegalArgumentException("Guest name required.");
+        return events.requestGuest(events.locked(id),actor,null,cpf,true,guestName);
+    }
     public EventGuestRequest createGuest(Long id, Long actor, String cpf) { return events.requestGuest(events.locked(id), actor, null, cpf, true); }
     public EventGuestRequest reviewGuest(Long id, Long guest, Long actor, boolean approve, String reason) {
         return events.reviewGuest(events.locked(id), guest, approve, null, actor, reason);
@@ -156,7 +160,7 @@ public class AdminEventService {
     }
     private EmergencyMedicalProfileQuery.Profile readHealth(Long id, MedicalProfileOwner type, Long target) {
         var event = events.locked(id);
-        if (event.effectiveStatus(events.now()) != EventStatus.IN_PROGRESS) throw error("EVENT_HEALTH_ACCESS_NOT_ALLOWED");
+        // Temporal lifecycle is context only: a real emergency must remain accessible.
         var registrations = events.refreshed(id).stream().filter(r -> r.status() == EventRegistration.Status.CONFIRMED).toList();
         boolean participant = type == MedicalProfileOwner.USER ? registrations.stream().anyMatch(r -> r.userId().equals(target))
             : registrations.stream().anyMatch(r -> (r.unallocatedDependentIds().contains(target) || r.allocations().stream().anyMatch(a -> a.dependentIds().contains(target))) && dependents.isActiveDependentOfUser(target, r.userId()));
