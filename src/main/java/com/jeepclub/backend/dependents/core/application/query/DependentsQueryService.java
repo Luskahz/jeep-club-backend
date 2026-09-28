@@ -13,6 +13,19 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DependentsQueryService implements DependentsQuery {
+    public java.util.List<Details> findDetailsByIds(Collection<Long> ids) {
+        if(ids==null || ids.isEmpty())return java.util.List.of();
+        if(ids.size()>500)throw new IllegalArgumentException("Maximum batch: 500");
+        return dependentRepository.findByIds(ids).stream().map(DependentsQueryService::details).toList();
+    }
+    public java.util.List<Details> findDetailsByUser(Long userId,long afterId,int limit) {
+        if(limit<1 || limit>500 || afterId<0)throw new IllegalArgumentException("Invalid batch");
+        return dependentRepository.findByUserAfterId(userId,afterId,limit).stream().map(DependentsQueryService::details).toList();
+    }
+    private static Details details(com.jeepclub.backend.dependents.core.domain.model.Dependent d) {
+        return new Details(d.getId(),d.getUserId(),d.getName(),d.getCpf(),d.getRelationshipType().name(),d.getStatus().name());
+    }
+
 
     private final DependentRepository dependentRepository;
 

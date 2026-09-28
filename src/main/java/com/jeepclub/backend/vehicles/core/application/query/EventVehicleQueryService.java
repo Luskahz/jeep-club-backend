@@ -10,6 +10,14 @@ import java.util.Optional;
 
 @Service @RequiredArgsConstructor
 public class EventVehicleQueryService implements EventVehicleQuery {
+    @Transactional(readOnly=true)
+    public java.util.List<Details> findDetailsBatch(java.util.Collection<Long> ids) {
+        if(ids.isEmpty())return java.util.List.of();
+        if(ids.size()>500)throw new IllegalArgumentException("Maximum batch: 500");
+        return vehicles.findAllByIds(ids).stream().filter(v->v.getStatus()==VehicleStatus.ACTIVE)
+            .map(v->new Details(v.getId(),v.getOwnerId(),v.getNickname(),v.getPlate(),v.getBrand(),v.getModel(),v.getSeatingCapacity())).toList();
+    }
+
     private final VehicleRepository vehicles;
     @Transactional(readOnly = true)
     public java.util.List<VehicleCapacity> findActiveBatch(java.util.Collection<Long> ids) {

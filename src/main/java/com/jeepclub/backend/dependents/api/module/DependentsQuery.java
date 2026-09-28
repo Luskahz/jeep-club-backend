@@ -4,6 +4,10 @@ import java.util.Collection;
 import java.util.Set;
 
 public interface DependentsQuery {
+    record Details(Long id, Long userId, String name, String cpf, String relationshipType, String status) {}
+    java.util.List<Details> findDetailsByIds(Collection<Long> ids);
+    java.util.List<Details> findDetailsByUser(Long userId, long afterId, int limit);
+
 
     boolean existsById(Long dependentId);
 

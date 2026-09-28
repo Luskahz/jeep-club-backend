@@ -116,3 +116,10 @@ estado de exclusão. Eles não descrevem o runtime atual: exclusão é snapshot
 histórico seguido de hard delete e `ToolStatus` contém somente `ACTIVE` e
 `INACTIVE`. Essas tarefas continuam inalteradas e precisam ser revalidadas
 antes de uma futura suíte definitiva.
+
+
+## Exportações CSV/PDF — BACK-410
+
+TOOLS_TOOL_EXPORT permite todos, id, userId, name (contains sem distinguir caixa), status e histórico separado. PDF por usuário agrupa a identificação de Identity. Foto é representada apenas por existência.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
