@@ -8,6 +8,9 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface UserRepository {
+    List<User> findByIds(Collection<Long> ids);
+    List<User> findAfterId(long afterId, int limit);
+
 
     User create(User user);
 

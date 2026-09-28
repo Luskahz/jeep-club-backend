@@ -12,6 +12,9 @@ import java.util.Set;
  * the administrative activity methods exposed here.</p>
  */
 public interface UserQuery {
+    List<UserDetails> findByIds(Collection<Long> ids);
+    List<UserDetails> findAfterId(long afterId, int limit);
+
 
     Optional<UserDetails> findById(Long userId);
 

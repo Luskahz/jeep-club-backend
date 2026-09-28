@@ -173,3 +173,10 @@ normalização, lifecycle transacional, read model administrativo, paginação,
 filtros, sparse fields, sort e persistência. Alterações futuras devem escolher
 cobertura proporcional conforme as
 [regras globais](../../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
+
+
+## Exportações CSV/PDF — BACK-410
+
+UserQuery.findByIds e findAfterId oferecem leitura administrativa em lote de até 500, incluindo cadastros desativados para auditoria. Export mantém filtros AdminUserFilter existentes; foto aparece somente como booleano. IDENTITY_USER_EXPORT é independente de READ.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
