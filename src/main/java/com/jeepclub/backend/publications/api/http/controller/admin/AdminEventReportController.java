@@ -65,8 +65,7 @@ public class AdminEventReportController {
     }
     @GetMapping(value="/admin/events/{eventId}/health/{type}/{target}/export",produces="application/pdf")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ')") @RequiredPermission("PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="200", description="PDF individual para download", content=@io.swagger.v3.oas.annotations.media.Content(mediaType="application/pdf",schema=@io.swagger.v3.oas.annotations.media.Schema(type="string",format="binary")))
-    @Operation(summary="Exportar ficha médica emergencial individual",description="PDF individual. Exige Event válido, participante confirmado e ownership válido para dependente. Lifecycle não bloqueia acesso. Auditoria síncrona obrigatória antes de liberar dados. Não existe export clínico em massa.") @ExportResponse
+    @Operation(summary="Exportar ficha médica emergencial individual",description="PDF individual. Exige Event válido, participante confirmado e ownership válido para dependente. Lifecycle não bloqueia acesso. Auditoria síncrona obrigatória antes de liberar dados. Não existe export clínico em massa.") @EmergencyPdfResponse
     public ResponseEntity<byte[]> emergency(@PathVariable @Positive Long eventId,@PathVariable MedicalProfileOwner type,@PathVariable @Positive Long target,@AuthenticationPrincipal UserPrincipal principal) {
         return ExportDownload.response(service.emergency(eventId,type,target,principal.getUserId()));
     }

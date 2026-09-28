@@ -134,7 +134,8 @@ class EventHttpIntegrationTest {
                         ? "PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ" : "PUBLICATIONS_EXPORT");
                     var content = operation.get("responses").get("200").get("content");
                     assertThat(content.has("application/pdf")).isTrue();
-                    if (!path.contains("/health/")) assertThat(content.has("text/csv")).isTrue();
+                    if (path.contains("/health/")) assertThat(content.has("text/csv")).isFalse();
+                    else assertThat(content.has("text/csv")).isTrue();
                 } else {
                     assertThat(permission).startsWith("PUBLICATIONS_EVENT_");
                     assertThat(operation.get("responses").get("409").get("content").has("application/problem+json")).isTrue();
