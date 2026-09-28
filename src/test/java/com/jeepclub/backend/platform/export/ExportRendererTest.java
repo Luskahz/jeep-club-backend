@@ -59,4 +59,15 @@ class ExportRendererTest {
         var d=new ExportDocument("../injection\r\n","Teste",List.of("ID"),List.of(),sink->{});
         assertThatThrownBy(()->renderer.render(d,ExportFormat.CSV)).isInstanceOf(ExportException.class);
     }
+    @Test void mandatoryAuditFailurePreventsFileDelivery() {
+        var audit=org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class);
+        renderer.audit(audit);
+        var principal=org.mockito.Mockito.mock(com.jeepclub.backend.platform.security.principal.UserPrincipal.class);
+        org.mockito.Mockito.when(principal.getUserId()).thenReturn(42L);
+        org.springframework.security.core.context.SecurityContextHolder.getContext().setAuthentication(
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(principal,null,List.of()));
+        org.mockito.Mockito.doThrow(new IllegalStateException("Audit unavailable")).when(audit).recordRequired(org.mockito.ArgumentMatchers.any());
+        try {assertThatThrownBy(()->renderer.render(document("clinical"),ExportFormat.PDF)).isInstanceOf(IllegalStateException.class);}
+        finally {org.springframework.security.core.context.SecurityContextHolder.clearContext();}
+    }
 }

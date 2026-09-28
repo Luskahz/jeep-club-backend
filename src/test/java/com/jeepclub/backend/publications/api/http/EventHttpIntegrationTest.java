@@ -128,9 +128,18 @@ class EventHttpIntegrationTest {
             var item = document.get("paths").get(path);
             for (String method : item.propertyNames()) {
                 var operation = item.get(method);
-                assertThat(operation.get("x-required-permissions").get(0).asString()).startsWith("PUBLICATIONS_EVENT_");
+                String permission = operation.get("x-required-permissions").get(0).asString();
+                if (path.endsWith("/export")) {
+                    assertThat(permission).isEqualTo(path.contains("/health/")
+                        ? "PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ" : "PUBLICATIONS_EXPORT");
+                    var content = operation.get("responses").get("200").get("content");
+                    assertThat(content.has("application/pdf")).isTrue();
+                    if (!path.contains("/health/")) assertThat(content.has("text/csv")).isTrue();
+                } else {
+                    assertThat(permission).startsWith("PUBLICATIONS_EVENT_");
+                    assertThat(operation.get("responses").get("409").get("content").has("application/problem+json")).isTrue();
+                }
                 assertThat(operation.get("responses").has("403")).isTrue();
-                assertThat(operation.get("responses").get("409").get("content").has("application/problem+json")).isTrue();
                 checked++;
             }
         }
