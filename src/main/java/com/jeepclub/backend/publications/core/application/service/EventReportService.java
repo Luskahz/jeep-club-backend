@@ -54,7 +54,7 @@ public class EventReportService {
         if(status!=null)metadata.add("Inscrição: "+status);if(type!=null)metadata.add("Tipo: "+type);if(withVehicle!=null)metadata.add("Com veículo: "+ExportValues.text(withVehicle));
         // The shareable access/coverage files intentionally omit financial and administrative summaries.
         if(product!=Product.ACCESS && product!=Product.HEALTH_COVERAGE) {
-            metadata.add("Inscrições: "+registrations.size()+"; confirmados: "+registrations.stream().filter(r->r.status()==EventRegistration.Status.CONFIRMED).count());
+            metadata.add("Inscrições: "+registrations.size()+"; confirmados: "+registrations.stream().filter(r->r.status()==EventRegistration.Status.CONFIRMED).count()+"; cancelados: "+registrations.stream().filter(r->r.status()==EventRegistration.Status.CANCELLED).count());
             metadata.add("Dependentes: "+dashboard.dependents()+"; convidados pendentes: "+dashboard.guestsPending()+"; aprovados: "+dashboard.guestsApproved());
             metadata.add("Pessoas: "+dashboard.totalPeople()+"; veículos: "+dashboard.vehicles()+"; capacidade: "+dashboard.totalCapacity()+"; vagas: "+dashboard.availableSeats());
             metadata.add("Cobranças não pagas: "+dashboard.unpaidCharges()+"; aguardando validação: "+dashboard.pendingValidation()+"; pós-cutoff: "+dashboard.postCutoffPending());

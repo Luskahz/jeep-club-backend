@@ -14,7 +14,9 @@ public class EventFinanceReportJpaQuery implements EventFinanceReportRepository 
     }
     public Map<String,Long> paymentCounts(Long id) {
         var rows=em.createQuery("select p.status,count(p.id) from MemberPaymentEntity p join MemberChargeEntity c on c.id=p.memberChargeId join EventChargeContextEntity x on x.cycleId=c.chargeCycleId where x.eventId=:id group by p.status",Object[].class).setParameter("id",id).getResultList();
-        var result=new java.util.TreeMap<String,Long>();rows.forEach(t->result.put(t[0].toString(),(Long)t[1]));return result;
+        var result=new java.util.TreeMap<String,Long>();rows.forEach(t->result.put(t[0].toString(),(Long)t[1]));
+        for(var status:com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus.values())result.putIfAbsent(status.name(),0L);
+        return result;
     }
     public void requireWithinLimit(Long id) {
         long charges=em.createQuery("select count(c.id) from MemberChargeEntity c join EventChargeContextEntity x on x.cycleId=c.chargeCycleId where x.eventId=:id",Long.class).setParameter("id",id).getSingleResult();
