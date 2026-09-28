@@ -19,7 +19,9 @@ No fluxo específico de Event, a inscrição garante o assignment daquele Event,
 um único `EventChargeContext`/ciclo para Event + definição e uma MemberCharge
 por usuário/ciclo. Não resolve ALL_MEMBERS, USER, ROLE ou outro Event da definição.
 O lock da definição serializa a primeira criação e os incrementos. Não é preciso
-estar CONFIRMED para receber a dívida. Cancelamento usa os contextos daquele Event.
+estar CONFIRMED para receber a dívida. O cancelamento do Event consulta apenas os
+contextos daquele Event e cancela os ciclos ainda `GENERATED`; ciclos que já foram
+finalizados pela API administrativa de Billing ficam `FINISHED`, com suas cobranças.
 
 ## Encerramento do ciclo
 
@@ -63,6 +65,6 @@ O administrador aprova, rejeita, marca como devolvido, expira ou cancela conform
 a máquina de estados. O código não executa expiração automática.
 
 Cancelamento não cria refund para PENDING_VALIDATION. Confirmar esse pagamento
-depois garante ELIGIBLE sem duplicar refund ativo/concluído, preservando a janela
-de 30 dias contada do cancelamento. Confirmar após essa janela não a reabre:
-a elegibilidade criada já está temporalmente expirada para request/approve.
+depois cria ELIGIBLE sem duplicar refund ativo/concluído, preservando a janela
+de 30 dias contada do cancelamento. Se a confirmação ocorrer depois da janela,
+o registro já nasce com elegibilidade temporalmente expirada para request/approve.

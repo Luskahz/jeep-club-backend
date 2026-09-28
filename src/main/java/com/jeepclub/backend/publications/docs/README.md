@@ -4,9 +4,12 @@ Leia primeiro a [governança global](../../../../../../../../docs/architecture/R
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../docs/architecture/feature-development-rules.md).
 
-Este documento registra as decisões arquiteturais e de domínio estáveis do bounded context
-`publications`. O OpenAPI será a fonte de verdade dos contratos HTTP à medida que as
-Stories de implementação adicionarem controllers, requests, responses, permissions e erros.
+Este documento registra o comportamento mergeado do bounded context `publications`.
+O OpenAPI gerado é a fonte dos contratos HTTP de controllers, requests, responses,
+permissions e erros.
+
+Os riscos técnicos confirmados após BACK-71 estão no
+[relatório de auditoria pós-implementação](post-implementation-audit.md).
 
 ## Responsabilidade e linguagem do domínio
 
@@ -53,8 +56,8 @@ entity, repository ou service interno de outro módulo.
 
 A referência canônica do autor é o `userId` interno.
 
-Quando os fluxos HTTP forem implementados, o autor de operações de membro deve vir do
-`UserPrincipal.userId`; o cliente não pode escolher arbitrariamente o autor pelo payload.
+O autor de operações de membro vem do `UserPrincipal.userId`; o cliente não pode
+escolher arbitrariamente o autor pelo payload.
 
 Não copiar nome, CPF, e-mail ou outros dados de Identity para a Publication apenas por
 conveniência de leitura.
@@ -64,7 +67,7 @@ conveniência de leitura.
 A classe base deve concentrar somente atributos e comportamentos realmente comuns às
 especializações.
 
-O modelo final deve contemplar, no mínimo, os conceitos de:
+O modelo implementado contempla:
 
 - identificador;
 - autor/originador;
@@ -135,6 +138,10 @@ As seguintes regras continuam estáveis:
 - finalizar/cancelar uma especialização não implica automaticamente arquivar ou apagar a
   Publication;
 - um Event pode estar `FINISHED` e continuar publicado como registro social do evento.
+
+Na superfície HTTP atual, somente Notice expõe comando de arquivamento. Event e
+ServicePublication não possuem rota de archive; finalizar/cancelar Event não muda o
+estado editorial e um Event ainda `PUBLISHED` permanece no feed e nas interações.
 
 Toda lógica dependente de "agora" deve usar o `Clock` global/injetado. Não esconder
 `Instant.now()`/equivalente dentro do domínio.
@@ -210,7 +217,7 @@ payloads, statuses e erros HTTP desta superfície.
 `Event` representa um evento real do Jeep Club e possui lifecycle próprio separado do
 lifecycle editorial.
 
-As capacidades funcionais já definidas para evolução do Event incluem:
+As capacidades implementadas do Event incluem:
 
 - data de realização;
 - inscrição de membros;
@@ -221,7 +228,7 @@ As capacidades funcionais já definidas para evolução do Event incluem:
 - operação administrativa de participantes, ocupação e vagas;
 - acesso emergencial e permissionado a dados de Health durante o evento.
 
-Essas integrações são implementadas pela BACK-399 e suas subtasks, sobre a fundação
+Essas integrações foram implementadas pela BACK-399 e suas subtasks, sobre a fundação
 polimórfica da BACK-397. As superfícies administrativas e de membro são separadas;
 somente as rotas de membro exigem também `@RequiresMembership`. As authorities
 `PUBLICATIONS_EVENT_*` são específicas por ação, com enforcement e OpenAPI alinhados.
@@ -242,7 +249,9 @@ pendentes nasce PENDING_PAYMENT. Consultar a própria inscrição, dashboard ou
 operação que exige confirmação reavalia requisitos; CONFIRMED nunca é rebaixado
 pela situação financeira posterior. Cancelamento de inscrição preserva a linha,
 não permite reinscrição duplicada e é limitado ao período OPEN. Cancelar o Event
-preserva as inscrições como fatos e cancela seus ciclos financeiros.
+preserva as inscrições como fatos e solicita ao Billing o cancelamento dos ciclos
+financeiros próprios ainda em estado `GENERATED`. Ciclos já `FINISHED` não são
+cancelados por esse comando.
 
 Dependents ativos próprios são validados pelo contrato público de Dependents.
 Podem estar alocados a um veículo ou presentes em `unallocatedDependentIds`.
@@ -326,10 +335,13 @@ protegem Event/member, Event/CPF, Event/veículo aprovado, oferta guest/vehicle,
 guest selecionado e ocupante por inscrição. Corridas são exercitadas com transações
 independentes. Handlers Event são limitados aos seus controllers e retornam RFC 9457.
 
-Hard delete exige estado terminal quando há inscrições. Snapshot preserva agenda,
-estado explícito e dados editoriais; registrations, rules, guests e offers permanecem
-congelados por referência escalar ao ID removido. Billing mantém seus contextos e
-fatos sem FK/cascade destrutivo. A mídia física global não é removida.
+Hard delete exige estado terminal quando há inscrições. O snapshot preserva agenda,
+estado operacional persistido e dados editoriais. O estado temporal retornado pela API
+é calculado por `effectiveStatus(now)` e pode diferir do estado persistido no snapshot.
+Registrations, rules, guests e offers não são copiados para `publication_event_history`:
+suas linhas operacionais permanecem por referência escalar ao ID removido, sem FK para
+`publications`, e deixam de ser alcançáveis pelas rotas do Event excluído. Billing
+mantém seus contextos e fatos sem FK/cascade destrutivo. A mídia física global não é removida.
 Listagens administrativas de Event, guests e ofertas usam PageResponse. Coleções
 operacionais são ordenadas por ID e paginadas depois da resolução de elegibilidade;
 o dashboard é uma projeção completa do Event. Contratos exatos ficam no OpenAPI.
@@ -418,8 +430,8 @@ As demais regras estáveis são:
 - o serviço pertence ao membro criador;
 - permissions HTTP são distintas para request inicial, change request, leitura e delete de Service;
 - pode receber imagens, curtidas e comentários por ser uma Publication;
-- creator e administrador autorizado poderão possuir fluxos de exclusão conforme contrato
-  da Story;
+- creator pode excluir o próprio Service e administrador autorizado pode excluir qualquer
+  Service, cada um pela permission específica;
 - negociação e pagamento acontecem **fora do sistema**.
 
 ServicePublication não cria `ChargeDefinition`, `MemberCharge`, `MemberPayment`,
@@ -436,7 +448,7 @@ Publication não concede uma permission genérica que autorize todas as especial
 As operações devem ter permissions explícitas por ação e por domínio quando aplicável. Ter
 permission para criar Notice não implica permission para criar Event ou ServicePublication.
 
-O enforcement HTTP futuro usa o mecanismo global de Authorization/`@PreAuthorize`; não
+O enforcement HTTP usa o mecanismo global de Authorization/`@PreAuthorize`; não
 criar uma tabela local `ClubPublicationPermission` como no desenho histórico antigo.
 
 `@RequiredPermission`, quando usado, permanece documental/OpenAPI e deve refletir a
@@ -449,7 +461,7 @@ O domínio não depende de JPA.
 Entities, repositories JPA, mappers e adapters pertencem a
 `publications.infra.persistence`.
 
-A estratégia de persistência deve suportar:
+A estratégia de persistência suporta:
 
 - dados comuns em Publication;
 - evolução independente de Notice, Event e ServicePublication;
@@ -522,8 +534,8 @@ momento da exclusão, incluindo:
 
 O histórico não é um estado operacional reativável e não substitui a tabela atual.
 
-Hard delete da Publication remove suas associações operacionais do bounded context, mas não
-deve assumir ownership exclusivo do arquivo armazenado no storage global.
+Hard delete da Publication remove comentários e curtidas operacionais, mas o snapshot
+histórico não inclui essas interações. A exclusão não remove o arquivo no storage global.
 
 O histórico também usa JOINED: `publication_history` guarda o snapshot comum,
 `publication_notice_history`, `publication_event_history` e
@@ -548,9 +560,9 @@ e aprovação concorrente sem duplicar Service.
 
 ## Boundaries conhecidos
 
-As integrações previstas devem respeitar os seguintes owners:
+Fronteiras de ownership relevantes:
 
-| Contexto | Owner | Uso futuro por Publications |
+| Contexto | Owner | Uso por Publications |
 | --- | --- | --- |
 | Identity/User | Identity | validar/identificar autor ou membro por contrato público |
 | Billing | Billing | cobranças e pagamentos relacionados a Event |

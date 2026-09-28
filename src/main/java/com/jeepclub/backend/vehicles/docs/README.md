@@ -173,6 +173,9 @@ administrativa. `vehicles.api.module.EventVehicleQuery` expõe somente ID, owner
 e `seatingCapacity` de veículos ativos, incluindo consulta em lote. A capacidade
 canônica existente representa todas as pessoas, incluindo motorista; não foi
 criado campo paralelo. Publications valida alocação usando esse contrato.
+Os fluxos atuais de edição e hard delete de Vehicle não consultam inscrições de
+Event. Uma redução posterior de `seatingCapacity` ou exclusão do veículo não
+revalida nem remove alocações já persistidas em Publications.
 Não há acesso direto a repository, entity ou service interno de Identity.
 
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter

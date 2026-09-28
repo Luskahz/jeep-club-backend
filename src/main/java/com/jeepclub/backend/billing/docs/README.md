@@ -31,7 +31,7 @@ integrações consumidas estão descritas em [Fluxos](flows.md).
 
 Para Event, `EventChargeCatalogQuery` consulta definições ACTIVE/ONE_TIME,
 `EventBillingCommand` cria definição inline, garante assignment/ciclo/cobrança
-e cancela somente os ciclos daquele Event; `EventFinancialQuery` consulta
+e cancela os ciclos ainda `GENERATED` daquele Event; `EventFinancialQuery` consulta
 estado efetivo, estado de pagamento e instante da submissão, em lote.
 `evaluate` distingue também `CHARGE_NOT_FOUND`. Nenhum desses contratos expõe
 entity ou repository. Criação inline força ONE_TIME e AFTER_DUE_DATE.
