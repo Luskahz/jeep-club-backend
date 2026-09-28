@@ -24,11 +24,11 @@ import com.jeepclub.backend.memberships.api.security.RequiresMembership;
 @RestController @RequestMapping("/events") @RequiredArgsConstructor @RequiresMembership
 @Tag(name="Events", description="Member registration and own guest/ride operations. Identity comes from the authenticated principal.")
 @ApiResponses({
-    @ApiResponse(responseCode="400", description="Event validation, authorization or state error; RFC 9457 code identifies the reason.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
-    @ApiResponse(responseCode="401", description="Event validation, authorization or state error; RFC 9457 code identifies the reason.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
-    @ApiResponse(responseCode="403", description="Event validation, authorization or state error; RFC 9457 code identifies the reason.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
-    @ApiResponse(responseCode="404", description="Event validation, authorization or state error; RFC 9457 code identifies the reason.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
-    @ApiResponse(responseCode="409", description="Event validation, authorization or state error; RFC 9457 code identifies the reason.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class)))
+    @ApiResponse(responseCode="400", description="Invalid Event request or payload.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
+    @ApiResponse(responseCode="401", description="Authentication required.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
+    @ApiResponse(responseCode="403", description="Membership or operation permission required.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
+    @ApiResponse(responseCode="404", description="Event or related resource not found.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class))),
+    @ApiResponse(responseCode="409", description="Event state or concurrent persistence conflict.", content=@Content(mediaType="application/problem+json", schema=@Schema(implementation=ApiErrorResponse.class)))
 })
 
 public class EventController {

@@ -15,7 +15,7 @@ public final class PublicationFeedDTO {
     }
 
     @Schema(oneOf = {NoticeDetails.class, EventDetails.class, ServiceDetails.class},
-            description = "Subtype details selected by the type field. No administrative or financial data is included.")
+            description = "Subtype details selected by the type field. Service includes its advertised amount; no Billing debt, payment, guest or Health data is included.")
     public sealed interface Details permits NoticeDetails, EventDetails, ServiceDetails {}
     public record NoticeDetails() implements Details {}
     public record EventDetails(Instant startsAt, Instant endsAt, String status) implements Details {}

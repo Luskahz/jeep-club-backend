@@ -41,6 +41,15 @@
     `UNTIL_DAYS_AFTER_DUE_DATE` até a data calculada de tolerância;
     `AFTER_DUE_DATE` não possui limite final.
 
+No vínculo de Event, `participationCutoff` é um `Instant` de Publications e
+controla confirmação da inscrição. `financialDueDate` é um `LocalDate` opcional
+da regra do Event; quando informado, vira `ChargeCycle.dueDate` e
+`MemberCharge.dueDate`. Quando omitido, o ciclo usa a data UTC de `startsAt`
+como vencimento de referência. `paymentAllowedUntil` é derivado da política
+financeira: coincide com o vencimento para `UNTIL_DUE_DATE`, soma a tolerância
+para `UNTIL_DAYS_AFTER_DUE_DATE` e fica sem limite para `AFTER_DUE_DATE`.
+Essas datas não alteram retroativamente uma inscrição já `CONFIRMED`.
+
 ### Consulta pública para Membership
 
 `MembershipChargeQuery` recebe definição e usuário e resolve primeiro o ciclo
