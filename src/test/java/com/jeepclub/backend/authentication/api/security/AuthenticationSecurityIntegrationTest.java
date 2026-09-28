@@ -12,6 +12,7 @@ import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.shared.authorization.PermissionCode;
+import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +32,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -180,7 +183,7 @@ class AuthenticationSecurityIntegrationTest {
 
     @Test
     @Transactional
-    void positiveAdministrativePathVariableCurrentlyUsesInternalServerError() throws Exception {
+    void positiveAdministrativePathVariableReturnsValidationProblem() throws Exception {
         Instant now = Instant.now(clock);
         String cpf = "95846031722";
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
@@ -196,9 +199,44 @@ class AuthenticationSecurityIntegrationTest {
         grant(role, PermissionCode.AUTHENTICATION_SESSION_READ, now);
 
         mockMvc.perform(get("/authentication/admin/sessions/{sessionId}", 0)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+                        .header("X-Request-Id", "invalid-session-id"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(header().string("X-Request-Id", "invalid-session-id"))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.detail").value("One or more request fields are invalid."))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(result -> assertThat(result.getResolvedException())
+                        .isInstanceOf(ConstraintViolationException.class));
+    }
+
+    @Test
+    @Transactional
+    void positiveBillingRequestParameterReturnsValidationProblem() throws Exception {
+        Instant now = Instant.now(clock);
+        String cpf = "92374658105";
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData(
+                        "Query Validation", null, "query-validation@example.com", cpf,
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+        Long userId = userQuery.findByCpf(cpf).orElseThrow().id();
+        Role role = roleRepository.save(Role.create("query-validation", "Test role", now));
+        userRoleRepository.save(UserRole.create(userId, role.getId(), now));
+        grant(role, PermissionCode.BILLING_MEMBER_CHARGE_READ, now);
+
+        mockMvc.perform(get("/billing/member-charges")
+                        .param("userId", "0")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken()))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"));
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(result -> assertThat(result.getResolvedException())
+                        .isInstanceOf(ConstraintViolationException.class));
     }
 
     @Test
@@ -243,6 +281,12 @@ class AuthenticationSecurityIntegrationTest {
     void openApiDescribesAuthenticationResponsesPrecisely() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions/{sessionId}']['get']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authentication/admin/sessions/{sessionId}']['get']['responses']['500']")
+                        .doesNotExist())
+                .andExpect(jsonPath("$['paths']['/billing/member-charges']['get']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/authentication/admin/sessions']['get']['responses']['200']['content']['application/json']['schema']['type']")
                         .value("array"))
                 .andExpect(jsonPath("$['paths']['/authentication/admin/sessions']['get']['responses']['200']['content']['application/json']['schema']['items']['$ref']")

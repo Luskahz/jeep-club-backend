@@ -92,8 +92,16 @@ public class AdminPermissionController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador inválido ou permissão inexistente atualmente resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Permissão não encontrada.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -132,8 +140,16 @@ public class AdminPermissionController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Código inválido ou permissão inexistente atualmente resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Código de permissão inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Permissão não encontrada.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)

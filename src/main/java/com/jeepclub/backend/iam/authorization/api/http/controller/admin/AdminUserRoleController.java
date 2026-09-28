@@ -72,8 +72,16 @@ public class AdminUserRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador inválido ou usuário inexistente atualmente resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Usuário não encontrado.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -118,8 +126,16 @@ public class AdminUserRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, usuário ou role inexistente, ROOT solicitada ou role inativa atualmente resultam em erro interno.",
+                            responseCode = "404",
+                            description = "Usuário ou role não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role impede a substituição.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -156,8 +172,24 @@ public class AdminUserRoleController {
             responses = {
                     @ApiResponse(responseCode = "201", description = "Vínculo criado."),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, usuário ou role inexistente, ROOT, role inativa ou vínculo duplicado atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Usuário ou role não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role ou vínculo duplicado impede a atribuição.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -198,8 +230,24 @@ public class AdminUserRoleController {
             responses = {
                     @ApiResponse(responseCode = "204", description = "Vínculo removido."),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, usuário ou role inexistente, ROOT ou vínculo ausente atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Usuário, role ou vínculo não encontrado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role impede a remoção.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
