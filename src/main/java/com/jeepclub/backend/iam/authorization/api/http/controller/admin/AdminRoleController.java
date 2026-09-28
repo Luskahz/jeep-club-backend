@@ -82,8 +82,8 @@ public class AdminRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Nome já existente atualmente resulta em erro interno.",
+                            responseCode = "409",
+                            description = "Já existe uma role com o nome informado.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -142,8 +142,16 @@ public class AdminRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador inválido ou role inexistente atualmente resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role não encontrada.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -192,8 +200,16 @@ public class AdminRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, unicidade do nome, estado da role ou ROOT atualmente resultam em erro interno.",
+                            responseCode = "404",
+                            description = "Role não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Nome duplicado ou estado da role impede a atualização.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -240,8 +256,24 @@ public class AdminRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, role inexistente, excluída ou ROOT atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role impede a alteração.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -282,8 +314,24 @@ public class AdminRoleController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, role inexistente, excluída ou ROOT atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role impede a alteração.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -317,8 +365,24 @@ public class AdminRoleController {
             responses = {
                     @ApiResponse(responseCode = "204", description = "Role excluída logicamente."),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, role inexistente, excluída ou ROOT atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role impede a exclusão.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)

@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(basePackages = "com.jeepclub.backend.authorization.api")
+@RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.authorization.api")
 public class RolePermissionExceptionHandler extends ApiExceptionHandler {
 
     @ExceptionHandler(RolePermissionAlreadyExistsException.class)
