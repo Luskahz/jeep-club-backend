@@ -20,6 +20,15 @@ A existência de um perfil médico associado a `ownerId`, por exemplo, ainda pod
 ser inferida. Proteger todo o grafo exigiria tokenização/reestruturação de
 queries e é uma decisão separada; registrar esse risco residual na aprovação.
 
+Valores financeiros em claro são uma escolha de priorização sujeita a PD-01,
+não uma impossibilidade técnica de cifrar. Os repositories examinados filtram
+cobranças/pagamentos/reembolsos principalmente por usuário, ciclo, vínculo e
+status; não foi localizada agregação SQL obrigatória por valor. Cálculos no
+domínio podem trabalhar com valores descriptografados. A proposta inicial
+prioriza identificadores, clínica, notas e comprovantes; aceitar valores e
+estados financeiros legíveis em um dump exige registro de risco, ou ampliar
+a cifra caso a análise de exposição/finalidade assim determine.
+
 ## Boundary e representação
 
 Manter campos canônicos no domínio e nos contratos autorizados. Adapters de
