@@ -22,6 +22,7 @@ class EventReportServiceTest {
     final Instant now=Instant.parse("2026-09-28T12:00:00Z");
     final AdminEventService admin=mock(AdminEventService.class);
     final PublicationRepository publications=mock(PublicationRepository.class);
+    final EventPresentationQueryRepository history=mock(EventPresentationQueryRepository.class);
     final EventOperationsRepository operations=mock(EventOperationsRepository.class);
     final EventReportVolumeQuery volume=mock(EventReportVolumeQuery.class);
     final UserQuery users=mock(UserQuery.class);
@@ -30,7 +31,7 @@ class EventReportServiceTest {
     final MedicalProfileCoverageQuery coverage=mock(MedicalProfileCoverageQuery.class);
     final EventFinanceReportQuery finance=mock(EventFinanceReportQuery.class);
     final Clock clock=Clock.fixed(now,ZoneOffset.UTC);
-    final EventReportService service=new EventReportService(admin,publications,operations,volume,users,dependents,vehicles,coverage,finance,new DefaultExportRenderer(clock,20000,500,16777216),clock);
+    final EventReportService service=new EventReportService(admin,publications,history,operations,volume,users,dependents,vehicles,coverage,finance,new DefaultExportRenderer(clock,20000,500,16777216),clock);
     EventRegistration registration;
     @BeforeEach void fixture() {
         registration=new EventRegistration(1L,1L,10L,EventRegistration.Status.CONFIRMED,List.of(new EventRegistration.Allocation(101L,true,List.of(201L)),new EventRegistration.Allocation(102L,false,List.of(202L))),now,now,null,List.of(203L));
@@ -66,8 +67,63 @@ class EventReportServiceTest {
     @Test void acceptedRideNotSelectedIsReported(){when(operations.offers(1L)).thenReturn(List.of(new EventRideOffer(5L,1L,91L,1L,10L,101L,EventRideOffer.Status.ACCEPTED,now,null)));assertThat(report(EventReportService.Product.TRANSPORT,EventReportService.TransportView.ACCEPTED_RIDES)).contains("Carona aceita, ainda não selecionada");}
     @Test void accessIsMinimizedAndOmitsFinancialAndClinicalData(){String csv=report(EventReportService.Product.ACCESS,EventReportService.TransportView.ALL);assertThat(csv).contains("Convidado aprovado","Confirmação").doesNotContain("PENDING_VALIDATION","1000","Alergias","Situação financeira");verifyNoInteractions(coverage);}
     @Test void confirmedRegistrationCanHavePendingValidationAndPostCutoffDebt(){String csv=report(EventReportService.Product.FINANCIAL,EventReportService.TransportView.ALL);assertThat(csv).contains("CONFIRMED","PENDING_VALIDATION","Confirmado com pendência financeira","Taxa do evento","100,00");}
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "PAID,CONFIRMED,-1,Obrigação satisfeita",
+        "CANCELED,CANCELED,-1,Confirmado com pendência financeira",
+        "PENDING,PENDING_VALIDATION,-1,Obrigação satisfeita; aguardando validação",
+        "PENDING,PENDING_VALIDATION,0,Obrigação satisfeita; aguardando validação",
+        "PENDING,PENDING_VALIDATION,1,Confirmado com pendência financeira",
+        "PAID,CONFIRMED,1,Confirmado com pendência financeira",
+        "PENDING,REJECTED,-1,Confirmado com pendência financeira",
+        "OVERDUE,REJECTED,-1,Confirmado com pendência financeira",
+        "EXPIRED,REJECTED,-1,Confirmado com pendência financeira"
+    })
+    void participationUsesConfirmationRuleAndKeepsAllStatuses(String charge,String payment,long submittedOffset,String expected) {
+        when(operations.rules(1L)).thenReturn(List.of(new EventChargeRule(1L,50L,true,now,LocalDate.of(2026,10,1))));
+        var state=new EventFinancialQuery.State(50L,10L,1000L,charge,payment,now.plusSeconds(submittedOffset),"Taxa",BigDecimal.TEN,70L,LocalDate.of(2026,10,1));
+        when(admin.dashboard(1L)).thenReturn(new AdminEventService.Dashboard(List.of(registration),0,0,0,1,0,0,0,0,0,0,List.of(state)));
+        var csv=report(EventReportService.Product.FINANCIAL,EventReportService.TransportView.ALL);
+        assertThat(csv).contains("Situação da inscrição","Situação efetiva da cobrança","Situação do pagamento","\"CONFIRMED\"","\""+charge+"\"","\""+payment+"\"",expected);
+        if(charge.equals("CANCELED"))assertThat(csv).doesNotContain("Obrigação satisfeita","Sem pendência financeira");
+    }
+    @Test void missingPaymentSubmissionDoesNotSatisfyParticipation() {
+        var state=new EventFinancialQuery.State(50L,10L,1000L,"PAID","CONFIRMED",null);
+        when(admin.dashboard(1L)).thenReturn(new AdminEventService.Dashboard(List.of(registration),0,0,0,1,0,0,0,0,0,0,List.of(state)));
+        assertThat(report(EventReportService.Product.FINANCIAL,EventReportService.TransportView.ALL)).contains("Confirmado com pendência financeira");
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({
+        "PENDING_PAYMENT,CANCELED,true,1,Falta pagar",
+        "PENDING_PAYMENT,OVERDUE,true,-1,Passou do limite de participação",
+        "PENDING_PAYMENT,EXPIRED,true,-1,Passou do limite de participação",
+        "PENDING_PAYMENT,CANCELED,false,-1,Não obrigatória para participação",
+        "CANCELLED,PAID,true,-1,Inscrição cancelada"
+    })
+    void participationDistinguishesCutoffOptionalChargeAndCancellation(String status,String charge,boolean required,long cutoffOffset,String expected) {
+        var r=new EventRegistration(1L,1L,10L,EventRegistration.Status.valueOf(status),List.of(),now,null,null);
+        var state=new EventFinancialQuery.State(50L,10L,1000L,charge,"CANCELED",now);
+        when(operations.rules(1L)).thenReturn(List.of(new EventChargeRule(1L,50L,required,now.plusSeconds(cutoffOffset),LocalDate.of(2026,10,1))));
+        when(admin.dashboard(1L)).thenReturn(new AdminEventService.Dashboard(List.of(r),0,0,0,0,0,0,0,0,0,0,List.of(state)));
+        assertThat(report(EventReportService.Product.FINANCIAL,EventReportService.TransportView.ALL)).contains(expected).doesNotContain("Sem pendência financeira");
+    }
+    @Test void historicalFallbackIsLimitedToPostEventAndDoesNotRefreshRegistration() {
+        var dashboard=admin.dashboard(1L);
+        clearInvocations(admin);
+        when(publications.findById(1L)).thenReturn(Optional.empty());
+        when(history.findHistoricalById(1L)).thenReturn(Optional.of(new EventPresentationQueryRepository.HistoricalEvent(1L,"Trilha excluída",now.minusSeconds(3600),now,EventStatus.FINISHED,now)));
+        when(admin.historicalDashboard(1L)).thenReturn(dashboard);
+        assertThat(report(EventReportService.Product.POST_EVENT,EventReportService.TransportView.ALL)).contains("Trilha excluída","Histórico","FINISHED","Titular A","PENDING_VALIDATION");
+        verify(admin,never()).dashboard(anyLong());
+        for(var product:EventReportService.Product.values())if(product!=EventReportService.Product.POST_EVENT)
+            assertThatThrownBy(()->report(product,EventReportService.TransportView.ALL)).isInstanceOf(ExportException.class);
+    }
     @Test void healthCoverageUsesOnlyExistenceContract(){when(coverage.findCovered(eq(MedicalProfileOwner.USER),any())).thenReturn(Set.of(10L));String csv=report(EventReportService.Product.HEALTH_COVERAGE,EventReportService.TransportView.ALL);assertThat(csv.lines().count()).isEqualTo(5);assertThat(csv).contains("Possui ficha médica","Sim","Não").doesNotContain("Convidado","52998224725","PENDING_VALIDATION");}
     @Test void postEventUsesAllPaymentStatesAndSharedPeople(){String csv=report(EventReportService.Product.POST_EVENT,EventReportService.TransportView.ALL);assertThat(csv).contains("Participantes","Transporte","CONFIRMED","REJECTED","PENDING_VALIDATION","Pendências");}
+    @Test void postEventPreservesRulesEvenWithoutGeneratedCharges(){
+        when(admin.dashboard(1L)).thenReturn(new AdminEventService.Dashboard(List.of(),0,0,0,0,0,0,0,0,0,0,List.of()));
+        assertThat(report(EventReportService.Product.POST_EVENT,EventReportService.TransportView.ALL)).contains("Regras","Obrigatória para participação: Sim","50","01/10/2026");
+    }
     @Test void oversizedEventFailsBeforeLoadingDashboard(){doThrow(new ExportException(ExportException.Reason.LIMIT)).when(volume).requireWithinLimit(1L);assertThatThrownBy(()->report(EventReportService.Product.MANIFEST,EventReportService.TransportView.ALL)).isInstanceOf(ExportException.class);verifyNoInteractions(admin);}
     @Test void invalidFilterDoesNotQueryData(){assertThatThrownBy(()->service.export(1L,EventReportService.Product.MANIFEST,ExportFormat.CSV,"INVALID",null,null,EventReportService.TransportView.ALL)).isInstanceOf(ExportException.class);verifyNoInteractions(publications);}
     @Test void pdfIncludesOperationalDashboardAndGroups()throws Exception{var file=service.export(1L,EventReportService.Product.MANIFEST,ExportFormat.PDF,null,null,null,EventReportService.TransportView.ALL);try(var pdf=org.apache.pdfbox.Loader.loadPDF(file.bytes())){assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(pdf)).contains("Inscrições: 1", "Titular A / Jeep A", "aguardando", "Página");}}

@@ -55,6 +55,14 @@ class ExportRendererTest {
         assertThatThrownBy(()->new DefaultExportRenderer(clock,10,10,64).render(document("a".repeat(100)),ExportFormat.CSV))
             .isInstanceOf(ExportException.class).extracting("reason").isEqualTo(ExportException.Reason.LIMIT);
     }
+    @Test void characterLimitFailsBeforeWritingOversizedCell() {
+        for(var format:ExportFormat.values())assertThatThrownBy(()->renderer.render(document("a".repeat(4_000_001)),format))
+            .isInstanceOf(ExportException.class).extracting("reason").isEqualTo(ExportException.Reason.LIMIT);
+    }
+    @Test void pageLimitFailsWithoutTruncatingLongPdf() {
+        assertThatThrownBy(()->renderer.render(document("linha\n".repeat(60_000)),ExportFormat.PDF))
+            .isInstanceOf(ExportException.class).extracting("reason").isEqualTo(ExportException.Reason.LIMIT);
+    }
     @Test void unsafeFilenameIsRejected() {
         var d=new ExportDocument("../injection\r\n","Teste",List.of("ID"),List.of(),sink->{});
         assertThatThrownBy(()->renderer.render(d,ExportFormat.CSV)).isInstanceOf(ExportException.class);

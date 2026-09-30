@@ -132,14 +132,60 @@ Arguments.of("/billing/admin/refunds/export","BILLING_EXPORT"));}
         assertThat(result.lines().count()).isEqualTo(3);assertThat(result).contains("Titular médico","Dependente correto","CLINICAL_SENTINEL","Sim","Não").doesNotContain("Dependente alheio");
         var logs=em.createQuery("select l from SystemLogEntity l",com.jeepclub.backend.platform.logging.SystemLogEntity.class).getResultList();
         assertThat(logs).allSatisfy(log->assertThat(log.getAction()+log.getPath()).doesNotContain("CLINICAL_SENTINEL"));
+        assertThat(download("/admin/medical-profiles/export","HEALTH_MEDICAL_PROFILE_EXPORT","PDF","userId",id(u).toString(),"household","true"))
+            .contains("Titular médico","Dependente correto","CLINICAL_SENTINEL").doesNotContain("Dependente alheio");
+        assertThat(csv("/admin/medical-profiles/export","HEALTH_MEDICAL_PROFILE_EXPORT","dependentId",id(dependent).toString())).contains("CLINICAL_SENTINEL");
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void dependentSelectionAndHistoryStaySeparateInBothFormats()throws Exception {
+        var u=user("Titular dependentes","52998224725");var other=user("Outro titular","11144477735");
+        Object disabled=null;
+        for(var state:com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.values()) {
+            var dep=seed("dependents.infra.persistence.entity.DependentEntity","name","Dependente "+state,"cpf",state.name().equals("ACTIVE")?"12345678901":"12345678902","birthDate",java.time.LocalDate.of(2010,1,1),"relationshipType",com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,"userId",id(u),"status",state,"createdAt",FIXTURE_TIME);
+            if(state.name().equals("DISABLED"))disabled=dep;
+        }
+        seed("dependents.infra.persistence.entity.DependentEntity","name","Dependente alheio","cpf","12345678903","birthDate",java.time.LocalDate.of(2010,1,1),"relationshipType",com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,"userId",id(other),"status",com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.ACTIVE,"createdAt",FIXTURE_TIME);
+        seed("dependents.infra.persistence.entity.DependentHistoryEntity","dependentId",999999L,"name","Dependente removido","cpf","12345678904","birthDate",java.time.LocalDate.of(2010,1,1),"relationshipType",com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,"userId",id(u),"status",com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.DISABLED,"createdAt",FIXTURE_TIME,"deletedAt",FIXTURE_TIME,"deletedByUserId",999L);
+        for(String format:List.of("CSV","PDF")) {
+            assertThat(download("/admin/dependents/export","DEPENDENTS_DEPENDENT_EXPORT",format,"userId",id(u).toString())).contains("Titular dependentes","Dependente ACTIVE","Dependente DISABLED").doesNotContain("Dependente alheio","Dependente removido");
+            assertThat(download("/admin/dependents/export","DEPENDENTS_DEPENDENT_EXPORT",format,"id",id(disabled).toString())).contains("Dependente DISABLED").doesNotContain("Dependente ACTIVE");
+            assertThat(download("/admin/dependents/history/export","DEPENDENTS_DEPENDENT_EXPORT",format)).contains("Dependente removido","Excluído em").doesNotContain("Dependente ACTIVE");
+        }
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void membershipPeriodsAndBlocksPreserveSelectionWithoutTechnicalFields()throws Exception {
+        var early=seed("memberships.infra.persistence.entity.MembershipApplicationEntity","name","Anterior","cpf","52998224725","status",com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus.PENDING,"requestedAt",FIXTURE_TIME);
+        seed("memberships.infra.persistence.entity.MembershipApplicationEntity","name","Selecionado","cpf","11144477735","status",com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus.APPROVED,"requestedAt",FIXTURE_TIME.plusSeconds(86400));
+        var block=seed("memberships.infra.persistence.entity.MembershipApplicantBlockEntity","cpf","52998224725","activeCpf","52998224725","reason","Bloqueio administrativo","blockedAt",FIXTURE_TIME,"blockedByUserId",999L);
+        for(String format:List.of("CSV","PDF")) {
+            assertThat(download("/admin/membership-applications/export","MEMBERSHIP_EXPORT",format,"from",FIXTURE_TIME.plusSeconds(1).toString(),"to",FIXTURE_TIME.plusSeconds(172800).toString())).contains("Selecionado").doesNotContain("Anterior");
+            assertThat(download("/admin/membership-applications/blocks/export","MEMBERSHIP_EXPORT",format,"id",id(block).toString())).contains("Bloqueio administrativo").doesNotContain("activeCpf","version","tokenHash");
+        }
+        assertThat(csv("/admin/membership-applications/blocks/export","MEMBERSHIP_EXPORT","from",FIXTURE_TIME.plusSeconds(1).toString()).lines().count()).isEqualTo(1);
     }
     @Test void openApiDocumentsFilesAndMatchingPermissions()throws Exception {
         var response=mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         var json=new com.fasterxml.jackson.databind.ObjectMapper().readTree(response);
-        routes().forEach(args->{Object[] pair=args.get();var operation=json.path("paths").path((String)pair[0]).path("get");
-            assertThat(operation.path("responses").path("200").path("content").has("text/csv")).isTrue();
-            assertThat(operation.path("responses").path("200").path("content").has("application/pdf")).isTrue();
-            assertThat(operation.path("x-required-permissions").toString()).contains((String)pair[1]);
+        var contracts=new ArrayList<Arguments>(routes().toList());
+        for(String report:List.of("manifest","transport","financial","access","health-coverage","post-event"))
+            contracts.add(Arguments.of("/admin/events/{eventId}/reports/"+report+"/export","PUBLICATIONS_EXPORT"));
+        contracts.add(Arguments.of("/admin/events/{eventId}/health/{type}/{target}/export","PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ"));
+        assertThat(contracts).hasSize(38);
+        contracts.forEach(args->{Object[] pair=args.get();String path=(String)pair[0];var operation=json.path("paths").path(path).path("get");
+            var success=operation.path("responses").path("200");
+            var media=new HashSet<String>();success.path("content").fieldNames().forEachRemaining(media::add);
+            assertThat(media).as(path).containsExactlyInAnyOrderElementsOf(path.contains("/health/{type}")?List.of("application/pdf"):List.of("text/csv","application/pdf"));
+            media.forEach(type->{var schema=success.path("content").path(type).path("schema");
+                assertThat(schema.path("type").asText()).as(path+" "+type).isEqualTo("string");
+                assertThat(schema.path("format").asText()).as(path+" "+type).isEqualTo("binary");});
+            assertThat(success.path("headers").path("Content-Disposition").path("schema").path("type").asText()).as(path).isEqualTo("string");
+            assertThat(success.path("headers").has("Cache-Control")).as(path).isTrue();
+            assertThat(operation.path("x-required-permissions").toString()).as(path).contains((String)pair[1]);
+            for(String error:List.of("400","401","403","404","413","500")) {
+                var responseError=operation.path("responses").path(error);
+                assertThat(responseError.path("description").asText()).as(path+" "+error).isNotBlank();
+                assertThat(responseError.path("content").path("application/problem+json").path("schema").isMissingNode()).as(path+" "+error).isFalse();
+            }
         });
     }
 
@@ -163,6 +209,106 @@ Arguments.of("/billing/admin/refunds/export","BILLING_EXPORT"));}
     }
     private Object cycle(Long definition,java.time.LocalDate due,String code)throws Exception {
         return seed("billing.infra.persistence.entity.ChargeCycleEntity","chargeDefinitionId",definition,"chargeDefinitionNameSnapshot","Nome histórico","chargeDefinitionDefaultAmountSnapshot",new java.math.BigDecimal("100.00"),"chargeDefinitionRecurrenceTypeSnapshot",com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType.YEARLY,"chargeDefinitionRequiredSnapshot",true,"chargeDefinitionPaymentAcceptancePolicySnapshot",com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy.AFTER_DUE_DATE,"code",code,"dueDate",due,"status",com.jeepclub.backend.billing.core.domain.enums.cycle.ChargeCycleStatus.GENERATED,"generatedByUserId",999L,"generatedAt",FIXTURE_TIME,"createdAt",FIXTURE_TIME);
+    }
+    @Autowired com.jeepclub.backend.publications.core.application.service.AdminEventService eventAdministration;
+    @Autowired com.jeepclub.backend.publications.core.repository.EventOperationsRepository eventOperations;
+    @Autowired com.jeepclub.backend.publications.core.repository.PublicationRepository publications;
+
+    @Test @org.springframework.transaction.annotation.Transactional
+    void publicationCatalogsRequestsAndDeletionSnapshotsKeepTheirOwnData()throws Exception {
+        var u=user("Autor cadastral","52998224725");
+        var notice=seed("publications.infra.persistence.entity.NoticeEntity","authorUserId",id(u),"title","Aviso exportado","content","Conteúdo do aviso","status",com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.ARCHIVED,"createdAt",FIXTURE_TIME,"updatedAt",FIXTURE_TIME,"archivedAt",FIXTURE_TIME);
+        var service=seed("publications.infra.persistence.entity.ServicePublicationEntity","authorUserId",id(u),"title","Serviço exportado","content","Conteúdo do serviço","status",com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.ARCHIVED,"createdAt",FIXTURE_TIME,"updatedAt",FIXTURE_TIME,"archivedAt",FIXTURE_TIME,"sourceRequestId",999999L,"amount",new java.math.BigDecimal("42.00"),"contactPhone","12999999999");
+        var request=seed("publications.infra.persistence.entity.ServicePublicationRequestEntity","requestedByUserId",id(u),"title","Proposta pendente","content","Conteúdo proposto","amount",new java.math.BigDecimal("55.00"),"contactPhone","12888888888","status",com.jeepclub.backend.publications.core.domain.enums.ServicePublicationRequestStatus.PENDING,"requestedAt",FIXTURE_TIME,"updatedAt",FIXTURE_TIME);
+        var change=seed("publications.infra.persistence.entity.ServicePublicationChangeRequestEntity","servicePublicationId",id(service),"requestedByUserId",id(u),"proposedTitle","Alteração rejeitada","proposedContent","Conteúdo rejeitado","proposedAmount",new java.math.BigDecimal("65.00"),"proposedContactPhone","12777777777","status",com.jeepclub.backend.publications.core.domain.enums.ServicePublicationChangeRequestStatus.REJECTED,"rejectionReason","Revisão administrativa","requestedAt",FIXTURE_TIME,"updatedAt",FIXTURE_TIME);
+        for(String format:List.of("CSV","PDF")) {
+            assertThat(download("/admin/notices/export","PUBLICATIONS_EXPORT",format,"id",id(notice).toString(),"status","ARCHIVED")).contains("Aviso exportado","Autor cadastral").doesNotContain("Serviço exportado");
+            assertThat(download("/admin/services/export","PUBLICATIONS_EXPORT",format,"id",id(service).toString())).contains("Serviço exportado","42,00","12999999999").doesNotContain("Proposta pendente");
+            assertThat(download("/admin/service-publication-requests/export","PUBLICATIONS_EXPORT",format,"id",id(request).toString(),"status","PENDING")).contains("Proposta pendente","55,00").doesNotContain("Alteração rejeitada");
+            assertThat(download("/admin/service-publication-change-requests/export","PUBLICATIONS_EXPORT",format,"id",id(change).toString(),"status","REJECTED")).contains("Alteração rejeitada","65,00","Revisão administrativa").doesNotContain("Proposta pendente");
+        }
+        assertThat(csv("/admin/service-publication-requests/export","PUBLICATIONS_EXPORT","status","APPROVED").lines().count()).isEqualTo(1);
+        publications.delete(id(notice),999L,FIXTURE_TIME.plusSeconds(1));publications.delete(id(service),999L,FIXTURE_TIME.plusSeconds(1));
+        for(String format:List.of("CSV","PDF")) {
+            assertThat(download("/admin/notices/history/export","PUBLICATIONS_EXPORT",format)).contains("Aviso exportado","Excluído em");
+            assertThat(download("/admin/services/history/export","PUBLICATIONS_EXPORT",format)).contains("Serviço exportado","42,00","12999999999");
+            assertThat(download("/admin/notices/export","PUBLICATIONS_EXPORT",format)).doesNotContain("Aviso exportado");
+            assertThat(download("/admin/services/export","PUBLICATIONS_EXPORT",format)).doesNotContain("Serviço exportado");
+        }
+    }
+
+    @Test @org.springframework.transaction.annotation.Transactional
+    void postEventAndAllBillingProductsSurviveRealHardDelete()throws Exception {
+        var u=user("Participante histórico","52998224725");
+        var d=definition("Cobrança histórica");
+        var event=seed("publications.infra.persistence.entity.EventEntity","authorUserId",id(u),"title","Evento removido auditável","content","Histórico","publishedAt",FIXTURE_TIME,"status",com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.PUBLISHED,"createdAt",FIXTURE_TIME,"updatedAt",FIXTURE_TIME,"startsAt",FIXTURE_TIME.plusSeconds(86400));
+        var image=new com.jeepclub.backend.publications.infra.persistence.entity.PublicationImageEntity();image.setStorageKey("images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg");image.setPosition(0);image.setPrimary(true);
+        ((com.jeepclub.backend.publications.infra.persistence.entity.EventEntity)event).getImages().add(image);em.flush();
+        Long eventId=id(event);
+        var v=vehicle(id(u),"ABC1D23","12345678901",com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE);
+        eventOperations.save(new com.jeepclub.backend.publications.core.domain.model.EventRegistration(null,eventId,id(u),com.jeepclub.backend.publications.core.domain.model.EventRegistration.Status.CONFIRMED,List.of(new com.jeepclub.backend.publications.core.domain.model.EventRegistration.Allocation(id(v),true,List.of())),FIXTURE_TIME,FIXTURE_TIME,null));
+        seed("publications.infra.persistence.entity.EventGuestRequestEntity","eventId",eventId,"requesterUserId",id(u),"vehicleId",id(v),"approvedVehicleId",id(v),"cpf","12345678909","guestName","Convidado histórico","status","APPROVED","createdAt",FIXTURE_TIME,"reviewedAt",FIXTURE_TIME);
+        var cycle=cycle(id(d),java.time.LocalDate.of(2026,2,15),"ciclo-historico");
+        var charge=charge(id(u),id(d),id(cycle),java.time.LocalDate.of(2026,2,15));
+        var payment=seed("billing.infra.persistence.entity.MemberPaymentEntity","memberChargeId",id(charge),"amount",new java.math.BigDecimal("100.00"),"paymentMethod",com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod.PIX,"status",com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus.CONFIRMED,"receiptStorageKey","HISTORICAL_RECEIPT_SECRET","createdAt",FIXTURE_TIME,"paidAt",FIXTURE_TIME,"submittedAt",FIXTURE_TIME,"confirmedAt",FIXTURE_TIME,"confirmedByUserId",999L);
+        seed("billing.infra.persistence.entity.MemberRefundEntity","memberChargeId",id(charge),"memberPaymentId",id(payment),"chargeCycleId",id(cycle),"userId",id(u),"amount",new java.math.BigDecimal("100.00"),"reason",com.jeepclub.backend.billing.core.domain.enums.refund.RefundReason.MEMBER_REQUEST,"status",com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus.REQUESTED,"requestedAt",FIXTURE_TIME,"createdAt",FIXTURE_TIME);
+        var assignment=new com.jeepclub.backend.billing.infra.persistence.entity.assignment.EventParticipantsChargeAssignmentEntity(null,id(d),eventId,true,FIXTURE_TIME,null);
+        em.persist(assignment);em.flush();
+        seed("billing.infra.persistence.entity.EventChargeContextEntity","eventId",eventId,"chargeDefinitionId",id(d),"assignmentId",id(assignment),"cycleId",id(cycle));
+        eventOperations.replaceRules(eventId,List.of(new com.jeepclub.backend.publications.core.domain.model.EventChargeRule(eventId,id(d),true,FIXTURE_TIME.plusSeconds(86400),java.time.LocalDate.of(2026,2,15))));
+        var pendingUser=user("Inscrição histórica pendente","11144477735");
+        eventOperations.save(new com.jeepclub.backend.publications.core.domain.model.EventRegistration(null,eventId,id(pendingUser),com.jeepclub.backend.publications.core.domain.model.EventRegistration.Status.PENDING_PAYMENT,List.of(),FIXTURE_TIME,null,null));
+
+        for(String product:List.of("definitions","cycles","member-charges","payments","refunds"))
+            assertThat(csv("/billing/admin/"+product+"/export","BILLING_EXPORT","eventId",eventId.toString()).lines().count()).as(product+" ativo").isEqualTo(2);
+        eventAdministration.finish(eventId);
+        eventAdministration.delete(eventId,999L);
+        em.flush();em.clear();
+        assertThat(em.find(com.jeepclub.backend.publications.infra.persistence.entity.EventEntity.class,eventId)).isNull();
+        assertThat(em.createQuery("select count(e) from EventHistoryEntity e where e.publicationId=:id",Long.class).setParameter("id",eventId).getSingleResult()).isEqualTo(1);
+        assertThat(em.createQuery("select count(e) from EventChargeContextEntity e where e.eventId=:id",Long.class).setParameter("id",eventId).getSingleResult()).isEqualTo(1);
+        for(String format:List.of("CSV","PDF")) {
+            String post=download("/admin/events/"+eventId+"/reports/post-event/export","PUBLICATIONS_EXPORT",format);
+            assertThat(post).contains("Evento removido auditável","FINISHED","Participante histórico","Convidado histórico","ABC1D23","CONFIRMED","Histórico","PENDING_PAYMENT");
+            for(String product:List.of("definitions","cycles","member-charges","payments","refunds")) {
+                String result=download("/billing/admin/"+product+"/export","BILLING_EXPORT",format,"eventId",eventId.toString());
+                assertThat(result).as(product+" histórico "+format).contains("Evento removido auditável").doesNotContain("HISTORICAL_RECEIPT_SECRET");
+                if(format.equals("CSV"))assertThat(result.lines().count()).as(product).isEqualTo(2);
+                if(List.of("member-charges","payments","refunds").contains(product))assertThat(result).contains("Participante histórico","Nome histórico");
+            }
+        }
+        auth("PUBLICATIONS_EXPORT");
+        mvc.perform(get("/admin/events/"+eventId+"/reports/manifest/export").header("Authorization","Bearer export-test")).andExpect(status().isNotFound());
+        assertThat(eventOperations.registrations(eventId)).hasSize(2);
+        assertThat(eventOperations.registrations(eventId).stream().filter(r->r.userId().equals(id(pendingUser))).findFirst().orElseThrow().status())
+            .isEqualTo(com.jeepclub.backend.publications.core.domain.model.EventRegistration.Status.PENDING_PAYMENT);
+    }
+    private String download(String path,String permission,String format,String...params)throws Exception {
+        auth(permission);var request=get(path).param("format",format).header("Authorization","Bearer export-test");
+        for(int i=0;i<params.length;i+=2)request.param(params[i],params[i+1]);
+        var response=mvc.perform(request).andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store")).andReturn().getResponse();
+        assertThat(response.getHeader("Content-Disposition")).startsWith("attachment;");
+        assertThat(response.getContentType()).startsWith(format.equals("CSV")?"text/csv":"application/pdf");
+        if(format.equals("PDF"))try(var pdf=org.apache.pdfbox.Loader.loadPDF(response.getContentAsByteArray())){return new org.apache.pdfbox.text.PDFTextStripper().getText(pdf);}
+        return response.getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+    }
+    @Test void billingEventWithoutFinancialContextIs404()throws Exception {
+        auth("BILLING_EXPORT");
+        for(String product:List.of("definitions","cycles","member-charges","payments","refunds"))
+            mvc.perform(get("/billing/admin/"+product+"/export").param("eventId","987654321").header("Authorization","Bearer export-test"))
+                .andExpect(status().isNotFound()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void latestPaymentUsesCreationTimeThenIdAsInEventFinance()throws Exception {
+        var u=user("Pagador","52998224725");var d=definition("Anuidade");
+        var cycle=cycle(id(d),java.time.LocalDate.of(2026,2,15),"ciclo");
+        var charge=charge(id(u),id(d),id(cycle),java.time.LocalDate.of(2026,2,15));
+        var latest=seed("billing.infra.persistence.entity.MemberPaymentEntity","memberChargeId",id(charge),"amount",new java.math.BigDecimal("100.00"),"paymentMethod",com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod.PIX,"status",com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus.PENDING_VALIDATION,"receiptStorageKey","LATEST_RECEIPT_SECRET","createdAt",FIXTURE_TIME.plusSeconds(10),"paidAt",FIXTURE_TIME,"submittedAt",FIXTURE_TIME);
+        seed("billing.infra.persistence.entity.MemberPaymentEntity","memberChargeId",id(charge),"amount",new java.math.BigDecimal("99.00"),"paymentMethod",com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod.CASH,"status",com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus.REJECTED,"receiptStorageKey","LATEST_RECEIPT_SECRET","createdAt",FIXTURE_TIME,"paidAt",FIXTURE_TIME,"submittedAt",FIXTURE_TIME);
+        var rows=csv("/billing/admin/member-charges/export","BILLING_EXPORT","id",id(charge).toString()).lines().toList();
+        assertThat(rows).hasSize(2);assertThat(rows.get(1)).endsWith("\""+id(latest)+"\";\"100,00\";\"PIX\";\"PENDING_VALIDATION\";\"01/01/2026 09:00:00 -03:00\"");
+        var tie=seed("billing.infra.persistence.entity.MemberPaymentEntity","memberChargeId",id(charge),"amount",new java.math.BigDecimal("101.00"),"paymentMethod",com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod.PIX,"status",com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus.PENDING_VALIDATION,"receiptStorageKey","LATEST_RECEIPT_SECRET","createdAt",FIXTURE_TIME.plusSeconds(10),"paidAt",FIXTURE_TIME,"submittedAt",FIXTURE_TIME);
+        assertThat(csv("/billing/admin/member-charges/export","BILLING_EXPORT","id",id(charge).toString())).contains("\""+id(tie)+"\";\"101,00\";\"PIX\"");
     }
     private Object charge(Long user,Long definition,Long cycle,java.time.LocalDate due)throws Exception {
         return seed("billing.infra.persistence.entity.MemberChargeEntity","userId",user,"chargeDefinitionId",definition,"chargeCycleId",cycle,"originalAmount",new java.math.BigDecimal("100.00"),"finalAmount",new java.math.BigDecimal("100.00"),"dueDate",due,"paymentAcceptancePolicy",com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy.AFTER_DUE_DATE,"status",com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus.PENDING,"createdAt",FIXTURE_TIME);
@@ -245,5 +391,14 @@ Arguments.of("/billing/admin/refunds/export","BILLING_EXPORT"));}
         var response=mvc.perform(get("/admin/events/"+id(event)+"/health/USER/"+id(u)+"/export").header("Authorization","Bearer export-test")).andExpect(status().isOk()).andReturn().getResponse();
         try(var pdf=org.apache.pdfbox.Loader.loadPDF(response.getContentAsByteArray())){assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(pdf)).contains("INDIVIDUAL_CLINICAL_SENTINEL","Participante confirmado");}
         assertThat(csv("/admin/events/export","PUBLICATIONS_EXPORT","id",id(event).toString())).contains("Encontro operacional","Sem regra financeira");
+        for(int i=0;i<2001;i++) {
+            var guest=new com.jeepclub.backend.publications.infra.persistence.entity.EventGuestRequestEntity();
+            guest.setEventId(id(event));guest.setRequesterUserId(id(u));guest.setCpf(String.format("%011d",i));
+            guest.setGuestName("Convidado "+i);guest.setStatus("PENDING");guest.setCreatedAt(FIXTURE_TIME);em.persist(guest);
+        }
+        em.flush();auth("PUBLICATIONS_EXPORT");
+        for(String format:List.of("CSV","PDF"))mvc.perform(get("/admin/events/"+id(event)+"/reports/manifest/export").param("format",format).header("Authorization","Bearer export-test"))
+            .andExpect(status().isPayloadTooLarge()).andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+            .andExpect(header().doesNotExist("Content-Disposition"));
     }
 }
