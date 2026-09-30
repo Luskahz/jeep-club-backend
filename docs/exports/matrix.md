@@ -1,7 +1,7 @@
 # Matriz de exportações — BACK-411 / BACK-410
 
 Base auditada: `b051da139395708aba61a2895ebdce3d51cee967` (origin/develop).
-Especificações: BACK-410, BACK-411..422, BACK-476, consultadas em 28/09/2026.
+Especificações: BACK-410, BACK-411..422, BACK-476, relidas integralmente em 29/09/2026.
 
 O bounded context define colunas e consultas; shared.export define somente o contrato neutro; platform.export renderiza. Nenhuma consulta transversal acessa tabelas externas.
 
@@ -22,7 +22,7 @@ O bounded context define colunas e consultas; shared.export define somente o con
 
 ## Matriz por recurso
 
-A necessidade operacional de cada linha é afirmativa. Colunas de exportação são definidas no serviço proprietário e detalhadas no OpenAPI. Sem volume de produção disponível, não se inventa cardinalidade esperada; usa-se o limite síncrono abaixo e mede-se a carga real antes de ampliá-lo. Os riscos de CPF/contato/saúde/finanças seguem BACK-409 e a permission indicada. O filename recebe somente o código estático indicado e timestamp UTC.
+A necessidade operacional de cada linha é afirmativa. Colunas de exportação são definidas explicitamente no serviço proprietário; rotas, filtros e formatos são documentados no OpenAPI. Sem volume de produção disponível, não se inventa cardinalidade esperada; usa-se o limite síncrono abaixo e mede-se a carga real antes de ampliá-lo. Os riscos de CPF/contato/saúde/finanças seguem BACK-409 e a permission indicada. O filename recebe somente o código estático indicado e timestamp UTC.
 
 | Módulo | Recurso | Necessidade | CSV | PDF | Filtros | Campos incluídos | Excluídos / minimizados | Permission | Volume esperado / limite | Risco LGPD | Filename base |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -67,11 +67,11 @@ As listas explícitas de colunas pertencem aos modelos de exportação do módul
 
 ## Volume e operação
 
-Não há medição de volume de produção disponível. A V2 usa limites síncronos conservadores e configuráveis: CSV 20.000 linhas; PDF 500 registros; bytes 16 MiB. Leitura interna de 200 registros por lote, ordenação estável por ID. Excesso retorna 413 sem arquivo parcial. PDF também limita páginas. Nomes são códigos estáticos em português + timestamp UTC; nunca nomes pessoais, CPF ou clínica. Datas visíveis usam America/Sao_Paulo; LocalDateTime legado representa UTC. Null é célula vazia; booleano Sim/Não. CSV usa UTF-8/BOM, `;`, CRLF e aspas em todas as células.
+Não há medição de volume de produção disponível. A V2 usa limites síncronos conservadores e configuráveis: CSV 20.000 linhas; PDF 500 registros; bytes 16 MiB. Leitura interna de 200 registros por lote, ordenação estável por ID. Excesso retorna 413 sem arquivo parcial. PDF também limita páginas. Nomes são códigos estáticos + timestamp UTC; nunca nomes pessoais, CPF ou clínica. Datas visíveis usam America/Sao_Paulo; LocalDateTime legado representa UTC. Null é célula vazia; booleano Sim/Não. CSV usa UTF-8/BOM, `;`, CRLF e aspas em todas as células.
 
 ## Segurança / BACK-409
 
-BACK-409 continua em investigação e não contém decisão aprovada de criptografia/masking. Esta Story consome os contratos cadastrais atuais, não inventa criptografia nem duplica CPF. A seleção de CPF integral corresponde às finalidades administrativas expressamente solicitadas e exige permission EXPORT independente de READ. Dados clínicos têm permission própria, auditoria sem payload e cache proibido. Controle de acesso de Event não contém dados financeiros ou médicos. A revisão de proteção em repouso continua pertencendo à BACK-409, sem declarar conformidade jurídica.
+O tratamento adicional de dados pessoais e masking pertence à BACK-409 e não faz parte desta implementação. Esta rodada preserva CPF e os demais contratos cadastrais atuais. A seleção de CPF integral corresponde às finalidades administrativas expressamente solicitadas e exige permission EXPORT independente de READ. Dados clínicos têm permission própria, auditoria sem payload e cache proibido. Controle de acesso de Event não contém dados financeiros ou médicos. Não se declara conformidade jurídica.
 
 ## Decisões de não exportar
 
@@ -93,3 +93,11 @@ Esta matriz registra o escopo de implementação; não equivale a uma declaraç�
 Além de linhas/bytes, o renderer limita o total de conteúdo a 4 milhões de caracteres e PDFs a 1.000 páginas. Billing e Health abortam após 100.000 candidatos quando a aplicação precisa pós-filtrar o conjunto. Event admite no máximo 2.000 registros/vínculos operacionais e 20.000 cobranças + pagamentos antes de carregar o dashboard existente. Leituras de enriquecimento público usam lotes de até 500 IDs. O banco usa as transações e timeouts configurados pelo ambiente; nenhuma fila foi introduzida. Os limites síncronos devem ser ajustados com medições reais de produção, que não estão disponíveis nesta tarefa.
 
 O audit log exige persistência síncrona antes do download. Identifica ator e tipo de exportação com rota estática; não armazena filtros, nomes, CPF, conteúdo clínico ou arquivo. As tentativas de emergência também usam a auditoria obrigatória já existente de Event.
+
+## Histórico e semântica financeira
+
+- Somente POST_EVENT resolve o cadastro pelo Event ativo ou, na sua ausência, por EventHistory (ID original, título, início, término, estado cadastral e data de exclusão). As inscrições, alocações, convidados e fatos financeiros preservados compõem o relatório. A leitura histórica não confirma nem altera inscrições; os demais relatórios continuam exigindo Event ativo.
+- O pós-evento inclui contexto cadastral e regras financeiras também no CSV, inclusive regras ainda sem cobrança gerada.
+- O filtro Billing por eventId valida EventChargeContext. A apresentação consulta Event ativo e busca os IDs ausentes em EventHistory, em lote, pelo contrato público EventPresentationQuery. Ausência de metadados não invalida contexto financeiro existente. Sem contexto financeiro, o filtro retorna 404.
+- A situação para participação usa EventParticipationRequirement, compartilhada com a confirmação real. PAID ou PENDING_VALIDATION satisfazem a obrigação somente com submissão até o cutoff, inclusive no instante exato. CANCELED isoladamente não satisfaz; status da inscrição, cobrança e pagamento permanecem separados. Inscrição CONFIRMED pode apresentar pendência. Cobrança opcional é identificada como não obrigatória para participação.
+- O último pagamento de MemberCharge é selecionado por createdAt e, no empate, ID; a mesma ordenação é usada na visão financeira de Event. Não há consulta por linha.

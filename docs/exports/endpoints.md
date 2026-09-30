@@ -50,3 +50,13 @@ Health: profileId, userId, dependentId são mutuamente exclusivos; household=tru
 Event: status da inscrição, type (MEMBER/DEPENDENT/GUEST), withVehicle nas visões de participantes. Financeiro aceita status; pós-evento é consolidado sem filtros. view é exclusivo de transporte: ALL, FULL, AVAILABLE, UNALLOCATED_PEOPLE, UNALLOCATED_GUESTS, PENDING_GUESTS, ACCEPTED_RIDES. Quando filtra veículos por ocupantes, a capacidade/ocupação continua sendo a real, sem descontar participantes ocultos pelo filtro.
 
 Erros: 400 filtros/formato, 401 sem autenticação, 403 permission insuficiente, 404 referência inexistente, 413 limite, 500 falha de geração/auditoria. Event mantém seus erros operacionais globais, inclusive 409 para conflito. Arquivo só é enviado depois da geração e auditoria completas.
+
+## Histórico após exclusão e conteúdo financeiro
+
+`GET /admin/events/{eventId}/reports/post-event/export` permanece disponível em CSV/PDF após hard delete permitido pelo lifecycle: EventHistory fornece o cadastro e os fatos operacionais preservados fornecem participantes, veículos, regras, cobranças, pagamentos e pendências. O CSV possui linhas Evento/Datas/Regras; o PDF também apresenta ID, título, datas e indicação histórica. Nenhum Event é restaurado. As demais cinco rotas de relatório e a emergência continuam exigindo o Event operacional.
+
+Nas cinco rotas de Billing, eventId é validado por EventChargeContext. Contexto existente permite exportar mesmo sem Publication ativa; o título e início usam fallback público em EventHistory. Sem contexto financeiro válido, retorna 404. Os filtros financeiros continuam usando vínculos estruturados, sem inferência por nome ou código de ciclo.
+
+O financeiro de Event apresenta inscrição, effectiveStatus da cobrança e status do pagamento em colunas independentes. A coluna Situação para participação usa a regra real de confirmação, inclusive o horário de submissão e cutoff. Obrigação satisfeita com PENDING_VALIDATION continua identificando a espera por validação. CANCELED não é sinônimo de PAID e inscrição CONFIRMED não oculta pendências. Regras opcionais são identificadas explicitamente.
+
+OpenAPI é verificado automaticamente nas 38 rotas: 31 cadastrais, seis relatórios e emergência individual. O teste exige permissions, media types exatos, string/binary, Content-Disposition, Cache-Control e respostas 400/401/403/404/413/500 em application/problem+json. Emergência declara somente application/pdf.
