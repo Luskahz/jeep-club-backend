@@ -6,6 +6,7 @@ import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserProf
 import com.jeepclub.backend.iam.identity.api.http.dto.user.UpdateCurrentUserPhotoRequestDTO;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserProfileQuery;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException;
 import com.jeepclub.backend.iam.identity.core.application.service.user.CurrentUserProfileService;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
@@ -34,7 +35,12 @@ import tools.jackson.databind.JsonNode;
 @Tag(name = "Identity - Users", description = "Cadastro e consulta dos dados cadastrais dos usuários.")
 public class CurrentUserController {
     private final UserQuery userQuery;
+    private final UserProfileQuery userProfileQuery;
     private final CurrentUserProfileService currentUserProfileService;
+
+    private CurrentUserResponseDTO response(UserDetails user) {
+        return CurrentUserResponseDTO.from(user, userProfileQuery.hasPendingProfileCompletion(user.id()));
+    }
 
     @GetMapping("/me")
     @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
@@ -57,7 +63,7 @@ public class CurrentUserController {
     ) {
         UserDetails user = userQuery.findById(principal.getUserId())
                 .orElseThrow(() -> new UserNotFoundException(principal.getUserId()));
-        return ResponseEntity.ok(CurrentUserResponseDTO.from(user));
+        return ResponseEntity.ok(response(user));
     }
 
     @PatchMapping(value = "/me", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -89,7 +95,7 @@ public class CurrentUserController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody JsonNode request
     ) {
-        return ResponseEntity.ok(CurrentUserResponseDTO.from(currentUserProfileService.updateProfile(
+        return ResponseEntity.ok(response(currentUserProfileService.updateProfile(
                 principal.getUserId(), UpdateCurrentUserProfileRequestDTO.read(request))));
     }
 
@@ -119,7 +125,7 @@ public class CurrentUserController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody UpdateCurrentUserEmailRequestDTO request
     ) {
-        return ResponseEntity.ok(CurrentUserResponseDTO.from(
+        return ResponseEntity.ok(response(
                 currentUserProfileService.updateEmail(principal.getUserId(), request.email())
         ));
     }
@@ -131,7 +137,7 @@ public class CurrentUserController {
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestBody UpdateCurrentUserPhotoRequestDTO request
     ) {
-        return ResponseEntity.ok(CurrentUserResponseDTO.from(
+        return ResponseEntity.ok(response(
                 currentUserProfileService.updateProfilePhoto(principal.getUserId(), request.storageKey())
         ));
     }

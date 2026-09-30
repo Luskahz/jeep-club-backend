@@ -197,4 +197,87 @@ class CurrentUserProfileIntegrationTest {
         return mvc.perform(patch("/identity/me").header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON).content(body));
     }
+
+    @Test
+    void complementaryProfileIsOptionalAndUpsertIsOwnedByPrincipal() throws Exception {
+        mvc.perform(get("/identity/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true))
+                .andExpect(jsonPath("$.workProfile").isEmpty()).andExpect(jsonPath("$.address").isEmpty());
+        assertThat(profileCount(before.id())).isZero();
+
+        putComplementary("{\"workProfile\":{\"occupation\":\" Mechanic \"}}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.occupation").value("Mechanic"))
+                .andExpect(jsonPath("$.profileCompletionPending").value(true));
+        entityManager.clear();
+        assertThat(profileCount(before.id())).isEqualTo(1);
+
+        String complete = """
+                {"workProfile":{"occupation":" Mechanic ","workplace":" Garage "},
+                 "address":{"postalCode":"12345-678","street":" Main Street ","number":"S/N",
+                            "neighborhood":" Center ","city":" City ","state":"sp"}}
+                """;
+        mvc.perform(put("/identity/me/profile").queryParam("userId", otherId.toString())
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(complete))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false))
+                .andExpect(jsonPath("$.address.postalCode").value("12345678"))
+                .andExpect(jsonPath("$.address.state").value("SP"));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false))
+                .andExpect(jsonPath("$.workProfile.workplace").value("Garage"));
+        mvc.perform(get("/identity/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+        patchProfile("{\"name\":\"New Name\"}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false));
+        putComplementary(complete.replace("Garage", "Workshop"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.workplace").value("Workshop"));
+        entityManager.clear();
+        assertThat(profileCount(before.id())).isEqualTo(1);
+        assertThat(profileCount(otherId)).isZero();
+        assertThat(users.findById(otherId).orElseThrow().name()).isEqualTo("Other");
+        assertThat(users.findById(before.id()).orElseThrow().cpf()).isEqualTo(before.cpf());
+
+        putComplementary("{}").andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile").isEmpty())
+                .andExpect(jsonPath("$.address").isEmpty()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "{\"userId\":1}", "{\"status\":\"DISABLED\"}",
+            "{\"workProfile\":{\"userId\":1}}", "{\"workProfile\":{\"occupation\":42}}",
+            "{\"address\":{\"unknown\":null}}", "{\"address\":{\"postalCode\":\"123\"}}",
+            "{\"address\":{\"state\":\"ZZ\"}}", "{\"address\":false}"})
+    void complementaryProfileRejectsInvalidDataAndArbitraryOwnership(String body) throws Exception {
+        putComplementary("{\"workProfile\":{\"occupation\":\"Original\"}}")
+                .andExpect(status().isOk());
+        putComplementary(body).andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.occupation").value("Original"));
+        assertThat(profileCount(otherId)).isZero();
+    }
+
+    @Test
+    void complementaryProfileRequiresAuthentication() throws Exception {
+        mvc.perform(get("/identity/me/profile")).andExpect(status().isUnauthorized());
+        mvc.perform(put("/identity/me/profile").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        assertThat(profileCount(before.id())).isZero();
+    }
+
+    private long profileCount(Long id) {
+        return entityManager.createQuery("select count(p) from UserProfileEntity p where p.userId = :id", Long.class)
+                .setParameter("id", id).getSingleResult();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putComplementary(String body) throws Exception {
+        return mvc.perform(put("/identity/me/profile").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
 }
