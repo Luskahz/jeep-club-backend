@@ -270,14 +270,31 @@ class EventOperationsIntegrationTest {
     }
     @Test void emergencyAccessIsIndividualContextualAndDurablyAudited() {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
-        assertThatThrownBy(() -> admin.health(e.getId(), MedicalProfileOwner.USER, 10L, 99L)).hasMessageContaining("not allowed");
+        assertThatThrownBy(() -> admin.health(e.getId(), MedicalProfileOwner.USER, 10L, 99L)).hasMessageContaining("profile not found");
         clock.now = START;
         assertThatThrownBy(() -> admin.health(e.getId(), MedicalProfileOwner.USER, 20L, 99L)).hasMessageContaining("participant not found");
         assertThatThrownBy(() -> admin.health(e.getId(), MedicalProfileOwner.USER, 10L, 99L)).hasMessageContaining("profile not found");
         var profile = new EmergencyMedicalProfileQuery.Profile("O_POSITIVE", "private", null, null, null, null, null, null, null, null, null);
         when(health.find(any(), anyLong())).thenReturn(Optional.of(profile));
+        clock.now=NOW; // Before the scheduled start: emergencies remain accessible.
         assertThat(admin.health(e.getId(), MedicalProfileOwner.DEPENDENT, 201L, 99L)).isEqualTo(profile);
-        assertThat(logs.findAll().stream().filter(l -> l.getAction().equals("EVENT_HEALTH_EMERGENCY_READ") && l.getPath().contains("/" + e.getId() + "/"))).hasSize(4);
+        clock.now=START.plus(java.time.Duration.ofDays(2));
+        assertThat(admin.health(e.getId(), MedicalProfileOwner.USER, 10L, 99L)).isEqualTo(profile);
+        assertThat(logs.findAll().stream().filter(l -> l.getAction().equals("EVENT_HEALTH_EMERGENCY_READ") && l.getPath().contains("/" + e.getId() + "/"))).hasSize(5);
+    }
+    @Test void guestNameIsValidatedPersistedAndPreservedAfterReview() {
+        var event=freeEvent();member.register(event.getId(),10L,allocation());
+        assertThatThrownBy(()->admin.createGuest(event.getId(),99L,"12345678909"," ")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->member.requestGuest(event.getId(),10L,101L,"12345678909","x".repeat(151))).isInstanceOf(IllegalArgumentException.class);
+        var guest=member.requestGuest(event.getId(),10L,101L,"12345678909","  Convidado Legível  ");
+        assertThat(guest.guestName()).isEqualTo("Convidado Legível");
+        assertThat(admin.reviewGuest(event.getId(),guest.id(),99L,true,null).guestName()).isEqualTo("Convidado Legível");
+    }
+    @Test void emergencyRejectsDependentWhoseOwnershipChanged() {
+        var event=freeEvent();member.register(event.getId(),10L,allocation());
+        when(dependents.isActiveDependentOfUser(201L,10L)).thenReturn(false);
+        assertThatThrownBy(()->admin.health(event.getId(),MedicalProfileOwner.DEPENDENT,201L,99L)).hasMessageContaining("participant not found");
+        verify(health,never()).find(any(),anyLong());
     }
     @Test void cancellationDefersRefundUntilPaymentActuallyConfirmed() {
         var e = event(true); member.register(e.getId(), 10L, List.of());

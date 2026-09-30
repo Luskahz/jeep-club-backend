@@ -161,3 +161,10 @@ Os testes de domínio/aplicação cobrem elegibilidade, aprovação, rejeição 
 histórico de bloqueio. Testes de contrato HTTP/OpenAPI devem caracterizar a
 superfície pública, permissions administrativas, paginação e respostas RFC 9457
 sem duplicar o contrato detalhado do Swagger.
+
+
+## Exportações CSV/PDF — BACK-410
+
+MEMBERSHIP_EXPORT permite solicitações e bloqueios, todos/id e filtros administrativos de status/período aplicáveis. Activation tokens, hashes, version e activeCpf não são campos dos relatórios.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

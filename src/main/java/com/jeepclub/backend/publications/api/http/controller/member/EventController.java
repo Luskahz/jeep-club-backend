@@ -81,7 +81,7 @@ public class EventController {
     @ApiResponse(responseCode="201", description="Request guest for own allocated vehicle")
     @ResponseStatus(HttpStatus.CREATED)
     public EventGuestRequest guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
-        return service.requestGuest(id, principal.getUserId(), r.vehicleId(), r.cpf());
+        return service.requestGuest(id, principal.getUserId(), r.vehicleId(), r.cpf(), r.guestName());
     }
     @GetMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REQUEST_READ')")

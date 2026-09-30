@@ -110,3 +110,10 @@ Os testes de domínio e aplicação caracterizam snapshots, estados, locks e reg
 financeiras. Os testes de comprovante cobrem validação, storage, compensação,
 persistência da key interna e autorização por `paymentId`. O contrato OpenAPI é
 protegido por teste focal em `/v3/api-docs`.
+
+
+## Exportações CSV/PDF — BACK-410
+
+Cinco produtos: definições × atribuições (inclui sem atribuição), ciclos históricos, cobranças, pagamentos e reembolsos. Filtros de ano/mês derivam do vencimento do ciclo; EventChargeContext fornece o vínculo de evento. Cobranças por chargeCycleId formam o relatório do ciclo e incluem o último pagamento, sem multiplicar cobranças. Situação efetiva usa o domínio existente. EventFinancialQuery acrescenta snapshots e vencimento mantendo o construtor anterior; EventFinanceReportQuery fornece definições e totais por status, com limites antes da composição. Nome/CPF, papel e evento são resolvidos por contratos públicos em lote.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

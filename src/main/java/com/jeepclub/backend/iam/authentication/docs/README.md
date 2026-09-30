@@ -129,3 +129,10 @@ Os testes existentes cobrem contrato DTO, controllers, segurança HTTP, estados
 da conta, revogação, login concorrente, adapters de persistência, JWT e
 integrações de provisionamento. Ao alterar este contexto, escolha os testes
 afetados conforme as [regras globais](../../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
+
+
+## Exportações CSV/PDF — BACK-410
+
+AUTHENTICATION_EXPORT permite contas (identityId), sessões, metadados de refresh e recuperação (id). Cada projection lista apenas campos administrativos e não seleciona passwordHash/tokenHash. PasswordChangeChallenge continua sem export.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

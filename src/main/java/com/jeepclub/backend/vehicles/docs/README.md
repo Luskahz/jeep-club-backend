@@ -306,3 +306,10 @@ feliz, reuso de identificadores e compatibilidade de leitura legada
 funcionais além dessas lacunas permanecem na BACK-332 original apenas onde
 ainda fizerem sentido, e devem seguir os
 [critérios globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
+
+
+## Exportações CSV/PDF — BACK-410
+
+VEHICLES_VEHICLE_EXPORT permite ACTIVE, id, ownerId e histórico separado. SOFT_DELETED não é operacional. EventVehicleQuery.findDetailsBatch inclui ID, ownerId, apelido, placa, marca/modelo e capacidade, sem foto/storage, até 500 IDs.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

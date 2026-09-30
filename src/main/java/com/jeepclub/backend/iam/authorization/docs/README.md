@@ -92,3 +92,10 @@ contrato global `400` RFC 9457.
 Os testes cobrem rotas, verbs, authorities documentadas, respostas de sucesso,
 consulta da autorização atual e sincronização do catálogo. Alterações neste
 contexto devem selecionar testes conforme as [regras globais](../../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
+
+
+## Exportações CSV/PDF — BACK-410
+
+AUTHORIZATION_EXPORT permite roles, permissions e visão de usuários com papéis/permissões efetivas. Somente roles ACTIVE concedem permissions na visão agregada. Nome/CPF são lidos de UserQuery, sem duplicação local. RolePresentationQuery oferece ID/nome em lote (até 500) para identificação de atribuições de Billing.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

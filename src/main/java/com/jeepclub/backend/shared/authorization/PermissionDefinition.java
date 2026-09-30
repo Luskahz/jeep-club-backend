@@ -3,6 +3,17 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    IDENTITY_USER_EXPORT(PermissionCode.IDENTITY_USER_EXPORT, ModuleCode.IDENTITY, "Permite exportação administrativa de IDENTITY"),
+    AUTHENTICATION_EXPORT(PermissionCode.AUTHENTICATION_EXPORT, ModuleCode.AUTHENTICATION, "Permite exportação administrativa de AUTHENTICATION"),
+    AUTHORIZATION_EXPORT(PermissionCode.AUTHORIZATION_EXPORT, ModuleCode.AUTHORIZATION, "Permite exportação administrativa de AUTHORIZATION"),
+    MEMBERSHIP_EXPORT(PermissionCode.MEMBERSHIP_EXPORT, ModuleCode.MEMBERSHIP, "Permite exportação administrativa de MEMBERSHIP"),
+    DEPENDENTS_DEPENDENT_EXPORT(PermissionCode.DEPENDENTS_DEPENDENT_EXPORT, ModuleCode.DEPENDENTS, "Permite exportação administrativa de DEPENDENTS"),
+    VEHICLES_VEHICLE_EXPORT(PermissionCode.VEHICLES_VEHICLE_EXPORT, ModuleCode.VEHICLES, "Permite exportação administrativa de VEHICLES"),
+    TOOLS_TOOL_EXPORT(PermissionCode.TOOLS_TOOL_EXPORT, ModuleCode.TOOLS, "Permite exportação administrativa de TOOLS"),
+    HEALTH_MEDICAL_PROFILE_EXPORT(PermissionCode.HEALTH_MEDICAL_PROFILE_EXPORT, ModuleCode.HEALTH, "Permite exportação administrativa de HEALTH"),
+    BILLING_EXPORT(PermissionCode.BILLING_EXPORT, ModuleCode.BILLING, "Permite exportação administrativa de BILLING"),
+    PUBLICATIONS_EXPORT(PermissionCode.PUBLICATIONS_EXPORT, ModuleCode.PUBLICATIONS, "Permite exportação administrativa de PUBLICATIONS"),
+
     PUBLICATIONS_INTERACTION_LIKE(PermissionCode.PUBLICATIONS_INTERACTION_LIKE, ModuleCode.PUBLICATIONS, "Publication: like and unlike"),
     PUBLICATIONS_COMMENT_CREATE(PermissionCode.PUBLICATIONS_COMMENT_CREATE, ModuleCode.PUBLICATIONS, "Publication: create comment"),
     PUBLICATIONS_COMMENT_READ(PermissionCode.PUBLICATIONS_COMMENT_READ, ModuleCode.PUBLICATIONS, "Publication: read comments"),

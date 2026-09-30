@@ -26,6 +26,14 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class DependentRepositoryAdapter implements DependentRepository {
+    public List<Dependent> findByIds(Collection<Long> ids) {
+        return ids.isEmpty()?List.of():jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
+    }
+    public List<Dependent> findByUserAfterId(Long userId,long afterId,int limit) {
+        return jpaRepository.findByUserIdAndIdGreaterThanOrderByIdAsc(userId,afterId,org.springframework.data.domain.PageRequest.of(0,limit))
+            .stream().map(mapper::toDomain).toList();
+    }
+
 
     private final DependentJpaRepository jpaRepository;
     private final DependentHistoryJpaRepository historyJpaRepository;
