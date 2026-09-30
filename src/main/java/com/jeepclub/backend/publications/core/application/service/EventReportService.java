@@ -1,6 +1,7 @@
 package com.jeepclub.backend.publications.core.application.service;
 import com.jeepclub.backend.publications.core.application.query.EventReportPeople;
 import com.jeepclub.backend.publications.core.application.query.EventReportPeople.Person;
+import com.jeepclub.backend.publications.core.application.service.internal.EventParticipationRequirement;
 import com.jeepclub.backend.publications.core.domain.model.*;
 import com.jeepclub.backend.publications.core.repository.*;
 import com.jeepclub.backend.iam.identity.api.module.*;
@@ -19,6 +20,7 @@ public class EventReportService {
     public enum TransportView { ALL,FULL,AVAILABLE,UNALLOCATED_PEOPLE,UNALLOCATED_GUESTS,PENDING_GUESTS,ACCEPTED_RIDES }
     private final AdminEventService administration;
     private final PublicationRepository publications;
+    private final EventPresentationQueryRepository eventHistory;
     private final EventOperationsRepository operations;
     private final EventReportVolumeQuery volume;
     private final UserQuery users;
@@ -35,9 +37,11 @@ public class EventReportService {
         if(product!=Product.TRANSPORT && view!=TransportView.ALL
             || (product==Product.FINANCIAL || product==Product.POST_EVENT) && (type!=null || withVehicle!=null)
             || product==Product.POST_EVENT && status!=null)throw new ExportException(ExportException.Reason.INVALID_FILTER);
-        var event=publications.findById(eventId).filter(Event.class::isInstance).map(Event.class::cast).orElseThrow(()->new ExportException(ExportException.Reason.NOT_FOUND));
+        var event=publications.findById(eventId).filter(Event.class::isInstance).map(Event.class::cast).orElse(null);
+        var historical=event==null && product==Product.POST_EVENT?eventHistory.findHistoricalById(eventId).orElse(null):null;
+        if(event==null && historical==null)throw new ExportException(ExportException.Reason.NOT_FOUND);
         volume.requireWithinLimit(eventId);finance.requireWithinLimit(eventId);
-        var dashboard=administration.dashboard(eventId);
+        var dashboard=event==null?administration.historicalDashboard(eventId):administration.dashboard(eventId);
         var registrations=dashboard.registrations();var guests=operations.guests(eventId);var rules=operations.rules(eventId);
         var userIds=new HashSet<Long>();registrations.forEach(r->userIds.add(r.userId()));guests.forEach(g->userIds.add(g.requesterUserId()));
         var depIds=new HashSet<Long>();registrations.forEach(r->{depIds.addAll(r.unallocatedDependentIds());r.allocations().forEach(a->depIds.addAll(a.dependentIds()));});
@@ -50,7 +54,12 @@ public class EventReportService {
         var selected=all.stream().filter(p->status==null || status.equals(p.registrationStatus())).filter(p->type==null || type.equals(p.type()))
             .filter(p->withVehicle==null || withVehicle==(p.vehicleId()!=null))
             .sorted(Comparator.comparing(Person::userId).thenComparing(Person::vehicleId,Comparator.nullsLast(Comparator.naturalOrder())).thenComparing(p->p.type().equals("MEMBER")?0:1)).toList();
-        var metadata=new ArrayList<String>();metadata.add("Evento: "+event.getTitle());metadata.add("Início: "+ExportValues.text(event.getStartsAt()));metadata.add("Situação: "+event.effectiveStatus(clock.instant()));
+        var metadata=new ArrayList<String>();metadata.add("ID do evento: "+eventId);
+        metadata.add("Evento: "+(event==null?historical.title():event.getTitle()));
+        metadata.add("Início: "+ExportValues.text(event==null?historical.startsAt():event.getStartsAt()));
+        metadata.add("Término: "+ExportValues.text(event==null?historical.endsAt():event.getEndsAt()));
+        metadata.add("Situação: "+(event==null?historical.status():event.effectiveStatus(clock.instant())));
+        if(historical!=null)metadata.add("Contexto histórico — excluído em: "+ExportValues.text(historical.deletedAt()));
         if(status!=null)metadata.add("Inscrição: "+status);if(type!=null)metadata.add("Tipo: "+type);if(withVehicle!=null)metadata.add("Com veículo: "+ExportValues.text(withVehicle));
         // The shareable access/coverage files intentionally omit financial and administrative summaries.
         if(product!=Product.ACCESS && product!=Product.HEALTH_COVERAGE) {
@@ -86,6 +95,9 @@ public class EventReportService {
                     var coveredDeps=covered(MedicalProfileOwner.DEPENDENT,eligible.stream().filter(p->p.type().equals("DEPENDENT")).map(Person::personId).toList());
                     for(var p:eligible)sink.accept(ExportRow.of(p.name(),p.type().equals("MEMBER")?"USER":"DEPENDENT",p.holder(),(p.type().equals("MEMBER")?coveredUsers:coveredDeps).contains(p.personId())));}
                 case POST_EVENT->{
+                    sink.accept(ExportRow.of("Evento",eventId,event==null?historical.title():event.getTitle(),event==null?historical.status():event.effectiveStatus(clock.instant()),"","","","").grouped("Evento"));
+                    sink.accept(ExportRow.of("Datas",eventId,"Início: "+ExportValues.text(event==null?historical.startsAt():event.getStartsAt())+"; término: "+ExportValues.text(event==null?historical.endsAt():event.getEndsAt()),historical==null?"Atual":"Histórico — excluído em: "+ExportValues.text(historical.deletedAt()),"","","","").grouped("Evento"));
+                    for(var rule:rules)sink.accept(ExportRow.of("Regras",rule.chargeDefinitionId(),"Obrigatória para participação: "+ExportValues.text(rule.requiredForParticipation())+"; limite: "+ExportValues.text(rule.participationCutoff())+"; vencimento: "+ExportValues.text(rule.financialDueDate()),"","","","","").grouped("Regras financeiras e de participação"));
                     for(var p:all)sink.accept(ExportRow.of("Participantes",p.personId(),p.name()+" / "+p.holder(),p.registrationStatus(),"",vehicle(vs.get(p.vehicleId())),"","").grouped("Participantes"));
                     for(var v:vs.values()){long occupied=all.stream().filter(p->Objects.equals(p.vehicleId(),v.id()) && occupies(p)).count();sink.accept(ExportRow.of("Transporte",v.id(),vehicle(v),"","",v.plate(),occupied,Math.max(0,v.seatingCapacity()-occupied)).grouped("Transporte"));}
                     for(var s:dashboard.financial())sink.accept(ExportRow.of("Cobranças",s.memberChargeId(),s.definitionName(),s.effectiveStatus()+" / "+ExportValues.text(s.paymentStatus()),s.amount(),"","","").grouped("Financeiro"));
@@ -99,10 +111,14 @@ public class EventReportService {
         var indexed=states.stream().collect(Collectors.toMap(s->s.userId()+":"+s.chargeDefinitionId(),s->s,(a,b)->a));
         for(var r:registrations)if(filter==null || filter.equals(r.status().name()))for(var rule:rules) {
             var s=indexed.get(r.userId()+":"+rule.chargeDefinitionId());var d=definitions.get(rule.chargeDefinitionId());var u=users.get(r.userId());
-            boolean paid=s!=null && List.of("PAID","CANCELED").contains(s.effectiveStatus());
+            boolean satisfied=EventParticipationRequirement.satisfied(rule,s);
             boolean pending=s!=null && "PENDING_VALIDATION".equals(s.paymentStatus());
             boolean cutoff=!clock.instant().isBefore(rule.participationCutoff());
-            String situation=r.status()==EventRegistration.Status.CANCELLED?"Inscrição cancelada":!paid && r.status()==EventRegistration.Status.CONFIRMED?"Confirmado com pendência financeira":paid?"Sem pendência financeira":pending?"Aguardando validação":cutoff?"Passou do limite de participação":"Falta pagar";
+            String situation=r.status()==EventRegistration.Status.CANCELLED?"Inscrição cancelada"
+                :!rule.requiredForParticipation()?"Não obrigatória para participação"
+                :satisfied?(pending?"Obrigação satisfeita; aguardando validação":"Obrigação satisfeita")
+                :r.status()==EventRegistration.Status.CONFIRMED?"Confirmado com pendência financeira"
+                :cutoff?"Passou do limite de participação":pending?"Aguardando validação; obrigação não satisfeita":"Falta pagar";
             sink.accept(ExportRow.of(r.userId(),u==null?"Cadastro indisponível":u.name(),u==null?"":u.cpf(),r.id(),r.status(),s!=null&&s.definitionName()!=null?s.definitionName():d==null?rule.chargeDefinitionId():d.name(),s!=null?s.amount():d==null?null:d.amount(),rule.requiredForParticipation(),rule.participationCutoff(),s!=null?s.dueDate():rule.financialDueDate(),s==null?null:s.memberChargeId(),s==null?"Cobrança ausente":s.effectiveStatus(),s==null?null:s.paymentStatus(),s==null?null:s.paymentSubmittedAt(),pending,situation).grouped("Usuário: "+(u==null?r.userId():u.name())));
         }
     }

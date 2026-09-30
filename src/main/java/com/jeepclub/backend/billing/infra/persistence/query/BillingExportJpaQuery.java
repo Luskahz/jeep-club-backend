@@ -8,10 +8,14 @@ import java.math.BigDecimal;
 @org.springframework.stereotype.Repository @lombok.RequiredArgsConstructor
 public class BillingExportJpaQuery implements BillingExportQuery {
     private final jakarta.persistence.EntityManager em;
+    public boolean hasEventContext(Long eventId) {
+        return em.createQuery("select count(c) from EventChargeContextEntity c where c.eventId=:eventId",Long.class)
+            .setParameter("eventId",eventId).getSingleResult()>0;
+    }
     public java.util.Map<Long,ExportRow> latestPayments(java.util.Collection<Long> chargeIds) {
         if(chargeIds.isEmpty())return java.util.Map.of();
         var result=new java.util.HashMap<Long,ExportRow>();
-        em.createQuery("select p.memberChargeId,p.id,p.amount,p.paymentMethod,p.status,p.submittedAt from MemberPaymentEntity p where p.memberChargeId in :ids and p.id=(select max(latest.id) from MemberPaymentEntity latest where latest.memberChargeId=p.memberChargeId)",Object[].class)
+        em.createQuery("select p.memberChargeId,p.id,p.amount,p.paymentMethod,p.status,p.submittedAt from MemberPaymentEntity p where p.memberChargeId in :ids and not exists (select latest.id from MemberPaymentEntity latest where latest.memberChargeId=p.memberChargeId and (latest.createdAt>p.createdAt or (latest.createdAt=p.createdAt and latest.id>p.id)))",Object[].class)
             .setParameter("ids",chargeIds).getResultList().forEach(t->result.put((Long)t[0],ExportRow.of(t[1],t[2],t[3],t[4],t[5])));
         return result;
     }

@@ -8,4 +8,5 @@ public interface BillingExportQuery {
     record Entry(Long userId,Long roleId,Long eventId,MemberCharge charge,ExportRow row) {}
     java.util.List<Entry> read(Product product,BillingExportFilter filter,int offset);
     boolean exists(Product product,Long id);
+    boolean hasEventContext(Long eventId);
 }

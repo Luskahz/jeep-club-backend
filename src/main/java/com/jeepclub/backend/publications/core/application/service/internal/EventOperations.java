@@ -73,8 +73,7 @@ public class EventOperations {
         if (registration.status() != EventRegistration.Status.PENDING_PAYMENT) return registration;
         boolean satisfied = rules.stream().filter(EventChargeRule::requiredForParticipation).allMatch(rule ->
             states.stream().filter(s -> s.userId().equals(registration.userId()) && s.chargeDefinitionId().equals(rule.chargeDefinitionId()))
-                .anyMatch(s -> ("PAID".equals(s.effectiveStatus()) || "PENDING_VALIDATION".equals(s.paymentStatus()))
-                    && s.paymentSubmittedAt() != null && !s.paymentSubmittedAt().isAfter(rule.participationCutoff())));
+                .anyMatch(s -> EventParticipationRequirement.satisfied(rule, s)));
         return satisfied ? operations.save(registration.confirm(now())) : registration;
     }
     public List<EventRegistration> refreshed(Long id) {

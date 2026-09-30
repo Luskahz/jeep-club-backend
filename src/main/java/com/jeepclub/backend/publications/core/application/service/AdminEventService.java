@@ -128,7 +128,13 @@ public class AdminEventService {
         long postCutoffPending, List<EventFinancialQuery.State> financial) {}
     public Dashboard dashboard(Long id) {
         events.locked(id);
-        var registrations = events.refreshed(id);
+        return dashboard(id, events.refreshed(id));
+    }
+    // The report resolves EventHistory first. Historical reads must not refresh registrations.
+    Dashboard historicalDashboard(Long id) {
+        return dashboard(id, operations.registrations(id));
+    }
+    private Dashboard dashboard(Long id, List<EventRegistration> registrations) {
         var active = registrations.stream().filter(r -> r.status() != EventRegistration.Status.CANCELLED).toList();
         var confirmed = registrations.stream().filter(r -> r.status() == EventRegistration.Status.CONFIRMED).toList();
         long dependentCount = confirmed.stream().flatMap(r -> r.allocations().stream()).mapToLong(a -> a.dependentIds().size()).sum()

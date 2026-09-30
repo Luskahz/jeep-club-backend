@@ -5,7 +5,6 @@ import com.jeepclub.backend.billing.core.application.query.BillingExportFilter;
 import com.jeepclub.backend.iam.identity.api.module.*;
 import com.jeepclub.backend.iam.authorization.api.module.RolePresentationQuery;
 import com.jeepclub.backend.publications.api.module.EventPresentationQuery;
-import com.jeepclub.backend.publications.api.module.EventQuery;
 import com.jeepclub.backend.shared.export.*;
 import java.time.*;
 import java.util.*;
@@ -17,7 +16,6 @@ public class BillingExportService {
     private final UserQuery users;
     private final RolePresentationQuery roles;
     private final EventPresentationQuery events;
-    private final EventQuery eventExistence;
     private final ExportRenderer renderer;
     private final Clock clock;
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
@@ -34,7 +32,7 @@ public class BillingExportService {
             try {com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod.valueOf(f.paymentMethod());}
             catch(IllegalArgumentException e){throw new ExportException(ExportException.Reason.INVALID_FILTER);}
         }
-        if(f.userId()!=null && !users.existsById(f.userId()) || f.eventId()!=null && !eventExistence.exists(f.eventId())
+        if(f.userId()!=null && !users.existsById(f.userId()) || f.eventId()!=null && !query.hasEventContext(f.eventId())
             || f.chargeDefinitionId()!=null && !query.exists(Product.DEFINITIONS,f.chargeDefinitionId())
             || f.chargeCycleId()!=null && !query.exists(Product.CYCLES,f.chargeCycleId())
             || f.id()!=null && !query.exists(product,f.id())) throw new ExportException(ExportException.Reason.NOT_FOUND);
