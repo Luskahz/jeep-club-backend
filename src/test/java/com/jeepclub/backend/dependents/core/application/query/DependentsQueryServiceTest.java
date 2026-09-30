@@ -9,7 +9,8 @@ import static org.mockito.Mockito.*;
 
 class DependentsQueryServiceTest {
     private final DependentRepository repository = mock(DependentRepository.class);
-    private final DependentsQueryService query = new DependentsQueryService(repository);
+    private final DependentsQueryService query = new DependentsQueryService(
+        mock(com.jeepclub.backend.dependents.core.repository.DependentHistoricalPresentationRepository.class), repository);
 
     @Test
     void absentIdentifiersAndEmptyBatchesNeverReachPersistence() {

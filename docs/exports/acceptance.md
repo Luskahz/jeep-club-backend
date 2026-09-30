@@ -6,6 +6,8 @@ O tratamento adicional de dados pessoais e masking pertence à BACK-409 e não f
 
 Evidência transversal: ExportHttpIntegrationTest executa queries reais dos 31 endpoints cadastrais em CSV/PDF e os relatórios Event; verifica autenticação, permission, ID inexistente, formato, headers e OpenAPI nas 38 rotas. ExportRendererTest verifica encoding, escaping, injeção, paginação, limites e auditoria. As evidências específicas, inspeção de boundaries e resultados das duas suítes completas estão em validation.md.
 
+Revalidação pontual da BACK-421: `postEventKeepsVehicleAndDependentAfterTheirRealHardDeletes` exclui Event, Vehicle e Dependent pelos serviços reais e confere POST_EVENT em CSV/PDF, veículo/capacidade e vínculo do dependente. `historicalPresentationPrefersCurrentAndHandlesUnknownIds` verifica prioridade do cadastro atual, ausência total e limite de lote. `historicalPresentationNeverRevealsAnotherHouseholdAndKeepsMissingVehicleId` protege a apresentação contra vínculo incorreto. O fallback histórico não altera os 170 critérios nem as consultas operacionais ACTIVE/ownership.
+
 | Issue | Critério | Implementação | Teste / verificação | Status |
 | --- | --- | --- | --- | --- |
 | BACK-410 | Existe matriz de necessidade de exportação por módulo/recurso. | Matriz + shared/export + platform/export + endpoints por módulo | Contratos HTTP/OpenAPI (38 rotas), renderer e auditoria transversal; validation.md | ADERENTE |

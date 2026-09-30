@@ -46,10 +46,10 @@ public class EventReportService {
         var userIds=new HashSet<Long>();registrations.forEach(r->userIds.add(r.userId()));guests.forEach(g->userIds.add(g.requesterUserId()));
         var depIds=new HashSet<Long>();registrations.forEach(r->{depIds.addAll(r.unallocatedDependentIds());r.allocations().forEach(a->depIds.addAll(a.dependentIds()));});
         var vehicleIds=new HashSet<Long>();registrations.forEach(r->r.allocations().forEach(a->vehicleIds.add(a.vehicleId())));guests.stream().map(EventGuestRequest::vehicleId).filter(Objects::nonNull).forEach(vehicleIds::add);
-        var vs=batch(vehicleIds,vehicles::findDetailsBatch).stream().collect(Collectors.toMap(EventVehicleQuery.Details::id,v->v));
+        var vs=batch(vehicleIds,historical==null?vehicles::findDetailsBatch:vehicles::findPresentationDetailsBatch).stream().collect(Collectors.toMap(EventVehicleQuery.Details::id,v->v));
         vs.values().forEach(v->userIds.add(v.ownerId()));
         var us=batch(userIds,users::findByIds).stream().collect(Collectors.toMap(UserDetails::id,u->u));
-        var ds=batch(depIds,dependents::findDetailsByIds).stream().collect(Collectors.toMap(DependentsQuery.Details::id,d->d));
+        var ds=batch(depIds,historical==null?dependents::findDetailsByIds:dependents::findPresentationDetailsByIds).stream().collect(Collectors.toMap(DependentsQuery.Details::id,d->d));
         var all=EventReportPeople.assemble(registrations,guests,us,ds);
         var selected=all.stream().filter(p->status==null || status.equals(p.registrationStatus())).filter(p->type==null || type.equals(p.type()))
             .filter(p->withVehicle==null || withVehicle==(p.vehicleId()!=null))
@@ -98,8 +98,9 @@ public class EventReportService {
                     sink.accept(ExportRow.of("Evento",eventId,event==null?historical.title():event.getTitle(),event==null?historical.status():event.effectiveStatus(clock.instant()),"","","","").grouped("Evento"));
                     sink.accept(ExportRow.of("Datas",eventId,"Início: "+ExportValues.text(event==null?historical.startsAt():event.getStartsAt())+"; término: "+ExportValues.text(event==null?historical.endsAt():event.getEndsAt()),historical==null?"Atual":"Histórico — excluído em: "+ExportValues.text(historical.deletedAt()),"","","","").grouped("Evento"));
                     for(var rule:rules)sink.accept(ExportRow.of("Regras",rule.chargeDefinitionId(),"Obrigatória para participação: "+ExportValues.text(rule.requiredForParticipation())+"; limite: "+ExportValues.text(rule.participationCutoff())+"; vencimento: "+ExportValues.text(rule.financialDueDate()),"","","","","").grouped("Regras financeiras e de participação"));
-                    for(var p:all)sink.accept(ExportRow.of("Participantes",p.personId(),p.name()+" / "+p.holder(),p.registrationStatus(),"",vehicle(vs.get(p.vehicleId())),"","").grouped("Participantes"));
+                    for(var p:all)sink.accept(ExportRow.of("Participantes",p.personId(),p.name()+" / "+p.holder(),p.registrationStatus(),"",historicalVehicle(p.vehicleId(),vs.get(p.vehicleId())),"","").grouped("Participantes"));
                     for(var v:vs.values()){long occupied=all.stream().filter(p->Objects.equals(p.vehicleId(),v.id()) && occupies(p)).count();sink.accept(ExportRow.of("Transporte",v.id(),vehicle(v),"","",v.plate(),occupied,Math.max(0,v.seatingCapacity()-occupied)).grouped("Transporte"));}
+                    for(var missingId:vehicleIds)if(!vs.containsKey(missingId))sink.accept(ExportRow.of("Transporte",missingId,"Cadastro do veículo indisponível","","","",all.stream().filter(p->Objects.equals(p.vehicleId(),missingId) && occupies(p)).count(),"").grouped("Transporte"));
                     for(var s:dashboard.financial())sink.accept(ExportRow.of("Cobranças",s.memberChargeId(),s.definitionName(),s.effectiveStatus()+" / "+ExportValues.text(s.paymentStatus()),s.amount(),"","","").grouped("Financeiro"));
                     finance.paymentCounts(eventId).forEach((state,count)->sink.accept(ExportRow.of("Pagamentos",state,"Quantidade de pagamentos",state,count,"","","").grouped("Pagamentos")));
                     sink.accept(ExportRow.of("Pendências","","Após limite para participação","",dashboard.postCutoffPending(),"","","").grouped("Pendências"));}
@@ -142,6 +143,9 @@ public class EventReportService {
     private static boolean occupies(Person p){return !List.of("CANCELLED","REJECTED","PENDING").contains(p.registrationStatus());}
     private static String names(List<Person> people){return people.stream().map(Person::name).collect(Collectors.joining("; "));}
     private static String vehicle(EventVehicleQuery.Details v){return v==null?"Não alocado":ExportValues.text(v.nickname())+" / "+v.brand()+" "+v.model();}
+    private static String historicalVehicle(Long id, EventVehicleQuery.Details v) {
+        return id == null ? "Não alocado" : v == null ? "Veículo indisponível (ID "+id+")" : vehicle(v);
+    }
     private static String personType(String t){return switch(t){case "MEMBER"->"Membro";case "DEPENDENT"->"Dependente";default->"Convidado";};}
     private static String financialSummary(Long user,List<EventFinancialQuery.State> states){return states.stream().filter(s->s.userId().equals(user)).map(s->s.effectiveStatus()+" / "+ExportValues.text(s.paymentStatus())).distinct().collect(Collectors.joining("; "));}
     private static String title(Product p){return switch(p){case MANIFEST->"Manifesto de participantes";case TRANSPORT->"Transporte e ocupação";case FINANCIAL->"Financeiro pré-evento";case ACCESS->"Controle de acesso";case HEALTH_COVERAGE->"Cobertura de ficha médica";case POST_EVENT->"Relatório pós-evento";};}

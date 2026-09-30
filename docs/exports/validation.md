@@ -16,10 +16,11 @@ O tratamento adicional de dados pessoais e masking pertence à BACK-409 e não f
 | BACK-422 | Teste OpenAPI cobria principalmente rotas cadastrais. | Cobertura das 38 rotas: permissions, media types exatos, string/binary, Content-Disposition, Cache-Control e erros 400/401/403/404/413/500. Emergência exclusivamente PDF. |
 | BACK-416 | Último pagamento escolhido por maior ID, divergindo da cronologia financeira. | Seleção em lote por createdAt e desempate por ID, como na visão financeira de Event. |
 | BACK-421 | Pós-evento omitia regras ainda sem cobrança; contexto cadastral ficava apenas nos metadados PDF. | Linhas Evento/Datas/Regras em CSV/PDF com ID, título, datas, situação, contexto histórico, obrigatoriedade, cutoff e vencimento. |
+| BACK-421 | Após exclusão do Event, POST_EVENT ainda dependia dos cadastros atuais de Vehicle/Dependent; o dashboard histórico somava apenas capacidade ACTIVE. | Contratos públicos de apresentação em Vehicles/Dependents com fallback batch para snapshots por ID original. POST_EVENT e dashboard histórico recuperam identificação e capacidade sem afetar consultas operacionais. |
 
 ## Novos testes e cobertura reforçada
 
-Foram adicionados 25 casos executáveis, elevando o total de 1.081 para 1.106. Testes preexistentes também foram ampliados.
+As duas rodadas adicionaram 28 casos executáveis ao total anterior de 1.081, agora 1.109. Esta rodada acrescentou três casos; testes preexistentes também foram ampliados.
 
 Em EventReportServiceTest:
 
@@ -37,6 +38,9 @@ Em ExportHttpIntegrationTest:
 - `dependentSelectionAndHistoryStaySeparateInBothFormats`: ACTIVE/DISABLED, id, titular, exclusão de outro agregado e histórico separado em CSV/PDF.
 - `membershipPeriodsAndBlocksPreserveSelectionWithoutTechnicalFields`: período, seleção individual de bloqueio, conjunto vazio e ausência de tokens/campos técnicos nos dois formatos.
 - `publicationCatalogsRequestsAndDeletionSnapshotsKeepTheirOwnData`: Notice, Service, request e change request possuem conteúdo e filtros próprios; exclusões reais pelo repository preservam snapshots separados e retiram os cadastros operacionais, em CSV/PDF.
+- `postEventKeepsVehicleAndDependentAfterTheirRealHardDeletes`: exclusão real do Event, Vehicle e Dependent; snapshots persistidos, POST_EVENT em CSV/PDF, participante e placa associados, capacidade/ocupação/vagas preservadas; consultas operacionais ACTIVE e ownership continuam rejeitando os registros excluídos.
+- `historicalPresentationPrefersCurrentAndHandlesUnknownIds`: quando atual e histórico coexistem, vence o atual; ID sem nenhum registro retorna vazio; lotes acima de 500 são recusados.
+- `historicalPresentationNeverRevealsAnotherHouseholdAndKeepsMissingVehicleId`: vínculo histórico com outro titular não revela identidade; veículo sem cadastro/snapshot preserva o ID com indicação de indisponibilidade, sem ser confundido com falta de alocação.
 
 Em ExportRendererTest:
 
@@ -82,7 +86,7 @@ Ambiente: Windows, Microsoft OpenJDK 17.0.20 e Maven Wrapper executado via Git B
 
 | Comando | Resultado | Testes | Falhas | Erros | Ignorados |
 | --- | --- | ---: | ---: | ---: | ---: |
-| `./mvnw test` | BUILD SUCCESS, 21:53:52 -03:00 | 1.106 | 0 | 0 | 1 |
-| `./mvnw verify` | BUILD SUCCESS, 21:57:13 -03:00 | 1.106 | 0 | 0 | 1 |
+| `./mvnw test` | BUILD SUCCESS | 1.109 | 0 | 0 | 1 |
+| `./mvnw verify` | BUILD SUCCESS | 1.109 | 0 | 0 | 1 |
 
-O único ignorado é o teste preexistente `LocalFileStorageTest.shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot`, cuja suposição exige suporte a links simbólicos indisponível neste ambiente. Nenhum teste de exportação foi ignorado. As três classes de exportação somam 221 casos (174 HTTP, 29 EventReportService, 18 renderer), todos sem falhas/erros/ignorados. Verify também concluiu empacotamento Spring Boot e geração do relatório JaCoCo.
+O único ignorado é o teste preexistente `LocalFileStorageTest.shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot`, cuja suposição exige suporte a links simbólicos indisponível neste ambiente. Nenhum teste de exportação foi ignorado. As três classes de exportação somam 224 casos (176 HTTP, 30 EventReportService, 18 renderer), todos sem falhas/erros/ignorados. Verify também concluiu empacotamento Spring Boot e geração do relatório JaCoCo.

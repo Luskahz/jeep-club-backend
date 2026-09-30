@@ -118,6 +118,23 @@ class EventReportServiceTest {
         for(var product:EventReportService.Product.values())if(product!=EventReportService.Product.POST_EVENT)
             assertThatThrownBy(()->report(product,EventReportService.TransportView.ALL)).isInstanceOf(ExportException.class);
     }
+    @Test void historicalPresentationNeverRevealsAnotherHouseholdAndKeepsMissingVehicleId() {
+        when(publications.findById(1L)).thenReturn(Optional.empty());
+        when(history.findHistoricalById(1L)).thenReturn(Optional.of(new EventPresentationQueryRepository.HistoricalEvent(
+            1L,"Trilha excluída",now.minusSeconds(3600),now,EventStatus.FINISHED,now)));
+        var dashboard=admin.dashboard(1L);
+        when(admin.historicalDashboard(1L)).thenReturn(dashboard);
+        when(vehicles.findPresentationDetailsBatch(any())).thenReturn(List.of(
+            new EventVehicleQuery.Details(101L,10L,"Jeep histórico","ABC1D23","Jeep","A",3)));
+        when(dependents.findPresentationDetailsByIds(any())).thenReturn(List.of(
+            new DependentsQuery.Details(201L,10L,"Dependente legítimo","1","CHILD","ACTIVE"),
+            new DependentsQuery.Details(202L,999L,"NOME DE OUTRA FAMÍLIA","2","CHILD","ACTIVE")));
+        String post=report(EventReportService.Product.POST_EVENT,EventReportService.TransportView.ALL);
+        assertThat(post).contains("Dependente legítimo","Jeep histórico","Veículo indisponível (ID 102)",
+            "Cadastro do veículo indisponível").doesNotContain("NOME DE OUTRA FAMÍLIA");
+        verify(vehicles,never()).findDetailsBatch(any());
+        verify(dependents,never()).findDetailsByIds(any());
+    }
     @Test void healthCoverageUsesOnlyExistenceContract(){when(coverage.findCovered(eq(MedicalProfileOwner.USER),any())).thenReturn(Set.of(10L));String csv=report(EventReportService.Product.HEALTH_COVERAGE,EventReportService.TransportView.ALL);assertThat(csv.lines().count()).isEqualTo(5);assertThat(csv).contains("Possui ficha médica","Sim","Não").doesNotContain("Convidado","52998224725","PENDING_VALIDATION");}
     @Test void postEventUsesAllPaymentStatesAndSharedPeople(){String csv=report(EventReportService.Product.POST_EVENT,EventReportService.TransportView.ALL);assertThat(csv).contains("Participantes","Transporte","CONFIRMED","REJECTED","PENDING_VALIDATION","Pendências");}
     @Test void postEventPreservesRulesEvenWithoutGeneratedCharges(){

@@ -213,6 +213,87 @@ Arguments.of("/billing/admin/refunds/export","BILLING_EXPORT"));}
     @Autowired com.jeepclub.backend.publications.core.application.service.AdminEventService eventAdministration;
     @Autowired com.jeepclub.backend.publications.core.repository.EventOperationsRepository eventOperations;
     @Autowired com.jeepclub.backend.publications.core.repository.PublicationRepository publications;
+    @Autowired com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleService vehicleAdministration;
+    @Autowired com.jeepclub.backend.dependents.core.application.service.dependent.DependentService dependentAdministration;
+    @Autowired com.jeepclub.backend.vehicles.api.module.EventVehicleQuery eventVehicles;
+    @Autowired com.jeepclub.backend.dependents.api.module.DependentsQuery eventDependents;
+    @Test @org.springframework.transaction.annotation.Transactional
+    void postEventKeepsVehicleAndDependentAfterTheirRealHardDeletes()throws Exception {
+        var owner=user("Titular da viagem","52998224725");
+        var vehicle=vehicle(id(owner),"ABC1D23","12345678901",com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE);
+        ((com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleEntity)vehicle).setNickname("Jeep da viagem");
+        var dependent=seed("dependents.infra.persistence.entity.DependentEntity","name","Dependente da viagem","cpf","12345678902",
+            "birthDate",java.time.LocalDate.of(2010,1,1),"relationshipType",com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,
+            "userId",id(owner),"status",com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.ACTIVE,"createdAt",FIXTURE_TIME);
+        var event=seed("publications.infra.persistence.entity.EventEntity","authorUserId",id(owner),"title","Viagem auditável",
+            "content","Histórico","publishedAt",FIXTURE_TIME,"status",com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.PUBLISHED,
+            "createdAt",FIXTURE_TIME,"updatedAt",FIXTURE_TIME,"startsAt",FIXTURE_TIME.plusSeconds(86400));
+        var image=new com.jeepclub.backend.publications.infra.persistence.entity.PublicationImageEntity();
+        image.setStorageKey("images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg");
+        image.setPosition(0);image.setPrimary(true);
+        ((com.jeepclub.backend.publications.infra.persistence.entity.EventEntity)event).getImages().add(image);
+        em.flush();
+        Long eventId=id(event),vehicleId=id(vehicle),dependentId=id(dependent);
+        eventOperations.save(new com.jeepclub.backend.publications.core.domain.model.EventRegistration(null,eventId,id(owner),
+            com.jeepclub.backend.publications.core.domain.model.EventRegistration.Status.CONFIRMED,
+            List.of(new com.jeepclub.backend.publications.core.domain.model.EventRegistration.Allocation(vehicleId,true,List.of(dependentId))),
+            FIXTURE_TIME,FIXTURE_TIME,null));
+        eventAdministration.finish(eventId);
+        eventAdministration.delete(eventId,999L);
+        em.flush();em.clear();
+        for(String format:List.of("CSV","PDF"))
+            assertThat(download("/admin/events/"+eventId+"/reports/post-event/export","PUBLICATIONS_EXPORT",format))
+                .contains("ABC1D23","Jeep da viagem","Jeep Renegade","Dependente da viagem","Titular da viagem");
+
+        vehicleAdministration.delete(vehicleId,999L);
+        dependentAdministration.delete(dependentId,id(owner));
+        em.flush();em.clear();
+        assertThat(em.find(com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleEntity.class,vehicleId)).isNull();
+        assertThat(em.find(com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity.class,dependentId)).isNull();
+        assertThat(em.createQuery("select count(h) from VehicleHistoryEntity h where h.vehicleId=:id",Long.class).setParameter("id",vehicleId).getSingleResult()).isEqualTo(1);
+        assertThat(em.createQuery("select count(h) from DependentHistoryEntity h where h.dependentId=:id",Long.class).setParameter("id",dependentId).getSingleResult()).isEqualTo(1);
+        assertThat(eventVehicles.findActive(vehicleId)).isEmpty();
+        assertThat(eventVehicles.findActiveBatch(List.of(vehicleId))).isEmpty();
+        assertThat(eventVehicles.findDetailsBatch(List.of(vehicleId))).isEmpty();
+        assertThat(eventDependents.existsActiveById(dependentId)).isFalse();
+        assertThat(eventDependents.isActiveDependentOfUser(dependentId,id(owner))).isFalse();
+        for(String format:List.of("CSV","PDF")) {
+            String post=download("/admin/events/"+eventId+"/reports/post-event/export","PUBLICATIONS_EXPORT",format);
+            assertThat(post).contains("ABC1D23","Jeep da viagem","Jeep Renegade","Dependente da viagem",
+                "Titular da viagem",vehicleId.toString())
+                .doesNotContain("Cadastro indisponível","Veículo indisponível");
+            if(format.equals("CSV"))assertThat(post).contains("\"ABC1D23\";\"2\";\"3\"");
+            else assertThat(post).contains("capacidade: 5","vagas: 3");
+        }
+    }
+    @Test @org.springframework.transaction.annotation.Transactional
+    void historicalPresentationPrefersCurrentAndHandlesUnknownIds()throws Exception {
+        var owner=user("Titular atual","52998224725");
+        var currentVehicle=vehicle(id(owner),"ABC1D23","12345678901",com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE);
+        var currentDependent=seed("dependents.infra.persistence.entity.DependentEntity","name","Dependente atual","cpf","12345678902",
+            "birthDate",java.time.LocalDate.of(2010,1,1),"relationshipType",com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,
+            "userId",id(owner),"status",com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.ACTIVE,"createdAt",FIXTURE_TIME);
+        seed("vehicles.infra.persistence.entity.VehicleHistoryEntity","vehicleId",id(currentVehicle),"nickname","Antigo",
+            "plate","DEF4G56","renavam","12345678909","brand","Outra","model","Modelo antigo",
+            "manufacturingYear",2019,"modelYear",2020,"seatingCapacity",2,
+            "fuelType",com.jeepclub.backend.vehicles.core.domain.enums.FuelType.FLEX,"engineDisplacement",1.8,
+            "status",com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE,"towing",false,
+            "ownerId",id(owner),"deletedByUserId",999L,"createdAt",FIXTURE_TIME,"deletedAt",FIXTURE_TIME);
+        seed("dependents.infra.persistence.entity.DependentHistoryEntity","dependentId",id(currentDependent),
+            "name","Dependente antigo","cpf","12345678903","birthDate",java.time.LocalDate.of(2010,1,1),
+            "relationshipType",com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,
+            "userId",id(owner),"status",com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.ACTIVE,
+            "deletedByUserId",999L,"createdAt",FIXTURE_TIME,"deletedAt",FIXTURE_TIME);
+        em.flush();em.clear();
+        assertThat(eventVehicles.findPresentationDetailsBatch(List.of(id(currentVehicle),987654321L)))
+            .extracting(com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.Details::plate).containsExactly("ABC1D23");
+        assertThat(eventDependents.findPresentationDetailsByIds(List.of(id(currentDependent),987654321L)))
+            .extracting(com.jeepclub.backend.dependents.api.module.DependentsQuery.Details::name).containsExactly("Dependente atual");
+        assertThatThrownBy(()->eventVehicles.findPresentationDetailsBatch(java.util.Collections.nCopies(501,987654321L)))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->eventDependents.findPresentationDetailsByIds(java.util.Collections.nCopies(501,987654321L)))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 
     @Test @org.springframework.transaction.annotation.Transactional
     void publicationCatalogsRequestsAndDeletionSnapshotsKeepTheirOwnData()throws Exception {
