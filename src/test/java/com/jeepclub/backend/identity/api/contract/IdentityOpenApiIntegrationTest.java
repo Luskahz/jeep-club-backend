@@ -26,6 +26,7 @@ import java.time.Clock;
 import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,6 +54,8 @@ class IdentityOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/identity/register']['post']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/identity/me']['get']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me/email']['patch']['responses']['409']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['components']['schemas']['UserRegistrationRequest']['properties']['birthDate']['format']")
                         .value("date"))
@@ -123,11 +126,75 @@ class IdentityOpenApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value("HTTP_400"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    @Transactional
+    void authenticatedUserCanOnlyUpdateOwnEmailWithValidationAndUniqueness() throws Exception {
+        Instant now = Instant.now(clock);
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData(
+                        "Email Owner", null, null, "47831962573",
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+        userRegistration.createWithPermanentCredential(
+                new UserRegistrationData(
+                        "Existing Email", null, "used@example.com", "86288366705",
+                        null, null, null, now
+                ),
+                "security-password"
+        );
+
+        mockMvc.perform(patch("/identity/me/email")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"  NEW@Example.COM  \"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("new@example.com"));
+
+        mockMvc.perform(patch("/identity/me/email")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"used@example.com\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("USER_EMAIL_ALREADY_IN_USE"));
+
+        mockMvc.perform(patch("/identity/me/email")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\" \"}"))
+                .andExpect(status().isBadRequest());
     }
 
     private void grant(Role role, PermissionCode code, Instant now) {
         Long permissionId = permissionRepository.findByCode(code).orElseThrow().getId();
         rolePermissionRepository.save(RolePermission.create(role.getId(), permissionId, now));
+    }
+
+    @Test
+    void openApiDescribesSelfProfilePatchAndProtectedFields() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['requestBody']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/UpdateCurrentUserProfileRequest"))
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['200']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/CurrentIdentityUserResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['401']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['404']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me']['patch']['responses']['409']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['additionalProperties']").value(false))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties'].length()").value(5))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['name']['maxLength']").value(150))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['birthDate']['format']").value("date"))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['cpf']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['properties']['profilePhotoUrl']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['CurrentIdentityUserResponse']['properties']['cpf']['readOnly']").value(true))
+                .andExpect(jsonPath("$['components']['schemas']['CurrentIdentityUserResponse']['properties']['status']['readOnly']").value(true))
+                .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['description']")
+                        .value(org.hamcrest.Matchers.containsString("null limpa")));
     }
 }

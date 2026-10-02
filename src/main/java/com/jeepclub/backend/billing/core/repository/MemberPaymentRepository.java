@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberPaymentRepository {
+    java.util.List<MemberPayment> findByMemberChargeIdIn(java.util.Collection<Long> ids);
 
     MemberPayment save(MemberPayment memberPayment);
 

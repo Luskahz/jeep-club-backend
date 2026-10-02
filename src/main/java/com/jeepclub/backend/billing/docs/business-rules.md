@@ -14,8 +14,9 @@
    arquivada. Ativar uma atribuição ativa ou desativar uma inativa gera conflito.
 5. O alvo `USER` exige usuário administrativamente ativo; `ROLE` exige role
    ativa. Alvos resolvidos na geração são deduplicados.
-6. A integração de eventos retorna indisponibilidade no adapter atual; portanto
-   `EVENT_PARTICIPANTS` não encontra alvo e não é integrado a um módulo de evento.
+6. `EVENT_PARTICIPANTS` valida Event pelo contrato público de Publications.
+   A geração administrativa continua resolvendo todos os assignments; o comando
+   específico de Event resolve somente seu contexto e recebe o inscrito diretamente.
 
 ## Ciclos e cobranças
 
@@ -23,8 +24,10 @@
    menos um usuário elegível. Ele nasce `GENERATED` e cria uma cobrança por alvo.
 8. Finalizar um ciclo muda apenas seu estado; não quita nem cancela cobranças.
 9. Cancelar um ciclo `GENERATED` cancela suas cobranças ainda abertas e cria
-   elegibilidades de reembolso por 30 dias para pagamentos `CONFIRMED` ou
-   `PENDING_VALIDATION` que ainda não possuam refund ativo ou concluído.
+   elegibilidades de reembolso por 30 dias para pagamentos `CONFIRMED`
+   que ainda não possuam refund ativo ou concluído. `PENDING_VALIDATION` continua
+   analisável: confirmação posterior garante elegibilidade com a mesma janela,
+   ancorada no cancelamento; rejeição não gera refund.
 10. Somente ciclos `FINISHED` ou `CANCELED` podem ser arquivados. Arquivamento é
     organização histórica e não produz novo efeito financeiro.
 11. `MemberCharge` persiste `PENDING`, `PAID` ou `CANCELED`. `OVERDUE` e
@@ -38,6 +41,25 @@
     `UNTIL_DAYS_AFTER_DUE_DATE` até a data calculada de tolerância;
     `AFTER_DUE_DATE` não possui limite final.
 
+No vínculo de Event, `participationCutoff` é um `Instant` de Publications e
+controla confirmação da inscrição. `financialDueDate` é um `LocalDate` opcional
+da regra do Event; quando informado, vira `ChargeCycle.dueDate` e
+`MemberCharge.dueDate`. Quando omitido, o ciclo usa a data UTC de `startsAt`
+como vencimento de referência. `paymentAllowedUntil` é derivado da política
+financeira: coincide com o vencimento para `UNTIL_DUE_DATE`, soma a tolerância
+para `UNTIL_DAYS_AFTER_DUE_DATE` e fica sem limite para `AFTER_DUE_DATE`.
+Essas datas não alteram retroativamente uma inscrição já `CONFIRMED`.
+
+### Consulta pública para Membership
+
+`MembershipChargeQuery` recebe definição e usuário e resolve primeiro o ciclo
+não arquivado aplicável ao período atual: mês para `MONTHLY`, ano para `YEARLY`
+e ciclo não arquivado para `ONE_TIME`. Entre múltiplos candidatos, prefere o
+vencimento mais recente já alcançado; se todos forem futuros, o mais próximo.
+Depois localiza a cobrança daquele usuário pelo ciclo e calcula o estado efetivo
+com o `Clock`. Ciclo recorrente atual ausente ou cobrança ausente nesse ciclo
+resultam em `CHARGE_NOT_FOUND`; `OVERDUE` e `EXPIRED` não são persistidos.
+
 ## Pagamentos
 
 15. A submissão exige cobrança própria, aberta na data atual, valor exatamente
@@ -45,8 +67,9 @@
     (`PENDING_VALIDATION` ou `REJECTED`).
 16. O pagamento nasce `PENDING_VALIDATION`. Apenas esse estado pode ser
     confirmado ou rejeitado.
-17. Confirmação marca o pagamento `CONFIRMED` e a cobrança `PAID` na mesma
-    transação. A janela é validada na submissão, não novamente na confirmação.
+17. Confirmação marca o pagamento `CONFIRMED` e a cobrança aberta `PAID` na mesma
+    transação. Se o ciclo já foi cancelado, preserva a cobrança cancelada e garante
+    elegibilidade de refund. A janela é validada na submissão, não na confirmação.
 18. Rejeição mantém a cobrança aberta. Pagamento `REJECTED` pode ser reenviado e
     volta a `PENDING_VALIDATION`, revalidando a janela da cobrança.
 19. Pagamento já `PENDING_VALIDATION` também pode ser substituído; nessa
@@ -57,7 +80,7 @@
 ## Reembolsos
 
 21. Um membro pode solicitar reembolso apenas de pagamento próprio `CONFIRMED`
-    ou `PENDING_VALIDATION` que ainda não tenha sido reembolsado.
+    que ainda não tenha sido reembolsado. Comprovante não analisado não comprova dinheiro recebido.
 22. Solicitação direta nasce `REQUESTED`. Uma elegibilidade de cancelamento de
     ciclo nasce `ELIGIBLE` com janela de 30 dias e pode ser solicitada ou aprovada
     enquanto não expirada.
@@ -69,6 +92,11 @@
     `REJECTED`, `REFUNDED`, `EXPIRED` e `CANCELED` são terminais no fluxo atual.
 
 ## Comprovantes
+
+`submittedAt` registra a submissão corrente e muda no reenvio/substituição.
+Confirmar ou rejeitar não altera esse instante. Dados legados sem a coluna
+preenchida usam `createdAt`; não há backfill que invente timestamps antigos.
+Publications compara esse instante com seu cutoff; Billing não decide participação.
 
 26. O arquivo é obrigatório em submissão e atualização; são aceitos PDF, JPEG,
     PNG e WebP de até 10 MB, com extensão e MIME coerentes.

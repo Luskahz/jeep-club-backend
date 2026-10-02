@@ -8,7 +8,7 @@ public enum AdminUserField {
     CPF,
     RG,
     PHONE_NUMBER,
-    PROFILE_PHOTO_URL,
+    PROFILE_PHOTO_STORAGE_KEY,
     STATUS,
     CREATED_AT,
     DISABLED_AT,

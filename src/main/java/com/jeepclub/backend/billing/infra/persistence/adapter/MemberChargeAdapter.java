@@ -20,6 +20,10 @@ public class MemberChargeAdapter implements MemberChargeRepository {
 
     private final MemberChargeJpaRepository jpa;
     private final MemberChargeMapper mapper;
+    @Override
+    public java.util.List<MemberCharge> findByChargeCycleIdIn(java.util.Collection<Long> ids) {
+        return ids.isEmpty() ? java.util.List.of() : jpa.findByChargeCycleIdIn(ids).stream().map(mapper::toDomain).toList();
+    }
 
     @Override
     public MemberCharge save(MemberCharge memberCharge) {
@@ -38,6 +42,18 @@ public class MemberChargeAdapter implements MemberChargeRepository {
     @Override
     public Optional<MemberCharge> findByIdForUpdate(Long id) {
         return jpa.findWithLockingById(id)
+                .map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<MemberCharge> findByChargeCycleIdAndUserId(
+            Long chargeCycleId,
+            Long userId
+    ) {
+        return jpa.findByChargeCycleIdAndUserId(
+                        chargeCycleId,
+                        userId
+                )
                 .map(mapper::toDomain);
     }
 

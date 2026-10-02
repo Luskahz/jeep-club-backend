@@ -97,4 +97,36 @@ public class MembershipExceptionHandler extends ApiExceptionHandler {
                 HttpStatus.CONFLICT
         );
     }
+
+    @ExceptionHandler(MembershipEmailRequiredException.class)
+    public ResponseEntity<ApiErrorResponse> handleEmailRequired(MembershipEmailRequiredException ex) {
+        return buildErrorResponse("MEMBERSHIP_EMAIL_REQUIRED", ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(MembershipFirstAccessConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleFirstAccessConflict(MembershipFirstAccessConflictException ex) {
+        return buildErrorResponse("MEMBERSHIP_FIRST_ACCESS_CONFLICT", ex.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(InvalidMembershipChargeDefinitionException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidMembershipChargeDefinition(
+            InvalidMembershipChargeDefinitionException ex
+    ) {
+        return buildErrorResponse(
+                "MEMBERSHIP_CHARGE_DEFINITION_INVALID",
+                ex.getMessage(),
+                HttpStatus.UNPROCESSABLE_ENTITY
+        );
+    }
+
+    @ExceptionHandler(MembershipBillingConfigurationNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleBillingConfigurationNotFound(
+            MembershipBillingConfigurationNotFoundException ex
+    ) {
+        return buildErrorResponse(
+                "MEMBERSHIP_BILLING_CONFIGURATION_NOT_FOUND",
+                ex.getMessage(),
+                HttpStatus.NOT_FOUND
+        );
+    }
 }

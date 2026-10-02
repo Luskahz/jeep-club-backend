@@ -1,6 +1,10 @@
 package com.jeepclub.backend.tools.core.application.service.tool;
 
 import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerNotFoundException;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerDisabledException;
+import com.jeepclub.backend.tools.core.port.ToolOwnerQuery;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
@@ -19,6 +23,16 @@ public class AdminToolService {
 
     private final ToolRepository toolRepository;
     private final Clock clock;
+    private final ToolOwnerQuery toolOwnerQuery;
+    private final ImageMediaService images;
+
+    @Transactional
+    public Tool updatePhoto(Long id, String storageKey) {
+        Tool tool = getToolDetails(id);
+        images.requireExisting(storageKey);
+        tool.updatePhoto(storageKey, now());
+        return toolRepository.save(tool);
+    }
 
     @Transactional(readOnly = true)
     public Page<Tool> listAllTools(String name, ToolStatus status, Pageable pageable) {
@@ -33,6 +47,12 @@ public class AdminToolService {
 
     @Transactional
     public Tool createToolForUser(Long userId, String name, String description) {
+        if (!toolOwnerQuery.existsById(userId)) {
+            throw new ToolOwnerNotFoundException();
+        }
+        if (!toolOwnerQuery.isAdministrativelyActive(userId)) {
+            throw new ToolOwnerDisabledException();
+        }
         Tool tool = Tool.create(name, description, userId, now());
         return toolRepository.save(tool);
     }

@@ -1,11 +1,16 @@
 package com.jeepclub.backend.platform.web.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.ElementKind;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -13,11 +18,15 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Controller;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 import java.time.Clock;
@@ -88,6 +97,65 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 status,
                 request
         );
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException exception,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request
+    ) {
+        if (exception.isForReturnValue()) {
+            return super.handleHandlerMethodValidationException(exception, headers, status, request);
+        }
+
+        return handleExceptionInternal(
+                exception,
+                problemFactory.create(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", LocaleContextHolder.getLocale()),
+                headers,
+                HttpStatus.BAD_REQUEST,
+                request
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleControllerParameterViolation(
+            ConstraintViolationException exception,
+            Locale locale,
+            HttpServletRequest request
+    ) {
+        if (exception.getConstraintViolations().isEmpty() || exception.getConstraintViolations().stream()
+                .anyMatch(violation -> !isControllerParameterViolation(violation, request))) {
+            return handleUnexpectedException(exception, locale);
+        }
+
+        return problemFactory.create(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", locale);
+    }
+
+    private boolean isControllerParameterViolation(
+            ConstraintViolation<?> violation,
+            HttpServletRequest request
+    ) {
+        boolean controller = AnnotatedElementUtils.hasAnnotation(violation.getRootBeanClass(), Controller.class);
+        Object handler = request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
+        if (!controller || !(handler instanceof HandlerMethod handlerMethod)
+                || !handlerMethod.getBeanType().isAssignableFrom(violation.getRootBeanClass())) {
+            return false;
+        }
+
+        boolean matchesHttpMethod = false;
+        boolean parameterViolation = false;
+        for (jakarta.validation.Path.Node node : violation.getPropertyPath()) {
+            if (node.getKind() == ElementKind.METHOD
+                    && handlerMethod.getMethod().getName().equals(node.getName())) {
+                matchesHttpMethod = true;
+            }
+            if (node.getKind() == ElementKind.PARAMETER || node.getKind() == ElementKind.CROSS_PARAMETER) {
+                parameterViolation = true;
+            }
+        }
+        return matchesHttpMethod && parameterViolation;
     }
 
     @Override
@@ -205,4 +273,3 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         );
     }
 }
-

@@ -3,6 +3,44 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    IDENTITY_USER_EXPORT(PermissionCode.IDENTITY_USER_EXPORT, ModuleCode.IDENTITY, "Permite exportação administrativa de IDENTITY"),
+    AUTHENTICATION_EXPORT(PermissionCode.AUTHENTICATION_EXPORT, ModuleCode.AUTHENTICATION, "Permite exportação administrativa de AUTHENTICATION"),
+    AUTHORIZATION_EXPORT(PermissionCode.AUTHORIZATION_EXPORT, ModuleCode.AUTHORIZATION, "Permite exportação administrativa de AUTHORIZATION"),
+    MEMBERSHIP_EXPORT(PermissionCode.MEMBERSHIP_EXPORT, ModuleCode.MEMBERSHIP, "Permite exportação administrativa de MEMBERSHIP"),
+    DEPENDENTS_DEPENDENT_EXPORT(PermissionCode.DEPENDENTS_DEPENDENT_EXPORT, ModuleCode.DEPENDENTS, "Permite exportação administrativa de DEPENDENTS"),
+    VEHICLES_VEHICLE_EXPORT(PermissionCode.VEHICLES_VEHICLE_EXPORT, ModuleCode.VEHICLES, "Permite exportação administrativa de VEHICLES"),
+    TOOLS_TOOL_EXPORT(PermissionCode.TOOLS_TOOL_EXPORT, ModuleCode.TOOLS, "Permite exportação administrativa de TOOLS"),
+    HEALTH_MEDICAL_PROFILE_EXPORT(PermissionCode.HEALTH_MEDICAL_PROFILE_EXPORT, ModuleCode.HEALTH, "Permite exportação administrativa de HEALTH"),
+    BILLING_EXPORT(PermissionCode.BILLING_EXPORT, ModuleCode.BILLING, "Permite exportação administrativa de BILLING"),
+    PUBLICATIONS_EXPORT(PermissionCode.PUBLICATIONS_EXPORT, ModuleCode.PUBLICATIONS, "Permite exportação administrativa de PUBLICATIONS"),
+
+    PUBLICATIONS_INTERACTION_LIKE(PermissionCode.PUBLICATIONS_INTERACTION_LIKE, ModuleCode.PUBLICATIONS, "Publication: like and unlike"),
+    PUBLICATIONS_COMMENT_CREATE(PermissionCode.PUBLICATIONS_COMMENT_CREATE, ModuleCode.PUBLICATIONS, "Publication: create comment"),
+    PUBLICATIONS_COMMENT_READ(PermissionCode.PUBLICATIONS_COMMENT_READ, ModuleCode.PUBLICATIONS, "Publication: read comments"),
+    PUBLICATIONS_FEED_READ(PermissionCode.PUBLICATIONS_FEED_READ, ModuleCode.PUBLICATIONS, "Publication: read feed"),
+    PUBLICATIONS_PUBLICATION_READ(PermissionCode.PUBLICATIONS_PUBLICATION_READ, ModuleCode.PUBLICATIONS, "Publication: read detail"),
+    PUBLICATIONS_EVENT_CREATE(PermissionCode.PUBLICATIONS_EVENT_CREATE, ModuleCode.PUBLICATIONS, "Event: create"),
+    PUBLICATIONS_EVENT_READ(PermissionCode.PUBLICATIONS_EVENT_READ, ModuleCode.PUBLICATIONS, "Event: read"),
+    PUBLICATIONS_EVENT_READ_ADMIN(PermissionCode.PUBLICATIONS_EVENT_READ_ADMIN, ModuleCode.PUBLICATIONS, "Event: read admin"),
+    PUBLICATIONS_EVENT_UPDATE(PermissionCode.PUBLICATIONS_EVENT_UPDATE, ModuleCode.PUBLICATIONS, "Event: update"),
+    PUBLICATIONS_EVENT_PUBLISH(PermissionCode.PUBLICATIONS_EVENT_PUBLISH, ModuleCode.PUBLICATIONS, "Event: publish"),
+    PUBLICATIONS_EVENT_CANCEL(PermissionCode.PUBLICATIONS_EVENT_CANCEL, ModuleCode.PUBLICATIONS, "Event: cancel"),
+    PUBLICATIONS_EVENT_FINISH(PermissionCode.PUBLICATIONS_EVENT_FINISH, ModuleCode.PUBLICATIONS, "Event: finish"),
+    PUBLICATIONS_EVENT_DELETE(PermissionCode.PUBLICATIONS_EVENT_DELETE, ModuleCode.PUBLICATIONS, "Event: delete"),
+    PUBLICATIONS_EVENT_REGISTER(PermissionCode.PUBLICATIONS_EVENT_REGISTER, ModuleCode.PUBLICATIONS, "Event: register"),
+    PUBLICATIONS_EVENT_REGISTRATION_READ(PermissionCode.PUBLICATIONS_EVENT_REGISTRATION_READ, ModuleCode.PUBLICATIONS, "Event: registration read"),
+    PUBLICATIONS_EVENT_REGISTRATION_CANCEL(PermissionCode.PUBLICATIONS_EVENT_REGISTRATION_CANCEL, ModuleCode.PUBLICATIONS, "Event: registration cancel"),
+    PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE(PermissionCode.PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE, ModuleCode.PUBLICATIONS, "Event: guest request create"),
+    PUBLICATIONS_EVENT_GUEST_REQUEST_READ(PermissionCode.PUBLICATIONS_EVENT_GUEST_REQUEST_READ, ModuleCode.PUBLICATIONS, "Event: guest request read"),
+    PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE(PermissionCode.PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE, ModuleCode.PUBLICATIONS, "Event: guest admin create"),
+    PUBLICATIONS_EVENT_GUEST_ADMIN_READ(PermissionCode.PUBLICATIONS_EVENT_GUEST_ADMIN_READ, ModuleCode.PUBLICATIONS, "Event: guest admin read"),
+    PUBLICATIONS_EVENT_GUEST_APPROVE(PermissionCode.PUBLICATIONS_EVENT_GUEST_APPROVE, ModuleCode.PUBLICATIONS, "Event: guest approve"),
+    PUBLICATIONS_EVENT_GUEST_REJECT(PermissionCode.PUBLICATIONS_EVENT_GUEST_REJECT, ModuleCode.PUBLICATIONS, "Event: guest reject"),
+    PUBLICATIONS_EVENT_RIDE_OFFER_READ(PermissionCode.PUBLICATIONS_EVENT_RIDE_OFFER_READ, ModuleCode.PUBLICATIONS, "Event: ride offer read"),
+    PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND(PermissionCode.PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND, ModuleCode.PUBLICATIONS, "Event: ride offer respond"),
+    PUBLICATIONS_EVENT_RIDE_OFFER_SELECT(PermissionCode.PUBLICATIONS_EVENT_RIDE_OFFER_SELECT, ModuleCode.PUBLICATIONS, "Event: ride offer select"),
+    PUBLICATIONS_EVENT_ADMIN_DASHBOARD_READ(PermissionCode.PUBLICATIONS_EVENT_ADMIN_DASHBOARD_READ, ModuleCode.PUBLICATIONS, "Event: admin dashboard read"),
+    PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ(PermissionCode.PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ, ModuleCode.PUBLICATIONS, "Event: health emergency read"),
 
     // IDENTITY / USERS
     IDENTITY_USER_READ(
@@ -366,6 +404,18 @@ public enum PermissionDefinition {
             "Permite reenviar o convite de ativação para um solicitante aprovado"
     ),
 
+    MEMBERSHIP_BILLING_CONFIGURATION_READ(
+            PermissionCode.MEMBERSHIP_BILLING_CONFIGURATION_READ,
+            ModuleCode.MEMBERSHIP,
+            "Permite consultar a configuração financeira da membritude"
+    ),
+
+    MEMBERSHIP_BILLING_CONFIGURATION_UPDATE(
+            PermissionCode.MEMBERSHIP_BILLING_CONFIGURATION_UPDATE,
+            ModuleCode.MEMBERSHIP,
+            "Permite configurar e habilitar a exigência financeira da membritude"
+    ),
+
     // TOOLS
         TOOLS_TOOL_CREATE(
         PermissionCode.TOOLS_TOOL_CREATE,
@@ -426,7 +476,53 @@ public enum PermissionDefinition {
             PermissionCode.VEHICLES_VEHICLE_DELETE,
             ModuleCode.VEHICLES,
             "Permite remover veículos"
-    );
+    ),
+
+    // PUBLICATIONS / NOTICE
+    PUBLICATIONS_NOTICE_CREATE(
+            PermissionCode.PUBLICATIONS_NOTICE_CREATE,
+            ModuleCode.PUBLICATIONS,
+            "Permite criar avisos"
+    ),
+    PUBLICATIONS_NOTICE_READ(
+            PermissionCode.PUBLICATIONS_NOTICE_READ,
+            ModuleCode.PUBLICATIONS,
+            "Permite consultar avisos em qualquer estado editorial"
+    ),
+    PUBLICATIONS_NOTICE_UPDATE(
+            PermissionCode.PUBLICATIONS_NOTICE_UPDATE,
+            ModuleCode.PUBLICATIONS,
+            "Permite editar avisos"
+    ),
+    PUBLICATIONS_NOTICE_PUBLISH(
+            PermissionCode.PUBLICATIONS_NOTICE_PUBLISH,
+            ModuleCode.PUBLICATIONS,
+            "Permite publicar avisos"
+    ),
+    PUBLICATIONS_NOTICE_ARCHIVE(
+            PermissionCode.PUBLICATIONS_NOTICE_ARCHIVE,
+            ModuleCode.PUBLICATIONS,
+            "Permite arquivar avisos"
+    ),
+    PUBLICATIONS_NOTICE_DELETE(
+            PermissionCode.PUBLICATIONS_NOTICE_DELETE,
+            ModuleCode.PUBLICATIONS,
+            "Permite excluir avisos com snapshot histórico"
+    ),
+    PUBLICATIONS_SERVICE_REQUEST_CREATE(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_CREATE, ModuleCode.PUBLICATIONS, "Permite solicitar publicação de serviço"),
+    PUBLICATIONS_SERVICE_REQUEST_READ(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_READ, ModuleCode.PUBLICATIONS, "Permite consultar solicitações próprias de serviço"),
+    PUBLICATIONS_SERVICE_REQUEST_ADMIN_READ(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_ADMIN_READ, ModuleCode.PUBLICATIONS, "Permite consultar solicitações de serviço administrativamente"),
+    PUBLICATIONS_SERVICE_REQUEST_APPROVE(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_APPROVE, ModuleCode.PUBLICATIONS, "Permite aprovar solicitação inicial de serviço"),
+    PUBLICATIONS_SERVICE_REQUEST_REJECT(PermissionCode.PUBLICATIONS_SERVICE_REQUEST_REJECT, ModuleCode.PUBLICATIONS, "Permite rejeitar solicitação inicial de serviço"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_CREATE(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_CREATE, ModuleCode.PUBLICATIONS, "Permite solicitar alteração de serviço próprio"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_READ(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_READ, ModuleCode.PUBLICATIONS, "Permite consultar alteração própria de serviço"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_ADMIN_READ(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_ADMIN_READ, ModuleCode.PUBLICATIONS, "Permite consultar alterações de serviço administrativamente"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_APPROVE(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_APPROVE, ModuleCode.PUBLICATIONS, "Permite aprovar alteração de serviço"),
+    PUBLICATIONS_SERVICE_CHANGE_REQUEST_REJECT(PermissionCode.PUBLICATIONS_SERVICE_CHANGE_REQUEST_REJECT, ModuleCode.PUBLICATIONS, "Permite rejeitar alteração de serviço"),
+    PUBLICATIONS_SERVICE_READ(PermissionCode.PUBLICATIONS_SERVICE_READ, ModuleCode.PUBLICATIONS, "Permite consultar serviço publicado"),
+    PUBLICATIONS_SERVICE_DELETE(PermissionCode.PUBLICATIONS_SERVICE_DELETE, ModuleCode.PUBLICATIONS, "Permite excluir serviço próprio"),
+    PUBLICATIONS_SERVICE_ADMIN_READ(PermissionCode.PUBLICATIONS_SERVICE_ADMIN_READ, ModuleCode.PUBLICATIONS, "Permite consultar serviços administrativamente"),
+    PUBLICATIONS_SERVICE_ADMIN_DELETE(PermissionCode.PUBLICATIONS_SERVICE_ADMIN_DELETE, ModuleCode.PUBLICATIONS, "Permite excluir qualquer serviço com histórico");
 
     private final PermissionCode code;
     private final ModuleCode module;

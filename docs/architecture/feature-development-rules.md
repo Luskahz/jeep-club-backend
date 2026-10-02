@@ -69,6 +69,14 @@ São responsabilidades diferentes:
 - ownership/regra de objeto: decisão do caso de uso com base no `userId` e no
   estado do recurso, aplicada no core do módulo proprietário.
 
+Recursos exclusivos de membros podem declarar `@RequiresMembership`. A
+annotation usa um advisor próprio de Spring Method Security, obtém
+`UserPrincipal.userId` e delega ao contrato público de Membership. Ela compõe
+com `@PreAuthorize`: autenticação, membritude e permission continuam condições
+independentes. O advisor não consulta Billing nem contém regra financeira;
+Membership faz essa integração por contrato público. O customizer OpenAPI da
+annotation documenta os possíveis erros 402 e 503 sem participar do enforcement.
+
 Uma rota deliberadamente compartilhada entre o dono do recurso e um usuário
 privilegiado pode precisar das authorities para escolher o caminho autorizado,
 como ocorre no download de comprovante de Billing. Isso é um contrato explícito

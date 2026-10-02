@@ -11,7 +11,7 @@ public record UserDetails(
         String cpf,
         String rg,
         String phoneNumber,
-        String profilePhotoUrl,
+        String profilePhotoStorageKey,
         boolean administrativelyActive,
         Instant createdAt,
         Instant disabledAt,

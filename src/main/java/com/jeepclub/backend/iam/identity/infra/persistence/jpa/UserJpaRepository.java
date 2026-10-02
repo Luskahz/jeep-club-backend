@@ -14,6 +14,8 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
+    java.util.List<UserEntity> findByIdGreaterThanOrderByIdAsc(Long id, org.springframework.data.domain.Pageable pageable);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
@@ -29,7 +31,11 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
 
     boolean existsByEmail(String email);
 
+    boolean existsByEmailAndIdNot(String email, Long id);
+
     boolean existsByRg(String rg);
+
+    boolean existsByRgAndIdNot(String rg, Long id);
 
     boolean existsByIdAndStatus(Long id, UserStatus status);
 

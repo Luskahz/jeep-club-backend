@@ -15,6 +15,7 @@ public class Tool {
     private String description;
     private ToolStatus status;
     private Long userId;
+    private String photoStorageKey;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -69,6 +70,17 @@ public class Tool {
             this.description = description.trim();
         }
         this.updatedAt = updatedAt;
+    }
+
+    public void updatePhoto(String storageKey, LocalDateTime updatedAt) {
+        Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
+        this.photoStorageKey = storageKey == null ? null
+                : com.jeepclub.backend.shared.storage.ImageReference.require(storageKey);
+        this.updatedAt = updatedAt;
+    }
+
+    public void restorePhoto(String storageKey) {
+        this.photoStorageKey = storageKey;
     }
 
     public boolean activate(LocalDateTime updatedAt) {

@@ -12,8 +12,16 @@ ChargeDefinition ACTIVE
 ```
 
 `ALL_MEMBERS` consulta Identity; `USER` valida um usuário ativo; `ROLE` consulta
-Authorization e filtra usuários ativos. O adapter de eventos ainda retorna
-nenhum evento/participante, portanto o alvo de evento não opera atualmente.
+Authorization e filtra usuários ativos. O adapter de eventos consulta participantes
+confirmados por `EventQuery` para a geração administrativa tradicional.
+
+No fluxo específico de Event, a inscrição garante o assignment daquele Event,
+um único `EventChargeContext`/ciclo para Event + definição e uma MemberCharge
+por usuário/ciclo. Não resolve ALL_MEMBERS, USER, ROLE ou outro Event da definição.
+O lock da definição serializa a primeira criação e os incrementos. Não é preciso
+estar CONFIRMED para receber a dívida. O cancelamento do Event consulta apenas os
+contextos daquele Event e cancela os ciclos ainda `GENERATED`; ciclos que já foram
+finalizados pela API administrativa de Billing ficam `FINISHED`, com suas cobranças.
 
 ## Encerramento do ciclo
 
@@ -49,9 +57,14 @@ confirmação valida estado, não recalcula a janela.
 
 ## Reembolso
 
-O membro pode criar `REQUESTED` a partir de pagamento próprio confirmado ou
-pendente de validação. Se já houver refund ativo de cancelamento de ciclo, a
+O membro pode criar `REQUESTED` a partir de pagamento próprio confirmado.
+Se já houver refund ativo de cancelamento de ciclo, a
 solicitação converte `ELIGIBLE` em `REQUESTED` em vez de criar outro registro.
 
 O administrador aprova, rejeita, marca como devolvido, expira ou cancela conforme
 a máquina de estados. O código não executa expiração automática.
+
+Cancelamento não cria refund para PENDING_VALIDATION. Confirmar esse pagamento
+depois cria ELIGIBLE sem duplicar refund ativo/concluído, preservando a janela
+de 30 dias contada do cancelamento. Se a confirmação ocorrer depois da janela,
+o registro já nasce com elegibilidade temporalmente expirada para request/approve.

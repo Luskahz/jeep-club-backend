@@ -46,7 +46,7 @@ public class MembershipApplication {
         MembershipApplication app = new MembershipApplication();
         app.name = requireText(name, "name");
         app.cpf = requireText(cpf, "cpf");
-        app.email = normalizeNullable(email);
+        app.email = normalizeEmail(email);
         app.phoneNumber = requireText(phoneNumber, "phoneNumber");
         app.message = normalizeNullable(message);
         app.status = MembershipApplicationStatus.PENDING;
@@ -161,5 +161,10 @@ public class MembershipApplication {
         return value == null || value.isBlank()
                 ? null
                 : value.trim();
+    }
+
+    private static String normalizeEmail(String value) {
+        String normalized = normalizeNullable(value);
+        return normalized == null ? null : normalized.toLowerCase(java.util.Locale.ROOT);
     }
 }

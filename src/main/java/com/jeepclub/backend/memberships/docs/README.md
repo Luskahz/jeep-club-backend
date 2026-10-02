@@ -1,9 +1,11 @@
 # Memberships
 
-Memberships é o bounded context do processo de admissão ao Jeep Club. Ele é
-proprietário da `MembershipApplication`, da decisão administrativa sobre a
-solicitação e dos bloqueios de novos pedidos por CPF. Não é proprietário do
-cadastro do `User`, de credenciais, sessões ou permissões.
+Memberships é o bounded context do processo de admissão e da política de acesso
+de membros do Jeep Club. Ele é proprietário da `MembershipApplication`, da
+decisão administrativa sobre a solicitação, dos bloqueios de novos pedidos por
+CPF e da configuração que indica qual cobrança de Billing representa a
+membritude. Não é proprietário do cadastro do `User`, de credenciais, sessões,
+permissions ou fatos financeiros.
 
 Antes de alterar este módulo, leia a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md) e as
@@ -27,15 +29,15 @@ descreve o domínio e as integrações, não um catálogo concorrente de rotas.
 
 ## Solicitação de adesão
 
-Uma `MembershipApplication` contém nome, CPF, e-mail, celular, mensagem e dados
+Uma `MembershipApplication` contém nome, CPF, e-mail opcional, celular, mensagem e dados
 de revisão. O domínio normaliza CPF para dígitos, e-mail para texto aparado em
 minúsculas, celular para dígitos e campos opcionais vazios para `null`.
 
 O pedido público começa em `PENDING`, com `requestedAt` e `updatedAt`. Ao criar
 um pedido, o serviço verifica primeiro um bloqueio ativo do CPF. Sem bloqueio,
 uma solicitação `PENDING` existente para o mesmo CPF é devolvida em vez de criar
-outra. Para um novo pedido, CPF e e-mail não podem já estar cadastrados em
-Identity e o e-mail não pode estar em outra solicitação pendente. Uma solicitação
+outra. Para um novo pedido, CPF não pode já estar cadastrado em Identity; quando
+o e-mail existir, ele não pode estar em Identity nem em outra solicitação pendente. Uma solicitação
 rejeitada não impede um novo pedido por si só.
 
 O agregado possui os seguintes estados e transições:
@@ -46,9 +48,9 @@ PENDING --aprovar--> APPROVED --complete() do agregado--> COMPLETED
    +--rejeitar ou rejeitar-e-bloquear--> REJECTED
 ```
 
-As operações de aplicação/HTTP atuais executam as transições a partir de
-`PENDING` para `APPROVED` ou `REJECTED`. `COMPLETED` é suportado pelo agregado,
-mas não há fluxo de aplicação ou endpoint atual que invoque `complete()`.
+As operações de aplicação/HTTP executam as transições a partir de `PENDING`
+para `APPROVED` ou `REJECTED`. A conclusão bem-sucedida do primeiro acesso,
+por senha provisória ou token de ativação, leva a solicitação a `COMPLETED`.
 Rejeitar preenche `reviewedAt`, `finishedAt` e `updatedAt`; aprovar preenche
 `reviewedAt`, `updatedAt`, o administrador revisor e o `User` criado. Os
 instantes vêm do `Clock` injetado conforme a regra global.
@@ -58,8 +60,9 @@ instantes vêm do `Clock` injetado conforme a regra global.
 As duas formas de aprovação criam um `User` em `PENDING_FIRST_ACCESS` por
 `CreateUserWithPendingFirstAccessPort` e só depois registram a aprovação com o
 identificador retornado. Falha nessa integração impede a aprovação da
-solicitação na transação atual. A opção de senha temporária devolve a senha uma
-única vez; a opção de link devolve um link temporário para a primeira senha.
+solicitação na transação atual. A opção de senha temporária funciona com ou sem
+e-mail e devolve a senha uma única vez. A opção por e-mail exige endereço,
+persiste somente o hash do token e envia o segredo sem devolvê-lo ao admin.
 
 A rejeição simples não cria bloqueio. O motivo é opcional e, quando presente,
 é enviado ao mail sender configurado. Rejeição e aprovação só aceitam
@@ -82,8 +85,9 @@ elegibilidade.
 
 ## Integrações e persistência
 
-Memberships não expõe contratos em `api.module` neste estado. Seus contratos
-consumidores são definidos no próprio módulo:
+Memberships publica apenas `MembershipOnboardingCompletion` para Authentication
+notificar a conclusão do primeiro acesso por senha provisória. Seus demais
+contratos consumidores são definidos no próprio módulo:
 
 - `UserExistencePort` é implementada por `IdentityUserExistenceAdapter`, que
   consulta `identity.api.module.UserQuery` para CPF e e-mail.
@@ -91,22 +95,65 @@ consumidores são definidos no próprio módulo:
   Authentication para provisionar o `User` e o primeiro acesso.
 - `MemberActivationTokenHashPort` tem adapter em Authentication; a validação de
   token consulta apenas o repositório de token de Memberships.
-- `MemberActivationMailSender` tem implementação dummy local que registra a
-  notificação de rejeição.
+- `CompletePendingFirstAccessPort` delega a definição da senha e a transição da
+  credencial a Authentication.
+- `MemberActivationMailSender` possui dummy restrito a dev/test e implementação
+  SMTP para os demais ambientes; nenhum deles registra token ou link.
+- `MembershipAccessQuery` é o contrato público read-only de decisão de acesso.
+  A implementação consulta `MembershipChargeQuery`, contrato público de
+  Billing, sem acessar ciclos, cobranças, repositories ou entities desse módulo.
 
 As entidades JPA e mappers permanecem em `infra.persistence`. A aplicação usa
 versionamento otimista em `MembershipApplication`. O bloqueio ativo tem
 unicidade persistida por CPF; a solicitação pendente é protegida atualmente por
 consulta e fluxo transacional, sem uma constraint de unicidade equivalente.
 
+## Membritude paga
+
+`MembershipBillingConfiguration` é uma configuração singleton opcional com
+`chargeDefinitionId`, `enforcementEnabled`, `createdAt` e `updatedAt`. Membership
+não copia valor, recorrência, vencimento, tolerância ou lifecycle da cobrança.
+A definição só pode ser configurada enquanto estiver ativa em Billing; nenhuma
+recorrência, flag `required` ou política de pagamento específica é imposta.
+
+Zero configurações é um estado válido e libera recursos protegidos. Desabilitar
+o enforcement também libera acesso, preservando a referência configurada para
+reativação posterior. A superfície administrativa permite consultar, criar ou
+substituir a configuração e alternar o enforcement; seus paths, payloads,
+permissions e respostas são documentados no OpenAPI.
+
+Quando o enforcement está ativo, Membership envia somente
+`chargeDefinitionId` e o `UserPrincipal.userId` para Billing. A matriz de
+decisão é:
+
+| Resultado financeiro | Decisão de Membership |
+| --- | --- |
+| `WITHIN_PAYMENT_PERIOD` (`PENDING` válido) | permitir |
+| `SATISFIED` (`PAID`) | permitir |
+| `CANCELED` | permitir intencionalmente nesta versão |
+| `PAYMENT_REQUIRED` (`OVERDUE` ou `EXPIRED`) | bloquear com `402 MEMBERSHIP_PAYMENT_REQUIRED` |
+| `CHARGE_NOT_FOUND` | bloquear com `503 MEMBERSHIP_CHARGE_UNAVAILABLE` e emitir warning operacional |
+
+Falhas inesperadas ao consultar Billing também usam o erro operacional 503,
+sem serem apresentadas como dívida. O log de cobrança ausente contém somente
+identificadores técnicos (`chargeDefinitionId` e `userId`) e herda a correlação
+do MDC global.
+
+`@RequiresMembership` declara essa exigência em métodos ou classes. Um advisor
+dedicado de Spring Method Security obtém o principal já autenticado e chama
+`MembershipAccessQuery`; ele executa cumulativamente com `@PreAuthorize`.
+Assim, ausência de autenticação permanece 401, bloqueio financeiro permanece
+402, indisponibilidade operacional permanece 503 e permission ausente após uma
+membritude válida permanece 403. Endpoints não anotados não executam essa regra.
+
 ## Token de ativação
 
-O módulo valida `MemberActivationToken` por hash, marca o token válido como usado
-e devolve o identificador da solicitação. Um token inexistente, expirado ou já
-usado possui erro próprio. No fluxo integrado atual não há emissão de
-`MemberActivationToken`; a aprovação com link usa o fluxo de primeiro acesso de
-Authentication. Essa diferença é registrada como achado sensível a contrato e
-não deve ser corrigida apenas por documentação.
+O módulo emite `MemberActivationToken` criptograficamente aleatório e persiste
+somente seu hash. O GET público valida existência, expiração, uso e estado da
+solicitação sem alterar o banco. O POST de conclusão usa o token bruto para
+solicitar a senha definitiva a Authentication; somente depois do sucesso marca
+o token usado e a solicitação `COMPLETED`. O reenvio invalida tokens ativos e
+não recria User nem AuthenticationAccount.
 
 ## Testes
 
@@ -114,3 +161,10 @@ Os testes de domínio/aplicação cobrem elegibilidade, aprovação, rejeição 
 histórico de bloqueio. Testes de contrato HTTP/OpenAPI devem caracterizar a
 superfície pública, permissions administrativas, paginação e respostas RFC 9457
 sem duplicar o contrato detalhado do Swagger.
+
+
+## Exportações CSV/PDF — BACK-410
+
+MEMBERSHIP_EXPORT permite solicitações e bloqueios, todos/id e filtros administrativos de status/período aplicáveis. Activation tokens, hashes, version e activeCpf não são campos dos relatórios.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

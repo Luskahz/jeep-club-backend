@@ -15,7 +15,7 @@ public record AdminUserResult(
         String cpf,
         String rg,
         String phoneNumber,
-        String profilePhotoUrl,
+        String profilePhotoStorageKey,
         UserStatus status,
         Instant createdAt,
         Instant disabledAt,
@@ -25,7 +25,7 @@ public record AdminUserResult(
         Objects.requireNonNull(user, "user cannot be null");
         return new AdminUserResult(
                 user.id(), user.name(), user.birthDate(), user.email(), user.cpf(),
-                user.rg(), user.phoneNumber(), user.profilePhotoUrl(),
+                user.rg(), user.phoneNumber(), user.profilePhotoStorageKey(),
                 user.administrativelyActive() ? UserStatus.ACTIVE : UserStatus.DISABLED,
                 user.createdAt(), user.disabledAt(), user.updatedAt()
         );

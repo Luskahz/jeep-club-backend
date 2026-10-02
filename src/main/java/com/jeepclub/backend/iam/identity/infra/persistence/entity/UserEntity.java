@@ -70,7 +70,7 @@ public class UserEntity {
     private String phoneNumber;
 
     @Column(name = "profile_photo_url", length = 255)
-    private String profilePhotoUrl;
+    private String profilePhotoStorageKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

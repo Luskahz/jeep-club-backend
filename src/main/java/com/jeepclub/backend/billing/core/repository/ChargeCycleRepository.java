@@ -7,6 +7,9 @@ import org.springframework.data.domain.Pageable;
 import java.util.Optional;
 
 public interface ChargeCycleRepository {
+    java.util.List<com.jeepclub.backend.billing.core.domain.model.ChargeCycle> findByIds(java.util.Collection<Long> ids);
+
+    java.util.List<ChargeCycle> findMembershipCycles(Long chargeDefinitionId);
 
     ChargeCycle save(ChargeCycle chargeCycle);
 

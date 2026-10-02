@@ -17,13 +17,31 @@ originou muda.
 - Identity informa usuários administrativamente ativos; Authorization informa
   roles e seus usuários. Billing consome esses contratos por portas próprias e
   adapters em `infra.integration`.
-- A integração de eventos ainda é um adapter indisponível: atribuições para
-  participantes de evento não podem ser criadas no estado atual.
+- A integração de eventos usa `publications.api.module.EventQuery`. A geração
+  incremental de dívida não exige confirmação prévia da inscrição.
 - Credenciais, usuários, roles e o provider físico de arquivos não pertencem a
   Billing.
 
-O módulo não expõe contrato Java em `api.module`. Sua superfície externa atual é
-HTTP; as integrações consumidas estão descritas em [Fluxos](flows.md).
+O módulo expõe contratos Java read-only mínimos em `api.module` para a
+política de membritude: `ChargeDefinitionQuery`, que informa se uma definição
+está ativa, e `MembershipChargeQuery`, que recebe somente definição e usuário e
+devolve um resultado financeiro sem expor entities, repositories, valores ou
+ciclos. A superfície externa de administração financeira continua HTTP; as
+integrações consumidas estão descritas em [Fluxos](flows.md).
+
+Para Event, `EventChargeCatalogQuery` consulta definições ACTIVE/ONE_TIME,
+`EventBillingCommand` cria definição inline, garante assignment/ciclo/cobrança
+e cancela os ciclos ainda `GENERATED` daquele Event; `EventFinancialQuery` consulta
+estado efetivo, estado de pagamento e instante da submissão, em lote.
+`evaluate` distingue também `CHARGE_NOT_FOUND`. Nenhum desses contratos expõe
+entity ou repository. Criação inline força ONE_TIME e AFTER_DUE_DATE.
+
+`EventChargeContext` mantém a identidade estruturada Event + definição +
+assignment + ciclo. A tabela retida tem unicidade de Event/definição,
+assignment e ciclo. O código textual do ciclo não é sua chave de idempotência.
+MemberCharges usam os snapshots do ciclo, inclusive para inscrições posteriores.
+Ciclos com contexto Event são excluídos da seleção de `MembershipChargeQuery`;
+a reutilização da definição não substitui a obrigação normal de membership.
 
 ## Modelo conceitual
 
@@ -49,6 +67,20 @@ Consulte:
 - [Fluxos](flows.md) para geração, pagamento, reembolso e comprovante;
 - [Concorrência](concurrency.md) para locks e compensação transacional;
 - [Glossário](glossary.md) para a linguagem do contexto.
+
+Para `MembershipChargeQuery`, Billing resolve primeiro o ciclo aplicável da
+definição. Ciclos `ARCHIVED` são históricos; ciclos mensais precisam pertencer
+ao mês corrente e ciclos anuais ao ano corrente. Um ciclo `ONE_TIME` permanece
+aplicável enquanto não for arquivado. Se houver mais de um ciclo no período,
+vence o vencimento mais recente já alcançado; sem ciclo vencido, vence o futuro
+mais próximo. Só então Billing procura a cobrança do usuário por `chargeCycleId`
+e usa a mesma data de referência capturada para a seleção do ciclo ao calcular
+`MemberCharge.effectiveStatusAt(referenceDate)`.
+O resultado público distingue prazo vigente, obrigação satisfeita, cancelamento,
+pagamento necessário e cobrança inexistente. A ausência do ciclo recorrente do
+período atual ou da cobrança do usuário nesse ciclo resulta em
+`CHARGE_NOT_FOUND`. Membership decide a política de acesso; Billing não conhece
+`@RequiresMembership`.
 
 ## Comprovantes
 
@@ -78,3 +110,10 @@ Os testes de domínio e aplicação caracterizam snapshots, estados, locks e reg
 financeiras. Os testes de comprovante cobrem validação, storage, compensação,
 persistência da key interna e autorização por `paymentId`. O contrato OpenAPI é
 protegido por teste focal em `/v3/api-docs`.
+
+
+## Exportações CSV/PDF — BACK-410
+
+Cinco produtos: definições × atribuições (inclui sem atribuição), ciclos históricos, cobranças, pagamentos e reembolsos. Filtros de ano/mês derivam do vencimento do ciclo; EventChargeContext fornece o vínculo de evento. Cobranças por chargeCycleId formam o relatório do ciclo e incluem o último pagamento, sem multiplicar cobranças. Situação efetiva usa o domínio existente. EventFinancialQuery acrescenta snapshots e vencimento mantendo o construtor anterior; EventFinanceReportQuery fornece definições e totais por status, com limites antes da composição. Nome/CPF, papel e evento são resolvidos por contratos públicos em lote.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

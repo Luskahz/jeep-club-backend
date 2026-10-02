@@ -20,6 +20,18 @@ public class ChargeDefinitionAdapter implements ChargeDefinitionRepository {
     private final ChargeDefinitionMapper mapper;
 
     @Override
+    public Optional<ChargeDefinition> findByIdForUpdate(Long id) {
+        return jpa.findByIdForUpdate(id).map(mapper::toDomain);
+    }
+
+    @Override
+    public Page<ChargeDefinition> findEventEligible(Pageable pageable) {
+        return jpa.findByStatusAndRecurrenceType(
+            com.jeepclub.backend.billing.core.domain.enums.definition.ChargeDefinitionStatus.ACTIVE,
+            com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType.ONE_TIME, pageable).map(mapper::toDomain);
+    }
+
+    @Override
     public ChargeDefinition save(ChargeDefinition chargeDefinition) {
         ChargeDefinitionEntity entity = mapper.toEntity(chargeDefinition);
         ChargeDefinitionEntity savedEntity = jpa.save(entity);

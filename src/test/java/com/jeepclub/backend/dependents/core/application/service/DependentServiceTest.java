@@ -1,7 +1,7 @@
 package com.jeepclub.backend.dependents.core.application.service;
 
-import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentAccessDeniedException;
+import com.jeepclub.backend.dependents.core.application.exception.DependentCpfAlreadyInUseException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentNotFoundException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerInactiveException;
 import com.jeepclub.backend.dependents.core.application.exception.DependentOwnerNotFoundException;
@@ -12,18 +12,20 @@ import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
 import com.jeepclub.backend.dependents.core.port.DependentUserPort;
 import com.jeepclub.backend.dependents.core.repository.DependentRepository;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -67,12 +69,7 @@ class DependentServiceTest {
     }
 
     @Test
-    void createBlocksCpfUsedByActiveDependent() {
-        assertCreateBlocksReservedCpf();
-    }
-
-    @Test
-    void createBlocksCpfUsedByDisabledDependent() {
+    void createBlocksCpfReservedByOperationalDependent() {
         assertCreateBlocksReservedCpf();
     }
 
@@ -237,6 +234,39 @@ class DependentServiceTest {
     private void allowOwner() {
         when(dependentUserPort.existsById(1L)).thenReturn(true);
         when(dependentUserPort.existsActiveById(1L)).thenReturn(true);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void updateRejectsCpfReservedByIdentityOrAnotherDependent(boolean identityConflict) {
+        Dependent dependent = DependentsFixture.dependent(10L, 1L);
+        when(dependentRepository.findActiveById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentUserPort.existsByCpf("98765432100")).thenReturn(identityConflict);
+        if (!identityConflict) {
+            when(dependentRepository.existsByCpfAndIdNot("98765432100", 10L)).thenReturn(true);
+        }
+        assertThatThrownBy(() -> service.update(10L, "Pedro", "987.654.321-00",
+                LocalDate.of(2010, 5, 20), RelationshipType.CHILD, null, 1L))
+                .isInstanceOf(DependentCpfAlreadyInUseException.class);
+        verify(dependentRepository, Mockito.never()).save(any());
+        assertThat(dependent.getCpf()).isEqualTo("12345678900");
+    }
+
+    @Test
+    void updateWithSameFormattedCpfSkipsAvailabilityCheck() {
+        Dependent dependent = DependentsFixture.dependent(10L, 1L);
+        when(dependentRepository.findActiveById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.save(dependent)).thenReturn(dependent);
+        assertThat(service.update(10L, "Pedro", "123.456.789-00", LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD, null, 1L).cpf()).isEqualTo("12345678900");
+        verifyNoInteractions(dependentUserPort);
+        verify(dependentRepository, Mockito.never()).existsByCpfAndIdNot(any(), any());
+    }
+
+    @Test
+    void missingDependentCannotBeDeleted() {
+        assertThatThrownBy(() -> service.delete(404L, 1L)).isInstanceOf(DependentNotFoundException.class);
+        verify(dependentRepository, Mockito.never()).delete(any(), any(), any());
     }
 
     private DependentResult create(String cpf) {

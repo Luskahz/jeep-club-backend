@@ -64,6 +64,17 @@ Use `SystemLogService` somente quando o produto ou requisito técnico exigir
 persistência, consulta e retenção do evento. Não o use como substituto de
 `log.info`, `log.warn` ou `log.error`.
 
+### Auditoria obrigatória antes de devolver dados clínicos
+
+`SystemLogService.recordRequired` persiste e faz flush sincronamente em uma
+transação independente (`REQUIRES_NEW`), usando a mesma tabela `platform_logs`.
+O acesso emergencial de Event usa esse contrato para registrar ator, Event,
+tipo/ID do participante, instante e resultado, inclusive nas negativas de
+contexto/participação. Não registra conteúdo clínico. Se a persistência falhar,
+o prontuário não é devolvido. A política de retenção existente também se aplica.
+
+`record` continua usando a fila descrita acima. O contrato obrigatório é reservado
+a auditorias exigidas pelo caso de uso; não muda o logging HTTP operacional.
 ## Request ID e `X-Request-Id`
 
 O request ID é criado no início do request e devolvido no header

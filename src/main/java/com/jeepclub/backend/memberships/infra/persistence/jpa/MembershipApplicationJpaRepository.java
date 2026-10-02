@@ -31,4 +31,9 @@ public interface MembershipApplicationJpaRepository
             String email,
             MembershipApplicationStatus status
     );
+
+    Optional<MembershipApplicationEntity> findByCreatedUserIdAndStatus(
+            Long createdUserId,
+            MembershipApplicationStatus status
+    );
 }

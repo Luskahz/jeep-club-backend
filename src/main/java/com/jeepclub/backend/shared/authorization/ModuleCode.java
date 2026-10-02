@@ -9,5 +9,6 @@ public enum ModuleCode {
     TOOLS,
     HEALTH,
     IDENTITY,
-    VEHICLES
+    VEHICLES,
+    PUBLICATIONS
 }

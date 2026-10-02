@@ -16,6 +16,18 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 class UserQueryService implements UserQuery {
+    @Transactional(readOnly=true)
+    public List<UserDetails> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        if (ids.size() > 500) throw new IllegalArgumentException("Maximum batch size: 500");
+        return userRepository.findByIds(ids).stream().map(UserQueryService::toDetails).toList();
+    }
+    @Transactional(readOnly=true)
+    public List<UserDetails> findAfterId(long afterId, int limit) {
+        if (afterId < 0 || limit < 1 || limit > 500) throw new IllegalArgumentException("Invalid batch");
+        return userRepository.findAfterId(afterId, limit).stream().map(UserQueryService::toDetails).toList();
+    }
+
 
     private final UserRepository userRepository;
 
@@ -76,7 +88,7 @@ class UserQueryService implements UserQuery {
         return new UserDetails(
                 user.getId(), user.getName(), user.getBirthDate(),
                 user.getEmail(), user.getCpf(), user.getRg(),
-                user.getPhoneNumber(), user.getProfilePhotoUrl(),
+                user.getPhoneNumber(), user.getProfilePhotoStorageKey(),
                 user.isActive(), user.getCreatedAt(), user.getDisabledAt(),
                 user.getUpdatedAt()
         );

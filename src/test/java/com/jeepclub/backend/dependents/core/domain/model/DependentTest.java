@@ -2,13 +2,13 @@ package com.jeepclub.backend.dependents.core.domain.model;
 
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
+import java.time.Instant;
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import java.time.Instant;
-import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -165,5 +165,118 @@ class DependentTest {
                 1L,
                 NOW
         );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"update", "disable", "enable"})
+    void rejectsMutationBeforeCreationWithoutChangingState(String operation) {
+        Dependent dependent = create();
+        if (operation.equals("enable")) dependent.disable(NOW);
+        DependentStatus originalStatus = dependent.getStatus();
+        Instant originalUpdatedAt = dependent.getUpdatedAt();
+
+        assertThatThrownBy(() -> mutate(dependent, operation, NOW.minusNanos(1)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(dependent.getStatus()).isEqualTo(originalStatus);
+        assertThat(dependent.getUpdatedAt()).isEqualTo(originalUpdatedAt);
+        assertThat(dependent.getName()).isEqualTo("João Silva");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"update", "disable", "enable"})
+    void acceptsMutationAtCreationTime(String operation) {
+        Dependent dependent = create();
+        if (operation.equals("enable")) dependent.disable(NOW);
+        mutate(dependent, operation, NOW);
+        assertThat(dependent.getUpdatedAt()).isEqualTo(dependent.getCreatedAt());
+    }
+
+    @Test
+    void reconstitutionAllowsUnchangedOrEqualTimestampsButRejectsInversion() {
+        assertThat(reconstitute(null).getUpdatedAt()).isNull();
+        assertThat(reconstitute(NOW).getUpdatedAt()).isEqualTo(NOW);
+        assertThatThrownBy(() -> reconstitute(NOW.minusNanos(1)))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void repeatedStatusTransitionsPreserveLastChangeTime() {
+        Dependent dependent = create();
+        dependent.enable(NOW.plusSeconds(1));
+        assertThat(dependent.getUpdatedAt()).isNull();
+        dependent.disable(NOW.plusSeconds(2));
+        dependent.disable(NOW.plusSeconds(3));
+        assertThat(dependent.getUpdatedAt()).isEqualTo(NOW.plusSeconds(2));
+        dependent.enable(NOW.plusSeconds(4));
+        dependent.enable(NOW.plusSeconds(5));
+        assertThat(dependent.getUpdatedAt()).isEqualTo(NOW.plusSeconds(4));
+    }
+
+    @Test
+    void acceptsTenDigitPhoneAndNormalizesUpdateFields() {
+        Dependent dependent = create();
+        dependent.update(" Maria ", "987.654.321-00", LocalDate.of(2014, 1, 2),
+                RelationshipType.SIBLING, "(11) 3333-4444", NOW);
+        assertThat(dependent.getName()).isEqualTo("Maria");
+        assertThat(dependent.getBirthDate()).isEqualTo(LocalDate.of(2014, 1, 2));
+        assertThat(dependent.getRelationshipType()).isEqualTo(RelationshipType.SIBLING);
+        assertThat(dependent.getPhoneNumber()).isEqualTo("1133334444");
+        assertThat(dependent.getUserId()).isEqualTo(1L);
+        assertThat(dependent.getCreatedAt()).isEqualTo(NOW);
+    }
+
+    private Dependent reconstitute(Instant updatedAt) {
+        return Dependent.reconstitute(1L, "João", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 1L, DependentStatus.ACTIVE, NOW, updatedAt);
+    }
+
+    @Test
+    void creationRequiresExplicitTime() {
+        assertThatThrownBy(() -> Dependent.create("João", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 1L, null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void reconstitutionRejectsMissingNameAndInvalidOwner() {
+        assertThatThrownBy(() -> Dependent.reconstitute(1L, " ", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 1L, DependentStatus.ACTIVE, NOW, null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Dependent.reconstitute(1L, "João", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 0L, DependentStatus.ACTIVE, NOW, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void updateRejectsBlankNameWithoutChangingExistingData() {
+        Dependent dependent = create();
+        assertThatThrownBy(() -> dependent.update(" ", "98765432100", LocalDate.of(2014, 1, 2),
+                RelationshipType.CHILD, null, NOW)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(dependent.getName()).isEqualTo("João Silva");
+        assertThat(dependent.getUpdatedAt()).isNull();
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(longs = {0, -1})
+    void reconstitutionRejectsInvalidIdentity(Long id) {
+        assertThatThrownBy(() -> Dependent.reconstitute(id, "João", "12345678900", LocalDate.of(2015, 5, 10),
+                RelationshipType.CHILD, null, 1L, DependentStatus.ACTIVE, NOW, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"update", "disable", "enable"})
+    void mutationsRequireExplicitTime(String operation) {
+        assertThatThrownBy(() -> mutate(create(), operation, null)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    private void mutate(Dependent dependent, String operation, Instant time) {
+        switch (operation) {
+            case "update" -> dependent.update("Maria", "98765432100", LocalDate.of(2014, 1, 2),
+                    RelationshipType.CHILD, null, time);
+            case "disable" -> dependent.disable(time);
+            case "enable" -> dependent.enable(time);
+            default -> throw new AssertionError(operation);
+        }
     }
 }

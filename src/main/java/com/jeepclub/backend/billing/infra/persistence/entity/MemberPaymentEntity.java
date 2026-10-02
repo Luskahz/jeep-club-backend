@@ -117,4 +117,10 @@ public class MemberPaymentEntity {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+    @Column(name = "submitted_at")
+    private Instant submittedAt;
+
+    public MemberPaymentEntity(Long id, Long memberChargeId, BigDecimal amount, PaymentMethod paymentMethod, MemberPaymentStatus status, Instant paidAt, String receiptStorageKey, Instant confirmedAt, Long confirmedByUserId, Instant rejectedAt, Long rejectedByUserId, String rejectionReason, Instant canceledAt, String notes, Instant createdAt, Instant updatedAt) {
+        this(id, memberChargeId, amount, paymentMethod, status, paidAt, receiptStorageKey, confirmedAt, confirmedByUserId, rejectedAt, rejectedByUserId, rejectionReason, canceledAt, notes, createdAt, updatedAt, createdAt);
+    }
 }

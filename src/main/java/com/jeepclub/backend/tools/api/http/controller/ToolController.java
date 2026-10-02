@@ -4,6 +4,7 @@ import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.tools.api.http.dto.ToolCreateRequestDTO;
+import com.jeepclub.backend.tools.api.http.dto.ToolPhotoRequestDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolResponseDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolSummaryResponseDTO;
 import com.jeepclub.backend.tools.api.http.dto.ToolSummaryPageResponseSchema;
@@ -36,6 +37,13 @@ import org.springframework.web.bind.annotation.*;
 public class ToolController {
 
     private final ToolService toolService;
+
+    @PatchMapping(value = "/{id}/photo", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Associar foto à ferramenta do membro", description = "Recebe chave de POST /media/images; null remove a associação sem excluir o objeto no storage.")
+    public ResponseEntity<ToolResponseDTO> updatePhoto(@PathVariable Long id,
+            @RequestBody ToolPhotoRequestDTO request, @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(new ToolResponseDTO(toolService.updatePhoto(id, principal.getUserId(), request.storageKey())));
+    }
 
     @GetMapping
     @Operation(

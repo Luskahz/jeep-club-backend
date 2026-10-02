@@ -21,6 +21,10 @@ public class MemberPaymentAdapter implements MemberPaymentRepository {
 
     private final MemberPaymentJpaRepository jpa;
     private final MemberPaymentMapper mapper;
+    @Override
+    public java.util.List<MemberPayment> findByMemberChargeIdIn(java.util.Collection<Long> ids) {
+        return ids.isEmpty() ? java.util.List.of() : jpa.findByMemberChargeIdIn(ids).stream().map(mapper::toDomain).toList();
+    }
 
     @Override
     public MemberPayment save(MemberPayment memberPayment) {

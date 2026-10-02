@@ -18,6 +18,7 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
@@ -90,6 +91,27 @@ class ToolRepositoryAdapterTest {
 
         assertThatThrownBy(() -> repository.delete(saved, 99L, DELETED_AT))
                 .isInstanceOf(ToolAlreadyDeletedException.class);
+    }
+
+    @Test
+    void memberListingIsOwnerScopedAndAdminFiltersCombineNameAndStatus() {
+        repository.save(tool());
+        Tool second = Tool.reconstitute(null, "Chave de roda", "Reserva", ToolStatus.INACTIVE,
+                7L, CREATED_AT, CREATED_AT);
+        repository.save(second);
+        repository.save(Tool.reconstitute(null, "Chave alheia", "Outro dono", ToolStatus.INACTIVE,
+                8L, CREATED_AT, CREATED_AT));
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(repository.findByUserId(7L, PageRequest.of(0, 10)).getContent())
+                .extracting(Tool::getName).containsExactlyInAnyOrder("Macaco hidráulico", "Chave de roda");
+        assertThat(repository.findByUserId(8L, PageRequest.of(0, 10)).getContent())
+                .extracting(Tool::getName).containsExactly("Chave alheia");
+        assertThat(repository.findAll("cHaVe", ToolStatus.INACTIVE, PageRequest.of(0, 10)).getContent())
+                .extracting(Tool::getName).containsExactlyInAnyOrder("Chave de roda", "Chave alheia");
+        assertThat(repository.findAll("chave", ToolStatus.ACTIVE, PageRequest.of(0, 10)).getContent())
+                .isEmpty();
     }
 
     private Tool tool() {

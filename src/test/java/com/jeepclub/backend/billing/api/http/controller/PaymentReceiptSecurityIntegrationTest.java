@@ -128,7 +128,7 @@ class PaymentReceiptSecurityIntegrationTest {
                         .header("Authorization", "Bearer owner"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType("application/problem+json"))
-                .andExpect(jsonPath("$.code").value("HTTP_400"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
     private void authenticate(String token, Long userId, List<String> authorities) {

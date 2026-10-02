@@ -28,8 +28,7 @@ public class AdminMemberRefundService {
 
     private static final Duration REFUND_ELIGIBILITY_DURATION = Duration.ofDays(30);
     private static final List<MemberPaymentStatus> REFUNDABLE_PAYMENT_STATUSES = List.of(
-            MemberPaymentStatus.CONFIRMED,
-            MemberPaymentStatus.PENDING_VALIDATION
+            MemberPaymentStatus.CONFIRMED
     );
 
     private final MemberRefundRepository memberRefundRepository;
@@ -51,6 +50,7 @@ public class AdminMemberRefundService {
                     REFUNDABLE_PAYMENT_STATUSES
             );
             for (MemberPayment payment : payments) {
+                payment = memberPaymentRepository.findByIdForUpdate(payment.getId()).orElseThrow();
                 if (memberRefundRepository.existsActiveByMemberPaymentId(payment.getId())
                         || memberRefundRepository.existsRefundedByMemberPaymentId(payment.getId())) {
                     continue;
@@ -71,6 +71,16 @@ public class AdminMemberRefundService {
             }
         }
         return createdRefunds;
+    }
+
+    /** Caller holds the payment lock, shared with cancel/request, so eligibility cannot duplicate. */
+    @Transactional
+    public void ensureLateEligibility(MemberCharge charge, MemberPayment payment, Long actor, Instant canceledAt) {
+        if (!payment.isConfirmed() || memberRefundRepository.existsActiveByMemberPaymentId(payment.getId())
+                || memberRefundRepository.existsRefundedByMemberPaymentId(payment.getId())) return;
+        memberRefundRepository.save(MemberRefund.createEligibilityForCanceledCycle(charge.getId(), payment.getId(),
+            charge.getChargeCycleId(), charge.getUserId(), payment.getAmount(), actor, canceledAt,
+            canceledAt.plus(REFUND_ELIGIBILITY_DURATION), Instant.now(clock)));
     }
 
     @Transactional(readOnly = true)

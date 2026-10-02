@@ -26,6 +26,8 @@ import java.time.Clock;
 import java.time.Instant;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -72,17 +74,23 @@ class AuthorizationOpenApiIntegrationTest {
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/authorization/roles']['post']['responses']['403']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
-                .andExpect(jsonPath("$['paths']['/authorization/roles/{roleId}']['get']['responses']['500']['content']['application/problem+json']['schema']['$ref']")
+                .andExpect(jsonPath("$['paths']['/authorization/roles/{roleId}']['get']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authorization/roles/{roleId}']['get']['responses']['500']")
+                        .doesNotExist())
+                .andExpect(jsonPath("$['paths']['/authorization/roles']['post']['responses']['409']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/authorization/roles/{roleId}']['put']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
-                .andExpect(jsonPath("$['paths']['/authorization/users/{userId}/roles']['put']['responses']['500']['content']['application/problem+json']['schema']['$ref']")
-                        .value("#/components/schemas/ApiErrorResponse"));
+                .andExpect(jsonPath("$['paths']['/authorization/users/{userId}/roles']['put']['responses']['404']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/authorization/users/{userId}/roles']['put']['responses']['500']")
+                        .doesNotExist());
     }
 
     @Test
     @Transactional
-    void positivePathVariablesAndAuthorizationExceptionsCurrentlyUseInternalServerError() throws Exception {
+    void authorizationControllersUseValidationAndSpecificDomainHandlers() throws Exception {
         Instant now = Instant.now(clock);
         String cpf = "34790621854";
         UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
@@ -95,21 +103,59 @@ class AuthorizationOpenApiIntegrationTest {
         Long userId = userQuery.findByCpf(cpf).orElseThrow().id();
         Role role = roleRepository.save(Role.create("authorization-validation", "Test role", now));
         userRoleRepository.save(UserRole.create(userId, role.getId(), now));
-        grant(role, PermissionCode.AUTHORIZATION_ROLE_READ, now);
-
         String bearer = "Bearer " + tokens.accessToken();
+
+        mockMvc.perform(get("/authorization/roles/{roleId}", 999999L))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/authorization/roles/{roleId}", 999999L)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isForbidden());
+
+        grant(role, PermissionCode.AUTHORIZATION_ROLE_READ, now);
+        grant(role, PermissionCode.AUTHORIZATION_ROLE_CREATE, now);
+        grant(role, PermissionCode.AUTHORIZATION_USER_ROLE_READ, now);
+        grant(role, PermissionCode.AUTHORIZATION_PERMISSION_READ, now);
+        grant(role, PermissionCode.AUTHORIZATION_PERMISSION_ASSIGN, now);
 
         mockMvc.perform(get("/authorization/roles/{roleId}", 0)
                         .header(HttpHeaders.AUTHORIZATION, bearer))
-                .andExpect(status().isInternalServerError())
+                .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
         mockMvc.perform(get("/authorization/roles/{roleId}", 999999L)
-                        .header(HttpHeaders.AUTHORIZATION, bearer))
-                .andExpect(status().isInternalServerError())
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .header("X-Request-Id", "missing-role"))
+                .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"));
+                .andExpect(header().string("X-Request-Id", "missing-role"))
+                .andExpect(jsonPath("$.code").value("ROLE_NOT_FOUND"));
+
+        mockMvc.perform(post("/authorization/roles")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"authorization-validation\",\"description\":\"Duplicate\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("ROLE_ALREADY_EXISTS"));
+
+        mockMvc.perform(get("/authorization/users/{userId}/roles", 999999L)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
+
+        mockMvc.perform(get("/authorization/permissions/{permissionId}", 999999L)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("PERMISSION_NOT_FOUND"));
+
+        Long assignedPermissionId = permissionRepository
+                .findByCode(PermissionCode.AUTHORIZATION_ROLE_READ).orElseThrow().getId();
+        mockMvc.perform(post("/authorization/roles/{roleId}/permissions/{permissionId}",
+                        role.getId(), assignedPermissionId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ROLE_PERMISSION_ALREADY_EXISTS"));
     }
 
     private void grant(Role role, PermissionCode code, Instant now) {

@@ -11,14 +11,14 @@ import org.springframework.validation.annotation.Validated;
 @Component
 @Validated
 @Setter
-@ConfigurationProperties(prefix = "app.server")
+@ConfigurationProperties(prefix = "app.user-facing")
 public class ApplicationUrlPropertiesImpl implements ApplicationUrlProperties {
 
     @NotBlank
-    private String baseUrl;
+    private String passwordResetUrl;
 
     @Override
-    public String baseUrl() {
-        return baseUrl;
+    public String passwordResetUrl() {
+        return passwordResetUrl;
     }
 }

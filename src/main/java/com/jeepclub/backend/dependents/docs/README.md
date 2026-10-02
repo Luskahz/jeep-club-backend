@@ -84,7 +84,20 @@ snapshot e a remoção. `createdAt` representa a criação, `updatedAt` a últim
 alteração operacional e `deletedAt` pertence exclusivamente ao snapshot de
 histórico.
 
+Na criação, `updatedAt` é nulo. Quando informado, deve ser maior ou igual a
+`createdAt`: reconstrução e operações `update`, `disable` e `enable` rejeitam
+instantes anteriores à criação. Transições de status repetidas preservam o
+timestamp da última alteração; não há regra adicional de monotonicidade entre
+duas atualizações posteriores à criação.
+
 Os testes existentes caracterizam normalização, ownership, atividade,
 unicidade de CPF, transições do domínio, persistência de histórico e fluxo de
 sistema. Ao alterar o módulo, escolha cobertura proporcional conforme as
 [regras globais](../../../../../../../../docs/architecture/feature-development-rules.md#testes-m%C3%ADnimos).
+
+
+## Exportações CSV/PDF — BACK-410
+
+DEPENDENTS_DEPENDENT_EXPORT permite todos, id, userId e histórico separado. CSV plano e PDF por titular agrupado. DependentsQuery.findDetailsByIds/findDetailsByUser oferecem identificação, vínculo/status e paginação para composição pública de relatórios; não expõem entities.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

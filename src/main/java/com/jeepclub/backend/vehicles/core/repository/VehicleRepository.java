@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 public interface VehicleRepository {
+    java.util.List<Vehicle> findAllByIds(java.util.Collection<Long> ids);
 
     boolean existsByPlate(String plate);
 

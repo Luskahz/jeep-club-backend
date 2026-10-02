@@ -51,6 +51,7 @@ public class AdminMemberChargeController {
     @GetMapping("/billing/member-charges")
     @PreAuthorize("hasAuthority('BILLING_MEMBER_CHARGE_READ')")
     @RequiredPermission("BILLING_MEMBER_CHARGE_READ")
+    @ApiResponse(responseCode = "400", description = "Filtro userId inválido conforme Bean Validation.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
             summary = "Listar cobranças de membros",
             description = "Lista cobranças com filtros opcionais por userId e status persistido. Usa page zero-based, size 20 por padrão e limite global de 50.",

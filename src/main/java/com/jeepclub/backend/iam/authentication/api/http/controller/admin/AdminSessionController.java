@@ -111,8 +111,8 @@ public class AdminSessionController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador de path inválido conforme Bean Validation.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -155,8 +155,8 @@ public class AdminSessionController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador de path inválido conforme Bean Validation.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -198,15 +198,7 @@ public class AdminSessionController {
                     ),
                     @ApiResponse(
                             responseCode = "400",
-                            description = "Estado persistido de sessão inconsistente para logout.",
-                            content = @Content(
-                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
-                                    schema = @Schema(implementation = ApiErrorResponse.class)
-                            )
-                    ),
-                    @ApiResponse(
-                            responseCode = "500",
-                            description = "A validação atual de um identificador de path não positivo resulta em erro interno.",
+                            description = "Estado persistido inconsistente ou identificador de path inválido.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)

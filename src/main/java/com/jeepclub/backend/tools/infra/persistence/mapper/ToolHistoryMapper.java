@@ -24,6 +24,7 @@ public class ToolHistoryMapper {
         history.setDescription(source.getDescription());
         history.setStatus(source.getStatus());
         history.setUserId(source.getUserId());
+        history.setPhotoStorageKey(source.getPhotoStorageKey());
         history.setDeletedByUserId(deletedByUserId);
         history.setCreatedAt(source.getCreatedAt());
         history.setUpdatedAt(source.getUpdatedAt());

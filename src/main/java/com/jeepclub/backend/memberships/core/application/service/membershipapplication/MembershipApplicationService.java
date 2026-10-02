@@ -67,15 +67,17 @@ public class MembershipApplicationService {
             throw new MembershipCpfAlreadyRegisteredException(cpf);
         }
 
-        if (repository.existsByEmailAndStatus(
-                email,
-                MembershipApplicationStatus.PENDING
-        )) {
-            throw new MembershipEmailAlreadyInUseException(email);
-        }
+        if (email != null) {
+            if (repository.existsByEmailAndStatus(
+                    email,
+                    MembershipApplicationStatus.PENDING
+            )) {
+                throw new MembershipEmailAlreadyInUseException(email);
+            }
 
-        if (userExistencePort.existsByEmail(email)) {
-            throw new MembershipEmailAlreadyRegisteredException(email);
+            if (userExistencePort.existsByEmail(email)) {
+                throw new MembershipEmailAlreadyRegisteredException(email);
+            }
         }
     }
 
@@ -105,7 +107,7 @@ public class MembershipApplicationService {
     private static String normalizeEmail(String email) {
         return email == null || email.isBlank()
                 ? null
-                : email.trim().toLowerCase();
+                : email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private static String normalizePhoneNumber(String phoneNumber) {

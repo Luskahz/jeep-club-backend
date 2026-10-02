@@ -9,12 +9,18 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberChargeRepository {
+    java.util.List<MemberCharge> findByChargeCycleIdIn(java.util.Collection<Long> ids);
 
     MemberCharge save(MemberCharge memberCharge);
 
     Optional<MemberCharge> findById(Long id);
 
     Optional<MemberCharge> findByIdForUpdate(Long id);
+
+    Optional<MemberCharge> findByChargeCycleIdAndUserId(
+            Long chargeCycleId,
+            Long userId
+    );
 
     Page<MemberCharge> findAll(Pageable pageable);
 

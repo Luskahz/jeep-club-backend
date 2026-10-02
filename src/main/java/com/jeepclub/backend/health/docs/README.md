@@ -60,8 +60,13 @@ persistência.
 
 `health.api.module.medicalprofile.MedicalProfileQuery` é a API Java pública
 read-only do módulo: `existsByOwner(MedicalProfileOwner, ownerId)` informa se
-existe perfil operacional para um owner `USER` ou `DEPENDENT`. Não há consumo
-externo desse contrato no código atual.
+existe perfil operacional para um owner `USER` ou `DEPENDENT`.
+`EmergencyMedicalProfileQuery` fornece leitura individual mínima para Event,
+validando atividade/existência do owner pelos mesmos ports do módulo. Ausência
+ou owner inacessível resulta em Optional vazio. Publications impõe permission,
+participação confirmada e Event IN_PROGRESS, e audita a consulta com
+`SystemLogService.recordRequired`, persistido sincronamente antes do retorno.
+Nenhum perfil ou snapshot clínico é persistido em Publications.
 
 O contrato HTTP detalhado — rotas do usuário, rotas administrativas, schemas,
 paginação, permissions e respostas RFC 9457 — é o OpenAPI publicado em
@@ -75,3 +80,10 @@ Os testes do módulo cobrem normalização, owner ativo/inativo, ownership de
 dependente, exclusão com histórico, concorrência e tradução de falhas de
 persistência. Testes de contrato OpenAPI caracterizam a superfície HTTP sem
 duplicar o catálogo de rotas nesta documentação.
+
+
+## Exportações CSV/PDF — BACK-410
+
+Export administrativo exige HEALTH_MEDICAL_PROFILE_EXPORT. Perfil individual por profileId/userId/dependentId, todos, household=true com userId e histórico separado. Household inclui titulares/dependentes sem ficha e só relaciona dependentes do titular consultado. A visão administrativa comum preserva owners ativos; a ficha household inclui todos os vínculos atuais, ACTIVE ou DISABLED. MedicalProfileCoverageQuery fornece exclusivamente IDs com ficha, em lotes de até 500, sem campos clínicos. Publications continua usando EmergencyMedicalProfileQuery individual. Auditoria obrigatória registra ator/ação sem conteúdo clínico.
+
+Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.

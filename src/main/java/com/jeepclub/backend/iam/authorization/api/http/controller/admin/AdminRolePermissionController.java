@@ -70,8 +70,16 @@ public class AdminRolePermissionController {
                             )
                     ),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador inválido ou role inexistente atualmente resulta em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role não encontrada.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -105,8 +113,24 @@ public class AdminRolePermissionController {
             responses = {
                     @ApiResponse(responseCode = "201", description = "Vínculo criado."),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, role ou permissão inexistente, ROOT, role inativa ou vínculo duplicado atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role ou permissão não encontrada.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role ou vínculo duplicado impede a atribuição.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)
@@ -147,8 +171,24 @@ public class AdminRolePermissionController {
             responses = {
                     @ApiResponse(responseCode = "204", description = "Vínculo removido."),
                     @ApiResponse(
-                            responseCode = "500",
-                            description = "Identificador, role ou permissão inexistente, ROOT ou vínculo ausente atualmente resultam em erro interno.",
+                            responseCode = "400",
+                            description = "Identificador inválido.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "404",
+                            description = "Role, permissão ou vínculo não encontrado.",
+                            content = @Content(
+                                    mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
+                                    schema = @Schema(implementation = ApiErrorResponse.class)
+                            )
+                    ),
+                    @ApiResponse(
+                            responseCode = "409",
+                            description = "Estado da role impede a remoção.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)

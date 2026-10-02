@@ -19,7 +19,7 @@ public class DetailResponseDTO {
         @Schema(description = "Apelido informal do veículo", example = "Jipe do João", nullable = true)
         private String nickname;
 
-        @Schema(description = "URL pública da foto do veículo", example = "https://example.com/foto.jpg", nullable = true)
+        @Schema(description = "Chave da imagem no storage global (GET /media/images?key=...)", example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg", nullable = true)
         private String photo;
 
         @Schema(description = "Placa no formato Mercosul (ABC1D23) ou antigo (ABC1234)", example = "ABC1D23")

@@ -1,0 +1,16 @@
+package com.jeepclub.backend.platform.export;
+import java.lang.annotation.*;
+import io.swagger.v3.oas.annotations.responses.*;
+import io.swagger.v3.oas.annotations.media.*;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
+@Target(ElementType.METHOD) @Retention(RetentionPolicy.RUNTIME)
+@ApiResponses({
+ @ApiResponse(responseCode="200", description="Download individual de ficha médica emergencial em PDF, após auditoria síncrona.", headers={@io.swagger.v3.oas.annotations.headers.Header(name="Content-Disposition",description="attachment; filename estático e timestamp UTC",schema=@Schema(type="string")),@io.swagger.v3.oas.annotations.headers.Header(name="Cache-Control",schema=@Schema(type="string",example="no-store"))}, content=@Content(mediaType="application/pdf",schema=@Schema(type="string",format="binary"))),
+ @ApiResponse(responseCode="400",description="Filtro ou formato inválido",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
+ @ApiResponse(responseCode="401",description="Não autenticado",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
+ @ApiResponse(responseCode="403",description="Sem permissão de exportação",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
+ @ApiResponse(responseCode="404",description="Recurso referenciado inexistente",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
+ @ApiResponse(responseCode="413",description="Limite síncrono excedido; refine os filtros",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
+ @ApiResponse(responseCode="500",description="Falha controlada de geração",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class)))
+})
+public @interface EmergencyPdfResponse {}

@@ -37,6 +37,9 @@ public class ToolEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(name = "photo_storage_key", length = 255)
+    private String photoStorageKey;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -28,7 +28,7 @@ public class MemberPaymentMapper {
                 entity.getCanceledAt(),
                 entity.getNotes(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(), entity.getSubmittedAt()
         );
     }
 
@@ -51,7 +51,7 @@ public class MemberPaymentMapper {
                 memberPayment.getCanceledAt(),
                 memberPayment.getNotes(),
                 memberPayment.getCreatedAt(),
-                memberPayment.getUpdatedAt()
+                memberPayment.getUpdatedAt(), memberPayment.getSubmittedAt()
         );
     }
 }

@@ -10,7 +10,7 @@ import java.util.Set;
 public final class UserSortMapper {
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
             "id", "name", "birthDate", "email", "cpf", "rg", "phoneNumber",
-            "profilePhotoUrl", "status", "createdAt", "disabledAt", "updatedAt"
+            "profilePhotoStorageKey", "status", "createdAt", "disabledAt", "updatedAt"
     );
 
     private UserSortMapper() {

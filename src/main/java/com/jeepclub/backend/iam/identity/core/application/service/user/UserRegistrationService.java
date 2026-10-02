@@ -1,6 +1,7 @@
 package com.jeepclub.backend.iam.identity.core.application.service.user;
 
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.iam.identity.api.module.UserAuthenticationTokens;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserRegistrationConflictException;
@@ -18,6 +19,7 @@ class UserRegistrationService implements UserRegistration {
 
     private final UserRepository userRepository;
     private final UserAuthenticationProvisioningPort authenticationProvisioningPort;
+    private final ImageMediaService images;
 
     @Override
     @Transactional
@@ -57,6 +59,7 @@ class UserRegistrationService implements UserRegistration {
     }
 
     private Long createUser(UserRegistrationData data) {
+        images.requireExisting(data.profilePhotoStorageKey());
         User user = User.create(
                 data.name(),
                 data.birthDate(),
@@ -64,7 +67,7 @@ class UserRegistrationService implements UserRegistration {
                 data.cpf(),
                 data.rg(),
                 data.phoneNumber(),
-                data.profilePhotoUrl(),
+                data.profilePhotoStorageKey(),
                 data.now()
         );
 

@@ -1,6 +1,7 @@
 package com.jeepclub.backend.tools.core.application.service.tool;
 
 import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
+import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import com.jeepclub.backend.tools.core.domain.model.Tool;
 import com.jeepclub.backend.tools.core.repository.ToolRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,15 @@ public class ToolService {
 
     private final ToolRepository toolRepository;
     private final Clock clock;
+    private final ImageMediaService images;
+
+    @Transactional
+    public Tool updatePhoto(Long id, Long userId, String storageKey) {
+        Tool tool = getToolDetails(id, userId);
+        images.requireExisting(storageKey);
+        tool.updatePhoto(storageKey, now());
+        return toolRepository.save(tool);
+    }
 
     @Transactional(readOnly = true)
     public Page<Tool> listUserTools(Long userId, Pageable pageable) {

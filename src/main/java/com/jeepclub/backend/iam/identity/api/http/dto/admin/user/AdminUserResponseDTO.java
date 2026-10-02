@@ -44,9 +44,9 @@ public record AdminUserResponseDTO(
         @Schema(description = "Telefone canônico do usuário.", example = "5511999999999", nullable = true)
         String phoneNumber,
 
-        @Schema(description = "URL da foto de perfil do usuário.", example = "https://cdn.example.com/user/1.jpg",
+        @Schema(description = "Chave da foto no storage global; resolva via GET /media/images?key=...", example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg",
                 nullable = true)
-        String profilePhotoUrl,
+        String profilePhotoStorageKey,
 
         @Schema(description = "Status administrativo do usuário.", example = "ACTIVE",
                 allowableValues = {"ACTIVE", "DISABLED"})
@@ -68,7 +68,7 @@ public record AdminUserResponseDTO(
         Objects.requireNonNull(result, "result cannot be null");
         return new AdminUserResponseDTO(
                 result.id(), result.name(), result.birthDate(), result.email(), result.cpf(),
-                result.rg(), result.phoneNumber(), result.profilePhotoUrl(), result.status(),
+                result.rg(), result.phoneNumber(), result.profilePhotoStorageKey(), result.status(),
                 result.createdAt(), result.disabledAt(), result.updatedAt()
         );
     }

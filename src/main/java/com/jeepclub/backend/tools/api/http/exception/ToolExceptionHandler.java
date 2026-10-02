@@ -3,6 +3,8 @@ package com.jeepclub.backend.tools.api.http.exception;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.platform.web.exception.ApiExceptionHandler;
 import com.jeepclub.backend.tools.core.application.exception.ToolNotFoundException;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerNotFoundException;
+import com.jeepclub.backend.tools.core.application.exception.ToolOwnerDisabledException;
 import com.jeepclub.backend.tools.core.domain.exception.InvalidToolStatusException;
 import com.jeepclub.backend.tools.core.domain.exception.ToolAccessDeniedException;
 import com.jeepclub.backend.tools.core.domain.exception.ToolAlreadyDeletedException;
@@ -13,6 +15,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.tools")
 public class ToolExceptionHandler extends ApiExceptionHandler {
+
+    @ExceptionHandler(ToolOwnerNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleOwnerNotFound(ToolOwnerNotFoundException exception) {
+        return buildErrorResponse("TOOL_OWNER_NOT_FOUND", exception.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(ToolOwnerDisabledException.class)
+    public ResponseEntity<ApiErrorResponse> handleOwnerDisabled(ToolOwnerDisabledException exception) {
+        return buildErrorResponse("TOOL_OWNER_DISABLED", exception.getMessage(), HttpStatus.CONFLICT);
+    }
 
     @ExceptionHandler(ToolNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleToolNotFound(ToolNotFoundException exception) {

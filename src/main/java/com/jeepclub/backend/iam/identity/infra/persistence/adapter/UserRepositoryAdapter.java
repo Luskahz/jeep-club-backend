@@ -21,6 +21,14 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class UserRepositoryAdapter implements UserRepository {
+    public List<User> findByIds(Collection<Long> ids) {
+        return ids.isEmpty() ? List.of() : jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
+    }
+    public List<User> findAfterId(long afterId, int limit) {
+        return jpaRepository.findByIdGreaterThanOrderByIdAsc(afterId, org.springframework.data.domain.PageRequest.of(0, limit))
+            .stream().map(mapper::toDomain).toList();
+    }
+
 
     private final UserJpaRepository jpaRepository;
     private final UserMapper mapper;
@@ -33,6 +41,11 @@ public class UserRepositoryAdapter implements UserRepository {
     @Override
     public User save(User user) {
         return persist(user, false);
+    }
+
+    @Override
+    public User saveAndFlush(User user) {
+        return persist(user, true);
     }
 
     @Override
@@ -69,8 +82,18 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public boolean existsByEmailAndIdNot(String email, Long id) {
+        return email != null && id != null && jpaRepository.existsByEmailAndIdNot(email, id);
+    }
+
+    @Override
     public boolean existsByRg(String rg) {
         return rg != null && jpaRepository.existsByRg(rg);
+    }
+
+    @Override
+    public boolean existsByRgAndIdNot(String rg, Long id) {
+        return rg != null && id != null && jpaRepository.existsByRgAndIdNot(rg, id);
     }
 
     @Override

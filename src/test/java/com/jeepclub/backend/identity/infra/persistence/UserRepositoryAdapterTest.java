@@ -105,6 +105,26 @@ class UserRepositoryAdapterTest {
     }
 
     @Test
+    void translatesEmailUniqueConstraintViolationWhenExplicitlyFlushingAnUpdate() {
+        User first = repository.create(identity(
+                "First User",
+                "52998224725",
+                "first@example.com",
+                "123456789"
+        ));
+        User second = repository.create(identity(
+                "Second User",
+                "16899535009",
+                "second@example.com",
+                "987654321"
+        ));
+        second.updateEmail(first.getEmail(), CREATED_AT.plusSeconds(60));
+
+        assertThatThrownBy(() -> repository.saveAndFlush(second))
+                .isInstanceOf(UserConflictException.class);
+    }
+
+    @Test
     void translatesRgUniqueConstraintViolation() {
         repository.create(identity(
                 "First User",

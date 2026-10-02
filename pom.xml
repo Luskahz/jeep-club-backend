@@ -33,6 +33,11 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>3.0.6</version>
+        </dependency>
 
         <!-- ========================= -->
         <!-- SPRING BOOT               -->
@@ -61,6 +66,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
         <!-- ========================= -->
@@ -298,5 +308,30 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>tools-mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <configuration>
+                            <targetClasses combine.self="override">
+                                <param>com.jeepclub.backend.tools.core.domain.model.Tool</param>
+                                <param>com.jeepclub.backend.tools.core.application.service.tool.ToolService</param>
+                                <param>com.jeepclub.backend.tools.core.application.service.tool.AdminToolService</param>
+                            </targetClasses>
+                            <targetTests combine.self="override">
+                                <param>com.jeepclub.backend.tools.core.application.service.tool.*</param>
+                            </targetTests>
+                            <excludedClasses combine.self="override" />
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
