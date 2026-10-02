@@ -113,6 +113,11 @@ os contratos são:
   e atividade administrativa, inclusive consultas em lote. É consumido por
   Authentication e por adapters de Authorization, Billing, Memberships,
   Dependents, Vehicles e Health.
+- `UserProfileQuery` (BACK-408): contrato de Identity que expõe somente a
+  consulta informativa de completude do perfil complementar. Valida a existência
+  do User, inclusive quando chamado isoladamente; User inexistente é erro,
+  enquanto perfil inexistente implica pendência. Consumidores não acessam
+  repository/entity internos para obter esses dados.
 - `UserRegistration` e `UserRegistrationData`: criação composta de User com
   credencial permanente, pendente de primeiro acesso ou já autenticada. O
   bootstrap de desenvolvimento o consome diretamente; o fluxo de Memberships
@@ -155,6 +160,45 @@ parâmetros, schemas, validações, respostas e erros RFC 9457 está no OpenAPI;
 não há catálogo Markdown concorrente.
 
 ## Persistência e concorrência
+
+### Perfil complementar — BACK-408
+
+O perfil complementar pertence exclusivamente a Identity e possui associação
+opcional 1:1 com User. `UserProfile` reúne `WorkProfile` e `ResidentialAddress`,
+sem dependências HTTP/JPA. Sua ausência não altera onboarding, autenticação,
+Membership ou o lifecycle ACTIVE/DISABLED.
+
+A pendência é derivada: ocupação e local de trabalho devem estar preenchidos,
+assim como CEP, logradouro, número (ou S/N), bairro, cidade e UF; complemento
+é opcional. Dados parciais são aceitos. Textos são aparados e branco vira null;
+CEP brasileiro aceita oito dígitos com hífen opcional, persistindo só dígitos;
+UF válida é normalizada para maiúsculas. Os limites de texto são aplicados após
+aparar, e não ao payload bruto. Na revisão de 2026-10-02, o frontend acessível
+[jeep-club-tamoios-caragua](https://github.com/Vitorram/jeep-club-tamoios-caragua/tree/da893d9502d387bf549211924358c179e4252a74)
+continuava com `src/schemas/index.ts` e `src/services/index.ts` vazios, sem
+contrato de perfil/endereço nos tipos ou componentes. Mantém-se este conjunto
+mínimo, sem campos adicionais por inferência.
+
+O bloco complementar tem recurso próprio de leitura e substituição integral,
+separado da edição parcial dos dados básicos existente na BACK-391. Ambos usam
+somente o principal autenticado. No PUT, omitir `workProfile` ou `address`, ou
+enviar o bloco como `null`, remove o respectivo bloco. Campos internos omitidos,
+`null` ou em branco são removidos; `{}` limpa todo o perfil complementar.
+Preenchimento parcial mantém a pendência. Não se preservam valores omitidos
+como no PATCH da BACK-391. O OpenAPI detalha esse contrato.
+
+A resposta de `/identity/me` consulta `UserQuery` e depois `UserProfileQuery`,
+que verifica novamente a existência do User. Essa leitura redundante foi mantida:
+o contrato público deve validar chamadas isoladas, e uma composição adicional ou
+uma variante que dispense validação apenas para economizar essa consulta não se
+justifica nesta Story. Não se introduz novo contrato público.
+
+`identity_user_profiles` usa o user_id como PK e FK, garantindo um único perfil
+por User. O upsert bloqueia o User na mesma transação antes de consultar/criar
+o perfil, inclusive no primeiro preenchimento concorrente. Não há booleano de
+completude persistido. Ler um perfil ausente não cria uma linha no banco.
+
+### Cadastro básico
 
 `UserEntity`, repository JPA, mapper, adapter e read model administrativo
 ficam em `infra.persistence`; o domínio não depende de JPA. `identity_users`

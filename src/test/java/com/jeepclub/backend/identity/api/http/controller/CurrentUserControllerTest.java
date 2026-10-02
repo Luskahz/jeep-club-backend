@@ -26,7 +26,7 @@ class CurrentUserControllerTest {
                 "52998224725", "123456789", "5511999999999", "photo.jpg",
                 true, createdAt, null, null
         )));
-        var controller = new CurrentUserController(userQuery, mock(CurrentUserProfileService.class));
+        var controller = new CurrentUserController(userQuery, mock(com.jeepclub.backend.iam.identity.api.module.UserProfileQuery.class), mock(CurrentUserProfileService.class));
 
         var body = controller.getMe(new UserPrincipal(42L, 7L, "User", createdAt.plusSeconds(900)))
                 .getBody();

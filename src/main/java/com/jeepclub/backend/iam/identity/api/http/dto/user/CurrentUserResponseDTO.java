@@ -39,15 +39,18 @@ public record CurrentUserResponseDTO(
         Instant disabledAt,
         @Schema(description = "Instante da última alteração.", format = "date-time", nullable = true,
                 accessMode = Schema.AccessMode.READ_ONLY)
-        Instant updatedAt
+        Instant updatedAt,
+        @Schema(description = "Pendência informativa derivada do perfil profissional e endereço residencial. Não bloqueia acesso.",
+                requiredMode = Schema.RequiredMode.REQUIRED, accessMode = Schema.AccessMode.READ_ONLY)
+        boolean profileCompletionPending
 ) {
-    public static CurrentUserResponseDTO from(UserDetails user) {
+    public static CurrentUserResponseDTO from(UserDetails user, boolean profileCompletionPending) {
         Objects.requireNonNull(user, "user cannot be null");
         return new CurrentUserResponseDTO(
                 user.id(), user.name(), user.birthDate(), user.email(), user.cpf(), user.rg(),
                 user.phoneNumber(), user.profilePhotoStorageKey(),
                 user.administrativelyActive() ? UserStatus.ACTIVE : UserStatus.DISABLED,
-                user.createdAt(), user.disabledAt(), user.updatedAt()
+                user.createdAt(), user.disabledAt(), user.updatedAt(), profileCompletionPending
         );
     }
 }
