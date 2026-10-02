@@ -39,7 +39,8 @@ class BillingEventBoundaryTest {
                 com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy.AFTER_DUE_DATE, null, NOW);
         assertThatThrownBy(() -> service().getEligible(3L)).isInstanceOf(EventBillingException.class);
         when(definitions.findEventEligible(Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(definition())));
-        assertThat(service().findEligible(Pageable.unpaged()).getContent()).hasSize(1);
+        assertThat(service().findEligible(Pageable.unpaged()).getContent()).singleElement()
+                .satisfies(entry -> { assertThat(entry.id()).isEqualTo(3L); assertThat(entry.name()).isEqualTo("monthly fee"); });
     }
     @Test void inlineDefinitionForcesOneTimeUnlimitedPaymentAndEventAssignment() {
         when(events.existsEventById(30L)).thenReturn(true);
@@ -59,7 +60,7 @@ class BillingEventBoundaryTest {
         verify(charges, never()).save(any()); verify(cycles, never()).save(any()); verify(contexts, never()).save(any());
     }
     @Test void cancellationDelegatesOnlyGeneratedCyclesBelongingToEvent() {
-        var generated = cycle(); var finished = cycle(); finished.finish(99L, NOW);
+        var generated = cycle(); var finished = withId(cycle(), 8L); finished.finish(99L, NOW);
         when(contexts.findByEvent(30L)).thenReturn(List.of(new EventChargeContext(30L, 3L, 5L, 4L), new EventChargeContext(30L, 6L, 7L, 8L)));
         when(definitions.findByIdForUpdate(anyLong())).thenReturn(Optional.of(definition()));
         when(cycles.findById(4L)).thenReturn(Optional.of(generated)); when(cycles.findById(8L)).thenReturn(Optional.of(finished));
@@ -80,6 +81,57 @@ class BillingEventBoundaryTest {
         var c = cycle(); c.finish(99L, NOW); when(cycles.findById(4L)).thenReturn(Optional.of(c));
         assertThatThrownBy(() -> service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isInstanceOf(EventBillingException.class);
         verifyNoInteractions(charges);
+    }
+    @Test void newEventDebtPersistsContextAndReusesTheMatchingEventAssignment() {
+        when(events.existsEventById(30L)).thenReturn(true);
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
+        var wrongEvent = EventParticipantsChargeAssignment.reconstitute(6L, 3L, 31L, true, NOW, null);
+        var rightEvent = EventParticipantsChargeAssignment.reconstitute(5L, 3L, 30L, true, NOW, null);
+        when(assignments.findByChargeDefinitionId(3L, Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(wrongEvent, rightEvent)));
+        when(cycles.save(any())).thenAnswer(i -> withId(i.getArgument(0), 4L));
+        when(cycles.findById(4L)).thenReturn(Optional.of(cycle()));
+        when(charges.save(any())).thenReturn(charge());
+        assertThat(service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isEqualTo(2L);
+        verify(contexts).save(new EventChargeContext(30L, 3L, 5L, 4L));
+        verify(assignments, never()).save(any());
+        verify(charges).save(argThat(c -> c.getUserId().equals(10L) && c.getChargeCycleId().equals(4L)
+                && c.getFinalAmount().compareTo(AMOUNT) == 0));
+    }
+    @Test void newEventContextCreatesItsAssignmentWhenNoneExists() {
+        when(events.existsEventById(30L)).thenReturn(true);
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
+        when(assignments.findByChargeDefinitionId(3L, Pageable.unpaged())).thenReturn(Page.empty());
+        when(assignments.save(any())).thenReturn(EventParticipantsChargeAssignment.reconstitute(5L, 3L, 30L, true, NOW, null));
+        when(cycles.save(any())).thenAnswer(i -> withId(i.getArgument(0), 4L));
+        when(cycles.findById(4L)).thenReturn(Optional.of(cycle()));
+        when(charges.save(any())).thenReturn(charge());
+        assertThat(service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isEqualTo(2L);
+        verify(contexts).save(new EventChargeContext(30L, 3L, 5L, 4L));
+    }
+    @Test void missingLockedDefinitionReturnsControlledEventFailure() {
+        when(events.existsEventById(30L)).thenReturn(true);
+        assertThatThrownBy(() -> service().ensureAssignment(30L, 404L)).isInstanceOf(EventBillingException.class);
+        verifyNoInteractions(assignments, cycles, charges);
+    }
+    @Test void financialQuerySeparatesCyclesSelectsLatestPaymentAndKeepsUnpaidRows() {
+        var otherCharge = MemberCharge.reconstitute(12L, 20L, 6L, 8L, AMOUNT, AMOUNT, DUE,
+                com.jeepclub.backend.billing.core.domain.enums.cycle.PaymentAcceptancePolicy.UNTIL_DUE_DATE,
+                null, DUE, com.jeepclub.backend.billing.core.domain.enums.charge.MemberChargeStatus.PENDING, NOW, null, null, null);
+        var mapper = new com.jeepclub.backend.billing.infra.persistence.mapper.MemberPaymentMapper();
+        var older = payment();
+        var latestEntity = mapper.toEntity(payment());
+        org.springframework.test.util.ReflectionTestUtils.setField(latestEntity, "id", 9L);
+        org.springframework.test.util.ReflectionTestUtils.setField(latestEntity, "createdAt", NOW.plusSeconds(1));
+        org.springframework.test.util.ReflectionTestUtils.setField(latestEntity, "submittedAt", NOW.plusSeconds(2));
+        var latest = mapper.toDomain(latestEntity); latest.reject(99L, "reason", NOW.plusSeconds(3));
+        when(contexts.findByEvent(30L)).thenReturn(List.of(new EventChargeContext(30L, 3L, 5L, 4L), new EventChargeContext(30L, 6L, 7L, 8L)));
+        when(charges.findByChargeCycleIdIn(List.of(4L, 8L))).thenReturn(List.of(charge(), otherCharge));
+        when(payments.findByMemberChargeIdIn(List.of(2L, 12L))).thenReturn(List.of(older, latest));
+        when(cycles.findByIds(List.of(4L, 8L))).thenReturn(List.of(cycle()));
+        var states = service().findByEvent(30L);
+        assertThat(states).hasSize(2);
+        assertThat(states.get(0)).isEqualTo(new EventFinancialQuery.State(3L, 10L, 2L, "PENDING", "REJECTED", NOW.plusSeconds(2), "monthly fee", AMOUNT, 4L, DUE));
+        assertThat(states.get(1)).isEqualTo(new EventFinancialQuery.State(6L, 20L, 12L, "PENDING", null, null, null, AMOUNT, 8L, DUE));
     }
     @Test void chargeDefinitionQueryDoesNotExposeFinancialInternalsAndInvalidReferencesAreFalse() {
         var query = new ChargeDefinitionQueryService(definitions);

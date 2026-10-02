@@ -4,7 +4,7 @@
 
 - Repositório `Luskahz/jeep-club-backend`.
 - `git fetch origin` executado; `origin/develop` confirmado em
-  `0d8542fb3d90768573dc738cea85b23c1701b44c` antes de criar a branch
+  `0d8542fb3d90768573dc738cea85b23c1701b44c` no início da implementação, na branch
   `test/back-437-billing-hardening`.
 - BACK-437 lida diretamente no Jira. O SHA `80ddc7d` da análise original não foi
   utilizado. A descrição pede PR; a instrução explícita desta execução pede
@@ -13,7 +13,6 @@
   e todos os arquivos atuais de `billing/docs/`.
 - Suíte baseline: `mvnw.cmd test` e `mvnw.cmd verify` passaram, ambos com
   **1.109 testes, zero failures/errors, um skipped**. Logs locais em `target/`.
-- Mudança local preexistente em `jwt-secrets.properties.sample` não pertence à tarefa.
 
 ## Matriz produção → testes → gaps → ação
 
@@ -101,65 +100,254 @@ summary e description para evitar duplicação. Não alterar status/Sprint da BA
 - Nenhuma regra ou classe de produção foi excluída do JaCoCo. Nenhuma mudança de
   produção foi feita para aumentar cobertura.
 
-## JaCoCo
+## Validação final da árvore
 
-Fonte de verdade: `target/site/jacoco/jacoco.xml`, JaCoCo 0.8.15. Somam-se os
-`counter` diretos de cada `package` com prefixo `com/jeepclub/backend/billing`;
-nunca os contadores globais, classes de teste ou o relatório de Authentication.
+Execução final em 02/10/2026 na branch existente `test/back-437-billing-hardening`,
+descendente de `887860e3b6ad62b95037a9abf292edc25d1037ed`, após fetch/pull --ff-only.
+Baseline histórica: **develop@0d8542fb3d90768573dc738cea85b23c1701b44c**,
+**1.109 testes**. O commit de implementação acima recebeu somente os testes
+identificados pela análise de mutações e esta atualização de evidências.
 
-| Métrica | Antes covered | Antes missed | Antes % | Depois covered | Depois missed | Depois % |
+| Comando sobre os fontes/testes finais | Total | Failures | Errors | Skipped | Resultado |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `./mvnw test` | 1.331 | 0 | 0 | 1 | BUILD SUCCESS |
+| `./mvnw verify` | 1.331 | 0 | 0 | 1 | BUILD SUCCESS |
+
+São **222 execuções adicionais à baseline**, incluindo os três testes HTTP que
+não estavam na execução intermediária de 1.256. Os resultados de 1.256, 1.259
+e os testes focais anteriores não são usados como validação final desta árvore.
+Logs: `target/back-437-final-test.log` e `target/back-437-final-verify.log`.
+
+## JaCoCo final
+
+Fonte: `target/site/jacoco/jacoco.xml`, JaCoCo 0.8.15. Somente os contadores
+diretos dos packages de prefixo `com/jeepclub/backend/billing` são somados.
+`target/jacoco.exec` foi removido imediatamente antes do verify final para não
+acumular cobertura de execuções anteriores. Sem exclusões novas de produção.
+
+| Métrica | Inicial covered | Inicial missed | Inicial % | Final covered | Final missed | Final % |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| LINE | 1556 | 1210 | 56,25% | 2537 | 229 | 91,72% |
-| BRANCH | 458 | 427 | 51,75% | 731 | 154 | 82,60% |
-| INSTRUCTION | 8629 | 5508 | 61,04% | 12861 | 1276 | 90,97% |
+| LINE | 1556 | 1210 | 56,25% | 2612 | 154 | 94,43% |
+| BRANCH | 458 | 427 | 51,75% | 760 | 125 | 85,88% |
+| INSTRUCTION | 8629 | 5508 | 61,04% | 13260 | 877 | 93,80% |
 
-Os números depois correspondem ao `verify` completo de 30/09/2026, encerrado
-às 22:31:33 -03:00: **1.256 testes, zero failures/errors, um skipped**, BUILD SUCCESS.
-Fonte preservada localmente em `target/back-437-progress-verify-jacoco.xml`;
-log em `target/back-437-progress-verify.log`. A meta de LINE >= 80% foi atingida.
+**LINE >= 80% satisfeita.** O relatório cobre Billing inteiro, distinto da
+cobertura de linha de 1422/1444 (98,48%) das classes selecionadas pelo PIT.
+BillingAuthorizationAdapter e os demais adapters não foram adicionados ao alvo
+de mutation nem receberam testes artificiais para perseguir 100%.
 
-Depois desse verify foram adicionados três testes HTTP. A classe inteira foi
-reexecutada com `mvnw.cmd -Dtest=BillingHttpWorkflowIntegrationTest test`:
-**11 testes, zero failures/errors/skipped**, BUILD SUCCESS às 22:36:03 -03:00.
-O último `test` focal de todas as classes `Billing*Test` havia passado com
-147 execuções; o último verify completo também passou pela fase de testes.
-Esses resultados não equivalem a executar novamente a suíte completa sobre
-os três últimos testes. A contagem consolidada dos XML locais é 1.259 testes
-(150 a mais que a baseline); a última execução completa validada permanece 1.256.
+## PIT final e análise completa
 
-## PIT
+Comando efetivamente executado, sem sobrescrever os targets/mutators do pom:
+`./mvnw -Pbilling-mutation org.pitest:pitest-maven:mutationCoverage`.
+PIT 1.19.0; 20 classes alvo, 200 classes de teste examinadas.
+Perfil focal: cinco agregados, assignments e serviços de configuração, ciclos,
+charges, payments, refunds e Event. Controllers, DTOs e infraestrutura ficam
+fora desse alvo; a suíte completa continua obrigatória.
 
-Perfil `billing-mutation` focal: seis agregados, assignments e serviços financeiros
-de configuração, ciclo, charge, payment, refund e Event. DTOs, controllers e
-infraestrutura não são alvo de mutation. A seleção focal de tests permanece em
-Billing para evitar reexecutar todo o bootstrap de Publications por mutante;
-os testes cross-module permanecem obrigatórios em test/verify.
+Apesar de `outputDirectory` no perfil indicar `target/pit-reports/billing`,
+esta versão do plugin escreveu o relatório em **target/pit-reports/**.
+Análise feita sobre todo `mutations.xml`, conferida com `index.html` e o log,
+não somente com o resumo do console. Todos os mutantes pertencem aos targets
+de Billing. Arquivos locais: `target/pit-reports/{index.html,mutations.xml}`
+e `target/back-437-final-pit.log`; término 02/10/2026 00:45:23 -03:00.
 
-Comando: `mvnw.cmd -Pbilling-mutation org.pitest:pitest-maven:mutationCoverage`.
-Relatórios locais: `target/pit-reports/billing/{index.html,mutations.xml}`.
-**Não executado nesta rodada.** Não há mutation score, resultado de mutantes
-ou análise de survivors/NO_COVERAGE validada. O perfil apenas prepara a execução.
+| Resultado final | Quantidade |
+| --- | ---: |
+| Geradas | 617 |
+| KILLED | 611 |
+| SURVIVED | 6 |
+| NO_COVERAGE | 0 |
+| TIMED_OUT / NON_VIABLE / MEMORY_ERROR / RUN_ERROR / NOT_STARTED / STARTED | 0 |
+| Mutation score | 99,03% (611/617) |
+| Test strength | 99,03% (611/(617 - 0)) |
+| Execuções de teste durante mutation | 2117 |
+| Build | BUILD SUCCESS |
 
-## Encerramento da rodada e pendências
+A primeira execução produziu 513 KILLED, 81 SURVIVED e 23 NO_COVERAGE.
+Esses valores são diagnósticos intermediários, não resultados finais.
+Após testes comportamentais, a segunda execução produziu 600 KILLED,
+17 SURVIVED e zero NO_COVERAGE. A terceira execução acima é a final.
+Dos 104 mutantes inicialmente sobreviventes/sem cobertura, **98 passaram a
+KILLED e seis são equivalentes**. Nenhuma exclusão ou troca de mutators foi
+usada para aumentar o score.
 
-O usuário pediu encerrar a rodada e commitar o estado atual. Este é um checkpoint
-da BACK-437, não conclusão integral do objetivo original.
+### Gaps comportamentais implementados nesta validação
 
-Entregues nove classes novas de teste e fixtures compartilhadas, auditoria dos
-testes existentes, matriz de gaps, medição real acima da meta e dois tickets
-de dívida no backlog. Nenhum bug foi corrigido em código de produção; BACK-490
-tem reprodução por teste de caracterização e BACK-489 tem evidência estática,
-sem reprodução concorrente de perda de atualização neste trabalho.
+- Reenvio de payment revalida ownership, charge fechada e valor antes de
+  storage/lifecycle; referências ausentes continuam com exceção controlada.
+- Refund ativo de outro owner não pode ser reutilizado a partir de um payment
+  da charge consultada; nenhum save pode ocorrer.
+- Cancel de ciclo retorna CANCELED com timestamp; cancel de Event diferencia
+  IDs reais de ciclos GENERATED/FINISHED, preservando BACK-460/BACK-464.
+- Geração de dívida de Event salva contexto e charge, reutiliza assignment do
+  Event correto e cria um quando ausente. Catálogo mantém os dados retornados.
+- Consulta financeira de Event separa ciclos/owners, seleciona o último payment
+  e mantém linhas sem payment/metadados, sem alterar os scans de BACK-471.
+- Listagem/generation/assignment com definição ausente preserva erro de domínio;
+  resultados dos quatro assignments conservam audienceType e target.
+- `BillingMutationHistoryTest`: reconstrução via mappers rejeita decisões
+  incompatíveis de refunds/ciclos, falta de aprovação/transferência, janelas
+  ausentes, timestamps inválidos, IDs zero e atores históricos inválidos.
+  Round-trip mantém histórico e estado observável; null em descrição opcional
+  é preservado; submittedAt de payment mantém o valor ou o fallback legado.
+  ReflectionTestUtils corrompe apenas entidades de fixture para simular dados
+  persistidos inválidos, nunca objetos de produção durante a execução real.
 
-Falta para concluir:
+### Seis sobreviventes finais: tratamento individual
 
-1. Executar o PIT focal e analisar mutantes sobreviventes e sem cobertura,
-   acrescentando asserções ou justificativas técnicas por comportamento.
-2. Reexecutar `mvnw.cmd test` e `mvnw.cmd verify` sobre o estado final e após
-   eventuais ajustes do PIT, atualizando a medição sem misturar execuções.
-3. Confirmar a checklist original com essas evidências. Os tickets de dívida
-   documentam trabalho posterior e não são correções implementadas aqui.
+Classes de domínio abaixo pertencem a `com.jeepclub.backend.billing.core.domain.model`.
+O nome do mutator tem prefixo `org.pitest.mutationtest.engine.gregor.mutators`;
+NullReturnValsMutator pertence ao subpackage `returns`.
 
-Relatórios de build, logs, HTML e arquivos temporários permanecem em `target/`,
-sem versionamento. A alteração preexistente em `jwt-secrets.properties.sample`
-permanece fora do commit. Não abrir PR, fazer merge ou encerrar BACK-437.
+| Classe | Método | Linha | Mutator | Comportamento afetado e justificativa |
+| --- | --- | ---: | --- | --- |
+| MemberRefund | validateStatusConsistency | 397 | VoidMethodCallMutator | Remove validateOptionalId(rejectedByUserId). REJECTED valida o mesmo ID em requireRejectionData; todos os outros estados proíbem rejection data. A remoção não aceita nenhum estado novo. Equivalente. |
+| MemberRefund | validateStatusConsistency | 398 | VoidMethodCallMutator | Remove validateOptionalId(refundedByUserId). REFUNDED valida em requireRefundedData; todos os demais estados proíbem refunded data. Equivalente. |
+| MemberRefund | validateStatusConsistency | 399 | VoidMethodCallMutator | Remove validateOptionalId(canceledByUserId). CANCELED valida em requireCancellationData; os demais estados proíbem cancellation data. Equivalente. |
+| ChargeCycle | validateStatusConsistency | 281 | VoidMethodCallMutator | Remove validateOptionalId(archivedByUserId). ARCHIVED valida em requireArchiveData; GENERATED/CANCELED/FINISHED proíbem archive data. Equivalente. Os atores históricos canceled/finished em ARCHIVED são distintos e agora têm teste de ID zero. |
+| MemberPayment | updateSubmission | 232 | VoidMethodCallMutator | Remove validateStatusConsistency após reenvio. Só entra de PENDING_VALIDATION/REJECTED reconstruídos válidos; muda para PENDING_VALIDATION e zera todos os campos de rejeição/cancelamento. Campos de confirmação já eram null, e novos valores são validados antes. Nenhum estado inválido pode ser produzido pela API pública; checagem final redundante. Equivalente, sem forçar corrupção de campos privados para matar o mutante. |
+| com.jeepclub.backend.billing.core.application.service.chargeassignment.AdminChargeAssignmentService | findActiveChargeDefinitionOrThrow | 178 | returns.NullReturnValsMutator | Troca somente o retorno por null após executar lookup e guards. Os cinco chamadores (quatro assign e activate) descartam o retorno; validações e efeitos permanecem. Equivalente; não alterar produção para obter 100%. |
+
+Não existem SURVIVED sem triagem nem NO_COVERAGE finais.
+
+## Dívidas, limites e conclusão
+
+BACK-489 e BACK-490 foram relidas no Jira nesta execução: ambas continuam
+**Tarefas pendentes, sem Sprint, no backlog**. Nenhuma delas foi corrigida.
+Permanecem as associações com **BACK-460, BACK-464, BACK-465, BACK-466 e BACK-471**
+descritas acima. Os limites de H2 e as decisões semânticas da matriz continuam
+válidos. Nenhum arquivo em `src/main/` mudou desde a baseline: **ausência de
+alteração funcional de produção**; somente testes, fixtures, configuração PIT
+e evidência de auditoria.
+
+Os critérios técnicos restantes da BACK-437 estão satisfeitos: test, verify,
+JaCoCo e PIT foram efetivamente executados após o último ajuste de teste;
+mutantes relevantes receberam teste ou justificativa técnica. Pronta para
+encerramento técnico, sem encerrar a issue nesta execução. Publicação somente
+na mesma branch remota, sem PR ou merge e sem mudança no Jira.
+
+### Integridade dos artefatos locais
+
+Os relatórios/logs completos permanecem em `target/`, sem versionamento.
+Hashes SHA-256 identificam exatamente os artefatos usados nesta evidência:
+
+- `target/back-437-final-test.log`: `9dd8795ff2fa7b6074ea0b15b7d1591367ad6fbe4453e33a029160924dd50221`
+- `target/back-437-final-verify.log`: `c67844c701f64f560e7525ad4eaf5ce6d4f3130d5a8a030139d61e0383c2c4c7`
+- `target/site/jacoco/jacoco.xml`: `c1688e3fc2483488eef2e4eebce1a9a2646f2ea68324c8a3cce930c42f2e9bc6`
+- `target/back-437-final-pit.log`: `c476dd783aae6f92454e58fd8d846131c3f76f8f254d1df43130cf299ee8bd47`
+- `target/pit-reports/mutations.xml`: `faed2ac91b151bb46b81fa4ffa726f9980628e47d49ff24557862537de44d421`
+
+### Inventário dos 104 mutantes inicialmente sobreviventes/sem cobertura
+
+Cada linha relaciona classe, método, linha e mutator do XML inicial ao status
+no XML final. `KILLED` indica o tratamento pelos testes acima; `SURVIVED` remete
+à justificativa individual da tabela anterior. O prefixo das classes é
+`com.jeepclub.backend.billing.`; mutators são exibidos pelo nome curto.
+
+| Classe (sob Billing) | Método | Linha | Mutator | Comportamento mutado | Inicial | Final |
+| --- | --- | ---: | --- | --- | --- | --- |
+| core.domain.model.MemberRefund | `isApproved` | 366 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberRefund::isApproved | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `isCanceled` | 378 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberRefund::isCanceled | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `isExpired` | 374 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberRefund::isExpired | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `isRefunded` | 370 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberRefund::isRefunded | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `isRequested` | 362 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberRefund::isRequested | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `normalizeNullableText` | 601 | EmptyObjectReturnValsMutator | replaced return value with "" for com/jeepclub/backend/billing/core/domain/model/MemberRefund::normalizeNullableText | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateId` | 563 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 394 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::validateOptionalId | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 395 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::validateOptionalId | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 396 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::validateOptionalId | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 397 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::validateOptionalId | SURVIVED | SURVIVED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 398 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::validateOptionalId | SURVIVED | SURVIVED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 399 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::validateOptionalId | SURVIVED | SURVIVED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 404 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::requireEligibilityWindow | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 409 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::requireEligibilityWindow | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 412 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRejectionData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 413 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRefundedData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 414 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 419 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoApprovalData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 420 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRejectionData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 421 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRefundedData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 422 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 427 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRejectionData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 428 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRefundedData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 429 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 434 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoApprovalData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 435 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRefundedData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 436 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 440 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::requireApprovalData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 441 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::requireRefundedData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 442 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRejectionData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 443 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 447 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::requireEligibilityWindow | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 449 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoApprovalData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 450 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRejectionData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 451 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRefundedData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 452 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 457 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRejectionData | SURVIVED | KILLED |
+| core.domain.model.MemberRefund | `validateStatusConsistency` | 458 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberRefund::ensureNoRefundedData | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `<init>` | 108 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::validatePaymentAcceptancePolicyConsistency | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `isArchived` | 267 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/ChargeCycle::isArchived | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `isCanceled` | 259 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/ChargeCycle::isCanceled | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `isFinished` | 263 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/ChargeCycle::isFinished | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `normalizeNullableText` | 455 | EmptyObjectReturnValsMutator | replaced return value with "" for com/jeepclub/backend/billing/core/domain/model/ChargeCycle::normalizeNullableText | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateAmount` | 438 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateId` | 420 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateOptionalId` | 412 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validatePaymentAcceptancePolicyConsistency` | 393 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 275 | NegateConditionalsMutator | negated conditional | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 279 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::validateOptionalId | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 280 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::validateOptionalId | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 281 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::validateOptionalId | SURVIVED | SURVIVED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 291 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::ensureNoFinishData | NO_COVERAGE | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 292 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::ensureNoArchiveData | NO_COVERAGE | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 297 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::ensureNoCancellationData | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 298 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::ensureNoArchiveData | SURVIVED | KILLED |
+| core.domain.model.ChargeCycle | `validateStatusConsistency` | 302 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::requireArchiveData | SURVIVED | KILLED |
+| core.domain.model.MemberCharge | `validateId` | 343 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.domain.model.MemberPayment | `isCanceled` | 254 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberPayment::isCanceled | SURVIVED | KILLED |
+| core.domain.model.MemberPayment | `isPendingValidation` | 236 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/domain/model/MemberPayment::isPendingValidation | SURVIVED | KILLED |
+| core.domain.model.MemberPayment | `reconstitute` | 241 | NegateConditionalsMutator | negated conditional | SURVIVED | KILLED |
+| core.domain.model.MemberPayment | `updateSubmission` | 232 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/MemberPayment::validateStatusConsistency | SURVIVED | SURVIVED |
+| core.domain.model.MemberPayment | `validateId` | 314 | ConditionalsBoundaryMutator | changed conditional boundary | SURVIVED | KILLED |
+| core.application.service.event.EventBillingService | `assignment` | 122 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::assignment | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `assignment` | 124 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::assignment | SURVIVED | KILLED |
+| core.application.service.event.EventBillingService | `cancelEventCycles` | 85 | NegateConditionalsMutator | negated conditional | SURVIVED | KILLED |
+| core.application.service.event.EventBillingService | `eligibleLocked` | 115 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::eligibleLocked | SURVIVED | KILLED |
+| core.application.service.event.EventBillingService | `findByEvent` | 102 | NegateConditionalsMutator | negated conditional | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `findByEvent` | 103 | NegateConditionalsMutator | negated conditional | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `findByEvent` | 104 | NegateConditionalsMutator | negated conditional | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `findByEvent` | 108 | EmptyObjectReturnValsMutator | replaced return value with Collections.emptyList for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::findByEvent | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$assignment$8` | 119 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$assignment$8 | SURVIVED | KILLED |
+| core.application.service.event.EventBillingService | `lambda$eligibleLocked$7` | 112 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$eligibleLocked$7 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$ensureEventMemberCharge$2` | 69 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/repository/EventChargeContextRepository::save | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$ensureEventMemberCharge$2` | 70 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$ensureEventMemberCharge$2 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$ensureEventMemberCharge$3` | 74 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$ensureEventMemberCharge$3 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$findByEvent$4` | 96 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$findByEvent$4 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$findByEvent$5` | 98 | BooleanFalseReturnValsMutator | replaced boolean return with false for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$findByEvent$5 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$findByEvent$5` | 98 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$findByEvent$5 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$findByEvent$6` | 99 | BooleanFalseReturnValsMutator | replaced boolean return with false for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$findByEvent$6 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$findByEvent$6` | 99 | BooleanTrueReturnValsMutator | replaced boolean return with true for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$findByEvent$6 | NO_COVERAGE | KILLED |
+| core.application.service.event.EventBillingService | `lambda$findEligible$0` | 33 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/event/EventBillingService::lambda$findEligible$0 | SURVIVED | KILLED |
+| core.application.service.chargecycle.AdminChargeCycleService | `cancel` | 141 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeCycle::cancel | SURVIVED | KILLED |
+| core.application.service.chargecycle.AdminChargeCycleService | `cancel` | 159 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/chargecycle/AdminChargeCycleService::cancel | SURVIVED | KILLED |
+| core.application.service.chargecycle.AdminChargeCycleService | `findByChargeDefinitionId` | 118 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/application/service/chargecycle/AdminChargeCycleService::ensureChargeDefinitionExists | SURVIVED | KILLED |
+| core.application.service.chargecycle.AdminChargeCycleService | `lambda$findChargeDefinitionOrThrow$1` | 305 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/chargecycle/AdminChargeCycleService::lambda$findChargeDefinitionOrThrow$1 | NO_COVERAGE | KILLED |
+| core.application.service.chargeassignment.AdminChargeAssignmentService | `findActiveChargeDefinitionOrThrow` | 178 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/chargeassignment/AdminChargeAssignmentService::findActiveChargeDefinitionOrThrow | SURVIVED | SURVIVED |
+| core.application.service.chargeassignment.AdminChargeAssignmentService | `findByChargeDefinitionId` | 124 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/application/service/chargeassignment/AdminChargeAssignmentService::ensureChargeDefinitionExists | SURVIVED | KILLED |
+| core.application.service.chargeassignment.AdminChargeAssignmentService | `lambda$ensureChargeDefinitionExists$2` | 280 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/chargeassignment/AdminChargeAssignmentService::lambda$ensureChargeDefinitionExists$2 | NO_COVERAGE | KILLED |
+| core.application.service.chargeassignment.AdminChargeAssignmentService | `lambda$ensureChargeDefinitionIsNotArchived$3` | 289 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/chargeassignment/AdminChargeAssignmentService::lambda$ensureChargeDefinitionIsNotArchived$3 | NO_COVERAGE | KILLED |
+| core.application.service.chargeassignment.AdminChargeAssignmentService | `lambda$findActiveChargeDefinitionOrThrow$0` | 168 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/chargeassignment/AdminChargeAssignmentService::lambda$findActiveChargeDefinitionOrThrow$0 | NO_COVERAGE | KILLED |
+| core.domain.model.ChargeDefinition | `normalizeNullableText` | 250 | EmptyObjectReturnValsMutator | replaced return value with "" for com/jeepclub/backend/billing/core/domain/model/ChargeDefinition::normalizeNullableText | SURVIVED | KILLED |
+| core.domain.model.ChargeDefinition | `update` | 147 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/domain/model/ChargeDefinition::validatePaymentAcceptancePolicyConsistency | SURVIVED | KILLED |
+| core.application.service.memberrefund.MemberRefundService | `requestExistingRefundIfEligible` | 68 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/application/service/memberrefund/MemberRefundService::ensureRefundBelongsToUser | SURVIVED | KILLED |
+| core.application.service.memberpayment.MemberPaymentService | `lambda$findMemberChargeForUpdateOrThrow$1` | 198 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/memberpayment/MemberPaymentService::lambda$findMemberChargeForUpdateOrThrow$1 | NO_COVERAGE | KILLED |
+| core.application.service.memberpayment.MemberPaymentService | `lambda$findMemberPaymentForUpdateOrThrow$0` | 192 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/memberpayment/MemberPaymentService::lambda$findMemberPaymentForUpdateOrThrow$0 | NO_COVERAGE | KILLED |
+| core.application.service.memberpayment.MemberPaymentService | `updateSubmission` | 106 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/application/service/memberpayment/MemberPaymentService::ensureChargeBelongsToAuthenticatedUser | SURVIVED | KILLED |
+| core.application.service.memberpayment.MemberPaymentService | `updateSubmission` | 107 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/application/service/memberpayment/MemberPaymentService::ensureChargeCanHavePaymentUpdated | SURVIVED | KILLED |
+| core.application.service.memberpayment.MemberPaymentService | `updateSubmission` | 111 | VoidMethodCallMutator | removed call to com/jeepclub/backend/billing/core/application/service/memberpayment/MemberPaymentService::ensurePaymentAmountMatchesCharge | SURVIVED | KILLED |
+| core.application.service.membercharge.AdminMemberChargeService | `lambda$findMemberChargeOrThrow$0` | 99 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/application/service/membercharge/AdminMemberChargeService::lambda$findMemberChargeOrThrow$0 | NO_COVERAGE | KILLED |
+| core.domain.model.assignment.RoleChargeAssignment | `audienceType` | 60 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/domain/model/assignment/RoleChargeAssignment::audienceType | SURVIVED | KILLED |
+| core.domain.model.assignment.UserChargeAssignment | `audienceType` | 60 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/domain/model/assignment/UserChargeAssignment::audienceType | SURVIVED | KILLED |
+| core.domain.model.assignment.EventParticipantsChargeAssignment | `audienceType` | 60 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/domain/model/assignment/EventParticipantsChargeAssignment::audienceType | SURVIVED | KILLED |
+| core.domain.model.assignment.AllMembersChargeAssignment | `audienceType` | 50 | NullReturnValsMutator | replaced return value with null for com/jeepclub/backend/billing/core/domain/model/assignment/AllMembersChargeAssignment::audienceType | SURVIVED | KILLED |

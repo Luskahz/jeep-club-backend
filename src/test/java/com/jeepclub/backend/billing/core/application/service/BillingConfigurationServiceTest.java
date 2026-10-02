@@ -142,11 +142,34 @@ class BillingConfigurationServiceTest {
         when(cycles.findById(4L)).thenReturn(Optional.of(c)); when(cycles.save(c)).thenReturn(c);
         when(charges.findByChargeCycleId(4L)).thenReturn(List.of(open)); when(payments.findByMemberChargeIdIn(List.of(2L))).thenReturn(List.of(payment()));
         when(charges.findOpenByChargeCycleId(4L)).thenReturn(List.of(open)); when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(becamePaid));
-        cycleService.cancel(4L, 99L);
+        assertThat(cycleService.cancel(4L, 99L).status()).isEqualTo(ChargeCycleStatus.CANCELED);
+        assertThat(c.getCanceledAt()).isEqualTo(NOW);
         var order = inOrder(payments, charges, cycles, refunds);
         order.verify(payments).findByIdForUpdate(1L); order.verify(charges).findByIdForUpdate(2L);
         order.verify(cycles).save(c); order.verify(refunds).createEligibilityForCanceledCycle(4L, 99L, NOW);
         assertThat(becamePaid.isPaid()).isTrue(); verify(charges, never()).save(any());
+    }
+    @Test void missingDefinitionCannotBeListedAssignedOrChanged() {
+        var pageable = Pageable.unpaged();
+        assertThatThrownBy(() -> cycleService.findByChargeDefinitionId(404L, pageable)).isInstanceOf(ChargeDefinitionNotFoundException.class);
+        assertThatThrownBy(() -> cycleService.generate(404L, "code", DUE, 99L)).isInstanceOf(ChargeDefinitionNotFoundException.class);
+        assertThatThrownBy(() -> assignmentService.findByChargeDefinitionId(404L, pageable)).isInstanceOf(ChargeDefinitionNotFoundException.class);
+        assertThatThrownBy(() -> assignmentService.assignToAllMembers(404L)).isInstanceOf(ChargeDefinitionNotFoundException.class);
+        var a = AllMembersChargeAssignment.create(404L, NOW);
+        when(assignments.findById(1L)).thenReturn(Optional.of(a));
+        assertThatThrownBy(() -> assignmentService.deactivate(1L)).isInstanceOf(ChargeDefinitionNotFoundException.class);
+        verify(assignments, never()).save(any()); verify(cycles, never()).save(any());
+    }
+    @Test void assignmentResultsPreserveAudienceAndTarget() {
+        when(definitions.findById(3L)).thenReturn(Optional.of(definition()));
+        when(assignments.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(members.existsActiveMemberByUserId(10L)).thenReturn(true);
+        when(roles.existsActiveRoleById(20L)).thenReturn(true);
+        when(events.existsEventById(30L)).thenReturn(true);
+        assertThat(assignmentService.assignToAllMembers(3L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.ALL_MEMBERS);
+        assertThat(assignmentService.assignToUser(3L, 10L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.USER);
+        assertThat(assignmentService.assignToRole(3L, 20L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.ROLE);
+        assertThat(assignmentService.assignToEventParticipants(3L, 30L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.EVENT_PARTICIPANTS);
     }
     @Test void cancellationCancelsStillOpenChargeAndFinishArchiveHaveNoFinancialSideEffects() {
         var c = cycle(); var debt = charge(); when(cycles.findById(4L)).thenReturn(Optional.of(c)); when(cycles.save(c)).thenReturn(c);

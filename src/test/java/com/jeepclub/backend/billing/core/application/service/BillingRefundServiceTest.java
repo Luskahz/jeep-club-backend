@@ -39,6 +39,15 @@ class BillingRefundServiceTest {
         assertThat(result.amount()).isEqualByComparingTo(AMOUNT); assertThat(result.requestedAt()).isEqualTo(NOW);
         var order = inOrder(payments, refunds); order.verify(payments).findByIdForUpdate(1L); order.verify(refunds).existsRefundedByMemberPaymentId(1L); order.verify(refunds).findActiveByMemberPaymentId(1L); order.verify(refunds).save(any());
     }
+    @Test void existingRefundCannotBeReusedByTheOwnerOfADifferentCharge() {
+        var p = payment(); p.confirm(99L, NOW);
+        when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(p));
+        when(charges.findById(2L)).thenReturn(Optional.of(charge()));
+        var other = MemberRefund.createMemberRequest(2L, 1L, 4L, 20L, AMOUNT, 20L, NOW);
+        when(refunds.findActiveByMemberPaymentId(1L)).thenReturn(Optional.of(other));
+        assertThatThrownBy(() -> member.requestByMemberPaymentId(10L, 1L)).isInstanceOf(MemberRefundAccessDeniedException.class);
+        verify(refunds, never()).save(any());
+    }
     @ParameterizedTest @ValueSource(ints = {0, 1, 2})
     void existingActiveRefundIsReusedWithoutDuplicatingOrOverwritingReview(int stage) {
         var p = payment(); p.confirm(99L, NOW); var r = eligibility(); if (stage >= 1) r.request(10L, NOW); if (stage == 2) r.approve(99L, NOW);

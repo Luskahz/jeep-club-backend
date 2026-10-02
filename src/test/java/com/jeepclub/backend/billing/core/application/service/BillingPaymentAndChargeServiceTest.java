@@ -128,6 +128,28 @@ class BillingPaymentAndChargeServiceTest {
         var order = inOrder(payments, charges, storage, lifecycle); order.verify(payments, atLeastOnce()).findByIdForUpdate(1L);
         order.verify(charges, atLeastOnce()).findByIdForUpdate(2L); order.verify(storage).store(any(), any()); order.verify(lifecycle).register("new", "old"); order.verify(payments).save(p);
     }
+    @ParameterizedTest @ValueSource(ints = {0, 1, 2, 3})
+    void replacementRevalidatesOwnershipChargeStateAndAmountBeforeStorage(int conflict) {
+        var c = charge(); var p = payment();
+        if (conflict == 1) c.cancel(NOW);
+        if (conflict == 2) c.markAsPaid(NOW, NOW);
+        when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(p));
+        when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(c));
+        var expected = conflict == 0 ? MemberChargeAccessDeniedException.class : conflict == 3 ? InvalidPaymentAmountException.class : InvalidMemberPaymentStateException.class;
+        assertThatThrownBy(() -> memberPayments.updateSubmission(conflict == 0 ? 20L : 10L, 1L,
+                conflict == 3 ? BigDecimal.TEN : AMOUNT, PaymentMethod.PIX, NOW, file, null)).isInstanceOf(expected);
+        verifyNoInteractions(storage, lifecycle); verify(payments, never()).save(any());
+        assertThat(p.getReceiptStorageKey()).isEqualTo("billing/payment-receipts/private.pdf");
+    }
+    @Test void memberReplacementAndAdministrativeReadReportMissingReferences() {
+        assertThatThrownBy(() -> memberPayments.updateSubmission(10L, 404L, AMOUNT, PaymentMethod.PIX, NOW, file, null))
+                .isInstanceOf(MemberPaymentNotFoundException.class);
+        when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(payment()));
+        assertThatThrownBy(() -> memberPayments.updateSubmission(10L, 1L, AMOUNT, PaymentMethod.PIX, NOW, file, null))
+                .isInstanceOf(MemberChargeNotFoundException.class);
+        assertThatThrownBy(() -> adminCharges.findById(404L)).isInstanceOf(MemberChargeNotFoundException.class);
+        verifyNoInteractions(storage, lifecycle);
+    }
     @Test void missingPaymentAndChargeAreControlledAndPaymentListingsKeepStatusFilter() {
         assertThatThrownBy(() -> adminPayments.findById(404L)).isInstanceOf(MemberPaymentNotFoundException.class);
         assertThatThrownBy(() -> adminPayments.confirm(404L, 99L)).isInstanceOf(MemberPaymentNotFoundException.class);
