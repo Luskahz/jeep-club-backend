@@ -92,13 +92,17 @@ public class EventBillingService implements EventBillingCommand, EventChargeCata
         var eventContexts = contexts.findByEvent(eventId);
         var eventCharges = charges.findByChargeCycleIdIn(eventContexts.stream().map(EventChargeContext::cycleId).toList());
         var eventPayments = payments.findByMemberChargeIdIn(eventCharges.stream().map(MemberCharge::getId).toList());
+        var cycleMetadata=cycles.findByIds(eventContexts.stream().map(EventChargeContext::cycleId).toList()).stream()
+            .collect(java.util.stream.Collectors.toMap(ChargeCycle::getId,c->c));
         for (var context : eventContexts) {
             for (var charge : eventCharges.stream().filter(c -> c.getChargeCycleId().equals(context.cycleId())).toList()) {
                 var payment = eventPayments.stream().filter(p -> p.getMemberChargeId().equals(charge.getId()))
                     .max(Comparator.comparing(MemberPayment::getCreatedAt).thenComparing(MemberPayment::getId)).orElse(null);
                 states.add(new State(context.chargeDefinitionId(), charge.getUserId(), charge.getId(),
                     charge.effectiveStatusAt(LocalDate.now(clock)).name(), payment == null ? null : payment.getStatus().name(),
-                    payment == null ? null : payment.getSubmittedAt()));
+                    payment == null ? null : payment.getSubmittedAt(),
+                    cycleMetadata.containsKey(context.cycleId())?cycleMetadata.get(context.cycleId()).getChargeDefinitionNameSnapshot():null,
+                    charge.getFinalAmount(),charge.getChargeCycleId(),charge.getDueDate()));
             }
         }
         return List.copyOf(states);

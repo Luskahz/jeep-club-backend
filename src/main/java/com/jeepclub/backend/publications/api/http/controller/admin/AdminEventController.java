@@ -147,7 +147,7 @@ public class AdminEventController {
     @ApiResponse(responseCode="201", description="Create administrative guest without transport")
     @ResponseStatus(HttpStatus.CREATED)
     public EventGuestRequest guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
-        if (r.vehicleId() != null) throw new IllegalArgumentException("Administrative guest uses ride selection."); return service.createGuest(id, principal.getUserId(), r.cpf());
+        if (r.vehicleId() != null) throw new IllegalArgumentException("Administrative guest uses ride selection."); return service.createGuest(id, principal.getUserId(), r.cpf(), r.guestName());
     }
     @PostMapping("/{id}/guest-requests/{guestId}/approve")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_APPROVE')")
@@ -184,8 +184,8 @@ public class AdminEventController {
     @GetMapping("/{id}/health/{type}/{participantId}")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ')")
     @RequiredPermission("PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ")
-    @Operation(summary="Audited individual health access during IN_PROGRESS for confirmed participant")
-    @ApiResponse(responseCode="200", description="Audited individual health access during IN_PROGRESS for confirmed participant")
+    @Operation(summary="Leitura médica individual auditada de participante confirmado, independente do lifecycle temporal")
+    @ApiResponse(responseCode="200", description="Leitura médica individual auditada de participante confirmado, independente do lifecycle temporal")
     public EmergencyMedicalProfileQuery.Profile health(@PathVariable Long id, @PathVariable MedicalProfileOwner type, @PathVariable Long participantId, @AuthenticationPrincipal UserPrincipal principal) {
         return service.health(id, type, participantId, principal.getUserId());
     }

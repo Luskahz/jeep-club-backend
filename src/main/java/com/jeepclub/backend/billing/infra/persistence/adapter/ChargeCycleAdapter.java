@@ -15,6 +15,10 @@ import java.util.Optional;
 @Repository
 @RequiredArgsConstructor
 public class ChargeCycleAdapter implements ChargeCycleRepository {
+    public java.util.List<com.jeepclub.backend.billing.core.domain.model.ChargeCycle> findByIds(java.util.Collection<Long> ids) {
+        return jpa.findAllById(ids).stream().map(mapper::toDomain).toList();
+    }
+
 
     private final ChargeCycleJpaRepository jpa;
     private final ChargeCycleMapper mapper;

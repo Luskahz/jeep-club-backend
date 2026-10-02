@@ -105,6 +105,10 @@ public class AdminEventService {
     public List<EventGuestRequest> guests(Long id) { events.locked(id); return operations.guests(id); }
     public long visits(String cpf) { return operations.approvedVisits(cpf); }
     public Map<String,Long> visits(Collection<String> cpfs) { return operations.approvedVisits(cpfs); }
+    public EventGuestRequest createGuest(Long id, Long actor, String cpf, String guestName) {
+        if(guestName==null || guestName.isBlank() || guestName.trim().length()>150)throw new IllegalArgumentException("Guest name required.");
+        return events.requestGuest(events.locked(id),actor,null,cpf,true,guestName);
+    }
     public EventGuestRequest createGuest(Long id, Long actor, String cpf) { return events.requestGuest(events.locked(id), actor, null, cpf, true); }
     public EventGuestRequest reviewGuest(Long id, Long guest, Long actor, boolean approve, String reason) {
         return events.reviewGuest(events.locked(id), guest, approve, null, actor, reason);
@@ -124,7 +128,13 @@ public class AdminEventService {
         long postCutoffPending, List<EventFinancialQuery.State> financial) {}
     public Dashboard dashboard(Long id) {
         events.locked(id);
-        var registrations = events.refreshed(id);
+        return dashboard(id, events.refreshed(id), false);
+    }
+    // The report resolves EventHistory first. Historical reads must not refresh registrations.
+    Dashboard historicalDashboard(Long id) {
+        return dashboard(id, operations.registrations(id), true);
+    }
+    private Dashboard dashboard(Long id, List<EventRegistration> registrations, boolean historical) {
         var active = registrations.stream().filter(r -> r.status() != EventRegistration.Status.CANCELLED).toList();
         var confirmed = registrations.stream().filter(r -> r.status() == EventRegistration.Status.CONFIRMED).toList();
         long dependentCount = confirmed.stream().flatMap(r -> r.allocations().stream()).mapToLong(a -> a.dependentIds().size()).sum()
@@ -132,7 +142,13 @@ public class AdminEventService {
         var guests = operations.guests(id);
         long approved = guests.stream().filter(g -> g.status() == EventGuestRequest.Status.APPROVED).count();
         var vehicleIds = active.stream().flatMap(r -> r.allocations().stream()).map(EventRegistration.Allocation::vehicleId).distinct().toList();
-        int capacity = vehicles.findActiveBatch(vehicleIds).stream().mapToInt(EventVehicleQuery.VehicleCapacity::seatingCapacity).sum();
+        int capacity = 0;
+        for (int i = 0; i < vehicleIds.size(); i += 500) {
+            var batch = vehicleIds.subList(i, Math.min(i + 500, vehicleIds.size()));
+            capacity += historical
+                ? vehicles.findPresentationDetailsBatch(batch).stream().mapToInt(EventVehicleQuery.Details::seatingCapacity).sum()
+                : vehicles.findActiveBatch(batch).stream().mapToInt(EventVehicleQuery.VehicleCapacity::seatingCapacity).sum();
+        }
         int reserved = active.stream().flatMap(r -> r.allocations().stream()).mapToInt(a -> a.dependentIds().size() + (a.member() ? 1 : 0)).sum();
         var states = financial.findByEvent(id);
         long unpaid = states.stream().filter(s -> !"PAID".equals(s.effectiveStatus()) && !"CANCELED".equals(s.effectiveStatus())).count();
@@ -156,7 +172,7 @@ public class AdminEventService {
     }
     private EmergencyMedicalProfileQuery.Profile readHealth(Long id, MedicalProfileOwner type, Long target) {
         var event = events.locked(id);
-        if (event.effectiveStatus(events.now()) != EventStatus.IN_PROGRESS) throw error("EVENT_HEALTH_ACCESS_NOT_ALLOWED");
+        // Temporal lifecycle is context only: a real emergency must remain accessible.
         var registrations = events.refreshed(id).stream().filter(r -> r.status() == EventRegistration.Status.CONFIRMED).toList();
         boolean participant = type == MedicalProfileOwner.USER ? registrations.stream().anyMatch(r -> r.userId().equals(target))
             : registrations.stream().anyMatch(r -> (r.unallocatedDependentIds().contains(target) || r.allocations().stream().anyMatch(a -> a.dependentIds().contains(target))) && dependents.isActiveDependentOfUser(target, r.userId()));

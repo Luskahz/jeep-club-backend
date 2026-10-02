@@ -10,5 +10,10 @@ public interface EventFinancialQuery {
             .findFirst().orElse(new State(chargeDefinitionId, userId, null, "CHARGE_NOT_FOUND", null, null));
     }
     record State(Long chargeDefinitionId, Long userId, Long memberChargeId, String effectiveStatus,
-                 String paymentStatus, Instant paymentSubmittedAt) {}
+                 String paymentStatus, Instant paymentSubmittedAt, String definitionName, java.math.BigDecimal amount,
+                 Long chargeCycleId, java.time.LocalDate dueDate) {
+        public State(Long definition,Long user,Long charge,String effective,String payment,Instant submitted) {
+            this(definition,user,charge,effective,payment,submitted,null,null,null,null);
+        }
+    }
 }

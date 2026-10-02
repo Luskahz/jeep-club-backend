@@ -15,6 +15,8 @@ import java.util.Set;
 
 public interface DependentJpaRepository
         extends JpaRepository<DependentEntity, Long> {
+    java.util.List<DependentEntity> findByUserIdAndIdGreaterThanOrderByIdAsc(Long userId, Long afterId, org.springframework.data.domain.Pageable pageable);
+
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

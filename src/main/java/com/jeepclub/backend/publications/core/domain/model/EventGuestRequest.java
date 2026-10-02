@@ -4,9 +4,13 @@ import java.time.Instant;
 import java.util.Objects;
 
 public record EventGuestRequest(Long id, Long eventId, Long requesterUserId, Long vehicleId, String cpf,
-        Status status, boolean administrative, Long reviewerId, Instant createdAt, Instant reviewedAt, String rejectionReason) {
+        Status status, boolean administrative, Long reviewerId, Instant createdAt, Instant reviewedAt, String rejectionReason, String guestName) {
+    public EventGuestRequest(Long id, Long eventId, Long requesterUserId, Long vehicleId, String cpf, Status status, boolean administrative, Long reviewerId, Instant createdAt, Instant reviewedAt, String rejectionReason) {
+        this(id,eventId,requesterUserId,vehicleId,cpf,status,administrative,reviewerId,createdAt,reviewedAt,rejectionReason,null);
+    }
     public enum Status { PENDING, APPROVED, REJECTED }
     public EventGuestRequest {
+        if (guestName != null) { guestName=guestName.trim(); if(guestName.isEmpty() || guestName.length()>150) throw new IllegalArgumentException("Guest name requires 1 to 150 characters."); }
         Publication.positive(eventId, "eventId"); Publication.positive(requesterUserId, "requesterUserId");
         cpf = Objects.requireNonNull(cpf, "cpf").replaceAll("\\D", "");
         if (cpf.length() != 11) throw new IllegalArgumentException("CPF requires eleven digits.");
@@ -18,9 +22,9 @@ public record EventGuestRequest(Long id, Long eventId, Long requesterUserId, Lon
         if (approve) Publication.positive(vehicle, "vehicleId");
         else if (reason == null || reason.isBlank()) throw new IllegalArgumentException("Rejection reason required.");
         return new EventGuestRequest(id, eventId, requesterUserId, vehicle, cpf, approve ? Status.APPROVED : Status.REJECTED,
-            administrative, actor, createdAt, now, approve ? null : reason.trim());
+            administrative, actor, createdAt, now, approve ? null : reason.trim(), guestName);
     }
     public EventGuestRequest identified(Long value) {
-        return new EventGuestRequest(value, eventId, requesterUserId, vehicleId, cpf, status, administrative, reviewerId, createdAt, reviewedAt, rejectionReason);
+        return new EventGuestRequest(value, eventId, requesterUserId, vehicleId, cpf, status, administrative, reviewerId, createdAt, reviewedAt, rejectionReason, guestName);
     }
 }

@@ -21,6 +21,14 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class UserRepositoryAdapter implements UserRepository {
+    public List<User> findByIds(Collection<Long> ids) {
+        return ids.isEmpty() ? List.of() : jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
+    }
+    public List<User> findAfterId(long afterId, int limit) {
+        return jpaRepository.findByIdGreaterThanOrderByIdAsc(afterId, org.springframework.data.domain.PageRequest.of(0, limit))
+            .stream().map(mapper::toDomain).toList();
+    }
+
 
     private final UserJpaRepository jpaRepository;
     private final UserMapper mapper;
