@@ -111,6 +111,20 @@ e preencha as chaves necessárias.
 
 ## 5. Execute
 
+O CORS pode ser configurado no deploy por variáveis de ambiente, sem alterar o
+`application.properties` ou gerar outro build:
+
+| Variável | Configuração |
+| --- | --- |
+| `APP_CORS_ALLOWED_ORIGINS` | Origins permitidas, separadas por vírgula |
+| `APP_CORS_ALLOWED_METHODS` | Métodos permitidos, separados por vírgula |
+| `APP_CORS_ALLOWED_HEADERS` | Headers permitidos, separados por vírgula |
+| `APP_CORS_ALLOW_CREDENTIALS` | Envio de credenciais (`true` ou `false`) |
+| `APP_CORS_MAX_AGE` | Cache do preflight, em segundos |
+
+Exemplo para duas origins: `APP_CORS_ALLOWED_ORIGINS=https://app.jeepclub.com.br,https://admin.jeepclub.com.br`.
+Os valores padrão estão em `src/main/resources/application.properties`.
+
 Linux/macOS
 
 ```bash
