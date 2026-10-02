@@ -18,6 +18,7 @@ class UserProfileServiceTest {
     @Test
     void unknownUsersCannotReadOrCreateProfiles() {
         assertThatThrownBy(() -> service.get(7L)).isInstanceOf(UserNotFoundException.class);
+        assertThatThrownBy(() -> service.hasPendingProfileCompletion(7L)).isInstanceOf(UserNotFoundException.class);
         assertThatThrownBy(() -> service.replace(7L, null, null)).isInstanceOf(UserNotFoundException.class);
         verifyNoInteractions(profiles);
     }

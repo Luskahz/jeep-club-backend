@@ -47,4 +47,30 @@ class UserProfileTest {
         assertThatThrownBy(() -> new ResidentialAddress(null, null, null, null, null, null, "ZZ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ResidentialAddress(null, null, "a".repeat(21), null, null, null, null)).isInstanceOf(IllegalArgumentException.class);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"12345678", "12345-678", " 12345-678 "})
+    void acceptsBothCepFormatsAndPersistsCanonicalDigits(String cep) {
+        assertThat(new ResidentialAddress(cep, null, null, null, null, null, null).postalCode()).isEqualTo("12345678");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"1234567", "123456789", "1234-5678", "abcdefgh", "12345 678"})
+    void rejectsInvalidCep(String cep) {
+        assertThatThrownBy(() -> new ResidentialAddress(cep, null, null, null, null, null, null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SP", "sp", "sP", " sp "})
+    void acceptsUfRegardlessOfCaseAndSurroundingSpaces(String state) {
+        assertThat(new ResidentialAddress(null, null, null, null, null, null, state).state()).isEqualTo("SP");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"ZZ", "S", "SPP", "12"})
+    void rejectsInvalidUf(String state) {
+        assertThatThrownBy(() -> new ResidentialAddress(null, null, null, null, null, null, state))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
