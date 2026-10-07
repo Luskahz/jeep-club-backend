@@ -39,5 +39,7 @@ set_env APP_SERVER_BASE_URL "https://$ip"
 docker compose up -d --no-build --wait --wait-timeout 240 backend proxy
 docker compose exec -T proxy nginx -t
 docker compose exec -T proxy nginx -s reload
-curl --fail --silent --show-error --output /dev/null "https://$ip/v3/api-docs"
+# Check TLS and the public gateway without depending on disabled documentation.
+status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' "https://$ip/identity/me")
+[[ "$status" == 401 || "$status" == 403 ]]
 echo "HTTPS ready at https://$ip"

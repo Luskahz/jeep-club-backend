@@ -125,8 +125,14 @@ administrador com CPF `12345678909` e a senha local escolhida. Alterar a senha
 do bootstrap depois não é um procedimento de troca de senha de uma conta já
 criada.
 
-Abra http://localhost:8080/swagger-ui/index.html para conferir a API. SMTP
-pode permanecer vazio no perfil `dev`.
+Swagger e OpenAPI permanecem desativados em `application.properties`, inclusive
+no perfil `dev`. Confira a API pelo frontend local ou depure pelo IntelliJ.
+SMTP pode permanecer vazio em `dev`; o indicador de saúde de SMTP está
+desativado nesse perfil, pois o envio de e-mails é simulado.
+
+Ao rodar o backend pelo IntelliJ, a exigência da credencial privada do frontend
+vem desativada por padrão. A stack da VPS usa essa proteção pelo `compose.yaml`;
+esse arquivo não faz parte do fluxo local de banco descrito aqui.
 
 ## 5. Conectar pelo MySQL Workbench ou IntelliJ
 
@@ -153,7 +159,8 @@ Na raiz do frontend, crie/ajuste `.env.local`:
 
 ```dotenv
 API_URL=http://localhost:8080
-NEXT_PUBLIC_API_URL=http://localhost:8080
+# Pode ficar vazia em desenvolvimento com o backend local sem a proteção entre servidores.
+API_FRONTEND_KEY=
 NODE_SECURE=HTTP
 # Gere uma chave privada local, diferente da chave JWT do backend.
 ACCESS=CHANGE_ME

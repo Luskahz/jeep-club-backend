@@ -145,17 +145,10 @@ mvnw.cmd spring-boot:run
 
 # Documentação da API
 
-Após iniciar a aplicação:
-
-```
-http://localhost:8080/swagger-ui.html
-```
-
-ou
-
-```
-http://localhost:8080/swagger-ui/index.html
-```
+Swagger e OpenAPI estão desativados em `application.properties`, inclusive no
+perfil `dev`. O frontend local pode ser usado para testar os fluxos da API.
+Consulte [o tutorial de ambiente local](deploy/LOCAL.md) e
+[as regras de acesso pelo frontend](deploy/FRONTEND-ACCESS.md).
 
 ---
 
