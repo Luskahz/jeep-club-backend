@@ -18,6 +18,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class MedicalProfileDataTest {
 
     @Test
+    void domainDataStringRepresentationDoesNotExposeAnyMedicalField() {
+        String marker = "SYNTHETIC_PRIVATE_MARKER";
+        MedicalProfileData data = data(marker, marker, marker, marker, marker,
+                marker, marker, "00000000000", marker, marker);
+        assertThat(data.toString()).doesNotContain(marker, "00000000000");
+    }
+
+    @Test
     void normalizesEveryTextFieldAndFormattedPhone() {
         MedicalProfileData data = data(
                 "  alergia  ",

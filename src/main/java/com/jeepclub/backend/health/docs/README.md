@@ -76,6 +76,9 @@ paginação, permissions e respostas RFC 9457 — é o OpenAPI publicado em
 
 ## Testes relevantes
 
+A [auditoria da suíte](test-audit.md) registra a matriz entre produção,
+cobertura preexistente e incrementos, além das evidências de JaCoCo/PIT.
+
 Os testes do módulo cobrem normalização, owner ativo/inativo, ownership de
 dependente, exclusão com histórico, concorrência e tradução de falhas de
 persistência. Testes de contrato OpenAPI caracterizam a superfície HTTP sem

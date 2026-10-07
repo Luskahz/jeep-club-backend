@@ -208,6 +208,19 @@ class HealthHttpIntegrationTest {
         assertThat(profiles.findById(inactive.getId())).isEmpty();
     }
 
+    @Test
+    void healthExportsRejectInvalidSelectorsAndMissingOwnersBeforeReturningClinicalData() throws Exception {
+        permissions("HEALTH_MEDICAL_PROFILE_EXPORT");
+        String path = "/admin/medical-profiles/export?";
+        for (String filter : List.of("profileId=0", "userId=-1", "dependentId=0", "household=true",
+                "profileId=1&userId=" + user.getId(), "userId=" + user.getId() + "&dependentId=" + dependent.getId())) {
+            problem(call("GET", path + filter, null), 400);
+        }
+        problem(call("GET", path + "userId=999999999", null), 404);
+        problem(call("GET", path + "dependentId=999999999", null), 404);
+        assertThat(history.count()).isZero();
+    }
+
     private ResultActions problem(ResultActions result, int status) throws Exception {
         return result.andExpect(status().is(status)).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.status").value(status))
