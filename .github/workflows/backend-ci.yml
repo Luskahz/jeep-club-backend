@@ -46,6 +46,7 @@ jobs:
         run: |
           for script in deploy/*.sh; do bash -n "$script"; done
           docker compose config --quiet
+          docker compose -f compose.local.yaml config --quiet
 
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify

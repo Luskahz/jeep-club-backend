@@ -1,5 +1,9 @@
 # Docker deployment
 
+For development with only MySQL in Docker and the applications running locally,
+follow [the local environment tutorial](LOCAL.md). Use `compose.local.yaml` for
+that workflow.
+
 ## Private frontend access
 
 See [FRONTEND-ACCESS.md](FRONTEND-ACCESS.md) before publishing this stack. Docker

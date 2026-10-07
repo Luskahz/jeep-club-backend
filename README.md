@@ -49,6 +49,10 @@ Antes de executar o projeto é necessário possuir instalado:
 
 # Instalação
 
+Para desenvolver com **MySQL no Docker, backend no IntelliJ e frontend com
+`npm run dev`**, siga o [tutorial do ambiente local](deploy/LOCAL.md).
+Ele usa `compose.local.yaml` e um banco persistente na porta `3307`.
+
 ## 1. Clone o repositório
 
 ```bash
@@ -141,17 +145,10 @@ mvnw.cmd spring-boot:run
 
 # Documentação da API
 
-Após iniciar a aplicação:
-
-```
-http://localhost:8080/swagger-ui.html
-```
-
-ou
-
-```
-http://localhost:8080/swagger-ui/index.html
-```
+Swagger e OpenAPI estão desativados em `application.properties`, inclusive no
+perfil `dev`. O frontend local pode ser usado para testar os fluxos da API.
+Consulte [o tutorial de ambiente local](deploy/LOCAL.md) e
+[as regras de acesso pelo frontend](deploy/FRONTEND-ACCESS.md).
 
 ---
 
