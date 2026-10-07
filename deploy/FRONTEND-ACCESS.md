@@ -35,6 +35,11 @@ O healthcheck usa GET `/actuator/health` na porta 8081, vinculada a 127.0.0.1 de
 do container. Essa porta não é publicada, e a porta da API não tem essa exceção.
 MySQL e backend continuam sem portas públicas; Nginx publica apenas HTTP/HTTPS.
 
+No perfil `dev`, o indicador de saúde de SMTP fica desativado, pois o ambiente
+usa envio de e-mail simulado e não tem servidor SMTP configurado. A saúde do
+banco e da aplicação continua sendo verificada. Esse ajuste não desativa o
+indicador de SMTP em outros perfis.
+
 Para IDE local a proteção vem desabilitada por padrão. Para desenvolvimento local
 com Compose, use uma chave privada em ambos os serviços ou defina explicitamente
 `SECURITY_FRONTEND_ACCESS_ENABLED=false` apenas no ambiente local.
