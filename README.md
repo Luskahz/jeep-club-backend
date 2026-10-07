@@ -49,6 +49,10 @@ Antes de executar o projeto é necessário possuir instalado:
 
 # Instalação
 
+Para desenvolver com **MySQL no Docker, backend no IntelliJ e frontend com
+`npm run dev`**, siga o [tutorial do ambiente local](deploy/LOCAL.md).
+Ele usa `compose.local.yaml` e um banco persistente na porta `3307`.
+
 ## 1. Clone o repositório
 
 ```bash

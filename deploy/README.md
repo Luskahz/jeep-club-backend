@@ -1,5 +1,9 @@
 # Docker deployment
 
+For development with only MySQL in Docker and the applications running locally,
+follow [the local environment tutorial](LOCAL.md). Use `compose.local.yaml` for
+that workflow.
+
 ## HTTPS on an IP address
 
 The default proxy configuration serves HTTP and the ACME webroot. For a public IP, run `sudo bash deploy/setup-https-ip.sh <public IPv4>` on the VPS deployment directory. This requests a trusted short-lived certificate with Certbot, changes the proxy to `deploy/nginx-https.conf`, and redirects HTTP to HTTPS. It registers an ACME account without a contact email.
