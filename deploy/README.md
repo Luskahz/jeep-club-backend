@@ -1,5 +1,11 @@
 # Docker deployment
 
+## Private frontend access
+
+See [FRONTEND-ACCESS.md](FRONTEND-ACCESS.md) before publishing this stack. Docker
+requires a private credential from the Next.js server, in addition to user JWTs.
+Swagger and OpenAPI are disabled; health checks use container loopback port 8081.
+
 ## HTTPS on an IP address
 
 The default proxy configuration serves HTTP and the ACME webroot. For a public IP, run `sudo bash deploy/setup-https-ip.sh <public IPv4>` on the VPS deployment directory. This requests a trusted short-lived certificate with Certbot, changes the proxy to `deploy/nginx-https.conf`, and redirects HTTP to HTTPS. It registers an ACME account without a contact email.
