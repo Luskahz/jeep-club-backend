@@ -44,7 +44,7 @@ jobs:
           MYSQL_ROOT_PASSWORD: ci-placeholder
           SECURITY_JWT_SECRET: ci-placeholder
         run: |
-          bash -n deploy/vps-deploy.sh
+          for script in deploy/*.sh; do bash -n "$script"; done
           docker compose config --quiet
 
       - name: Verify

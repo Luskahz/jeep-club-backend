@@ -1,5 +1,13 @@
 # Docker deployment
 
+## HTTPS on an IP address
+
+The default proxy configuration serves HTTP and the ACME webroot. For a public IP, run `sudo bash deploy/setup-https-ip.sh <public IPv4>` on the VPS deployment directory. This requests a trusted short-lived certificate with Certbot, changes the proxy to `deploy/nginx-https.conf`, and redirects HTTP to HTTPS. It registers an ACME account without a contact email.
+
+The certificate is named `jeep-club-api`; files persist under `/etc/letsencrypt`, and ACME challenge files under `/var/lib/jeep-club-acme`. These are host bind mounts. Keep automated renewal running: install `deploy/renew-https.sh` and invoke it twice daily using a systemd timer. IP certificates require frequent renewal.
+
+For the existing VPS, `NGINX_CONFIG=/etc/jeep-club/nginx-https.conf` and `APP_SERVER_BASE_URL=https://144.91.73.3` live in the private environment file. Keep the HTTP ACME challenge route reachable during renewal. Migrating an IP deployment requires issuing a certificate for the new IP.
+
 ## GitHub Actions deployment
 
 The existing Backend CI workflow runs Maven verification for pull requests. On a push to `master`, or a manual run selecting `master`, the deployment job starts only after verification succeeds. Pull requests and other branches do not deploy.
