@@ -336,6 +336,39 @@
             </build>
         </profile>
         <profile>
+            <id>billing-mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <configuration>
+                            <targetClasses combine.self="override">
+                                <param>com.jeepclub.backend.billing.core.domain.model.MemberCharge</param>
+                                <param>com.jeepclub.backend.billing.core.domain.model.MemberPayment</param>
+                                <param>com.jeepclub.backend.billing.core.domain.model.MemberRefund</param>
+                                <param>com.jeepclub.backend.billing.core.domain.model.ChargeDefinition</param>
+                                <param>com.jeepclub.backend.billing.core.domain.model.ChargeCycle</param>
+                                <param>com.jeepclub.backend.billing.core.domain.model.assignment.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.membercharge.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.memberpayment.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.memberrefund.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.chargedefinition.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.chargeassignment.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.chargecycle.*</param>
+                                <param>com.jeepclub.backend.billing.core.application.service.event.*</param>
+                            </targetClasses>
+                            <targetTests combine.self="override">
+                                <param>com.jeepclub.backend.billing.*</param>
+                            </targetTests>
+                            <excludedClasses combine.self="override" />
+                            <outputDirectory>${project.build.directory}/pit-reports/billing</outputDirectory>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>tools-mutation</id>
             <build>
                 <plugins>
