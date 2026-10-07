@@ -1,5 +1,17 @@
 # Docker deployment
 
+## GitHub Actions deployment
+
+The existing Backend CI workflow runs Maven verification for pull requests. On a push to `master`, or a manual run selecting `master`, the deployment job starts only after verification succeeds. Pull requests and other branches do not deploy.
+
+Required repository secrets: `JEEPCLUB_DEPLOY_HOST`, `JEEPCLUB_DEPLOY_USER`, `JEEPCLUB_DEPLOY_SSH_KEY`, and `JEEPCLUB_DEPLOY_KNOWN_HOSTS`. Use a dedicated SSH key constrained with `restrict,command="/usr/local/sbin/jeep-club-deploy"` in `authorized_keys`. The key permits only `status` and `deploy <40-character commit SHA>`, and the server validates that the commit belongs to `origin/master`.
+
+Install `deploy/vps-deploy.sh` as `/usr/local/sbin/jeep-club-deploy` with root ownership and mode `700`. It uses the clone at `/opt/jeep-club-repo` and the private environment file at `/opt/jeep-club-compose/.env`.
+
+Deployment builds an image tagged with the tested commit, backs up the existing database/uploads, and waits for container health checks. Concurrent deployments are serialized. If startup fails, the script attempts to restore the previous application image; database schema changes are not reversed automatically. Keep the pre-deployment database backup for recovery.
+
+After a successful deployment, the image tag is saved in the private environment file and `/var/lib/jeep-club-deploy`. Do not remove these image tags until the corresponding release is no longer needed for rollback. Database credentials remain on the VPS and are not needed in GitHub Actions.
+
 This stack runs the Java 17 Spring Boot backend, MySQL 8.0 and Nginx. Only the proxy HTTP port is published. Database and uploaded files use named volumes; container restarts and rebuilds keep their data.
 
 ## First start
