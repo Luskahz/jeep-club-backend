@@ -2,6 +2,8 @@ package com.jeepclub.backend.platform.security.config;
 
 import com.jeepclub.backend.platform.security.filter.JwtAuthenticationFilter;
 import com.jeepclub.backend.platform.security.filter.FrontendAccessFilter;
+import com.jeepclub.backend.platform.web.exception.ApiProblemResponseWriter;
+import org.springframework.beans.factory.annotation.Value;
 import com.jeepclub.backend.platform.logging.RequestContextEnrichmentFilter;
 import com.jeepclub.backend.platform.security.jwt.JwtProperties;
 import com.jeepclub.backend.platform.security.handler.ApiAccessDeniedHandler;
@@ -42,6 +44,15 @@ public class SecurityConfig {
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
         this.requestContextEnrichmentFilter = requestContextEnrichmentFilter;
+    }
+
+    @Bean
+    public static FrontendAccessFilter frontendAccessFilter(
+            @Value("${security.frontend-access.enabled:false}") boolean enabled,
+            @Value("${security.frontend-access.secret:}") String secret,
+            @Value("${springdoc.api-docs.enabled:false}") boolean documentationEnabled,
+            JwtProperties jwtProperties, ApiProblemResponseWriter problemWriter) {
+        return new FrontendAccessFilter(enabled, secret, documentationEnabled, jwtProperties, problemWriter);
     }
 
     @Bean

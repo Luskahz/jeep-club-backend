@@ -6,9 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.crypto.Mac;
@@ -21,7 +19,6 @@ import java.util.Base64;
 import java.util.Collections;
 
 /** Authenticates the frontend server before user JWT authentication. */
-@Component
 public class FrontendAccessFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Frontend-Key";
     private final boolean enabled;
@@ -30,9 +27,9 @@ public class FrontendAccessFilter extends OncePerRequestFilter {
     private final ApiProblemResponseWriter problemWriter;
 
     public FrontendAccessFilter(
-            @Value("${security.frontend-access.enabled:false}") boolean enabled,
-            @Value("${security.frontend-access.secret:}") String secret,
-            @Value("${springdoc.api-docs.enabled:false}") boolean documentationEnabled,
+            boolean enabled,
+            String secret,
+            boolean documentationEnabled,
             JwtProperties jwtProperties,
             ApiProblemResponseWriter problemWriter) {
         this.enabled = enabled;
