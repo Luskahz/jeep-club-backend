@@ -110,6 +110,11 @@ class HealthHttpIntegrationTest {
         permissions(Stream.of("READ", "UPDATE", "DELETE", "EXPORT").filter(p -> !p.equals(permission))
                 .map(p -> "HEALTH_MEDICAL_PROFILE_" + p).toArray(String[]::new));
         problem(call(method, route, "{}"), 403);
+        em.clear();
+        assertThat(profiles.findById(profile.getId()).orElseThrow().getAllergies()).isEqualTo(SENTINEL);
+        assertThat(profiles.findByOwner(MedicalProfileOwnerType.DEPENDENT, dependent.getId())
+                .orElseThrow().getAllergies()).isEqualTo(SENTINEL);
+        assertThat(history.count()).isZero();
         permissions("HEALTH_MEDICAL_PROFILE_" + permission);
         call(method, route, "{}").andExpect(status().is(method.equals("DELETE") ? 204 : 200));
     }
@@ -157,6 +162,7 @@ class HealthHttpIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"GET", "PUT", "DELETE"})
     void inactiveAndMissingDependentsHaveControlledErrors(String method) throws Exception {
+        var saved = seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
         dependent.setStatus(DependentStatus.DISABLED);
         em.flush();
         problem(call(method, "/medical-profiles/dependents/" + dependent.getId(), "{}"), 409)
@@ -164,6 +170,9 @@ class HealthHttpIntegrationTest {
         problem(call(method, "/medical-profiles/dependents/999999999", "{}"), 404)
                 .andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_NOT_FOUND"));
         problem(call(method, "/medical-profiles/dependents/0", "{}"), 400);
+        em.clear();
+        assertThat(profiles.findById(saved.getId()).orElseThrow().getAllergies()).isEqualTo(SENTINEL);
+        assertThat(history.count()).isZero();
     }
 
     @ParameterizedTest

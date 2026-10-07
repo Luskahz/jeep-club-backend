@@ -7,6 +7,7 @@ import com.jeepclub.backend.health.core.application.service.medicalprofile.Medic
 import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.domain.exception.MedicalProfileAlreadyDeletedException;
 import com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatus;
 import com.jeepclub.backend.health.infra.persistence.adapter.MedicalProfileRepositoryAdapter;
 import com.jeepclub.backend.health.infra.persistence.entity.MedicalProfileEntity;
@@ -42,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest
+@DataJpaTest(showSql = false)
 @ActiveProfiles("test")
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @ContextConfiguration(classes = MedicalProfileConcurrencyIntegrationTest.JpaTestConfiguration.class)
@@ -204,6 +205,48 @@ class MedicalProfileConcurrencyIntegrationTest {
             return future.get(5, TimeUnit.SECONDS);
         } catch (ExecutionException exception) {
             return exception.getCause();
+        }
+    }
+
+    @Test
+    void concurrentDeletionCreatesExactlyOneSnapshotAndPreservesOtherOwnerType() throws Exception {
+        MedicalProfile saved = transactionTemplate.execute(status -> repository.save(profile(90_003L, "SYNTHETIC_DELETE")));
+        MedicalProfile dependent = transactionTemplate.execute(status -> repository.save(MedicalProfile.create(
+                MedicalProfileOwnerType.DEPENDENT, 90_003L, null, "SYNTHETIC_UNTOUCHED",
+                null, null, null, null, null, null, null, null, null, NOW)));
+        CountDownLatch bothRead = new CountDownLatch(2);
+        CountDownLatch delete = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Callable<MedicalProfile> attempt = () -> transactionTemplate.execute(status -> {
+                MedicalProfile stale = repository.findById(saved.getId()).orElseThrow();
+                bothRead.countDown();
+                await(delete);
+                repository.delete(stale, 42L, NOW.plusSeconds(30));
+                return stale;
+            });
+            Future<MedicalProfile> first = executor.submit(attempt);
+            Future<MedicalProfile> second = executor.submit(attempt);
+            assertThat(bothRead.await(5, TimeUnit.SECONDS)).isTrue();
+            delete.countDown();
+            List<Object> outcomes = List.of(outcome(first), outcome(second));
+            assertThat(outcomes).filteredOn(MedicalProfile.class::isInstance).hasSize(1);
+            assertThat(outcomes).filteredOn(MedicalProfileAlreadyDeletedException.class::isInstance).hasSize(1);
+            transactionTemplate.executeWithoutResult(status -> {
+                assertThat(repository.findById(saved.getId())).isEmpty();
+                assertThat(historyJpaRepository.findAll()).singleElement().satisfies(snapshot -> {
+                    assertThat(snapshot.getMedicalProfileId()).isEqualTo(saved.getId());
+                    assertThat(snapshot.getDeletedByUserId()).isEqualTo(42L);
+                    assertThat(snapshot.getDeletedAt()).isEqualTo(NOW.plusSeconds(30));
+                    assertThat(snapshot.getAllergies()).isEqualTo("SYNTHETIC_DELETE");
+                });
+                assertThat(repository.findById(dependent.getId()).orElseThrow().getAllergies())
+                        .isEqualTo("SYNTHETIC_UNTOUCHED");
+            });
+        } finally {
+            delete.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
         }
     }
 

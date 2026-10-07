@@ -52,16 +52,19 @@ class MedicalProfileInvariantTest {
     @Test
     void rejectedUpdatesPreserveDataAndTimestampsIncludingLateFieldValidation() {
         var profile = restore(1L, MedicalProfileOwnerType.USER, 2L, CREATED, UPDATED);
+        var original = restore(1L, MedicalProfileOwnerType.USER, 2L, CREATED, UPDATED);
         for (Instant invalid : new Instant[]{null, CREATED.minusNanos(1), UPDATED.minusNanos(1)}) {
             assertThatThrownBy(() -> update(profile, invalid, "SYNTHETIC_CHANGED", null))
                     .isInstanceOf(InvalidMedicalProfileException.class);
             assertThat(profile.getAllergies()).isEqualTo("SYNTHETIC_ORIGINAL");
             assertThat(profile.getUpdatedAt()).isEqualTo(UPDATED);
+            assertThat(profile).usingRecursiveComparison().isEqualTo(original);
         }
         assertThatThrownBy(() -> update(profile, UPDATED.plusSeconds(1), "SYNTHETIC_CHANGED", "x".repeat(2001)))
                 .isInstanceOf(InvalidMedicalProfileException.class);
         assertThat(profile.getAllergies()).isEqualTo("SYNTHETIC_ORIGINAL");
         assertThat(profile.getUpdatedAt()).isEqualTo(UPDATED);
+        assertThat(profile).usingRecursiveComparison().isEqualTo(original);
     }
 
     @Test
