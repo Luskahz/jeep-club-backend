@@ -44,3 +44,8 @@ jwt-secrets.properties
 # Local JWT signing secret (machine-specific)
 jwt-secrets.properties
 
+
+# Docker deployment secrets
+.env
+.env.*
+!.env.example
