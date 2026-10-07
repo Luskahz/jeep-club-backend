@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: backend-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
   verify:
@@ -38,5 +38,52 @@ jobs:
       - name: Make Maven wrapper executable
         run: chmod +x mvnw
 
+      - name: Validate deployment configuration
+        env:
+          MYSQL_PASSWORD: ci-placeholder
+          MYSQL_ROOT_PASSWORD: ci-placeholder
+          SECURITY_JWT_SECRET: ci-placeholder
+        run: |
+          for script in deploy/*.sh; do bash -n "$script"; done
+          docker compose config --quiet
+
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
+
+  deploy:
+    name: Deploy to VPS
+    needs: verify
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: jeep-club-vps-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Configure deployment SSH key
+        env:
+          SSH_KEY: ${{ secrets.JEEPCLUB_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.JEEPCLUB_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_KEY"
+          test -n "$KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
+
+      - name: Publish tested commit
+        env:
+          VPS_HOST: ${{ secrets.JEEPCLUB_DEPLOY_HOST }}
+          VPS_USER: ${{ secrets.JEEPCLUB_DEPLOY_USER }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=20 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 \
+            "$VPS_USER@$VPS_HOST" "deploy $DEPLOY_SHA"
+
+      - name: Remove deployment credentials
+        if: always()
+        run: rm -f "$HOME/.ssh/id_ed25519" "$HOME/.ssh/known_hosts"
