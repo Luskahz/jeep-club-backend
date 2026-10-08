@@ -1,12 +1,18 @@
-# Copie este arquivo para application-local.properties
-# e configure os valores da sua máquina.
+# Desenvolvimento recomendado: MySQL no Docker; Spring Boot no IntelliJ; Next.js com npm run dev.
+# Copie este arquivo para application-dev.properties e configure os valores da sua máquina.
+# Ative o perfil dev. O arquivo copiado é ignorado pelo Git.
+# Passo a passo: deploy/LOCAL.md. O Docker lê .env.local; Spring lê este arquivo.
 
 # ========= DATABASE =========
-spring.datasource.url=jdbc:mysql://localhost:3306/jeep_club_database?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=America%2FSao_Paulo
-spring.datasource.username=root
+# compose.local.yaml cria o banco jeepclub e publica a porta 3307 apenas em 127.0.0.1.
+# Se mudar MYSQL_LOCAL_PORT, ajuste também a porta desta URL.
+spring.datasource.url=jdbc:mysql://127.0.0.1:3307/jeepclub?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+spring.datasource.username=jeepclub
+# Use a mesma MYSQL_PASSWORD escolhida em .env.local.
 spring.datasource.password=CHANGE_ME
 
 # ========= SECURITY / JWT =========
+# Chave privada local com pelo menos 32 bytes; não use segredos da VPS.
 security.jwt.secret=CHANGE_ME
 
 # ========= BOOTSTRAP / ADMINISTRADOR LOCAL =========
@@ -16,6 +22,13 @@ security.bootstrap.admin.birth-date=2000-01-01
 security.bootstrap.admin.email=admin@localhost.com
 security.bootstrap.admin.cpf=12345678909
 security.bootstrap.admin.rg=123456789
+# Escolha a senha do administrador LOCAL. Ele é criado pelo backend ao iniciar no banco vazio.
 security.bootstrap.admin.password=CHANGE_ME
 security.bootstrap.admin.phone-number=12999999999
 security.bootstrap.admin.role-name=ADMIN
+
+# URLs usadas no desenvolvimento, com o frontend em http://localhost:3000.
+app.user-facing.password-reset-url=http://localhost:3000/reset-password
+app.user-facing.membership-activation-url=http://localhost:3000/membership/activate
+
+# O perfil dev permite manter SMTP vazio; os e-mails são simulados.

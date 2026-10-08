@@ -49,6 +49,10 @@ Antes de executar o projeto é necessário possuir instalado:
 
 # Instalação
 
+Para desenvolver com **MySQL no Docker, backend no IntelliJ e frontend com
+`npm run dev`**, siga o [tutorial do ambiente local](deploy/LOCAL.md).
+Ele usa `compose.local.yaml` e um banco persistente na porta `3307`.
+
 ## 1. Clone o repositório
 
 ```bash
@@ -111,6 +115,20 @@ e preencha as chaves necessárias.
 
 ## 5. Execute
 
+O CORS pode ser configurado no deploy por variáveis de ambiente, sem alterar o
+`application.properties` ou gerar outro build:
+
+| Variável | Configuração |
+| --- | --- |
+| `APP_CORS_ALLOWED_ORIGINS` | Origins permitidas, separadas por vírgula |
+| `APP_CORS_ALLOWED_METHODS` | Métodos permitidos, separados por vírgula |
+| `APP_CORS_ALLOWED_HEADERS` | Headers permitidos, separados por vírgula |
+| `APP_CORS_ALLOW_CREDENTIALS` | Envio de credenciais (`true` ou `false`) |
+| `APP_CORS_MAX_AGE` | Cache do preflight, em segundos |
+
+Exemplo para duas origins: `APP_CORS_ALLOWED_ORIGINS=https://app.jeepclub.com.br,https://admin.jeepclub.com.br`.
+Os valores padrão estão em `src/main/resources/application.properties`.
+
 Linux/macOS
 
 ```bash
@@ -127,17 +145,10 @@ mvnw.cmd spring-boot:run
 
 # Documentação da API
 
-Após iniciar a aplicação:
-
-```
-http://localhost:8080/swagger-ui.html
-```
-
-ou
-
-```
-http://localhost:8080/swagger-ui/index.html
-```
+Swagger e OpenAPI estão desativados em `application.properties`, inclusive no
+perfil `dev`. O frontend local pode ser usado para testar os fluxos da API.
+Consulte [o tutorial de ambiente local](deploy/LOCAL.md) e
+[as regras de acesso pelo frontend](deploy/FRONTEND-ACCESS.md).
 
 ---
 

@@ -1,0 +1,7 @@
+*
+!pom.xml
+!src/
+!src/**
+src/main/resources/application-dev.properties
+src/main/resources/application-local.properties
+src/main/resources/jwt-secrets.properties
