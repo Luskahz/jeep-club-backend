@@ -46,6 +46,34 @@ class IdentityOpenApiIntegrationTest {
     @Autowired private Clock clock;
 
     @Test
+    void complementaryProfileDocumentsReplacementValidationAndCompletion() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['get']['responses']['200']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/IdentityUserProfileResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['put']['requestBody']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/IdentityUserProfileData"))
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['put']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
+                        .value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['get']['responses']['401']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['get']['responses']['404']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['IdentityUserProfileData']['additionalProperties']").value(false))
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['put']['responses']['401']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['put']['responses']['404']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/me/profile']['put']['description']", org.hamcrest.Matchers.containsString("{} limpa o perfil")))
+                .andExpect(jsonPath("$['components']['schemas']['IdentityWorkProfile']['additionalProperties']").value(false))
+                .andExpect(jsonPath("$['components']['schemas']['IdentityResidentialAddress']['additionalProperties']").value(false))
+                .andExpect(jsonPath("$['components']['schemas']['IdentityResidentialAddress']['properties']['postalCode']['description']", org.hamcrest.Matchers.containsString("12345-678")))
+                .andExpect(jsonPath("$['components']['schemas']['IdentityResidentialAddress']['properties']['postalCode']['pattern']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['IdentityResidentialAddress']['properties']['state']['description']", org.hamcrest.Matchers.containsString("maiúsculas/minúsculas")))
+                .andExpect(jsonPath("$['components']['schemas']['IdentityResidentialAddress']['properties']['state']['enum']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['IdentityResidentialAddress']['properties']['state']['minLength']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['IdentityWorkProfile']['properties']['occupation']['description']", org.hamcrest.Matchers.containsString("150 caracteres após aparar")))
+                .andExpect(jsonPath("$['components']['schemas']['IdentityWorkProfile']['properties']['occupation']['maxLength']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['IdentityUserProfileResponse']['properties']['profileCompletionPending']['readOnly']").value(true))
+                .andExpect(jsonPath("$['components']['schemas']['CurrentIdentityUserResponse']['properties']['profileCompletionPending']['readOnly']").value(true));
+    }
+
+    @Test
     void openApiDescribesIdentityContractsPrecisely() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())

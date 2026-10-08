@@ -28,6 +28,8 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.stream.Stream;
+import java.util.Map;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -195,6 +197,150 @@ class CurrentUserProfileIntegrationTest {
 
     private org.springframework.test.web.servlet.ResultActions patchProfile(String body) throws Exception {
         return mvc.perform(patch("/identity/me").header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    void complementaryProfileIsOptionalAndUpsertIsOwnedByPrincipal() throws Exception {
+        mvc.perform(get("/identity/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true))
+                .andExpect(jsonPath("$.workProfile").isEmpty()).andExpect(jsonPath("$.address").isEmpty());
+        assertThat(profileCount(before.id())).isZero();
+
+        putComplementary("{\"workProfile\":{\"occupation\":\" Mechanic \"}}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.occupation").value("Mechanic"))
+                .andExpect(jsonPath("$.profileCompletionPending").value(true));
+        entityManager.clear();
+        assertThat(profileCount(before.id())).isEqualTo(1);
+
+        String complete = """
+                {"workProfile":{"occupation":" Mechanic ","workplace":" Garage "},
+                 "address":{"postalCode":"12345-678","street":" Main Street ","number":"S/N",
+                            "neighborhood":" Center ","city":" City ","state":"sp"}}
+                """;
+        mvc.perform(put("/identity/me/profile").queryParam("userId", otherId.toString())
+                        .header("Authorization", "Bearer " + token).contentType(MediaType.APPLICATION_JSON).content(complete))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false))
+                .andExpect(jsonPath("$.address.postalCode").value("12345678"))
+                .andExpect(jsonPath("$.address.state").value("SP"));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false))
+                .andExpect(jsonPath("$.workProfile.workplace").value("Garage"));
+        mvc.perform(get("/identity/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false))
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+        patchProfile("{\"name\":\"New Name\"}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false));
+        putComplementary(complete.replace("Garage", "Workshop"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.workplace").value("Workshop"));
+        entityManager.clear();
+        assertThat(profileCount(before.id())).isEqualTo(1);
+        assertThat(profileCount(otherId)).isZero();
+        assertThat(users.findById(otherId).orElseThrow().name()).isEqualTo("Other");
+        assertThat(users.findById(before.id()).orElseThrow().cpf()).isEqualTo(before.cpf());
+
+        putComplementary("{}").andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile").isEmpty())
+                .andExpect(jsonPath("$.address").isEmpty()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "[]", "{\"userId\":1}", "{\"status\":\"DISABLED\"}",
+            "{\"workProfile\":{\"userId\":1}}", "{\"workProfile\":{\"occupation\":42}}",
+            "{\"address\":{\"unknown\":null}}", "{\"address\":{\"postalCode\":\"123\"}}",
+            "{\"address\":{\"state\":\"ZZ\"}}", "{\"address\":false}", "{\"workProfile\":[]}",
+            "{\"id\":1}", "{\"address\":{\"userId\":1}}", "{\"address\":{\"id\":1}}",
+            "{\"address\":{\"postalCode\":12345678}}", "{\"address\":{\"number\":12}}",
+            "{\"workProfile\":{\"workplace\":true}}"})
+    void complementaryProfileRejectsInvalidDataAndArbitraryOwnership(String body) throws Exception {
+        putComplementary("{\"workProfile\":{\"occupation\":\"Original\"}}")
+                .andExpect(status().isOk());
+        putComplementary(body).andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.occupation").value("Original"));
+        assertThat(profileCount(otherId)).isZero();
+    }
+
+    @Test
+    void complementaryProfileRequiresAuthentication() throws Exception {
+        mvc.perform(get("/identity/me/profile")).andExpect(status().isUnauthorized());
+        mvc.perform(put("/identity/me/profile").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        assertThat(profileCount(before.id())).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"workProfile\":null,\"address\":null}", "{}",
+            "{\"workProfile\":{},\"address\":{}}",
+            "{\"workProfile\":{\"occupation\":\"  \",\"workplace\":\"  \"},"
+                    + "\"address\":{\"postalCode\":\" \",\"street\":\" \",\"number\":\" \","
+                    + "\"complement\":\" \",\"neighborhood\":\" \",\"city\":\" \",\"state\":\" \"}}"})
+    void replacementClearsPopulatedBlocksAndDerivedCompletion(String body) throws Exception {
+        putComplementary("""
+                {"workProfile":{"occupation":"Mechanic","workplace":"Garage"},
+                 "address":{"postalCode":"12345678","street":"Street","number":"1",
+                            "complement":"Apartment","neighborhood":"Center","city":"City","state":"SP"}}
+                """).andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(false));
+        putComplementary(body).andExpect(status().isOk())
+                .andExpect(jsonPath("$.workProfile").isEmpty()).andExpect(jsonPath("$.address").isEmpty())
+                .andExpect(jsonPath("$.profileCompletionPending").value(true));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile").isEmpty())
+                .andExpect(jsonPath("$.address").isEmpty());
+        mvc.perform(get("/identity/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.profileCompletionPending").value(true));
+        assertThat(profileCount(before.id())).isEqualTo(1);
+        assertThat(profileCount(otherId)).isZero();
+        assertThat(users.findById(before.id()).orElseThrow()).isEqualTo(before);
+    }
+
+    @Test
+    void replacementRemovesOmittedBlocksAndFieldsRatherThanMergingThem() throws Exception {
+        putComplementary("""
+                {"workProfile":{"occupation":"Mechanic","workplace":"Garage"},"address":{"city":"City"}}
+                """).andExpect(status().isOk());
+        putComplementary("{\"workProfile\":{\"occupation\":\"Driver\"}}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile.workplace").isEmpty())
+                .andExpect(jsonPath("$.address").isEmpty());
+        putComplementary("{\"address\":{\"city\":\"Another city\"}}")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile").isEmpty())
+                .andExpect(jsonPath("$.address.city").value("Another city"));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.workProfile").isEmpty())
+                .andExpect(jsonPath("$.address.city").value("Another city"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"workProfile,occupation,150", "workProfile,workplace,150", "address,street,150",
+            "address,number,20", "address,complement,150", "address,neighborhood,100", "address,city,100"})
+    void textLimitsApplyAfterTrimmingAndInvalidReplacementDoesNotMutate(String block, String field, int limit) throws Exception {
+        String accepted = "a".repeat(limit);
+        putComplementary(json.writeValueAsString(Map.of(block, Map.of(field, " " + accepted + " "))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$." + block + "." + field).value(accepted));
+        putComplementary(json.writeValueAsString(Map.of(block, Map.of(field, accepted + "a"))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ARGUMENT"));
+        entityManager.clear();
+        mvc.perform(get("/identity/me/profile").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andExpect(jsonPath("$." + block + "." + field).value(accepted));
+        assertThat(profileCount(otherId)).isZero();
+    }
+
+    private long profileCount(Long id) {
+        return entityManager.createQuery("select count(p) from UserProfileEntity p where p.userId = :id", Long.class)
+                .setParameter("id", id).getSingleResult();
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putComplementary(String body) throws Exception {
+        return mvc.perform(put("/identity/me/profile").header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 }
