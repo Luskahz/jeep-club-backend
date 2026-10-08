@@ -19,6 +19,20 @@ class HealthOpenApiIntegrationTest {
     @Autowired private MockMvc mockMvc;
 
     @Test
+    void remainingOperationalContractsMatchActualMethodsPermissionsAndPrivacySchemas() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/admin/medical-profiles/{profileId}']['get']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_READ"))
+                .andExpect(jsonPath("$['paths']['/admin/medical-profiles/users/{userId}']['get']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_READ"))
+                .andExpect(jsonPath("$['paths']['/admin/medical-profiles/dependents/{dependentId}']['get']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_READ"))
+                .andExpect(jsonPath("$['paths']['/admin/medical-profiles/dependents/{dependentId}']['put']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_UPDATE"))
+                .andExpect(jsonPath("$['paths']['/medical-profiles/me']['delete']['responses']['204']").exists())
+                .andExpect(jsonPath("$['paths']['/medical-profiles/me']['post']").doesNotExist())
+                .andExpect(jsonPath("$['paths']['/medical-profiles/me']['patch']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['MedicalProfileMutationResponse']['properties']['allergies']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['MedicalProfileSummaryResponse']['properties']['allergies']").doesNotExist());
+    }
+
+    @Test
     void openApiDescribesHealthContractsPrecisely() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
@@ -33,11 +47,11 @@ class HealthOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/admin/medical-profiles']['get']['x-required-permissions'][0]")
                         .value("HEALTH_MEDICAL_PROFILE_READ"))
                 .andExpect(jsonPath("$['paths']['/admin/medical-profiles']['get']['parameters'][?(@.name == 'page')]")
-                        .isArray())
+                        .isNotEmpty())
                 .andExpect(jsonPath("$['paths']['/admin/medical-profiles']['get']['parameters'][?(@.name == 'size')]")
-                        .isArray())
+                        .isNotEmpty())
                 .andExpect(jsonPath("$['paths']['/admin/medical-profiles']['get']['parameters'][?(@.name == 'sort')]")
-                        .isArray())
+                        .isNotEmpty())
                 .andExpect(jsonPath("$['paths']['/admin/medical-profiles']['get']['responses']['200']['content']['application/json']['schema']['$ref']")
                         .value("#/components/schemas/PageResponseMedicalProfileSummaryResponse"))
                 .andExpect(jsonPath("$['components']['schemas']['PageResponseMedicalProfileSummaryResponse']['properties']['content']['type']")

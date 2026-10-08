@@ -8,6 +8,7 @@ import com.jeepclub.backend.health.core.application.exceptions.MedicalProfilePer
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfilePersistenceUnavailableException;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.exception.InvalidMedicalProfileException;
+import com.jeepclub.backend.health.core.domain.exception.MedicalProfileAlreadyDeletedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -17,6 +18,20 @@ class MedicalProfileExceptionHandlerTest {
 
     private final MedicalProfileExceptionHandler handler =
             new MedicalProfileExceptionHandler();
+
+    @Test
+    void concurrentDeletionUsesConflictProblemInsteadOfServerError() {
+        var response = handler.handleMedicalProfileAlreadyDeleted(
+                new MedicalProfileAlreadyDeletedException(17L)
+        );
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getStatus()).isEqualTo(409);
+        assertThat(response.getBody().getCode()).isEqualTo("MEDICAL_PROFILE_ALREADY_DELETED");
+        assertThat(response.getBody().getTitle()).isNotBlank();
+        assertThat(response.getBody().getDetail()).isNotBlank();
+        assertThat(response.getBody().getTimestamp()).isNotNull();
+    }
 
     @Test
     void mapsMissingOwnerToStandardNotFoundProblem() {

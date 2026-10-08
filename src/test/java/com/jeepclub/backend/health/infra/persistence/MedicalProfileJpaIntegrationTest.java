@@ -27,6 +27,24 @@ class MedicalProfileJpaIntegrationTest {
     @Autowired
     private MedicalProfileJpaRepository repository;
 
+    @Autowired
+    private com.jeepclub.backend.health.core.repository.MedicalProfileCoverageRepository coverage;
+
+    @Test
+    void sameNumericOwnerIdIsIsolatedByTypeIncludingCoverageProjection() {
+        repository.saveAndFlush(entity(MedicalProfileOwnerType.USER, 71001L, BloodType.UNKNOWN, null));
+        repository.saveAndFlush(entity(MedicalProfileOwnerType.DEPENDENT, 71001L, BloodType.UNKNOWN, null));
+        repository.saveAndFlush(entity(MedicalProfileOwnerType.DEPENDENT, 71002L, BloodType.UNKNOWN, null));
+        var user = repository.findByOwnerTypeAndOwnerId(MedicalProfileOwnerType.USER, 71001L).orElseThrow();
+        var dependent = repository.findByOwnerTypeAndOwnerId(MedicalProfileOwnerType.DEPENDENT, 71001L).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(user.getId()).isNotEqualTo(dependent.getId());
+        var ids = java.util.List.of(71001L, 71002L);
+        org.assertj.core.api.Assertions.assertThat(coverage.findCovered(
+                com.jeepclub.backend.health.api.module.medicalprofile.MedicalProfileOwner.USER, ids)).containsExactly(71001L);
+        org.assertj.core.api.Assertions.assertThat(coverage.findCovered(
+                com.jeepclub.backend.health.api.module.medicalprofile.MedicalProfileOwner.DEPENDENT, java.util.List.of(71001L))).containsExactly(71001L);
+    }
+
     @Test
     void deveSalvarEBuscarPerfilMedicoPorOwnerTypeEOwnerId() {
         MedicalProfileEntity entity = entity(

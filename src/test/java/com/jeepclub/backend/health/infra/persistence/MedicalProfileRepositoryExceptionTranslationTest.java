@@ -37,6 +37,42 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class MedicalProfileRepositoryExceptionTranslationTest {
 
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> untestedFailures() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(new jakarta.persistence.LockTimeoutException("SYNTHETIC_INTERNAL"), MedicalProfileConflictException.class),
+                org.junit.jupiter.params.provider.Arguments.of(new jakarta.persistence.PessimisticLockException("SYNTHETIC_INTERNAL"), MedicalProfileConflictException.class),
+                org.junit.jupiter.params.provider.Arguments.of(new jakarta.persistence.OptimisticLockException("SYNTHETIC_INTERNAL"), MedicalProfileConflictException.class),
+                org.junit.jupiter.params.provider.Arguments.of(new jakarta.persistence.PersistenceException("SYNTHETIC_INTERNAL"), MedicalProfilePersistenceException.class));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("untestedFailures")
+    void translatesJpaFailuresOnBothSaveAndReadWithoutLeakingCause(RuntimeException failure, Class<?> expected) {
+        MedicalProfile profile = profile();
+        MedicalProfileEntity entity = new MedicalProfileEntity();
+        when(mapper.toEntity(profile)).thenReturn(entity);
+        when(jpaRepository.saveAndFlush(entity)).thenThrow(failure);
+        when(jpaRepository.findById(1L)).thenThrow(failure);
+        assertThatThrownBy(() -> adapter.save(profile)).isInstanceOf(expected)
+                .hasCause(failure).hasMessageNotContaining("SYNTHETIC_INTERNAL");
+        assertThatThrownBy(() -> adapter.findById(1L)).isInstanceOf(expected)
+                .hasCause(failure).hasMessageNotContaining("SYNTHETIC_INTERNAL");
+    }
+
+    @Test
+    void saveTranslatesSpringLockTransientAndUnexpectedFailuresAtFlush() {
+        MedicalProfile profile = profile();
+        MedicalProfileEntity entity = new MedicalProfileEntity();
+        when(mapper.toEntity(profile)).thenReturn(entity);
+        when(jpaRepository.saveAndFlush(entity)).thenThrow(
+                new PessimisticLockingFailureException("SYNTHETIC_INTERNAL"),
+                new QueryTimeoutException("SYNTHETIC_INTERNAL"),
+                new DataRetrievalFailureException("SYNTHETIC_INTERNAL"));
+        assertThatThrownBy(() -> adapter.save(profile)).isInstanceOf(MedicalProfileConflictException.class);
+        assertThatThrownBy(() -> adapter.save(profile)).isInstanceOf(MedicalProfilePersistenceUnavailableException.class);
+        assertThatThrownBy(() -> adapter.save(profile)).isInstanceOf(MedicalProfilePersistenceException.class);
+    }
+
     private static final String INFRASTRUCTURE_DETAIL =
             "SQLSTATE 23000 constraint uk_medical_profile_owner";
 
