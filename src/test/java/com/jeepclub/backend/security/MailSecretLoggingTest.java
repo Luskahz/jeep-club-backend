@@ -6,6 +6,8 @@ import com.jeepclub.backend.iam.authentication.infra.adapter.DummyEmailNotificat
 import com.jeepclub.backend.iam.authentication.infra.adapter.SmtpEmailNotificationAdapter;
 import com.jeepclub.backend.memberships.infra.mail.DummyMemberActivationMailSender;
 import com.jeepclub.backend.memberships.infra.mail.SmtpMemberActivationMailSender;
+import com.jeepclub.backend.iam.authentication.infra.mail.DummyAccountActivationMailSender;
+import com.jeepclub.backend.iam.authentication.infra.mail.SmtpAccountActivationMailSender;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -23,6 +25,10 @@ class MailSecretLoggingTest {
         assertThat(SmtpEmailNotificationAdapter.class.getAnnotation(Profile.class).value())
                 .containsExactly("!dev & !test");
         assertThat(SmtpMemberActivationMailSender.class.getAnnotation(Profile.class).value())
+                .containsExactly("!dev & !test");
+        assertThat(DummyAccountActivationMailSender.class.getAnnotation(Profile.class).value())
+                .containsExactly("dev", "test");
+        assertThat(SmtpAccountActivationMailSender.class.getAnnotation(Profile.class).value())
                 .containsExactly("!dev & !test");
     }
 
@@ -48,6 +54,16 @@ class MailSecretLoggingTest {
         );
 
         assertThat(messages(appender)).doesNotContain("raw-secret", "token=", "http");
+    }
+
+    @Test
+    void administrativeInvitationDummyDoesNotLogRecipientOrToken() {
+        ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender = capture(
+                DummyAccountActivationMailSender.class
+        );
+        new DummyAccountActivationMailSender().send("private@example.com", "Private Name", "raw-secret");
+
+        assertThat(messages(appender)).doesNotContain("private@example.com", "Private Name", "raw-secret");
     }
 
     private ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> capture(Class<?> type) {

@@ -23,6 +23,12 @@ public class SystemLogServiceAdapter implements SystemLogService {
     public void recordRequired(SystemLogEvent event) {
         repository.saveAndFlush(new SystemLogEntity(event));
     }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void recordInTransaction(SystemLogEvent event) {
+        repository.saveAndFlush(new SystemLogEntity(event));
+    }
     private final BlockingQueue<SystemLogEvent> queue = new ArrayBlockingQueue<>(QUEUE_CAPACITY);
 
     @Override

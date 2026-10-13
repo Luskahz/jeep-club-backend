@@ -102,4 +102,9 @@ public class MembershipApplicationRepositoryAdapter implements MembershipApplica
         return jpaRepository.findByCreatedUserIdAndStatus(createdUserId, status)
                 .map(MembershipApplicationMapper::toDomain);
     }
+
+    @Override
+    public boolean existsByCreatedUserId(Long createdUserId) {
+        return jpaRepository.existsByCreatedUserId(createdUserId);
+    }
 }

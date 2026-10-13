@@ -2,6 +2,7 @@ package com.jeepclub.backend.security;
 
 import com.jeepclub.backend.iam.authentication.infra.adapter.SmtpEmailNotificationAdapter;
 import com.jeepclub.backend.memberships.infra.mail.SmtpMemberActivationMailSender;
+import com.jeepclub.backend.iam.authentication.infra.mail.SmtpAccountActivationMailSender;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mail.SimpleMailMessage;
@@ -44,6 +45,21 @@ class SmtpMailAdaptersTest {
         assertThat(message.getTo()).containsExactly("member@example.com");
         assertThat(message.getText())
                 .contains("https://app.example.com/membership/activate?token=raw-token");
+    }
+
+    @Test
+    void administrativeInvitationUsesProductionJavaMailSender() {
+        JavaMailSender javaMailSender = mock(JavaMailSender.class);
+        SmtpAccountActivationMailSender adapter = new SmtpAccountActivationMailSender(javaMailSender);
+        ReflectionTestUtils.setField(adapter, "from", "no-reply@example.com");
+        ReflectionTestUtils.setField(adapter, "activationUrl", "https://app.example.com/account/activate");
+
+        adapter.send("member@example.com", "Member", "raw-token");
+
+        SimpleMailMessage message = capturedMessage(javaMailSender);
+        assertThat(message.getFrom()).isEqualTo("no-reply@example.com");
+        assertThat(message.getTo()).containsExactly("member@example.com");
+        assertThat(message.getText()).contains("https://app.example.com/account/activate?token=raw-token");
     }
 
     private SimpleMailMessage capturedMessage(JavaMailSender javaMailSender) {
