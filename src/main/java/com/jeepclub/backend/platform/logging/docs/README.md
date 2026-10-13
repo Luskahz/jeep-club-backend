@@ -75,6 +75,12 @@ o prontuário não é devolvido. A política de retenção existente também se 
 
 `record` continua usando a fila descrita acima. O contrato obrigatório é reservado
 a auditorias exigidas pelo caso de uso; não muda o logging HTTP operacional.
+
+`recordInTransaction` persiste e faz flush na transação de negócio existente
+(`MANDATORY`). A criação administrativa de User e o reenvio do convite BACK-511
+usam este contrato: a operação e seu evento de auditoria confirmam ou revertem
+juntos. Assim não há HTTP 500 posterior a um commit de negócio por falha de
+auditoria. A tabela e retenção de `platform_logs` permanecem as mesmas.
 ## Request ID e `X-Request-Id`
 
 O request ID é criado no início do request e devolvido no header

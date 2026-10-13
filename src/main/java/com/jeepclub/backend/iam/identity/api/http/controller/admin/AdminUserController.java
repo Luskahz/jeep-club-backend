@@ -5,10 +5,8 @@ import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserRespon
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminCreateUserRequestDTO;
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminCreateUserResponseDTO;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.iam.identity.api.module.UserActivationMethod;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
-import com.jeepclub.backend.platform.logging.SystemLogEvent;
-import com.jeepclub.backend.platform.logging.SystemLogOutcome;
-import com.jeepclub.backend.platform.logging.SystemLogService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserField;
 import com.jeepclub.backend.iam.identity.core.application.result.admin.user.AdminUserResult;
@@ -56,7 +54,6 @@ public class AdminUserController {
 
     private final AdminUserService adminUserService;
     private final UserRegistration userRegistration;
-    private final SystemLogService audit;
     private final Clock clock;
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -80,14 +77,12 @@ public class AdminUserController {
         Instant now = Instant.now(clock);
         var result = userRegistration.createAdministratively(new UserRegistrationData(
                 request.name(), request.birthDate(), request.email(), request.cpf(), request.rg(),
-                request.phoneNumber(), null, now), request.activationMethod());
-        audit.record(new SystemLogEvent(principal.getUserId(),
-                "IDENTITY_USER_CREATE_" + request.activationMethod(), "POST",
-                "/identity/admin/users/" + result.userId(), 201, SystemLogOutcome.SUCCESS,
-                0, null, now));
+                request.phoneNumber(), null, now), request.activationMethod(), principal.getUserId());
+        String invitationStatus = result.activationMethod() == UserActivationMethod.EMAIL_INVITATION
+                ? userRegistration.administrativeInvitationStatus(result.userId()) : null;
         return ResponseEntity.created(URI.create("/identity/admin/users/" + result.userId()))
                 .header("Cache-Control", "no-store")
-                .body(AdminCreateUserResponseDTO.from(result));
+                .body(AdminCreateUserResponseDTO.from(result, invitationStatus));
     }
 
     @GetMapping

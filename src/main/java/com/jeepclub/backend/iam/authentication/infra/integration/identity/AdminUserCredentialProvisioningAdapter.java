@@ -27,4 +27,9 @@ public class AdminUserCredentialProvisioningAdapter implements AdminUserCredenti
         }
         return temporaryPassword;
     }
+
+    @Override
+    public String invitationStatus(Long userId) {
+        return invitations.deliveryStatus(userId);
+    }
 }

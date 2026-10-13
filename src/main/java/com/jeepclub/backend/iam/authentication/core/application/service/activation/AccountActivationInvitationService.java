@@ -11,6 +11,10 @@ import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAcc
 import com.jeepclub.backend.iam.authentication.core.repository.AccountActivationInvitationRepository;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
 import com.jeepclub.backend.iam.identity.api.module.UserQuery;
+import com.jeepclub.backend.memberships.api.module.MembershipIdentityOwnership;
+import com.jeepclub.backend.platform.logging.SystemLogEvent;
+import com.jeepclub.backend.platform.logging.SystemLogOutcome;
+import com.jeepclub.backend.platform.logging.SystemLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -27,12 +31,14 @@ public class AccountActivationInvitationService {
     private final AccountActivationInvitationRepository invitations;
     private final AuthenticationAccountRepository accounts;
     private final UserQuery users;
+    private final MembershipIdentityOwnership membershipIdentityOwnership;
     private final RefreshTokenGenerator tokenGenerator;
     private final RefreshTokenHashService tokenHashService;
     private final PasswordHasher passwordHasher;
     private final CredentialRevocationService revocations;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final SystemLogService audit;
 
     @Value("${app.authentication.account-activation-ttl:PT24H}")
     private Duration ttl;
@@ -43,13 +49,19 @@ public class AccountActivationInvitationService {
     }
 
     @Transactional
-    public void issueForExistingUser(Long userId) {
+    public void issueForExistingUser(Long userId, Long actorId) {
+        java.util.Objects.requireNonNull(actorId, "actorId is required for administrative audit");
         issue(userId);
+        audit.recordInTransaction(new SystemLogEvent(actorId, "ACCOUNT_ACTIVATION_EMAIL_INVITATION_REISSUE",
+                "POST", "/authentication/admin/users/" + userId + "/activation-invitations",
+                202, SystemLogOutcome.SUCCESS, 0, null, Instant.now(clock)));
     }
 
     @Transactional(readOnly = true)
     public String deliveryStatus(Long userId) {
-        return invitations.findById(userId).map(AccountActivationInvitation::deliveryStatus)
+        // Scalar projection reads the committed status rather than a request-scoped
+        // EntityManager's pre-AFTER_COMMIT snapshot of the invitation entity.
+        return invitations.findDeliveryStatusById(userId)
                 .orElseThrow(() -> new ActivationInvitationException(true));
     }
 
@@ -59,7 +71,8 @@ public class AccountActivationInvitationService {
         UserDetails user = users.findById(userId)
                 .orElseThrow(() -> new ActivationInvitationException(true));
         if (!account.isPendingFirstAccess() || account.isBlockedForLogin() || !user.administrativelyActive()
-                || user.email() == null || user.email().isBlank()) {
+                || user.email() == null || user.email().isBlank()
+                || membershipIdentityOwnership.ownsIdentity(userId)) {
             throw new ActivationInvitationException(true);
         }
         String rawToken = tokenGenerator.generate();
@@ -106,7 +119,8 @@ public class AccountActivationInvitationService {
                 .orElseThrow(() -> new ActivationInvitationException(false));
         if (invitation.usedAt() != null || !Instant.now(clock).isBefore(invitation.expiresAt())
                 || !account.isPendingFirstAccess() || account.isBlockedForLogin()
-                || !users.isAdministrativelyActive(invitation.identityId())) {
+                || !users.isAdministrativelyActive(invitation.identityId())
+                || membershipIdentityOwnership.ownsIdentity(invitation.identityId())) {
             throw new ActivationInvitationException(false);
         }
     }

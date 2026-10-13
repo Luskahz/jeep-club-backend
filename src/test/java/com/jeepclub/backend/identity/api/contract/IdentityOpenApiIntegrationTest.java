@@ -36,6 +36,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class IdentityOpenApiIntegrationTest {
 
+    @Test
+    void administrativeCreationDocumentsDiscriminatedResponses() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['201']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/AdminCreateUserResponseDTO"))
+                .andExpect(jsonPath("$['components']['schemas']['AdminCreateUserResponseDTO']['oneOf'].length()").value(2))
+                .andExpect(jsonPath("$['components']['schemas']['TemporaryPasswordUserCreatedDTO']['properties']['temporaryPassword']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['TemporaryPasswordUserCreatedDTO']['properties']['invitationStatus']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['EmailInvitationUserCreatedDTO']['properties']['invitationStatus']['enum']").isArray())
+                .andExpect(jsonPath("$['components']['schemas']['EmailInvitationUserCreatedDTO']['properties']['temporaryPassword']").doesNotExist());
+    }
+
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRegistration userRegistration;
     @Autowired private UserQuery userQuery;

@@ -43,4 +43,6 @@ public interface MembershipApplicationRepository {
             MembershipApplicationStatus status
     );
 
+    boolean existsByCreatedUserId(Long createdUserId);
+
 }

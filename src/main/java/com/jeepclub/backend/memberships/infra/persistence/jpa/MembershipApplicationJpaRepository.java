@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface MembershipApplicationJpaRepository
         extends JpaRepository<MembershipApplicationEntity, Long> {
 
+    boolean existsByCreatedUserId(Long createdUserId);
+
     Optional<MembershipApplicationEntity> findByCpf(String cpf);
 
     List<MembershipApplicationEntity> findAllByStatus(MembershipApplicationStatus status);

@@ -4,9 +4,6 @@ import com.jeepclub.backend.iam.authentication.api.http.dto.activation.Activatio
 import com.jeepclub.backend.iam.authentication.api.http.dto.activation.ActivationInvitationTokenDTO;
 import com.jeepclub.backend.iam.authentication.api.http.dto.activation.CompleteAccountActivationDTO;
 import com.jeepclub.backend.iam.authentication.core.application.service.activation.AccountActivationInvitationService;
-import com.jeepclub.backend.platform.logging.SystemLogEvent;
-import com.jeepclub.backend.platform.logging.SystemLogOutcome;
-import com.jeepclub.backend.platform.logging.SystemLogService;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.openapi.group.SwaggerOperationGroup;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
@@ -30,8 +27,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import java.time.Clock;
-import java.time.Instant;
 
 @RestController
 @RequestMapping(value = "/authentication", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -40,8 +35,6 @@ import java.time.Instant;
 @Tag(name = "Authentication - Account Activation", description = "Convites administrativos para ativação de credenciais pendentes.")
 public class AccountActivationController {
     private final AccountActivationInvitationService invitations;
-    private final SystemLogService audit;
-    private final Clock clock;
 
     @PostMapping(value = "/activation-invitations/validation", consumes = MediaType.APPLICATION_JSON_VALUE)
     @SwaggerOperationGroup(value = "Rotas públicas", order = 10)
@@ -77,12 +70,9 @@ public class AccountActivationController {
             @ApiResponse(responseCode = "409", description = "Conta sem elegibilidade ou e-mail.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))})
     public ResponseEntity<ActivationInvitationStatusDTO> reissue(@PathVariable @Positive Long userId,
                                                                   @AuthenticationPrincipal UserPrincipal principal) {
-        invitations.issueForExistingUser(userId);
-        audit.record(new SystemLogEvent(principal.getUserId(), "ACCOUNT_ACTIVATION_INVITATION_REISSUE",
-                "POST", "/authentication/admin/users/" + userId + "/activation-invitations",
-                202, SystemLogOutcome.SUCCESS, 0, null, Instant.now(clock)));
+        invitations.issueForExistingUser(userId, principal.getUserId());
         return ResponseEntity.accepted().header("Cache-Control", "no-store")
-                .body(new ActivationInvitationStatusDTO(userId, "QUEUED"));
+                .body(new ActivationInvitationStatusDTO(userId, invitations.deliveryStatus(userId)));
     }
 
     @GetMapping(value = "/admin/users/{userId}/activation-invitations")

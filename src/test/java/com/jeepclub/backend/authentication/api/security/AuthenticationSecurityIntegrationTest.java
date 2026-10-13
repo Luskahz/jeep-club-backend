@@ -147,10 +147,56 @@ class AuthenticationSecurityIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(jsonPath("$.temporaryPassword").isNotEmpty())
+                .andExpect(jsonPath("$.invitationStatus").doesNotExist())
                 .andExpect(jsonPath("$.userId").isNumber());
+        String invitationBody = "{\"name\":\"Invited User\",\"cpf\":\"16899535009\",\"email\":\"invited@example.com\",\"activationMethod\":\"EMAIL_INVITATION\"}";
+        mockMvc.perform(post("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content(invitationBody))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.activationMethod").value("EMAIL_INVITATION"))
+                .andExpect(jsonPath("$.invitationStatus").value("QUEUED"))
+                .andExpect(jsonPath("$.temporaryPassword").doesNotExist());
         mockMvc.perform(post("/authentication/admin/users/{userId}/activation-invitations", actorId)
                         .header(HttpHeaders.AUTHORIZATION, bearer))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void invitationHttpResponsesReflectPersistedPostCommitDeliveryState() throws Exception {
+        Instant now = Instant.now(clock);
+        String actorCpf = "12763845053";
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData("Invite Actor", null, "invite-actor@example.com", actorCpf,
+                        null, null, null, now), "security-password");
+        Long actorId = userQuery.findByCpf(actorCpf).orElseThrow().id();
+        Role role = roleRepository.save(Role.create("admin-invite-status-test", "Test role", now));
+        userRoleRepository.save(UserRole.create(actorId, role.getId(), now));
+        grant(role, PermissionCode.IDENTITY_USER_CREATE, now);
+        String bearer = "Bearer " + tokens.accessToken();
+        String body = "{\"name\":\"Invite Target\",\"cpf\":\"65923017407\",\"email\":\"invite-target@example.com\",\"activationMethod\":\"EMAIL_INVITATION\"}";
+        var creation = mockMvc.perform(post("/identity/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.invitationStatus").value("SENT"))
+                .andExpect(jsonPath("$.temporaryPassword").doesNotExist())
+                .andReturn();
+        Number createdId = com.jayway.jsonpath.JsonPath.read(creation.getResponse().getContentAsString(), "$.userId");
+        Long userId = createdId.longValue();
+        mockMvc.perform(get("/authentication/admin/users/{userId}/activation-invitations", userId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invitationStatus").value("SENT"));
+        var resend = mockMvc.perform(post("/authentication/admin/users/{userId}/activation-invitations", userId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isAccepted())
+                .andReturn();
+        mockMvc.perform(get("/authentication/admin/users/{userId}/activation-invitations", userId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invitationStatus").value("SENT"));
+        assertThat(resend.getResponse().getContentAsString()).contains("\"invitationStatus\":\"SENT\"");
     }
 
     @Test

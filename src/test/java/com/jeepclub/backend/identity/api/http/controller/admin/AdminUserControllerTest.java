@@ -3,7 +3,6 @@ package com.jeepclub.backend.identity.api.http.controller.admin;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.iam.identity.api.http.controller.admin.AdminUserController;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
-import com.jeepclub.backend.platform.logging.SystemLogService;
 import com.jeepclub.backend.iam.identity.api.http.exception.IdentityUserExceptionHandler;
 import com.jeepclub.backend.iam.identity.api.module.UserStatus;
 import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
@@ -68,9 +67,6 @@ class AdminUserControllerTest {
     @Mock
     private UserRegistration userRegistration;
 
-    @Mock
-    private SystemLogService audit;
-
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -87,7 +83,7 @@ class AdminUserControllerTest {
         pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
         pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, userRegistration, audit, Clock.systemUTC()))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, userRegistration, Clock.systemUTC()))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(pageableResolver)
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))

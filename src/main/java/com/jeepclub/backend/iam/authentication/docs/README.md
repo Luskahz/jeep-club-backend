@@ -1,6 +1,9 @@
 # Authentication
 
 Convites de ativação de contas criadas administrativamente: [BACK-511](../../../../../../../../../docs/back-511-admin-user-creation.md).
+Authentication consulta `MembershipIdentityOwnership`, contrato público de Memberships,
+antes de emitir ou concluir convite administrativo. Um User vinculado a qualquer
+MembershipApplication conserva o primeiro acesso do fluxo de Memberships.
 
 Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../../docs/architecture/module-organization.md)

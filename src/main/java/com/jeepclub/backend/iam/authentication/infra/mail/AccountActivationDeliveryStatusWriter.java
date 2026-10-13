@@ -13,11 +13,9 @@ public class AccountActivationDeliveryStatusWriter {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void update(Long userId, String tokenHash, String status) {
-        invitations.findById(userId).ifPresent(invitation -> {
-            if (invitation.getTokenHash().equals(tokenHash)) {
-                invitation.setDeliveryStatus(status);
-                invitations.save(invitation);
-            }
-        });
+        // The token hash predicate is checked by the database while updating.
+        // Delivery state does not advance the invitation's optimistic version:
+        // a concurrent token rotation must not fail because SMTP reported a result.
+        invitations.updateDeliveryStatusIfCurrent(userId, tokenHash, status);
     }
 }

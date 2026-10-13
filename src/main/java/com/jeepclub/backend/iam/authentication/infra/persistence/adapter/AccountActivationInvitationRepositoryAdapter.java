@@ -20,6 +20,11 @@ public class AccountActivationInvitationRepositoryAdapter implements AccountActi
     }
 
     @Override
+    public Optional<String> findDeliveryStatusById(Long identityId) {
+        return jpa.findDeliveryStatusById(identityId);
+    }
+
+    @Override
     public Optional<AccountActivationInvitation> findByTokenHash(String tokenHash) {
         return jpa.findByTokenHash(tokenHash).map(this::toDomain);
     }
