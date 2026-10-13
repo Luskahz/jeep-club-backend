@@ -2,6 +2,8 @@ package com.jeepclub.backend.identity.api.http.controller.admin;
 
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.iam.identity.api.http.controller.admin.AdminUserController;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.platform.logging.SystemLogService;
 import com.jeepclub.backend.iam.identity.api.http.exception.IdentityUserExceptionHandler;
 import com.jeepclub.backend.iam.identity.api.module.UserStatus;
 import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
@@ -36,6 +38,7 @@ import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
@@ -62,6 +65,12 @@ class AdminUserControllerTest {
     @Mock
     private AdminUserService adminUserService;
 
+    @Mock
+    private UserRegistration userRegistration;
+
+    @Mock
+    private SystemLogService audit;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -78,7 +87,7 @@ class AdminUserControllerTest {
         pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
         pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, userRegistration, audit, Clock.systemUTC()))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(pageableResolver)
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))

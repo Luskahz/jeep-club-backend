@@ -16,6 +16,7 @@ public class ProductionMailConfigurationValidator {
     private final String from;
     private final String passwordResetUrl;
     private final String membershipActivationUrl;
+    private final String accountActivationUrl;
 
     public ProductionMailConfigurationValidator(
             @Value("${spring.mail.host:}") String host,
@@ -24,7 +25,8 @@ public class ProductionMailConfigurationValidator {
             @Value("${spring.mail.password:}") String password,
             @Value("${app.mail.from:}") String from,
             @Value("${app.user-facing.password-reset-url:}") String passwordResetUrl,
-            @Value("${app.user-facing.membership-activation-url:}") String membershipActivationUrl
+            @Value("${app.user-facing.membership-activation-url:}") String membershipActivationUrl,
+            @Value("${app.user-facing.account-activation-url:}") String accountActivationUrl
     ) {
         this.host = host;
         this.port = port;
@@ -33,6 +35,7 @@ public class ProductionMailConfigurationValidator {
         this.from = from;
         this.passwordResetUrl = passwordResetUrl;
         this.membershipActivationUrl = membershipActivationUrl;
+        this.accountActivationUrl = accountActivationUrl;
     }
 
     @PostConstruct
@@ -46,6 +49,7 @@ public class ProductionMailConfigurationValidator {
         requireText(from, "app.mail.from");
         requireExternalUrl(passwordResetUrl, "app.user-facing.password-reset-url");
         requireExternalUrl(membershipActivationUrl, "app.user-facing.membership-activation-url");
+        requireExternalUrl(accountActivationUrl, "app.user-facing.account-activation-url");
     }
 
     private static void requireText(String value, String property) {

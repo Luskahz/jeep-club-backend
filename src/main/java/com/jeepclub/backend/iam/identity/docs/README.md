@@ -1,5 +1,7 @@
 # Identity
 
+Criação administrativa de User e integração com Authentication: [BACK-511](../../../../../../../../../docs/back-511-admin-user-creation.md).
+
 Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../../docs/architecture/feature-development-rules.md).

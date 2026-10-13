@@ -1,6 +1,7 @@
 package com.jeepclub.backend.iam.authentication.api.http.exception;
 
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountAccessDeniedException;
+import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.ActivationInvitationException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.PasswordChangeNotRequiredException;
@@ -20,6 +21,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.authentication")
 public class AuthenticationAccountExceptionHandler extends ApiExceptionHandler {
+
+    @ExceptionHandler(ActivationInvitationException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvitation(ActivationInvitationException exception) {
+        return buildErrorResponse(exception.isConflict() ? "ACCOUNT_ACTIVATION_CONFLICT" : "ACTIVATION_INVITATION_GONE",
+                exception.getMessage(), exception.isConflict() ? HttpStatus.CONFLICT : HttpStatus.GONE);
+    }
 
     @ExceptionHandler(AuthenticationAccountBlockedException.class)
     public ResponseEntity<ApiErrorResponse> handleBlocked(AuthenticationAccountBlockedException exception) {

@@ -83,6 +83,8 @@ public class SecurityConfig {
                                 "/identity/register",
                                 "/authentication/refresh",
                                 "/authentication/login/password-change",
+                                "/authentication/activation-invitations/validation",
+                                "/authentication/account-activations",
 
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

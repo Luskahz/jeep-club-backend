@@ -29,7 +29,8 @@ class ProductionMailConfigurationValidatorTest {
                 "spring.mail.password=secret",
                 "app.mail.from=no-reply@example.com",
                 "app.user-facing.password-reset-url=https://app.example.com/reset",
-                "app.user-facing.membership-activation-url=https://app.example.com/activate"
+                "app.user-facing.membership-activation-url=https://app.example.com/activate",
+                "app.user-facing.account-activation-url=https://app.example.com/account/activate"
         ).run(context -> assertThat(context).hasNotFailed());
     }
 }

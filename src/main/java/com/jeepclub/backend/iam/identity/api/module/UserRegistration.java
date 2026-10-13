@@ -16,4 +16,6 @@ public interface UserRegistration {
             UserRegistrationData data,
             String rawPassword
     );
+
+    AdminUserCreationResult createAdministratively(UserRegistrationData data, UserActivationMethod method);
 }
