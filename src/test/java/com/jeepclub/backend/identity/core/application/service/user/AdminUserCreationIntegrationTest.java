@@ -183,7 +183,8 @@ class AdminUserCreationIntegrationTest {
 
     @Test
     void deliveryFailureCanBeRecoveredByReissue() {
-        doThrow(new org.springframework.mail.MailSendException("simulated"))
+        doThrow(new org.springframework.mail.MailSendException("simulated SMTP timeout",
+                new java.net.SocketTimeoutException("read timed out")))
                 .doNothing().when(mailSender).send(anyString(), anyString(), anyString());
         var result = registration.createAdministratively(
                 data("12763845053", "delivery@example.com"), UserActivationMethod.EMAIL_INVITATION, 1L);

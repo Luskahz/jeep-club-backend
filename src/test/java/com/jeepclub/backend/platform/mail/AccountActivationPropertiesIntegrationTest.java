@@ -1,5 +1,7 @@
 package com.jeepclub.backend.platform.mail;
 
+import com.jeepclub.backend.iam.authentication.infra.mail.AccountActivationMailSender;
+import com.jeepclub.backend.iam.authentication.infra.mail.DummyAccountActivationMailSender;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,6 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 class AccountActivationPropertiesIntegrationTest {
     @Autowired private Environment environment;
+    @Autowired private AccountActivationMailSender mailSender;
 
     @Test
     void springResolvesAllThreeDeploymentVariables() {
@@ -25,5 +28,11 @@ class AccountActivationPropertiesIntegrationTest {
                 .isEqualTo("PT6H");
         assertThat(environment.getProperty("app.user-facing.account-activation-require-https"))
                 .isEqualTo("true");
+    }
+
+    @Test
+    void testProfileUsesSenderThatDoesNotTransmitMail() {
+        assertThat(mailSender).isInstanceOf(DummyAccountActivationMailSender.class);
+        mailSender.send("recipient@example.com", "Recipient", "secret-token");
     }
 }

@@ -64,4 +64,12 @@ class ProductionMailConfigurationValidatorTest {
                     assertThat(context.getStartupFailure()).rootCause().hasMessageContaining("simulated mail");
                 });
     }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"dev", "test"})
+    void simulatedProfilesAcceptAbsentSmtpHost(String profile) {
+        new ApplicationContextRunner().withUserConfiguration(SimulatedMailConfigurationValidator.class)
+                .withPropertyValues("spring.profiles.active=" + profile)
+                .run(context -> assertThat(context).hasNotFailed());
+    }
 }

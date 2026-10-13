@@ -145,7 +145,9 @@ class AuthenticationSecurityIntegrationTest {
         mockMvc.perform(post("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated())
+                .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/identity/admin/users/[0-9]+")))
                 .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.activationMethod").value("TEMPORARY_PASSWORD"))
                 .andExpect(jsonPath("$.temporaryPassword").isNotEmpty())
                 .andExpect(jsonPath("$.invitationStatus").doesNotExist())
                 .andExpect(jsonPath("$.userId").isNumber());

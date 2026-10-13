@@ -4,11 +4,14 @@ import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** A configured SMTP host must never be silently ignored by dev/test dummy senders. */
 @Component
 @Profile("dev | test")
 public class SimulatedMailConfigurationValidator {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SimulatedMailConfigurationValidator.class);
     private final String host;
 
     public SimulatedMailConfigurationValidator(@Value("${spring.mail.host:}") String host) {
@@ -20,5 +23,6 @@ public class SimulatedMailConfigurationValidator {
         if (host != null && !host.isBlank()) {
             throw new IllegalStateException("spring.mail.host is configured but dev/test use simulated mail; use a production profile for SMTP");
         }
+        LOGGER.warn("Mail delivery is simulated in dev/test; SENT means simulation completed, not SMTP acceptance");
     }
 }
