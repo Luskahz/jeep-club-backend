@@ -1,6 +1,9 @@
 package com.jeepclub.backend.platform.mail;
 
 import jakarta.annotation.PostConstruct;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -17,6 +20,7 @@ public class ProductionMailConfigurationValidator {
     private final String passwordResetUrl;
     private final String membershipActivationUrl;
     private final String accountActivationUrl;
+    private final boolean accountActivationRequireHttps;
 
     public ProductionMailConfigurationValidator(
             @Value("${spring.mail.host:}") String host,
@@ -26,7 +30,8 @@ public class ProductionMailConfigurationValidator {
             @Value("${app.mail.from:}") String from,
             @Value("${app.user-facing.password-reset-url:}") String passwordResetUrl,
             @Value("${app.user-facing.membership-activation-url:}") String membershipActivationUrl,
-            @Value("${app.user-facing.account-activation-url:}") String accountActivationUrl
+            @Value("${app.user-facing.account-activation-url:}") String accountActivationUrl,
+            @Value("${app.user-facing.account-activation-require-https:false}") boolean accountActivationRequireHttps
     ) {
         this.host = host;
         this.port = port;
@@ -36,6 +41,7 @@ public class ProductionMailConfigurationValidator {
         this.passwordResetUrl = passwordResetUrl;
         this.membershipActivationUrl = membershipActivationUrl;
         this.accountActivationUrl = accountActivationUrl;
+        this.accountActivationRequireHttps = accountActivationRequireHttps;
     }
 
     @PostConstruct
@@ -50,6 +56,7 @@ public class ProductionMailConfigurationValidator {
         requireExternalUrl(passwordResetUrl, "app.user-facing.password-reset-url");
         requireExternalUrl(membershipActivationUrl, "app.user-facing.membership-activation-url");
         requireExternalUrl(accountActivationUrl, "app.user-facing.account-activation-url");
+        requireActivationUrl(accountActivationUrl, accountActivationRequireHttps);
     }
 
     private static void requireText(String value, String property) {
@@ -62,6 +69,22 @@ public class ProductionMailConfigurationValidator {
         requireText(value, property);
         if (value.contains("localhost") || value.contains("127.0.0.1")) {
             throw new IllegalStateException(property + " must be explicitly configured outside dev/test");
+        }
+    }
+
+    private static void requireActivationUrl(String value, boolean requireHttps) {
+        String property = "app.user-facing.account-activation-url";
+        try {
+            URI uri = new URI(value);
+            String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
+            if ((!scheme.equals("http") && !scheme.equals("https")) || uri.getHost() == null
+                    || uri.getHost().isBlank() || uri.getRawUserInfo() != null
+                    || uri.getRawFragment() != null || (requireHttps && !scheme.equals("https"))) {
+                throw new IllegalStateException(property + " must be an absolute HTTP(S) URL with a host"
+                        + (requireHttps ? " and HTTPS is required" : ""));
+            }
+        } catch (URISyntaxException exception) {
+            throw new IllegalStateException(property + " must be a valid HTTP(S) URL", exception);
         }
     }
 }
