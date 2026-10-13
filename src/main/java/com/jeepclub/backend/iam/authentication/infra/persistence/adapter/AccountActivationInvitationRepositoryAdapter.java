@@ -25,6 +25,11 @@ public class AccountActivationInvitationRepositoryAdapter implements AccountActi
     }
 
     @Override
+    public Optional<Long> findIdentityIdByTokenHash(String tokenHash) {
+        return jpa.findIdentityIdByTokenHash(tokenHash);
+    }
+
+    @Override
     public Optional<AccountActivationInvitation> findByTokenHashForUpdate(String tokenHash) {
         return jpa.findByTokenHashForUpdate(tokenHash).map(this::toDomain);
     }

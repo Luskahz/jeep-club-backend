@@ -26,6 +26,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -126,6 +129,41 @@ class AdminUserCreationIntegrationTest {
         assertThat(invitations.deliveryStatus(result.userId())).isEqualTo("DELIVERY_FAILED");
         invitations.issueForExistingUser(result.userId());
         assertThat(invitations.deliveryStatus(result.userId())).isEqualTo("SENT");
+    }
+
+    @Test
+    void simultaneousActivationConsumesInvitationOnlyOnce() throws Exception {
+        var result = registration.createAdministratively(
+                data("65923017407", "concurrent@example.com"), UserActivationMethod.EMAIL_INVITATION);
+        ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
+        verify(mailSender).send(anyString(), anyString(), sent.capture());
+        String token = sent.getValue();
+        CountDownLatch start = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> completeAfter(start, token));
+            var second = executor.submit(() -> completeAfter(start, token));
+            start.countDown();
+            Throwable firstFailure = first.get(15, TimeUnit.SECONDS);
+            Throwable secondFailure = second.get(15, TimeUnit.SECONDS);
+            assertThat((firstFailure == null ? 1 : 0) + (secondFailure == null ? 1 : 0)).isEqualTo(1);
+            assertThat(firstFailure == null ? secondFailure : firstFailure)
+                    .isInstanceOf(ActivationInvitationException.class);
+            assertThat(accounts.findByIdentityId(result.userId()).orElseThrow().getCredentialStatus())
+                    .isEqualTo(CredentialStatus.PERMANENT);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private Throwable completeAfter(CountDownLatch start, String token) {
+        try {
+            start.await();
+            invitations.complete(token, "Definitiva@789");
+            return null;
+        } catch (Throwable failure) {
+            return failure;
+        }
     }
 
     private UserRegistrationData data(String cpf, String email) {

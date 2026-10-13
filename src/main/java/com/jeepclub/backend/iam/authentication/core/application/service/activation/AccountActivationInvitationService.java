@@ -86,9 +86,9 @@ public class AccountActivationInvitationService {
     public void complete(String rawToken, String newPassword) {
         String hash = tokenHashService.hash(rawToken);
         // Account and invitation mutations share a fixed lock order with issue/reissue.
-        AccountActivationInvitation snapshot = invitations.findByTokenHash(hash)
+        Long identityId = invitations.findIdentityIdByTokenHash(hash)
                 .orElseThrow(() -> new ActivationInvitationException(false));
-        AuthenticationAccount account = accounts.findByIdentityIdForUpdate(snapshot.identityId())
+        AuthenticationAccount account = accounts.findByIdentityIdForUpdate(identityId)
                 .orElseThrow(() -> new ActivationInvitationException(false));
         AccountActivationInvitation invitation = invitations.findByTokenHashForUpdate(hash)
                 .orElseThrow(() -> new ActivationInvitationException(false));
