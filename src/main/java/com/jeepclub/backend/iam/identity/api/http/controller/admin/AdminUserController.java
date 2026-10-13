@@ -2,6 +2,12 @@ package com.jeepclub.backend.iam.identity.api.http.controller.admin;
 
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserFilterDTO;
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserResponseDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminCreateUserRequestDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminCreateUserResponseDTO;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.iam.identity.api.module.UserActivationMethod;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
+import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserField;
 import com.jeepclub.backend.iam.identity.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.iam.identity.core.application.service.user.AdminUserService;
@@ -25,10 +31,14 @@ import org.springframework.data.web.SortDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.EnumSet;
 import java.util.Set;
+import java.time.Clock;
+import java.time.Instant;
+import java.net.URI;
 
 @RestController
 @RequestMapping(
@@ -43,6 +53,37 @@ import java.util.Set;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final UserRegistration userRegistration;
+    private final Clock clock;
+
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAuthority('IDENTITY_USER_CREATE')")
+    @RequiredPermission("IDENTITY_USER_CREATE")
+    @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
+    @Operation(summary = "Criar usuário administrativamente",
+            description = "Cria User e credencial pendente em uma transação. TEMPORARY_PASSWORD revela a senha somente nesta resposta; EMAIL_INVITATION prepara envio após commit e permite reenvio em falha. Não cria MembershipApplication nem atribui roles.",
+            responses = {
+                    @ApiResponse(responseCode = "201", description = "Usuário criado; Cache-Control: no-store.",
+                            content = @Content(schema = @Schema(implementation = AdminCreateUserResponseDTO.class))),
+                    @ApiResponse(responseCode = "400", description = "Dados ou modalidade inválidos.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "403", description = "Sem IDENTITY_USER_CREATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+                    @ApiResponse(responseCode = "409", description = "CPF, e-mail ou RG já cadastrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+            })
+    public ResponseEntity<AdminCreateUserResponseDTO> create(
+            @RequestBody @Valid AdminCreateUserRequestDTO request,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Instant now = Instant.now(clock);
+        var result = userRegistration.createAdministratively(new UserRegistrationData(
+                request.name(), request.birthDate(), request.email(), request.cpf(), request.rg(),
+                request.phoneNumber(), null, now), request.activationMethod(), principal.getUserId());
+        String invitationStatus = result.activationMethod() == UserActivationMethod.EMAIL_INVITATION
+                ? userRegistration.administrativeInvitationStatus(result.userId()) : null;
+        return ResponseEntity.created(URI.create("/identity/admin/users/" + result.userId()))
+                .header("Cache-Control", "no-store")
+                .body(AdminCreateUserResponseDTO.from(result, invitationStatus));
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('IDENTITY_USER_READ')")

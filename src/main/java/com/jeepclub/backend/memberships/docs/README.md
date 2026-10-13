@@ -85,8 +85,12 @@ elegibilidade.
 
 ## Integrações e persistência
 
-Memberships publica apenas `MembershipOnboardingCompletion` para Authentication
-notificar a conclusão do primeiro acesso por senha provisória. Seus demais
+Memberships publica `MembershipOnboardingCompletion` para Authentication
+notificar a conclusão do primeiro acesso por senha provisória e
+`MembershipIdentityOwnership` para impedir que um convite administrativo
+conclua o primeiro acesso de um User vinculado a qualquer MembershipApplication.
+A consulta usa o vínculo persistido com o User, independentemente do status da
+solicitação, sem expor entidades ou repositories internos. Seus demais
 contratos consumidores são definidos no próprio módulo:
 
 - `UserExistencePort` é implementada por `IdentityUserExistenceAdapter`, que

@@ -57,6 +57,8 @@ class AuthenticationSecurityIntegrationTest {
         assertPublicValidationRoute("/identity/register", "{}");
         assertPublicValidationRoute("/authentication/refresh", "{}");
         assertPublicValidationRoute("/authentication/login/password-change", "{}");
+        assertPublicValidationRoute("/authentication/activation-invitations/validation", "{}");
+        assertPublicValidationRoute("/authentication/account-activations", "{}");
     }
 
     @Test
@@ -107,9 +109,96 @@ class AuthenticationSecurityIntegrationTest {
         mockMvc.perform(get("/identity/admin/users"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        mockMvc.perform(post("/identity/admin/users")
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/authentication/admin/users/1/activation-invitations"))
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/authentication/admin/password-recovery/requests"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+    }
+
+    @Test
+    @Transactional
+    void administrativeCreationRequiresPermissionAndExplicitMethod() throws Exception {
+        Instant now = Instant.now(clock);
+        String actorCpf = "73045198279";
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData("Creation Actor", null, "creation-actor@example.com", actorCpf,
+                        null, null, null, now), "security-password");
+        Long actorId = userQuery.findByCpf(actorCpf).orElseThrow().id();
+        String bearer = "Bearer " + tokens.accessToken();
+        String body = "{\"name\":\"New User\",\"cpf\":\"66021478380\",\"activationMethod\":\"TEMPORARY_PASSWORD\"}";
+        mockMvc.perform(post("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/authentication/admin/users/{userId}/activation-invitations", actorId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isForbidden());
+        Role role = roleRepository.save(Role.create("admin-user-create-test", "Test role", now));
+        userRoleRepository.save(UserRole.create(actorId, role.getId(), now));
+        grant(role, PermissionCode.IDENTITY_USER_CREATE, now);
+        mockMvc.perform(post("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"New User\",\"cpf\":\"66021478380\"}"))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", org.hamcrest.Matchers.matchesPattern("/identity/admin/users/[0-9]+")))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.activationMethod").value("TEMPORARY_PASSWORD"))
+                .andExpect(jsonPath("$.temporaryPassword").isNotEmpty())
+                .andExpect(jsonPath("$.invitationStatus").doesNotExist())
+                .andExpect(jsonPath("$.userId").isNumber());
+        String invitationBody = "{\"name\":\"Invited User\",\"cpf\":\"16899535009\",\"email\":\"invited@example.com\",\"activationMethod\":\"EMAIL_INVITATION\"}";
+        mockMvc.perform(post("/identity/admin/users").header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content(invitationBody))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.activationMethod").value("EMAIL_INVITATION"))
+                .andExpect(jsonPath("$.invitationStatus").value("QUEUED"))
+                .andExpect(jsonPath("$.temporaryPassword").doesNotExist());
+        mockMvc.perform(post("/authentication/admin/users/{userId}/activation-invitations", actorId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void invitationHttpResponsesReflectPersistedPostCommitDeliveryState() throws Exception {
+        Instant now = Instant.now(clock);
+        String actorCpf = "12763845053";
+        UserAuthenticationTokens tokens = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData("Invite Actor", null, "invite-actor@example.com", actorCpf,
+                        null, null, null, now), "security-password");
+        Long actorId = userQuery.findByCpf(actorCpf).orElseThrow().id();
+        Role role = roleRepository.save(Role.create("admin-invite-status-test", "Test role", now));
+        userRoleRepository.save(UserRole.create(actorId, role.getId(), now));
+        grant(role, PermissionCode.IDENTITY_USER_CREATE, now);
+        String bearer = "Bearer " + tokens.accessToken();
+        String body = "{\"name\":\"Invite Target\",\"cpf\":\"65923017407\",\"email\":\"invite-target@example.com\",\"activationMethod\":\"EMAIL_INVITATION\"}";
+        var creation = mockMvc.perform(post("/identity/admin/users")
+                        .header(HttpHeaders.AUTHORIZATION, bearer)
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.invitationStatus").value("SENT"))
+                .andExpect(jsonPath("$.temporaryPassword").doesNotExist())
+                .andReturn();
+        Number createdId = com.jayway.jsonpath.JsonPath.read(creation.getResponse().getContentAsString(), "$.userId");
+        Long userId = createdId.longValue();
+        mockMvc.perform(get("/authentication/admin/users/{userId}/activation-invitations", userId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invitationStatus").value("SENT"));
+        var resend = mockMvc.perform(post("/authentication/admin/users/{userId}/activation-invitations", userId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isAccepted())
+                .andReturn();
+        mockMvc.perform(get("/authentication/admin/users/{userId}/activation-invitations", userId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.invitationStatus").value("SENT"));
+        assertThat(resend.getResponse().getContentAsString()).contains("\"invitationStatus\":\"SENT\"");
     }
 
     @Test
@@ -252,6 +341,11 @@ class AuthenticationSecurityIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/authorization/me']['get']").exists())
                 .andExpect(jsonPath("$['paths']['/authentication/password-recovery/requests']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users']['get']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['201']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['x-required-permissions'][0]").value("IDENTITY_USER_CREATE"))
+                .andExpect(jsonPath("$['paths']['/authentication/activation-invitations/validation']['post']").exists())
+                .andExpect(jsonPath("$['paths']['/authentication/account-activations']['post']").exists())
+                .andExpect(jsonPath("$['paths']['/authentication/admin/users/{userId}/activation-invitations']['post']").exists())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}']['get']").exists())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/disable']['patch']").exists())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/enable']['patch']").exists())

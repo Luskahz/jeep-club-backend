@@ -36,6 +36,33 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class IdentityOpenApiIntegrationTest {
 
+    @Test
+    void administrativeCreationDocumentsDiscriminatedResponses() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['201']['content']['application/json']['schema']['$ref']")
+                        .value("#/components/schemas/AdminCreateUserResponseDTO"))
+                .andExpect(jsonPath("$['components']['schemas']['AdminCreateUserResponseDTO']['oneOf'].length()").value(2))
+                .andExpect(jsonPath("$['components']['schemas']['AdminCreateUserResponseDTO']['oneOf'][*]['$ref']", org.hamcrest.Matchers.containsInAnyOrder(
+                        "#/components/schemas/TemporaryPasswordUserCreatedDTO",
+                        "#/components/schemas/EmailInvitationUserCreatedDTO")))
+                .andExpect(jsonPath("$['components']['schemas']['AdminCreateUserResponseDTO']['discriminator']['propertyName']").value("activationMethod"))
+                .andExpect(jsonPath("$['components']['schemas']['AdminCreateUserResponseDTO']['discriminator']['mapping']['TEMPORARY_PASSWORD']").value("#/components/schemas/TemporaryPasswordUserCreatedDTO"))
+                .andExpect(jsonPath("$['components']['schemas']['AdminCreateUserResponseDTO']['discriminator']['mapping']['EMAIL_INVITATION']").value("#/components/schemas/EmailInvitationUserCreatedDTO"))
+                .andExpect(jsonPath("$['components']['schemas']['TemporaryPasswordUserCreatedDTO']['required']", org.hamcrest.Matchers.containsInAnyOrder("userId", "activationMethod", "temporaryPassword")))
+                .andExpect(jsonPath("$['components']['schemas']['EmailInvitationUserCreatedDTO']['required']", org.hamcrest.Matchers.containsInAnyOrder("userId", "activationMethod", "invitationStatus")))
+                .andExpect(jsonPath("$['components']['schemas']['TemporaryPasswordUserCreatedDTO']['properties']['activationMethod']['enum']", org.hamcrest.Matchers.contains("TEMPORARY_PASSWORD")))
+                .andExpect(jsonPath("$['components']['schemas']['EmailInvitationUserCreatedDTO']['properties']['activationMethod']['enum']", org.hamcrest.Matchers.contains("EMAIL_INVITATION")))
+                .andExpect(jsonPath("$['components']['schemas']['TemporaryPasswordUserCreatedDTO']['properties']['temporaryPassword']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['TemporaryPasswordUserCreatedDTO']['properties']['invitationStatus']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['EmailInvitationUserCreatedDTO']['properties']['invitationStatus']['enum']").isArray())
+                .andExpect(jsonPath("$['components']['schemas']['EmailInvitationUserCreatedDTO']['properties']['temporaryPassword']").doesNotExist())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['x-required-permissions'][0]").value("IDENTITY_USER_CREATE"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['400']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['401']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['403']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users']['post']['responses']['409']").exists());
+    }
+
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRegistration userRegistration;
     @Autowired private UserQuery userQuery;
