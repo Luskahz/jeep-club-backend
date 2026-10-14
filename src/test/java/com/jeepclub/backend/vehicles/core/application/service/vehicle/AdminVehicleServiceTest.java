@@ -107,6 +107,21 @@ class AdminVehicleServiceTest {
     }
 
     @Test
+    void resolvesOwnerNamesInOneBatchForAdministrativeList() {
+        var pageable = PageRequest.of(0, 10);
+        var vehicle = vehicle();
+        when(vehicleRepository.findAllByStatus(VehicleStatus.ACTIVE, pageable))
+                .thenReturn(new PageImpl<>(List.of(vehicle)));
+        when(userPort.findNamesByIds(List.of(7L))).thenReturn(java.util.Map.of(7L, "João"));
+
+        var result = service.findAllWithOwners(pageable).getContent().get(0);
+
+        assertThat(result.vehicle()).isSameAs(vehicle);
+        assertThat(result.ownerName()).isEqualTo("João");
+        verify(userPort).findNamesByIds(List.of(7L));
+    }
+
+    @Test
     void listsFindsUpdatesAndDeletesAnyActiveVehicle() {
         var pageable = PageRequest.of(0, 10);
         Vehicle vehicle = vehicle();
