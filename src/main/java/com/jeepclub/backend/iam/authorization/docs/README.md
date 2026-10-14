@@ -99,3 +99,17 @@ contexto devem selecionar testes conforme as [regras globais](../../../../../../
 AUTHORIZATION_EXPORT permite roles, permissions e visão de usuários com papéis/permissões efetivas. Somente roles ACTIVE concedem permissions na visão agregada. Nome/CPF são lidos de UserQuery, sem duplicação local. RolePresentationQuery oferece ID/nome em lote (até 500) para identificação de atribuições de Billing.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+## Permissão de edição cadastral — BACK-522
+
+| Operação de Identity | Authority |
+| --- | --- |
+| Edição parcial administrativa de User | `IDENTITY_USER_UPDATE` |
+| Substituição administrativa de perfil complementar | `IDENTITY_USER_UPDATE` |
+| Consulta administrativa de perfil complementar | `IDENTITY_USER_READ` |
+
+`IDENTITY_USER_UPDATE` já integra `PermissionCode`/`PermissionDefinition` e é
+provisionada pelo synchronizer; ROOT recebe todas as permissions pelo bootstrap
+existente. Não há seed SQL nem nova migration. Roles CUSTOM precisam receber a
+permission explicitamente por seu fluxo administrativo; leitura não concede
+escrita. Cada rota usa `@PreAuthorize` e anuncia a mesma authority no OpenAPI.
