@@ -179,4 +179,26 @@ class MemberActivationTokenServiceTest {
                 NOW.minusSeconds(1800), 0L
         );
     }
+    @Test
+    void tokenExpiringDuringAuthenticationCannotConsumeTokenOrApplication() {
+        java.util.concurrent.atomic.AtomicReference<Instant> current=new java.util.concurrent.atomic.AtomicReference<>(NOW);
+        Clock changing=mock(Clock.class);
+        when(changing.instant()).thenAnswer(call -> current.get());
+        service=new MemberActivationTokenService(tokenRepository,hashPort,tokenGenerator,timeProperties,
+                applicationRepository,firstAccessPort,recipientPort,mailSender,changing);
+        MemberActivationToken token=MemberActivationToken.reconstitute(10L,1L,"hash",NOW.plusSeconds(60),null,NOW.minusSeconds(60));
+        MembershipApplication application=approvedApplication();
+        when(hashPort.hash("raw")).thenReturn("hash");
+        when(tokenRepository.findApplicationIdByTokenHash("hash")).thenReturn(Optional.of(1L));
+        when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate","candidate@example.com")));
+        when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        doAnswer(call -> { current.set(NOW.plusSeconds(120)); return null; }).when(firstAccessPort).complete(20L,"new-password");
+        assertThatThrownBy(() -> service.complete("raw","new-password")).isInstanceOf(MemberActivationTokenExpiredException.class);
+        assertThat(token.getUsedAt()).isNull();
+        assertThat(application.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+        verify(tokenRepository,never()).save(any());
+        verify(applicationRepository,never()).save(any());
+    }
+
 }

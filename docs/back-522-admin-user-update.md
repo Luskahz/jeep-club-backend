@@ -48,16 +48,19 @@ deverá autenticar novamente com o CPF vigente e a mesma senha. Correção de no
 RG, telefone, nascimento ou foto não exige novo login. IDs, vínculos e históricos
 não mudam; senha, lock, estado da credencial e status não são atribuídos pelo PATCH.
 
-E-mail corrigido invalida links pendentes de ativação administrativa, recuperação
-por e-mail e Membership. O status do convite administrativo passa a `INVALIDATED`;
+E-mail corrigido invalida links pendentes de ativação administrativa, todas as
+recuperações por e-mail abertas e Membership. O status do convite administrativo passa a `INVALIDATED`;
 não confundir com falha SMTP. Após confirmar o e-mail, usar o reenvio administrativo
 de Authentication para um usuário pendente, ou o reenvio da solicitação de
 Membership quando o convite pertencer àquele fluxo. Não há reenvio automático,
-nem entrega a partir de um evento com endereço anterior. Remover o e-mail é
+nem entrega a partir de um evento com endereço anterior, token substituído ou
+expirado, ou cuja conta já tenha deixado o primeiro acesso pendente. Remover o e-mail é
 permitido, mas impede novos convites até preencher um endereço válido.
 
 Outro administrador não pode mudar CPF/e-mail de ROOT. O titular ROOT autorizado
-pode corrigir os próprios dados; a alteração exige novo login. Os demais campos
+pode corrigir os próprios dados; a alteração exige novo login. O bootstrap dev
+preserva o vínculo ROOT existente pelo ID, sem transferir privilégios ao CPF
+anterior caso ele seja usado em outro cadastro. Os demais campos
 continuam disponíveis ao administrador autorizado. Cadastros DISABLED permanecem
 desativados após edição. A migração INACTIVE/ARCHIVED é responsabilidade da
 BACK-512/BACK-514, ainda não integrada nesta base.

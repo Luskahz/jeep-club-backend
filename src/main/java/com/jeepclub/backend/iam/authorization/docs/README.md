@@ -113,3 +113,9 @@ provisionada pelo synchronizer; ROOT recebe todas as permissions pelo bootstrap
 existente. Não há seed SQL nem nova migration. Roles CUSTOM precisam receber a
 permission explicitamente por seu fluxo administrativo; leitura não concede
 escrita. Cada rota usa `@PreAuthorize` e anuncia a mesma authority no OpenAPI.
+
+O bootstrap de desenvolvimento sincroniza a role ROOT e preserva seus vínculos
+com IDs de User existentes. Se já houver um titular ROOT, não atribui ROOT a quem
+ocupar o CPF originalmente configurado após uma correção cadastral. O CPF de
+bootstrap é usado para estabelecer o primeiro vínculo, não como identidade
+permanente de uma conta privilegiada.

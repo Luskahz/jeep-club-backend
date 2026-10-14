@@ -250,4 +250,21 @@ class AdminUserUpdateIntegrationTest {
         em.flush(); em.clear();
         assertThat(invitationRows.findById(created.userId()).orElseThrow().getTokenHash()).isNotEqualTo(hash);
     }
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"pt-BR,alteração", "en,update"})
+    void conflictsUseLocalizedPublicMessageInsteadOfGenericFallback(String language,String expected) throws Exception {
+        mvc.perform(patch("/identity/admin/users/{id}",before.id()).header("Authorization","Bearer "+token)
+                .header("Accept-Language",language).contentType(MediaType.APPLICATION_JSON).content("{\"cpf\":\"16899535009\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("USER_UPDATE_CONFLICT"))
+                .andExpect(jsonPath("$.detail",org.hamcrest.Matchers.containsString(expected)));
+    }
+
+    @Test void missingAuthenticationAccountReturnsControlledLocalizedConflict() throws Exception {
+        var orphan=repository.create(com.jeepclub.backend.iam.identity.core.domain.model.User.create("Legacy",null,"legacy@example.com","11144477735",null,null,null,clock.instant()));
+        mvc.perform(patch("/identity/admin/users/{id}",orphan.getId()).header("Authorization","Bearer "+token)
+                .header("Accept-Language","en").contentType(MediaType.APPLICATION_JSON).content("{\"email\":\"fixed@example.com\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("USER_IDENTITY_CHANGE_CONFLICT"))
+                .andExpect(jsonPath("$.detail",org.hamcrest.Matchers.containsString("authentication account")));
+    }
+
 }

@@ -60,7 +60,6 @@ public class SessionService {
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResult login(String cpf, String password) {
-        Instant now = Instant.now(clock);
         var identity = identityLock.byCpf(cpf)
                 .orElseThrow(InvalidCredentialsException::new);
         AuthenticationAccount account = accountRepository
@@ -73,6 +72,7 @@ public class SessionService {
             throw new InvalidCredentialsException();
         }
 
+        Instant now = Instant.now(clock);
         account.assertCanAttemptLogin();
         if (!identity.administrativelyActive()) {
             throw new AuthenticationAccountBlockedException();
@@ -89,7 +89,6 @@ public class SessionService {
 
     @Transactional
     public AuthTokens completeRequiredPasswordChange(String rawToken, String newPassword) {
-        Instant now = Instant.now(clock);
         String tokenHash = tokenHashService.hash(rawToken);
         Long userId = challengeRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(this::invalidChallenge);
@@ -100,6 +99,8 @@ public class SessionService {
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(this::invalidChallenge);
 
+        // Identity/account/challenge lock waits can cross the challenge's expiry.
+        Instant now = Instant.now(clock);
         if (!challenge.getUserId().equals(account.getIdentityId()) || !challenge.isValid(now)) {
             throw invalidChallenge();
         }
@@ -121,6 +122,9 @@ public class SessionService {
                     ));
         }
 
+        // Recovery-request acquisition can also wait; enforce expiry again before any mutation.
+        now = Instant.now(clock);
+        if (!challenge.isValid(now)) throw invalidChallenge();
         account.changePassword(passwordHasher.hash(newPassword), now);
         if (request != null) {
             request.resolve(now);

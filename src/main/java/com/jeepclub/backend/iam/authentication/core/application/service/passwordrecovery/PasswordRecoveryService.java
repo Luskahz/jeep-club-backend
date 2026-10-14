@@ -41,8 +41,8 @@ public class PasswordRecoveryService {
 
     @Transactional
     public PublicPasswordRecoveryResult request(String cpf) {
-        Instant now = Instant.now(clock);
         UserDetails identity = identityLock.byCpf(cpf).orElse(null);
+        Instant now = Instant.now(clock);
         if (identity != null && identity.administrativelyActive()
                 && accountRepository.existsByIdentityId(identity.id())) {
             requestManager.getOrCreate(identity.id(), now);
@@ -52,8 +52,8 @@ public class PasswordRecoveryService {
 
     @Transactional
     public PublicPasswordRecoveryResult sendEmailToken(String cpf) {
-        Instant now = Instant.now(clock);
         UserDetails identity = identityLock.byCpf(cpf).orElse(null);
+        Instant now = Instant.now(clock);
         if (identity == null || !identity.administrativelyActive()
                 || !accountRepository.existsByIdentityId(identity.id())
                 || identity.email() == null || identity.email().isBlank()) {

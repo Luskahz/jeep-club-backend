@@ -104,7 +104,7 @@ mesmas regras e DTOs do self-service; a contraparte administrativa delega a
 
 Troca efetiva de CPF ou e-mail revoga sessões, refresh tokens e challenges por
 `UserAuthenticationAdministrationPort.identityChanged`. Troca de e-mail também
-invalida convite administrativo e recuperação por e-mail em Authentication, e
+invalida convite administrativo e todas as recuperações por e-mail abertas em Authentication, e
 convite de Membership por `UserContactChangePort`, sem reescrever a solicitação
 histórica. Não envia um novo convite automaticamente: o administrador usa o fluxo
 de reenvio do proprietário. CPF continua apenas em Identity e o login consulta o
@@ -113,7 +113,9 @@ lock automático, tentativas e status administrativo são preservados.
 
 A política ROOT permite CPF/e-mail somente quando o ator é o próprio alvo, já
 portador de `IDENTITY_USER_UPDATE`; outro administrador recebe 409. Os demais
-campos podem ser corrigidos por um administrador autorizado. Usuários DISABLED
+campos podem ser corrigidos por um administrador autorizado. O bootstrap dev
+preserva o titular ROOT pelo vínculo com ID estável, sem promover quem ocupe seu
+CPF anterior. Usuários DISABLED
 podem ser editados sem reativação. BACK-512/BACK-514 estão pendentes: não se antecipa
 ACTIVE/INACTIVE/ARCHIVED nesta feature; quando integradas, devem continuar isoladas
 da edição cadastral.

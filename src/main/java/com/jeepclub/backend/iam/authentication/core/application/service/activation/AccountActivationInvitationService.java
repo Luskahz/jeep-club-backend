@@ -120,7 +120,8 @@ public class AccountActivationInvitationService {
     private void requireValid(AccountActivationInvitation invitation) {
         AuthenticationAccount account = accounts.findByIdentityId(invitation.identityId())
                 .orElseThrow(() -> new ActivationInvitationException(false));
-        if (invitation.usedAt() != null || !Instant.now(clock).isBefore(invitation.expiresAt())
+        if (invitation.usedAt() != null || "INVALIDATED".equals(invitation.deliveryStatus())
+                || !Instant.now(clock).isBefore(invitation.expiresAt())
                 || !account.isPendingFirstAccess() || account.isBlockedForLogin()
                 || !users.isAdministrativelyActive(invitation.identityId())
                 || membershipIdentityOwnership.ownsIdentity(invitation.identityId())) {

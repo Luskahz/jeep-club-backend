@@ -21,6 +21,12 @@ public class PasswordRecoveryRequestRepositoryAdapter
     private final PasswordRecoveryRequestJpaRepository jpaRepository;
 
     @Override
+    public List<PasswordRecoveryRequest> findOpenEmailTokensByUserIdForUpdate(Long userId) {
+        return jpaRepository.findOpenEmailTokensByUserIdForUpdate(userId).stream()
+                .map(PasswordRecoveryRequestMapper::toDomain).toList();
+    }
+
+    @Override
     public PasswordRecoveryRequest save(
             PasswordRecoveryRequest request
     ) {

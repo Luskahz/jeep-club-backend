@@ -1,6 +1,5 @@
 package com.jeepclub.backend.iam.authentication.infra.integration.identity;
 
-import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod;
 import com.jeepclub.backend.iam.authentication.core.repository.AccountActivationInvitationRepository;
 import com.jeepclub.backend.iam.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.iam.authentication.core.application.service.internal.CredentialRevocationService;
@@ -33,9 +32,8 @@ public class UserAuthenticationAdministrationAdapter
                 invitation.invalidate(now);
                 invitations.save(invitation);
             });
-            recoveries.findOpenByUserIdAndMethodForUpdate(identityId,
-                    PasswordRecoveryRequestMethod.EMAIL_TOKEN, now)
-                    .ifPresent(request -> { request.cancel(now); recoveries.save(request); });
+            recoveries.findOpenEmailTokensByUserIdForUpdate(identityId)
+                    .forEach(request -> { request.cancel(now); recoveries.save(request); });
         }
     }
 

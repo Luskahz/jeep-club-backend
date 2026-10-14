@@ -43,12 +43,18 @@ class AdminUserUpdateTransactionTest {
     @Autowired AdminUserService admin;
     @Autowired SessionService sessions;
     @Autowired com.jeepclub.backend.iam.authentication.core.application.service.refreshtoken.RefreshTokenService refresh;
-    @Autowired Clock clock;
+    @MockitoSpyBean Clock clock;
     @Autowired JsonMapper json;
     @Autowired Validator validator;
     @Autowired AuthenticationAccountRepository accounts;
     @Autowired AccountActivationInvitationService invitations;
     @Autowired AccountActivationCurrentDelivery delivery;
+    @Autowired com.jeepclub.backend.iam.authentication.core.repository.PasswordRecoveryRequestRepository recoveries;
+    @Autowired com.jeepclub.backend.iam.authentication.core.port.RefreshTokenHashService tokenHashes;
+    @Autowired com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.PasswordRecoveryService passwordRecovery;
+    @Autowired com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenService memberActivations;
+    @Autowired com.jeepclub.backend.memberships.core.port.MemberActivationTokenHashPort memberHashes;
+    @MockitoSpyBean com.jeepclub.backend.memberships.core.port.CompletePendingFirstAccessPort firstAccess;
     @Autowired SystemLogJpaRepository logs;
     @Autowired com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository applications;
     @Autowired com.jeepclub.backend.memberships.core.repository.MemberActivationTokenRepository memberTokens;
@@ -58,7 +64,7 @@ class AdminUserUpdateTransactionTest {
     @MockitoBean AccountActivationMailSender mail;
     private static final AtomicInteger SEQUENCE = new AtomicInteger(2000);
 
-    @AfterEach void cleanup() { reset(audit, repository, authentication, mail); }
+    @AfterEach void cleanup() { reset(audit, repository, authentication, mail, clock, firstAccess); }
     UserRegistrationData data() {
         String cpf = cpf(SEQUENCE.incrementAndGet());
         return new UserRegistrationData("Original", null, "u" + cpf + "@example.com", cpf, null, null, null, clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
@@ -236,6 +242,61 @@ class AdminUserUpdateTransactionTest {
         assertThat(after.getCpf()).isEqualTo(original.getCpf());
         assertThat(after.getCreatedUserId()).isEqualTo(id);
         assertThat(after.getStatus()).isEqualTo(original.getStatus());
+    }
+
+    @Test void emailCorrectionMustCancelEveryOpenEmailRecoveryToken() throws Exception {
+        var data=data(); Long id=registration.createWithPermanentCredential(data,"password-123");
+        var now=clock.instant();
+        var first=com.jeepclub.backend.iam.authentication.core.domain.model.PasswordRecoveryRequest.createOpenRequest(id,now.minusSeconds(10),now.plusSeconds(3600));
+        first.changeToEmailTokenMethod(tokenHashes.hash("first-old-token"),now);
+        recoveries.save(first);
+        var second=com.jeepclub.backend.iam.authentication.core.domain.model.PasswordRecoveryRequest.createOpenRequest(id,now.minusSeconds(5),now.plusSeconds(3600));
+        second.changeToEmailTokenMethod(tokenHashes.hash("second-old-token"),now);
+        recoveries.save(second);
+        update(id,"{\"email\":\"all-links-corrected@example.com\"}");
+        assertThat(recoveries.findByUserId(id)).hasSize(2).allSatisfy(request -> {
+            assertThat(request.getStatus()).isEqualTo(com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus.CANCELLED);
+            assertThat(request.getCancelledAt()).isNotNull();
+        });
+        for(String oldToken:java.util.List.of("first-old-token","second-old-token")) {
+            assertThatThrownBy(() -> passwordRecovery.resetPasswordByToken(oldToken,"new-password"))
+                    .isInstanceOf(com.jeepclub.backend.iam.authentication.core.application.exceptions.tokenhash.TokenInvalidException.class);
+        }
+    }
+
+    @Test void membershipExpiryAfterAuthenticationRollsBackCredentialChange() {
+        var now=clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        java.util.concurrent.atomic.AtomicReference<Instant> current=new java.util.concurrent.atomic.AtomicReference<>(now);
+        doAnswer(call -> current.get()).when(clock).instant();
+        var data=data(); Long id=registration.createPendingFirstAccess(data,"temporary-password");
+        var before=accounts.findByIdentityId(id).orElseThrow();
+        var application=com.jeepclub.backend.memberships.core.domain.model.MembershipApplication.create(data.name(),data.cpf(),data.email(),"11999999999",null,now);
+        application.approve(999L,id,now);
+        var saved=applications.save(application);
+        String raw="member-expiring-token";
+        memberTokens.save(com.jeepclub.backend.memberships.core.domain.model.MemberActivationToken.create(saved.getId(),memberHashes.hash(raw),java.time.Duration.ofSeconds(60),now));
+        doAnswer(call -> {
+            call.callRealMethod();
+            current.set(now.plusSeconds(120));
+            return null;
+        }).when(firstAccess).complete(eq(id),eq("new-password"));
+        assertThatThrownBy(() -> memberActivations.complete(raw,"new-password"))
+                .isInstanceOf(com.jeepclub.backend.memberships.core.application.exception.MemberActivationTokenExpiredException.class);
+        var after=accounts.findByIdentityId(id).orElseThrow();
+        assertThat(after.getPasswordHash()).isEqualTo(before.getPasswordHash());
+        assertThat(after.getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        assertThat(memberTokens.findLatestByApplicationId(saved.getId()).orElseThrow().getUsedAt()).isNull();
+        assertThat(applications.findById(saved.getId()).orElseThrow().getStatus())
+                .isEqualTo(com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus.APPROVED);
+    }
+
+    @Test void missingAuthenticationAccountRollsBackTheActualServiceTransaction() throws Exception {
+        var data=data();
+        var orphan=repository.create(com.jeepclub.backend.iam.identity.core.domain.model.User.create(data.name(),data.birthDate(),data.email(),data.cpf(),data.rg(),data.phoneNumber(),null,data.now()));
+        var before=users.findById(orphan.getId()).orElseThrow();
+        assertThatThrownBy(() -> update(orphan.getId(),"{\"email\":\"orphan-corrected@example.com\"}"))
+                .isInstanceOf(com.jeepclub.backend.iam.identity.api.module.exception.UserIdentityChangeConflictException.class);
+        assertThat(users.findById(orphan.getId()).orElseThrow()).isEqualTo(before);
     }
 
 }
