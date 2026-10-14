@@ -54,6 +54,15 @@ public class MemberActivationTokenService {
     public void complete(String rawToken, String newPassword) {
         Instant now = Instant.now(clock);
         String tokenHash = tokenHashPort.hash(rawToken);
+        // Resolve without locking the token, then establish the global Identity -> token/account order.
+        Long applicationId = memberActivationTokenRepository.findApplicationIdByTokenHash(tokenHash)
+                .orElseThrow(MemberActivationTokenNotFoundException::new);
+        MembershipApplication candidateApplication = requireApprovedApplication(applicationId);
+        if (candidateApplication.getCreatedUserId() == null) {
+            throw new MembershipFirstAccessConflictException("Approved membership application has no created User.");
+        }
+        activationRecipientPort.findByIdentityId(candidateApplication.getCreatedUserId())
+                .orElseThrow(() -> new MembershipFirstAccessConflictException("Created Identity User was not found."));
         MemberActivationToken token = memberActivationTokenRepository
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(MemberActivationTokenNotFoundException::new);

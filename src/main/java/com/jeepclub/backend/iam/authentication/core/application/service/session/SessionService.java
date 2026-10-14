@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.authentication.core.application.service.session;
 
+import com.jeepclub.backend.iam.identity.api.module.UserIdentityLock;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.PasswordChangeNotRequiredException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.PasswordChangeChallengeInvalidException;
@@ -53,13 +54,14 @@ public class SessionService {
     private final PasswordChangeChallengeIssuer challengeIssuer;
     private final TokenIssuanceService tokenIssuanceService;
     private final UserQuery userQuery;
+    private final UserIdentityLock identityLock;
     private final MembershipOnboardingCompletion membershipOnboardingCompletion;
     private final Clock clock;
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResult login(String cpf, String password) {
         Instant now = Instant.now(clock);
-        var identity = userQuery.findByCpf(cpf)
+        var identity = identityLock.byCpf(cpf)
                 .orElseThrow(InvalidCredentialsException::new);
         AuthenticationAccount account = accountRepository
                 .findByIdentityIdForUpdate(identity.id())
@@ -91,6 +93,7 @@ public class SessionService {
         String tokenHash = tokenHashService.hash(rawToken);
         Long userId = challengeRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(this::invalidChallenge);
+        identityLock.byId(userId).orElseThrow(this::invalidChallenge);
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account not found."));
         PasswordChangeChallenge challenge = challengeRepository

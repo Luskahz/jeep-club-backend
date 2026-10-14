@@ -111,6 +111,8 @@ class MemberActivationTokenServiceTest {
         MemberActivationToken token = validToken();
         MembershipApplication application = approvedApplication();
         when(hashPort.hash("raw")).thenReturn("hash");
+        when(tokenRepository.findApplicationIdByTokenHash("hash")).thenReturn(Optional.of(1L));
+        when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
         when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
 
@@ -129,6 +131,8 @@ class MemberActivationTokenServiceTest {
         MemberActivationToken token = validToken();
         MembershipApplication application = approvedApplication();
         when(hashPort.hash("raw")).thenReturn("hash");
+        when(tokenRepository.findApplicationIdByTokenHash("hash")).thenReturn(Optional.of(1L));
+        when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
         when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         doThrow(new IllegalStateException("authentication failed"))

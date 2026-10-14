@@ -156,6 +156,34 @@ public class User {
         return status == UserStatus.ACTIVE;
     }
 
+    /** All values are validated before mutation. Stable identity and lifecycle are preserved. */
+    public void updateAdministratively(String name, LocalDate birthDate, String email, String cpf,
+                                       String rg, String phone, String photo, Instant now) {
+        validateMutationInstant(now);
+        String normalizedCpf = Objects.equals(cpf, this.cpf) ? this.cpf : validateAdministrativeCpf(cpf);
+        String normalizedEmail = normalizeEmail(email);
+        // updateProfile validates every remaining value before changing the aggregate.
+        updateProfile(name, birthDate, rg, phone, photo, now);
+        this.cpf = normalizedCpf;
+        this.email = normalizedEmail;
+    }
+
+    public static String validateAdministrativeCpf(String raw) {
+        if (raw == null || !raw.matches("(\\d{11}|\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2})")) {
+            throw new IllegalArgumentException("Invalid CPF format.");
+        }
+        String cpf = normalizeCpf(raw);
+        if (cpf.chars().distinct().count() == 1) throw new IllegalArgumentException("Invalid CPF.");
+        for (int digit = 9; digit <= 10; digit++) {
+            int sum = 0;
+            for (int i = 0; i < digit; i++) sum += (cpf.charAt(i) - '0') * (digit + 1 - i);
+            int expected = 11 - sum % 11;
+            if (expected >= 10) expected = 0;
+            if (cpf.charAt(digit) - '0' != expected) throw new IllegalArgumentException("Invalid CPF.");
+        }
+        return cpf;
+    }
+
     public boolean isDisabled() {
         return status == UserStatus.DISABLED;
     }

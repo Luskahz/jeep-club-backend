@@ -10,4 +10,7 @@ public interface UserAuthenticationAdministrationPort {
     void disableAuthentication(Long identityId, Instant now);
 
     void enableAuthentication(Long identityId, Instant now);
+
+    /** Called after Identity has locked and flushed new contact data, in the same transaction. */
+    void identityChanged(Long identityId, boolean cpfChanged, boolean emailChanged, Instant now);
 }
