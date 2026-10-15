@@ -251,7 +251,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <skipTests>${skipUnitTests}</skipTests>
                     <argLine>@{surefireArgLine} -javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar</argLine>
                 </configuration>
             </plugin>
@@ -345,6 +344,10 @@
         <profile>
             <id>mysql-migrations</id>
             <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration><skipTests>${skipUnitTests}</skipTests></configuration>
+            </plugin><plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration><argLine>@{surefireArgLine}</argLine></configuration>

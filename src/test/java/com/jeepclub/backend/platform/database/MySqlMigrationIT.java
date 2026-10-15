@@ -73,6 +73,8 @@ class MySqlMigrationIT {
             s.execute("alter table identity_user_profiles drop column street");
         }
         assertThatThrownBy(() -> validateJpa(db)).hasStackTraceContaining("missing column [street]");
+        springContext(db).run(context -> assertThat(context).hasFailed().getFailure()
+                .hasStackTraceContaining("missing column [street]"));
     }
 
     @Test void flywayRejectsAlteredChecksumAndCleanIsDisabled() throws Exception {
@@ -83,6 +85,15 @@ class MySqlMigrationIT {
         assertThatThrownBy(flyway::validate).isInstanceOf(FlywayException.class);
         assertThatThrownBy(flyway::clean).isInstanceOf(FlywayException.class);
         assertThat(count(db, "identity_users")).isZero();
+    }
+
+    @Test void refusesSchemaHistoryFromANewerApplicationVersion() throws Exception {
+        String db = database(); var flyway = flyway(db, "3"); flyway.migrate();
+        try (var c = connection(db); var s = c.createStatement()) {
+            s.executeUpdate("insert into flyway_schema_history(installed_rank,version,description,type,script,checksum,installed_by,execution_time,success) "
+                    + "values(4,'4','Future fixture','SQL','V4__future_fixture.sql',123,'fixture',0,1)");
+        }
+        assertThatThrownBy(flyway::validate).isInstanceOf(FlywayException.class);
     }
 
     @Test void databaseEnforcesUniqueNotNullAndForeignKeyConstraints() throws Exception {
@@ -141,7 +152,7 @@ class MySqlMigrationIT {
     private static Flyway flyway(String db, String target) {
         return Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
                 .locations("classpath:db/migration").target(target).baselineOnMigrate(false)
-                .cleanDisabled(true).validateOnMigrate(true).validateMigrationNaming(true).outOfOrder(false).load();
+                .cleanDisabled(true).ignoreMigrationPatterns(new String[0]).validateOnMigrate(true).validateMigrationNaming(true).outOfOrder(false).load();
     }
     private static String database() throws Exception {
         String name = "migration_" + UUID.randomUUID().toString().replace("-", "");
@@ -160,7 +171,7 @@ class MySqlMigrationIT {
     private static void jpa(String name, int version, String action) throws Exception {
         var registry = SchemaMappings.registry(Map.of(
                 "hibernate.connection.url", url(name), "hibernate.connection.username", MYSQL.getUsername(),
-                "hibernate.connection.password", MYSQL.getPassword(), "hibernate.hbm2ddl.auto", action));
+                "hibernate.connection.password", MYSQL.getPassword(), "hibernate.default_catalog", name, "hibernate.hbm2ddl.auto", action));
         try (var ignored = SchemaMappings.metadata(registry, version).buildSessionFactory()) {
             // Building the factory performs the requested validation/isolated historical fixture creation.
         } finally { StandardServiceRegistryBuilder.destroy(registry); }
@@ -181,10 +192,11 @@ class MySqlMigrationIT {
         String[] queries = {
                 "select TABLE_NAME,ENGINE,TABLE_COLLATION from information_schema.TABLES where TABLE_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME",
                 "select TABLE_NAME,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COLUMN_DEFAULT,EXTRA,COLLATION_NAME,GENERATION_EXPRESSION from information_schema.COLUMNS where TABLE_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,COLUMN_NAME",
-                "select TABLE_NAME,INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,SUB_PART,INDEX_TYPE from information_schema.STATISTICS where TABLE_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX",
-                "select TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE from information_schema.TABLE_CONSTRAINTS where CONSTRAINT_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,CONSTRAINT_NAME",
-                "select TABLE_NAME,CONSTRAINT_NAME,COLUMN_NAME,ORDINAL_POSITION,REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,CONSTRAINT_NAME,ORDINAL_POSITION",
-                "select TABLE_NAME,CONSTRAINT_NAME,UNIQUE_CONSTRAINT_NAME,MATCH_OPTION,UPDATE_RULE,DELETE_RULE from information_schema.REFERENTIAL_CONSTRAINTS where CONSTRAINT_SCHEMA=? order by TABLE_NAME,CONSTRAINT_NAME"
+                "select TABLE_NAME,INDEX_NAME,NON_UNIQUE,SEQ_IN_INDEX,COLUMN_NAME,SUB_PART,INDEX_TYPE,EXPRESSION from information_schema.STATISTICS where TABLE_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX",
+                "select TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE,ENFORCED from information_schema.TABLE_CONSTRAINTS where CONSTRAINT_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,CONSTRAINT_NAME",
+                "select TABLE_NAME,CONSTRAINT_NAME,COLUMN_NAME,ORDINAL_POSITION,IF(REFERENCED_TABLE_SCHEMA=DATABASE(),'<current>',REFERENCED_TABLE_SCHEMA),REFERENCED_TABLE_NAME,REFERENCED_COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_SCHEMA=? and TABLE_NAME<>'flyway_schema_history' order by TABLE_NAME,CONSTRAINT_NAME,ORDINAL_POSITION",
+                "select TABLE_NAME,CONSTRAINT_NAME,UNIQUE_CONSTRAINT_NAME,MATCH_OPTION,UPDATE_RULE,DELETE_RULE from information_schema.REFERENTIAL_CONSTRAINTS where CONSTRAINT_SCHEMA=? order by TABLE_NAME,CONSTRAINT_NAME",
+                "select CONSTRAINT_NAME,CHECK_CLAUSE from information_schema.CHECK_CONSTRAINTS where CONSTRAINT_SCHEMA=? order by CONSTRAINT_NAME"
         };
         try (var c = connection(name)) {
             for (int i=0;i<queries.length;i++) {

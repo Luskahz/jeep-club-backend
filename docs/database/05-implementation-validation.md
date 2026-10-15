@@ -1,6 +1,6 @@
 # Relatório 5 — Implementação e validação
 
-Branch: `codex/flyway-schema-baseline`, criada de develop `9d3fba3`, sem alterar master/develop nem reescrever #98/#99. PR para develop será associado a esta auditoria; CI e SHA final registrados em validation.json. Integração não é automática.
+Branch: `codex/flyway-schema-baseline`, criada de develop `9d3fba3`, sem alterar master/develop nem reescrever #98/#99. PR para develop: [#101](https://github.com/Luskahz/jeep-club-backend/pull/101); CI e SHA final registrados em validation.json. Integração não é automática.
 
 Arquivos principais: pom.xml (starter/module/testcontainers/perfil Failsafe), application.properties (política segura), compose.yaml (validate/Flyway), SchemaSafetyConfiguration, três SQL em db/migration, SchemaMappings/SchemaMappingExportTest/SchemaSafetyConfigurationTest/MySqlMigrationIT, workflow com gate MySQL, scripts de coleta/comparação e vps-deploy.sh com interrupção segura de falha. Sem alteração de entidades de negócio, nomes de volumes ou credenciais.
 
