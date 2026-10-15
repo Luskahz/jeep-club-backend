@@ -1,0 +1,20 @@
+{
+  "status": "CI_PENDING",
+  "references": {
+    "initial_reference": "e4aa00e4a492900b26cec78839dcfae480712b0b",
+    "master": "6865bc4f600462c5fcc6cf1212c9660591eff4db",
+    "develop": "9d3fba331fba5a9284c85a0e5ab718efb58f93b5"
+  },
+  "local_schema_tests": {
+    "tests": 14,
+    "failures": 0,
+    "errors": 0
+  },
+  "vps": {
+    "ssh": "two timeouts before authentication",
+    "read_only_queries_executed": false,
+    "database_changed": false,
+    "baseline_executed": false
+  },
+  "release_100": "BLOCKED_PENDING_VPS_EVIDENCE_AND_FLYWAY_INTEGRATION"
+}

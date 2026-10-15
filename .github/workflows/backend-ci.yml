@@ -51,9 +51,32 @@ jobs:
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
+  mysql-migrations:
+    name: MySQL migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - run: chmod +x mvnw
+      - name: Validate empty and historical MySQL schemas
+        run: ./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify
+      - name: Preserve migration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql-migration-evidence
+          path: |
+            target/failsafe-reports
+            target/audit-evidence
+
   deploy:
     name: Deploy to VPS
-    needs: verify
+    needs: [verify, mysql-migrations]
     if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 20

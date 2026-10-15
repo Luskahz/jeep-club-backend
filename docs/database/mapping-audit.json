@@ -1,0 +1,1041 @@
+{
+  "refs": {
+    "initial_reference": "e4aa00e4a492900b26cec78839dcfae480712b0b",
+    "master": "6865bc4f600462c5fcc6cf1212c9660591eff4db",
+    "develop": "9d3fba331fba5a9284c85a0e5ab718efb58f93b5"
+  },
+  "mappings": [
+    {
+      "entity": "ChargeCycleEntity",
+      "table": "billing_charge_cycles",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/ChargeCycleEntity.java",
+      "initial_reference_blob": "23b1ed6a40a27ae8dda13e4519e280268c35f889",
+      "master_blob": "23b1ed6a40a27ae8dda13e4519e280268c35f889",
+      "develop_blob": "23b1ed6a40a27ae8dda13e4519e280268c35f889"
+    },
+    {
+      "entity": "ChargeDefinitionEntity",
+      "table": "billing_charge_definitions",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/ChargeDefinitionEntity.java",
+      "initial_reference_blob": "ac4303e3900c6074e48d96f485d1fe74226dda05",
+      "master_blob": "ac4303e3900c6074e48d96f485d1fe74226dda05",
+      "develop_blob": "ac4303e3900c6074e48d96f485d1fe74226dda05"
+    },
+    {
+      "entity": "EventChargeContextEntity",
+      "table": "billing_event_charge_contexts",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/EventChargeContextEntity.java",
+      "initial_reference_blob": "91fddc2289d06754518264d2a8c2aef3aa9a5516",
+      "master_blob": "91fddc2289d06754518264d2a8c2aef3aa9a5516",
+      "develop_blob": "91fddc2289d06754518264d2a8c2aef3aa9a5516"
+    },
+    {
+      "entity": "MemberChargeEntity",
+      "table": "billing_member_charges",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/MemberChargeEntity.java",
+      "initial_reference_blob": "92a03e5c229e25c96f468e7090c444a24c75db02",
+      "master_blob": "92a03e5c229e25c96f468e7090c444a24c75db02",
+      "develop_blob": "92a03e5c229e25c96f468e7090c444a24c75db02"
+    },
+    {
+      "entity": "MemberPaymentEntity",
+      "table": "billing_member_payments",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/MemberPaymentEntity.java",
+      "initial_reference_blob": "c8487235bd8152676de67adc819b86bb70ccdd84",
+      "master_blob": "c8487235bd8152676de67adc819b86bb70ccdd84",
+      "develop_blob": "c8487235bd8152676de67adc819b86bb70ccdd84"
+    },
+    {
+      "entity": "MemberRefundEntity",
+      "table": "billing_member_refunds",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/MemberRefundEntity.java",
+      "initial_reference_blob": "5dc517a1d660c4f3dad85de29b985452d4f59e4b",
+      "master_blob": "5dc517a1d660c4f3dad85de29b985452d4f59e4b",
+      "develop_blob": "5dc517a1d660c4f3dad85de29b985452d4f59e4b"
+    },
+    {
+      "entity": "AllMembersChargeAssignmentEntity",
+      "table": "billing_all_members_charge_assignments",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/AllMembersChargeAssignmentEntity.java",
+      "initial_reference_blob": "31b7d6eba7a250caacde37bcce1fb4e7018223ba",
+      "master_blob": "31b7d6eba7a250caacde37bcce1fb4e7018223ba",
+      "develop_blob": "31b7d6eba7a250caacde37bcce1fb4e7018223ba"
+    },
+    {
+      "entity": "ChargeAssignmentEntity",
+      "table": "billing_charge_assignments",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/ChargeAssignmentEntity.java",
+      "initial_reference_blob": "47fbbdfaa0719f72a7456c1a2ca227bae6f57f98",
+      "master_blob": "47fbbdfaa0719f72a7456c1a2ca227bae6f57f98",
+      "develop_blob": "47fbbdfaa0719f72a7456c1a2ca227bae6f57f98"
+    },
+    {
+      "entity": "EventParticipantsChargeAssignmentEntity",
+      "table": "billing_event_participants_charge_assignments",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/EventParticipantsChargeAssignmentEntity.java",
+      "initial_reference_blob": "7c46c88145b3b55286644dbabcc3891a8c968a10",
+      "master_blob": "7c46c88145b3b55286644dbabcc3891a8c968a10",
+      "develop_blob": "7c46c88145b3b55286644dbabcc3891a8c968a10"
+    },
+    {
+      "entity": "RoleChargeAssignmentEntity",
+      "table": "billing_role_charge_assignments",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/RoleChargeAssignmentEntity.java",
+      "initial_reference_blob": "2c49cf0bca8b931b65b2af34a226dcf8ea9822fd",
+      "master_blob": "2c49cf0bca8b931b65b2af34a226dcf8ea9822fd",
+      "develop_blob": "2c49cf0bca8b931b65b2af34a226dcf8ea9822fd"
+    },
+    {
+      "entity": "UserChargeAssignmentEntity",
+      "table": "billing_user_charge_assignments",
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/UserChargeAssignmentEntity.java",
+      "initial_reference_blob": "1eab7e398f0f2003c645e2500e6ca47e73899074",
+      "master_blob": "1eab7e398f0f2003c645e2500e6ca47e73899074",
+      "develop_blob": "1eab7e398f0f2003c645e2500e6ca47e73899074"
+    },
+    {
+      "entity": "DependentEntity",
+      "table": "dependents_dependent",
+      "path": "src/main/java/com/jeepclub/backend/dependents/infra/persistence/entity/DependentEntity.java",
+      "initial_reference_blob": "e8463572b45c09bfea7e5bf922f0ddd6d12acab5",
+      "master_blob": "e8463572b45c09bfea7e5bf922f0ddd6d12acab5",
+      "develop_blob": "e8463572b45c09bfea7e5bf922f0ddd6d12acab5"
+    },
+    {
+      "entity": "DependentHistoryEntity",
+      "table": "dependents_dependent_history",
+      "path": "src/main/java/com/jeepclub/backend/dependents/infra/persistence/entity/DependentHistoryEntity.java",
+      "initial_reference_blob": "1b17939ee642ab1ee96222cd4f2156d1a2708d2c",
+      "master_blob": "1b17939ee642ab1ee96222cd4f2156d1a2708d2c",
+      "develop_blob": "1b17939ee642ab1ee96222cd4f2156d1a2708d2c"
+    },
+    {
+      "entity": "MedicalProfileEntity",
+      "table": "medical_profiles",
+      "path": "src/main/java/com/jeepclub/backend/health/infra/persistence/entity/MedicalProfileEntity.java",
+      "initial_reference_blob": "19fcb1815e400bfd52c26b7ddf4e8d439408ab0d",
+      "master_blob": "19fcb1815e400bfd52c26b7ddf4e8d439408ab0d",
+      "develop_blob": "19fcb1815e400bfd52c26b7ddf4e8d439408ab0d"
+    },
+    {
+      "entity": "MedicalProfileHistoryEntity",
+      "table": "medical_profiles_history",
+      "path": "src/main/java/com/jeepclub/backend/health/infra/persistence/entity/MedicalProfileHistoryEntity.java",
+      "initial_reference_blob": "04024e37f00ef6ee6d7ee1d85ca57336e70c7303",
+      "master_blob": "04024e37f00ef6ee6d7ee1d85ca57336e70c7303",
+      "develop_blob": "04024e37f00ef6ee6d7ee1d85ca57336e70c7303"
+    },
+    {
+      "entity": "AccountActivationInvitationEntity",
+      "table": "authentication_account_activation_invitations",
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/AccountActivationInvitationEntity.java",
+      "initial_reference_blob": null,
+      "master_blob": "336550da277dac4f5f647513763fc81063f30402",
+      "develop_blob": "336550da277dac4f5f647513763fc81063f30402"
+    },
+    {
+      "entity": "AuthenticationAccountEntity",
+      "table": "authentication_accounts",
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/AuthenticationAccountEntity.java",
+      "initial_reference_blob": "a60559d525136d7d0092ccad875d5cad48b498c2",
+      "master_blob": "a60559d525136d7d0092ccad875d5cad48b498c2",
+      "develop_blob": "a60559d525136d7d0092ccad875d5cad48b498c2"
+    },
+    {
+      "entity": "PasswordChangeChallengeEntity",
+      "table": "authentication_password_change_challenges",
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/PasswordChangeChallengeEntity.java",
+      "initial_reference_blob": "e7e96f4758b10e58f6e42337a785336593abf8b3",
+      "master_blob": "e7e96f4758b10e58f6e42337a785336593abf8b3",
+      "develop_blob": "e7e96f4758b10e58f6e42337a785336593abf8b3"
+    },
+    {
+      "entity": "PasswordRecoveryRequestEntity",
+      "table": "authentication_password_recovery_requests",
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/PasswordRecoveryRequestEntity.java",
+      "initial_reference_blob": "f6f2ae792341c8ffdf1f63b752934f23f5f8e97e",
+      "master_blob": "f6f2ae792341c8ffdf1f63b752934f23f5f8e97e",
+      "develop_blob": "f6f2ae792341c8ffdf1f63b752934f23f5f8e97e"
+    },
+    {
+      "entity": "RefreshTokenEntity",
+      "table": "authentication_refresh_tokens",
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/RefreshTokenEntity.java",
+      "initial_reference_blob": "8905792e05be838af5188da14755973d2a0a9be6",
+      "master_blob": "8905792e05be838af5188da14755973d2a0a9be6",
+      "develop_blob": "8905792e05be838af5188da14755973d2a0a9be6"
+    },
+    {
+      "entity": "SessionEntity",
+      "table": "authentication_sessions",
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/SessionEntity.java",
+      "initial_reference_blob": "356571fcce1aec901b49ece0cadebdf544e2782a",
+      "master_blob": "356571fcce1aec901b49ece0cadebdf544e2782a",
+      "develop_blob": "356571fcce1aec901b49ece0cadebdf544e2782a"
+    },
+    {
+      "entity": "PermissionEntity",
+      "table": "authorization_permissions",
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/PermissionEntity.java",
+      "initial_reference_blob": "d63d0a12d525085cbbf8ec5801bf60ce8788ee59",
+      "master_blob": "d63d0a12d525085cbbf8ec5801bf60ce8788ee59",
+      "develop_blob": "d63d0a12d525085cbbf8ec5801bf60ce8788ee59"
+    },
+    {
+      "entity": "RoleEntity",
+      "table": "authorization_roles",
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/RoleEntity.java",
+      "initial_reference_blob": "fc4919be80e51c2b4c678b815d14d2e7a76cf55c",
+      "master_blob": "fc4919be80e51c2b4c678b815d14d2e7a76cf55c",
+      "develop_blob": "fc4919be80e51c2b4c678b815d14d2e7a76cf55c"
+    },
+    {
+      "entity": "RolePermissionEntity",
+      "table": "authorization_role_permissions",
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/RolePermissionEntity.java",
+      "initial_reference_blob": "81a5c43d4a7cb4f6c7890c90c06ddd9a5e9298c4",
+      "master_blob": "81a5c43d4a7cb4f6c7890c90c06ddd9a5e9298c4",
+      "develop_blob": "81a5c43d4a7cb4f6c7890c90c06ddd9a5e9298c4"
+    },
+    {
+      "entity": "UserRoleEntity",
+      "table": "authorization_user_roles",
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/UserRoleEntity.java",
+      "initial_reference_blob": "748f6199c972d194ef784760ad70d6c41ce08320",
+      "master_blob": "748f6199c972d194ef784760ad70d6c41ce08320",
+      "develop_blob": "748f6199c972d194ef784760ad70d6c41ce08320"
+    },
+    {
+      "entity": "UserEntity",
+      "table": "identity_users",
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/entity/UserEntity.java",
+      "initial_reference_blob": "06fae27cf631207c4624d756d0658bc4e3a19f20",
+      "master_blob": "06fae27cf631207c4624d756d0658bc4e3a19f20",
+      "develop_blob": "06fae27cf631207c4624d756d0658bc4e3a19f20"
+    },
+    {
+      "entity": "UserProfileEntity",
+      "table": "identity_user_profiles",
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/entity/UserProfileEntity.java",
+      "initial_reference_blob": null,
+      "master_blob": "57f450f803c5fcbd611b5f0168cbce7e6cfa6ee7",
+      "develop_blob": "57f450f803c5fcbd611b5f0168cbce7e6cfa6ee7"
+    },
+    {
+      "entity": "MemberActivationTokenEntity",
+      "table": "membership_activation_tokens",
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MemberActivationTokenEntity.java",
+      "initial_reference_blob": "59f4714beeee27c95462c98ee26e66b7baf6bd52",
+      "master_blob": "59f4714beeee27c95462c98ee26e66b7baf6bd52",
+      "develop_blob": "59f4714beeee27c95462c98ee26e66b7baf6bd52"
+    },
+    {
+      "entity": "MembershipApplicantBlockEntity",
+      "table": "membership_applicant_blocks",
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MembershipApplicantBlockEntity.java",
+      "initial_reference_blob": "3df25fdd47a54c55ac8f5e391436e5b09b8bf60b",
+      "master_blob": "3df25fdd47a54c55ac8f5e391436e5b09b8bf60b",
+      "develop_blob": "3df25fdd47a54c55ac8f5e391436e5b09b8bf60b"
+    },
+    {
+      "entity": "MembershipApplicationEntity",
+      "table": "membership_applications",
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MembershipApplicationEntity.java",
+      "initial_reference_blob": "8bb408ef6ea1b5ccb20f9f768b0932f958ff7a53",
+      "master_blob": "8bb408ef6ea1b5ccb20f9f768b0932f958ff7a53",
+      "develop_blob": "8bb408ef6ea1b5ccb20f9f768b0932f958ff7a53"
+    },
+    {
+      "entity": "MembershipBillingConfigurationEntity",
+      "table": "membership_billing_configurations",
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MembershipBillingConfigurationEntity.java",
+      "initial_reference_blob": "ccca0e7156b30282036be38f81a0f03a12a3562d",
+      "master_blob": "ccca0e7156b30282036be38f81a0f03a12a3562d",
+      "develop_blob": "ccca0e7156b30282036be38f81a0f03a12a3562d"
+    },
+    {
+      "entity": "SystemLogEntity",
+      "table": "platform_logs",
+      "path": "src/main/java/com/jeepclub/backend/platform/logging/SystemLogEntity.java",
+      "initial_reference_blob": "f14810f9309faf1ac8c0a2ad66bb353165ab8611",
+      "master_blob": "f14810f9309faf1ac8c0a2ad66bb353165ab8611",
+      "develop_blob": "f14810f9309faf1ac8c0a2ad66bb353165ab8611"
+    },
+    {
+      "entity": "EventChargeRuleEntity",
+      "table": "event_charge_rules",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventChargeRuleEntity.java",
+      "initial_reference_blob": "bb3b54790e576d449fcf25c901c16ecf95ceacae",
+      "master_blob": "bb3b54790e576d449fcf25c901c16ecf95ceacae",
+      "develop_blob": "bb3b54790e576d449fcf25c901c16ecf95ceacae"
+    },
+    {
+      "entity": "EventEntity",
+      "table": "publication_events",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventEntity.java",
+      "initial_reference_blob": "cbab0188839cb97f1e5f6e56255401e3c965fef4",
+      "master_blob": "cbab0188839cb97f1e5f6e56255401e3c965fef4",
+      "develop_blob": "cbab0188839cb97f1e5f6e56255401e3c965fef4"
+    },
+    {
+      "entity": "EventGuestRequestEntity",
+      "table": "event_guest_requests",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventGuestRequestEntity.java",
+      "initial_reference_blob": "4f26f4a39512c408c6fbbf3f296108c0e33a78d0",
+      "master_blob": "4f26f4a39512c408c6fbbf3f296108c0e33a78d0",
+      "develop_blob": "4f26f4a39512c408c6fbbf3f296108c0e33a78d0"
+    },
+    {
+      "entity": "EventHistoryEntity",
+      "table": "publication_event_history",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventHistoryEntity.java",
+      "initial_reference_blob": "8b035da2e99aa7791df855cb7da9e3878467b44e",
+      "master_blob": "8b035da2e99aa7791df855cb7da9e3878467b44e",
+      "develop_blob": "8b035da2e99aa7791df855cb7da9e3878467b44e"
+    },
+    {
+      "entity": "EventOccupantEmbeddable",
+      "table": "(inheritance/embeddable)",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventOccupantEmbeddable.java",
+      "initial_reference_blob": "78ab25da740669335521e30dc6b32bc6314ff80c",
+      "master_blob": "78ab25da740669335521e30dc6b32bc6314ff80c",
+      "develop_blob": "78ab25da740669335521e30dc6b32bc6314ff80c"
+    },
+    {
+      "entity": "EventRegistrationEntity",
+      "table": "event_registrations",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventRegistrationEntity.java",
+      "initial_reference_blob": "b936f124d5c5d205a44c640d384735e1162026cb",
+      "master_blob": "b936f124d5c5d205a44c640d384735e1162026cb",
+      "develop_blob": "b936f124d5c5d205a44c640d384735e1162026cb"
+    },
+    {
+      "entity": "EventRideOfferEntity",
+      "table": "event_ride_offers",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventRideOfferEntity.java",
+      "initial_reference_blob": "835bc2caf237c85831c462c726066ad4f46ed4e6",
+      "master_blob": "835bc2caf237c85831c462c726066ad4f46ed4e6",
+      "develop_blob": "835bc2caf237c85831c462c726066ad4f46ed4e6"
+    },
+    {
+      "entity": "NoticeEntity",
+      "table": "publication_notices",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/NoticeEntity.java",
+      "initial_reference_blob": "5b054fa5c7c27fa32aa60331562f16efdcb5edb1",
+      "master_blob": "5b054fa5c7c27fa32aa60331562f16efdcb5edb1",
+      "develop_blob": "5b054fa5c7c27fa32aa60331562f16efdcb5edb1"
+    },
+    {
+      "entity": "NoticeHistoryEntity",
+      "table": "publication_notice_history",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/NoticeHistoryEntity.java",
+      "initial_reference_blob": "6afe20d6a238db467c5691b5d70424336d3b39c7",
+      "master_blob": "6afe20d6a238db467c5691b5d70424336d3b39c7",
+      "develop_blob": "6afe20d6a238db467c5691b5d70424336d3b39c7"
+    },
+    {
+      "entity": "PublicationCommentEntity",
+      "table": "publication_comments",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationCommentEntity.java",
+      "initial_reference_blob": "e5c5ad4dc28a7ef02a4ac5b9c6dbd1baab803015",
+      "master_blob": "e5c5ad4dc28a7ef02a4ac5b9c6dbd1baab803015",
+      "develop_blob": "e5c5ad4dc28a7ef02a4ac5b9c6dbd1baab803015"
+    },
+    {
+      "entity": "PublicationCommentImageEntity",
+      "table": "(inheritance/embeddable)",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationCommentImageEntity.java",
+      "initial_reference_blob": "dad4ac53dd31fc872578b4559ec926438a64096c",
+      "master_blob": "dad4ac53dd31fc872578b4559ec926438a64096c",
+      "develop_blob": "dad4ac53dd31fc872578b4559ec926438a64096c"
+    },
+    {
+      "entity": "PublicationEntity",
+      "table": "publications",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationEntity.java",
+      "initial_reference_blob": "e0a0f32986e0898f967e28aea76430d35e2865e8",
+      "master_blob": "e0a0f32986e0898f967e28aea76430d35e2865e8",
+      "develop_blob": "e0a0f32986e0898f967e28aea76430d35e2865e8"
+    },
+    {
+      "entity": "PublicationHistoryEntity",
+      "table": "publication_history",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationHistoryEntity.java",
+      "initial_reference_blob": "44ce29755acdfc1c007a3c672c930a04d571c63d",
+      "master_blob": "44ce29755acdfc1c007a3c672c930a04d571c63d",
+      "develop_blob": "44ce29755acdfc1c007a3c672c930a04d571c63d"
+    },
+    {
+      "entity": "PublicationImageEntity",
+      "table": "(inheritance/embeddable)",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationImageEntity.java",
+      "initial_reference_blob": "74a5b360add2d0ef74bfa3c9aba9d76d9c0b4d40",
+      "master_blob": "74a5b360add2d0ef74bfa3c9aba9d76d9c0b4d40",
+      "develop_blob": "74a5b360add2d0ef74bfa3c9aba9d76d9c0b4d40"
+    },
+    {
+      "entity": "PublicationLikeEntity",
+      "table": "publication_likes",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationLikeEntity.java",
+      "initial_reference_blob": "2c206235550b5e0564eed68e4a830c5a1b91630c",
+      "master_blob": "2c206235550b5e0564eed68e4a830c5a1b91630c",
+      "develop_blob": "2c206235550b5e0564eed68e4a830c5a1b91630c"
+    },
+    {
+      "entity": "ServicePublicationChangeRequestEntity",
+      "table": "service_publication_change_requests",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationChangeRequestEntity.java",
+      "initial_reference_blob": "bd5cf6548e8b87c48b29c73017b65bfea099f77b",
+      "master_blob": "bd5cf6548e8b87c48b29c73017b65bfea099f77b",
+      "develop_blob": "bd5cf6548e8b87c48b29c73017b65bfea099f77b"
+    },
+    {
+      "entity": "ServicePublicationEntity",
+      "table": "publication_services",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationEntity.java",
+      "initial_reference_blob": "35cd795cbc934cc2033a91a5204c29b748fdfea9",
+      "master_blob": "35cd795cbc934cc2033a91a5204c29b748fdfea9",
+      "develop_blob": "35cd795cbc934cc2033a91a5204c29b748fdfea9"
+    },
+    {
+      "entity": "ServicePublicationHistoryEntity",
+      "table": "publication_service_history",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationHistoryEntity.java",
+      "initial_reference_blob": "b78967628afe1453933b25a5dabc4334465ec7f8",
+      "master_blob": "b78967628afe1453933b25a5dabc4334465ec7f8",
+      "develop_blob": "b78967628afe1453933b25a5dabc4334465ec7f8"
+    },
+    {
+      "entity": "ServicePublicationRequestEntity",
+      "table": "service_publication_requests",
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationRequestEntity.java",
+      "initial_reference_blob": "07ba0e5401b518ecd0b0f0d81e2688be40bb6684",
+      "master_blob": "07ba0e5401b518ecd0b0f0d81e2688be40bb6684",
+      "develop_blob": "07ba0e5401b518ecd0b0f0d81e2688be40bb6684"
+    },
+    {
+      "entity": "ToolEntity",
+      "table": "tools",
+      "path": "src/main/java/com/jeepclub/backend/tools/infra/persistence/entity/ToolEntity.java",
+      "initial_reference_blob": "430378e41ab04e25ba07038a2ec093f0141a19dc",
+      "master_blob": "430378e41ab04e25ba07038a2ec093f0141a19dc",
+      "develop_blob": "430378e41ab04e25ba07038a2ec093f0141a19dc"
+    },
+    {
+      "entity": "ToolHistoryEntity",
+      "table": "tools_tool_history",
+      "path": "src/main/java/com/jeepclub/backend/tools/infra/persistence/entity/ToolHistoryEntity.java",
+      "initial_reference_blob": "09b83da8d42dc3fd21f89ee6c7479c1a994926a1",
+      "master_blob": "09b83da8d42dc3fd21f89ee6c7479c1a994926a1",
+      "develop_blob": "09b83da8d42dc3fd21f89ee6c7479c1a994926a1"
+    },
+    {
+      "entity": "VehicleEntity",
+      "table": "vehicles_vehicle",
+      "path": "src/main/java/com/jeepclub/backend/vehicles/infra/persistence/entity/VehicleEntity.java",
+      "initial_reference_blob": "b24880f5781836291d754844c497b883303eea48",
+      "master_blob": "b24880f5781836291d754844c497b883303eea48",
+      "develop_blob": "b24880f5781836291d754844c497b883303eea48"
+    },
+    {
+      "entity": "VehicleHistoryEntity",
+      "table": "vehicles_vehicle_history",
+      "path": "src/main/java/com/jeepclub/backend/vehicles/infra/persistence/entity/VehicleHistoryEntity.java",
+      "initial_reference_blob": "f1f29d1b698fd4d3c4999801812824b926b26839",
+      "master_blob": "f1f29d1b698fd4d3c4999801812824b926b26839",
+      "develop_blob": "f1f29d1b698fd4d3c4999801812824b926b26839"
+    }
+  ],
+  "indirect_inputs": [
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/api/module/EventBillingException.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/api/module/MembershipChargeResult.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/ChargeRecurrenceType.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/assignment/ChargeAudienceType.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/charge/MemberChargeEffectiveStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/charge/MemberChargeStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/cycle/ChargeCycleStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/cycle/PaymentAcceptancePolicy.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/definition/ChargeDefinitionStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/payment/MemberPaymentStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/payment/PaymentMethod.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/refund/MemberRefundStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/domain/enums/refund/RefundReason.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/core/repository/BillingExportQuery.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/ChargeCycleEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/ChargeDefinitionEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/EventChargeContextEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/MemberChargeEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/MemberPaymentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/MemberRefundEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/AllMembersChargeAssignmentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/ChargeAssignmentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/EventParticipantsChargeAssignmentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/RoleChargeAssignmentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/billing/infra/persistence/entity/assignment/UserChargeAssignmentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/dependents/core/domain/enums/DependentStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/dependents/core/domain/enums/RelationshipType.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/dependents/infra/persistence/entity/DependentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/dependents/infra/persistence/entity/DependentHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/health/api/module/medicalprofile/MedicalProfileOwner.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/health/core/domain/enums/BloodType.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/health/core/domain/enums/MedicalProfileOwnerType.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/health/core/port/MedicalProfileOwnerStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/health/infra/persistence/entity/MedicalProfileEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/health/infra/persistence/entity/MedicalProfileHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/api/http/dto/enums/LoginResponseStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/AuthenticationAccessStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/AuthenticationStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/CredentialStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/PasswordRecoveryRequestMethod.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/PasswordRecoveryRequestStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/RefreshTokenStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/core/domain/enums/SessionStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/AccountActivationInvitationEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": false
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/AuthenticationAccountEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/PasswordChangeChallengeEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/PasswordRecoveryRequestEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/RefreshTokenEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/SessionEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/core/domain/enums/RoleKind.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/core/domain/enums/RoleStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/PermissionEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/RoleEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/RolePermissionEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/authorization/infra/persistence/entity/UserRoleEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/api/module/UserActivationMethod.java",
+      "master_develop_identical": true,
+      "initial_master_identical": false
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/api/module/UserStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/core/application/query/user/AdminUserField.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/entity/UserEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/entity/UserProfileEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": false
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/memberships/api/module/MembershipAccessResult.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/memberships/core/domain/enums/MembershipApplicationStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MemberActivationTokenEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MembershipApplicantBlockEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MembershipApplicationEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/memberships/infra/persistence/entity/MembershipBillingConfigurationEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/platform/logging/ClientPlatform.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/platform/logging/SystemLogEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/platform/logging/SystemLogOutcome.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/platform/storage/properties/StorageProperties.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/application/exception/ServiceOperationException.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/application/service/EventReportService.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/enums/EventStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/enums/PublicationStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/enums/ServicePublicationChangeRequestStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/enums/ServicePublicationRequestStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/model/EventGuestRequest.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/model/EventRegistration.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/domain/model/EventRideOffer.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/core/repository/PublicationExportQuery.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventChargeRuleEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventGuestRequestEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventOccupantEmbeddable.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventRegistrationEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/EventRideOfferEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/NoticeEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/NoticeHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationCommentEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationCommentImageEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationImageEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/PublicationLikeEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationChangeRequestEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationRequestEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/shared/authorization/ModuleCode.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/shared/authorization/PermissionCode.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/shared/authorization/PermissionDefinition.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/shared/export/ExportException.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/shared/export/ExportFormat.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/shared/storage/exception/StorageOperationException.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/tools/core/domain/enums/ToolStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/tools/infra/persistence/entity/ToolEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/tools/infra/persistence/entity/ToolHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/vehicles/core/application/FieldUpdate.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/vehicles/core/domain/enums/FuelType.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/vehicles/core/domain/enums/VehicleStatus.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/vehicles/infra/persistence/entity/VehicleEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/java/com/jeepclub/backend/vehicles/infra/persistence/entity/VehicleHistoryEntity.java",
+      "master_develop_identical": true,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/resources/application.properties",
+      "master_develop_identical": true,
+      "initial_master_identical": false
+    },
+    {
+      "path": "src/main/resources/messages.properties",
+      "master_develop_identical": false,
+      "initial_master_identical": true
+    },
+    {
+      "path": "src/main/resources/messages_en.properties",
+      "master_develop_identical": false,
+      "initial_master_identical": true
+    }
+  ],
+  "initial_master_changed_inputs": [
+    "src/main/java/com/jeepclub/backend/iam/authentication/infra/persistence/entity/AccountActivationInvitationEntity.java",
+    "src/main/java/com/jeepclub/backend/iam/identity/api/module/UserActivationMethod.java",
+    "src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/entity/UserProfileEntity.java",
+    "src/main/resources/application.properties"
+  ],
+  "master_develop_changed_inputs": [
+    "src/main/resources/messages.properties",
+    "src/main/resources/messages_en.properties"
+  ]
+}

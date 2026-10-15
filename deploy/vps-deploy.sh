@@ -27,6 +27,18 @@ git merge-base --is-ancestor "$sha" origin/master
 previous_commit=$(git rev-parse HEAD)
 previous_image=$(docker inspect --format '{{.Config.Image}}' jeep-club-backend-1)
 compose() { docker compose --env-file "$env_file" "$@"; }
+# First adoption is an explicit operation, never an implicit deploy side effect.
+if git cat-file -e "$sha:src/main/resources/db/migration" 2>/dev/null; then
+    history_present=$(docker exec jeep-club-mysql-1 sh -c '
+        export MYSQL_PWD="$MYSQL_PASSWORD"
+        mysql --batch --skip-column-names -u"$MYSQL_USER" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\"flyway_schema_history\";"
+    ')
+    if [[ "$history_present" != 1 ]]; then
+        echo 'Deploy blocked: existing VPS database must be audited and explicitly adopted by Flyway first. See docs/database/06-vps-runbook.md.' >&2
+        exit 1
+    fi
+fi
+
 git switch --detach "$sha"
 export BACKEND_IMAGE="jeep-club-backend:$sha"
 compose config --quiet
@@ -34,6 +46,12 @@ compose build backend
 /usr/local/sbin/jeep-club-backup
 
 if ! compose up -d --no-build --wait --wait-timeout 240; then
+    if [[ -d src/main/resources/db/migration ]]; then
+        compose stop backend || true
+        echo 'Migration-aware deployment failed; backend stopped. Automatic image rollback is disabled because MySQL DDL may already be committed.' >&2
+        echo 'Keep traffic blocked and follow docs/database/06-vps-runbook.md with the verified backup.' >&2
+        exit 1
+    fi
     echo 'Deployment failed; restoring previous application image.' >&2
     git switch --detach "$previous_commit"
     export BACKEND_IMAGE="$previous_image"
