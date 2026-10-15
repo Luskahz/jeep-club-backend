@@ -265,6 +265,7 @@
                         <configuration>
                             <includes>
                                 <include>com/jeepclub/backend/authentication/**</include>
+                                <include>com/jeepclub/backend/iam/authentication/**</include>
                             </includes>
                             <outputDirectory>${project.reporting.outputDirectory}/jacoco-authentication</outputDirectory>
                             <formats>
@@ -385,6 +386,31 @@
                                 <param>com.jeepclub.backend.tools.core.application.service.tool.*</param>
                             </targetTests>
                             <excludedClasses combine.self="override" />
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>authentication-mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <configuration>
+                            <targetClasses combine.self="override">
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.Session</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.RefreshToken</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.PasswordRecoveryRequest</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.application.service.refreshtoken.RefreshTokenService</param>
+                            </targetClasses>
+                            <targetTests combine.self="override">
+                                <param>com.jeepclub.backend.authentication.*</param>
+                            </targetTests>
+                            <excludedClasses combine.self="override" />
+                            <outputDirectory>${project.build.directory}/pit-reports/authentication</outputDirectory>
                         </configuration>
                     </plugin>
                 </plugins>
