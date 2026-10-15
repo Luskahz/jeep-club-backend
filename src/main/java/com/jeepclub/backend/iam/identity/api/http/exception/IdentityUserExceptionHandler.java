@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.identity.api.http.exception;
 
+import com.jeepclub.backend.iam.identity.core.application.exception.AdministrativeUserUpdateConflictException;
 import com.jeepclub.backend.iam.identity.api.module.exception.RootUserCannotBeDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserAlreadyDisabledException;
 import com.jeepclub.backend.iam.identity.api.module.exception.UserNotDisabledException;
@@ -16,6 +17,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.identity")
 public class IdentityUserExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.iam.identity.api.module.exception.UserIdentityChangeConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleIdentityChangeConflict(RuntimeException exception) {
+        return buildErrorResponse("USER_IDENTITY_CHANGE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrencyConflict(RuntimeException exception) {
+        return buildErrorResponse("USER_CONCURRENT_MODIFICATION", "Concurrent user modification; retry the operation.", HttpStatus.CONFLICT);
+    }
+    @ExceptionHandler(AdministrativeUserUpdateConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleAdministrativeUpdateConflict(RuntimeException exception) {
+        return buildErrorResponse("USER_UPDATE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
     @ExceptionHandler(UserRgAlreadyInUseException.class)
     public ResponseEntity<ApiErrorResponse> handleRgAlreadyInUse(UserRgAlreadyInUseException exception) {
         return buildErrorResponse("USER_RG_ALREADY_IN_USE", exception.getMessage(), HttpStatus.CONFLICT);

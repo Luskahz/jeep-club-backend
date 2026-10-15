@@ -83,6 +83,55 @@ O nome do campo HTTP de nascimento é `birthDate`. Não há alias `birthData` no
 DTO ou na serialização atual. Formatos aceitos, limites e exemplos do request,
 bem como o formato canônico retornado, pertencem aos schemas OpenAPI.
 
+## Edição administrativa — BACK-522
+
+A superfície administrativa reutiliza `ProfileUpdate.Field` para distinguir omissão
+(deixar como está), null (remover opcional) e valor informado. `AdminUserUpdate`
+compõe esse comando com CPF e e-mail. `User.updateAdministratively` valida antes de
+mutar; IDs, status e timestamps de lifecycle permanecem sob seus fluxos próprios.
+CPF enviado exige formato e dígitos verificadores válidos; edição de outros campos
+preserva CPF legado sem impor backfill. Identificadores únicos são verificados
+excluindo o próprio ID e protegidos pelas constraints já existentes. `{}` e valores
+que normalizam para o cadastro atual não salvam nem alteram `updatedAt`.
+
+`AdminUserService` bloqueia User, salva/flush, coordena os efeitos por SPI e registra
+um evento `IDENTITY_USER_UPDATE:<campo>` por campo realmente alterado, na mesma
+transação. O evento contém ator, alvo no path, operação e instante; não contém
+valores pessoais. `recordInTransaction` faz a alteração e auditoria confirmarem ou
+reverterem juntas, conforme retenção de Platform. O perfil complementar usa as
+mesmas regras e DTOs do self-service; a contraparte administrativa delega a
+`UserProfileService` e audita os nove campos com `IDENTITY_USER_PROFILE_UPDATE`.
+
+Troca efetiva de CPF ou e-mail revoga sessões, refresh tokens e challenges por
+`UserAuthenticationAdministrationPort.identityChanged`. Troca de e-mail também
+invalida convite administrativo e todas as recuperações por e-mail abertas em Authentication, e
+convite de Membership por `UserContactChangePort`, sem reescrever a solicitação
+histórica. Não envia um novo convite automaticamente: o administrador usa o fluxo
+de reenvio do proprietário. CPF continua apenas em Identity e o login consulta o
+valor atual; FK/vínculos continuam usando o ID estável. Senha, estado da credencial,
+lock automático, tentativas e status administrativo são preservados.
+
+A política ROOT permite CPF/e-mail somente quando o ator é o próprio alvo, já
+portador de `IDENTITY_USER_UPDATE`; outro administrador recebe 409. Os demais
+campos podem ser corrigidos por um administrador autorizado. O bootstrap dev
+preserva o titular ROOT pelo vínculo com ID estável, sem promover quem ocupe seu
+CPF anterior. Usuários DISABLED
+podem ser editados sem reativação. BACK-512/BACK-514 estão pendentes: não se antecipa
+ACTIVE/INACTIVE/ARCHIVED nesta feature; quando integradas, devem continuar isoladas
+da edição cadastral.
+
+`UserIdentityLock` é leitura pública transacional (`MANDATORY`) para serializar
+login, emissão/consumo de convites e recuperação por CPF com correções cadastrais.
+A ordem é User antes de conta/token; não expõe entity ou repository. O envio de
+convite administrativo verifica e bloqueia o cadastro em transação nova após o
+commit para impedir entrega a um e-mail substituído. Timeout/deadlock/concorrência
+traduzidos em `USER_CONCURRENT_MODIFICATION` (409) devem ser repetidos pelo cliente;
+violação de unicidade/ROOT usa `USER_UPDATE_CONFLICT` e conta ausente usa
+`USER_IDENTITY_CHANGE_CONFLICT`.
+
+Orientações de integração: [edição administrativa](../../../../../../../../../docs/back-522-admin-user-update.md).
+O contrato HTTP completo permanece no OpenAPI.
+
 ## Lifecycle composto com Authentication
 
 Identity define as necessidades de Authentication em
@@ -144,8 +193,8 @@ User, conta ou role.
 O OpenAPI descreve registro público, `/identity/me` autenticado e a superfície
 administrativa de usuários. As operações administrativas usam `@PreAuthorize`
 para enforcement e `@RequiredPermission` apenas para publicar a mesma authority
-no OpenAPI: `IDENTITY_USER_READ`, `IDENTITY_USER_DISABLE` e
-`IDENTITY_USER_ENABLE`.
+no OpenAPI: `IDENTITY_USER_READ`, `IDENTITY_USER_CREATE`, `IDENTITY_USER_UPDATE`,
+`IDENTITY_USER_DISABLE` e `IDENTITY_USER_ENABLE`.
 
 A listagem administrativa retorna o envelope paginado transversal
 `PageResponse<AdminUserResponseDTO>`. Aceita

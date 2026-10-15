@@ -67,6 +67,7 @@ class AdminUserCreationIntegrationTest {
     @Autowired private PasswordChangeChallengeJpaRepository challenges;
     @Autowired private UserRoleRepository userRoles;
     @MockitoBean private AccountActivationMailSender mailSender;
+    @MockitoSpyBean private com.jeepclub.backend.iam.authentication.infra.mail.AccountActivationCurrentDelivery currentDelivery;
 
     @Test
     void temporaryPasswordCreatesPendingAccountAndRequiresPasswordChange() {
@@ -271,6 +272,13 @@ class AdminUserCreationIntegrationTest {
     void simultaneousReissuesLeaveOnlyNewestInvitationValid() throws Exception {
         var result = registration.createAdministratively(data("39057816426", "reissue@example.com"),
                 UserActivationMethod.EMAIL_INVITATION, 1L);
+        // Delay both callbacks until both rotations committed. Only the current token may be sent.
+        CountDownLatch callbacks = new CountDownLatch(2);
+        org.mockito.Mockito.doAnswer(call -> {
+            callbacks.countDown();
+            if (!callbacks.await(10, TimeUnit.SECONDS)) throw new AssertionError("Reissue callbacks did not arrive");
+            return call.callRealMethod();
+        }).when(currentDelivery).sendIfCurrent(org.mockito.ArgumentMatchers.any());
         CountDownLatch start = new CountDownLatch(1);
         var executor = Executors.newFixedThreadPool(2);
         try {
@@ -283,7 +291,8 @@ class AdminUserCreationIntegrationTest {
             executor.shutdownNow();
         }
         ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
-        verify(mailSender, times(3)).send(anyString(), anyString(), sent.capture());
+        assertThat(callbacks.getCount()).isZero();
+        verify(mailSender, times(2)).send(anyString(), anyString(), sent.capture());
         long valid = sent.getAllValues().stream().filter(this::isValidInvitation).count();
         assertThat(valid).isEqualTo(1);
         assertThat(invitationRepository.findById(result.userId())).isPresent();

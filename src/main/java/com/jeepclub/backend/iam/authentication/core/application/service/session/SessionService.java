@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.authentication.core.application.service.session;
 
+import com.jeepclub.backend.iam.identity.api.module.UserIdentityLock;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.InvalidCredentialsException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.PasswordChangeNotRequiredException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.login.PasswordChangeChallengeInvalidException;
@@ -53,13 +54,13 @@ public class SessionService {
     private final PasswordChangeChallengeIssuer challengeIssuer;
     private final TokenIssuanceService tokenIssuanceService;
     private final UserQuery userQuery;
+    private final UserIdentityLock identityLock;
     private final MembershipOnboardingCompletion membershipOnboardingCompletion;
     private final Clock clock;
 
     @Transactional(noRollbackFor = InvalidCredentialsException.class)
     public LoginResult login(String cpf, String password) {
-        Instant now = Instant.now(clock);
-        var identity = userQuery.findByCpf(cpf)
+        var identity = identityLock.byCpf(cpf)
                 .orElseThrow(InvalidCredentialsException::new);
         AuthenticationAccount account = accountRepository
                 .findByIdentityIdForUpdate(identity.id())
@@ -71,6 +72,7 @@ public class SessionService {
             throw new InvalidCredentialsException();
         }
 
+        Instant now = Instant.now(clock);
         account.assertCanAttemptLogin();
         if (!identity.administrativelyActive()) {
             throw new AuthenticationAccountBlockedException();
@@ -87,16 +89,18 @@ public class SessionService {
 
     @Transactional
     public AuthTokens completeRequiredPasswordChange(String rawToken, String newPassword) {
-        Instant now = Instant.now(clock);
         String tokenHash = tokenHashService.hash(rawToken);
         Long userId = challengeRepository.findUserIdByTokenHash(tokenHash)
                 .orElseThrow(this::invalidChallenge);
+        identityLock.byId(userId).orElseThrow(this::invalidChallenge);
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account not found."));
         PasswordChangeChallenge challenge = challengeRepository
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(this::invalidChallenge);
 
+        // Identity/account/challenge lock waits can cross the challenge's expiry.
+        Instant now = Instant.now(clock);
         if (!challenge.getUserId().equals(account.getIdentityId()) || !challenge.isValid(now)) {
             throw invalidChallenge();
         }
@@ -118,6 +122,9 @@ public class SessionService {
                     ));
         }
 
+        // Recovery-request acquisition can also wait; enforce expiry again before any mutation.
+        now = Instant.now(clock);
+        if (!challenge.isValid(now)) throw invalidChallenge();
         account.changePassword(passwordHasher.hash(newPassword), now);
         if (request != null) {
             request.resolve(now);

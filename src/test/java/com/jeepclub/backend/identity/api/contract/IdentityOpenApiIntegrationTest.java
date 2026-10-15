@@ -252,4 +252,19 @@ class IdentityOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['components']['schemas']['UpdateCurrentUserProfileRequest']['description']")
                         .value(org.hamcrest.Matchers.containsString("null limpa")));
     }
+    @Test
+    void administrativeUpdateDocumentsSevenFieldsPermissionsAndProfileReuse() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}']['patch']['x-required-permissions'][0]").value("IDENTITY_USER_UPDATE"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}']['patch']['requestBody']['content']['application/json']['schema']['$ref']").value("#/components/schemas/AdminUpdateUserRequest"))
+                .andExpect(jsonPath("$['components']['schemas']['AdminUpdateUserRequest']['additionalProperties']").value(false))
+                .andExpect(jsonPath("$['components']['schemas']['AdminUpdateUserRequest']['properties'].length()").value(7))
+                .andExpect(jsonPath("$['components']['schemas']['AdminUpdateUserRequest']['properties']['cpf']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['AdminUpdateUserRequest']['properties']['birthDate']['format']").value("date"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}']['patch']['responses']['409']['content']['application/problem+json']['schema']['$ref']").value("#/components/schemas/ApiErrorResponse"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/profile']['get']['x-required-permissions'][0]").value("IDENTITY_USER_READ"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/profile']['put']['x-required-permissions'][0]").value("IDENTITY_USER_UPDATE"))
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/{userId}/profile']['put']['requestBody']['content']['application/json']['schema']['$ref']").value("#/components/schemas/IdentityUserProfileData"));
+    }
+
 }

@@ -12,14 +12,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class AccountActivationMailDelivery {
     private static final Logger LOGGER = LoggerFactory.getLogger(AccountActivationMailDelivery.class);
-    private final AccountActivationMailSender mailSender;
+    private final AccountActivationCurrentDelivery delivery;
     private final AccountActivationDeliveryStatusWriter statusWriter;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void deliver(AccountActivationMailEvent event) {
         String status;
         try {
-            mailSender.send(event.email(), event.name(), event.rawToken());
+            if (!delivery.sendIfCurrent(event)) return;
             status = "SENT";
         } catch (RuntimeException ignored) {
             status = "DELIVERY_FAILED";

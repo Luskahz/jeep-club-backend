@@ -88,6 +88,14 @@ public class AdminVehicleService {
     }
 
     @Transactional(readOnly = true)
+    public Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSummary> findAllWithOwners(Pageable pageable) {
+        Page<Vehicle> vehicles = findAll(pageable);
+        var names = userPort.findNamesByIds(vehicles.stream().map(Vehicle::getOwnerId).distinct().toList());
+        return vehicles.map(vehicle -> new com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSummary(
+                vehicle, names.get(vehicle.getOwnerId())));
+    }
+
+    @Transactional(readOnly = true)
     public Vehicle findById(Long vehicleId) {
         return findActiveVehicle(vehicleId);
     }
