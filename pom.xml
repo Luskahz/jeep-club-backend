@@ -407,10 +407,12 @@
                                 <param>com.jeepclub.backend.iam.authentication.core.application.service.refreshtoken.RefreshTokenService</param>
                             </targetClasses>
                             <targetTests combine.self="override">
-                                <param>com.jeepclub.backend.authentication.*</param>
+                                <param>com.jeepclub.backend.authentication.core.domain.model.*</param>
+                                <param>com.jeepclub.backend.authentication.core.application.service.refreshtoken.*</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.*</param>
                             </targetTests>
                             <excludedClasses combine.self="override" />
-                            <outputDirectory>${project.build.directory}/pit-reports/authentication</outputDirectory>
+                            <reportsDirectory>${project.build.directory}/pit-reports/authentication</reportsDirectory>
                         </configuration>
                     </plugin>
                 </plugins>

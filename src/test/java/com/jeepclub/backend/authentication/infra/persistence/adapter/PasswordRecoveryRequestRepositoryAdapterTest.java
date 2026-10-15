@@ -67,7 +67,17 @@ class PasswordRecoveryRequestRepositoryAdapterTest {
         assertThat(saved.getId()).isEqualTo(1L);
         assertThat(saved.getUserId()).isEqualTo(10L);
         assertThat(saved.getTokenHash()).isEqualTo(TOKEN_HASH);
-        verify(jpaRepository).save(any(PasswordRecoveryRequestEntity.class));
+        var captured = org.mockito.ArgumentCaptor.forClass(PasswordRecoveryRequestEntity.class);
+        verify(jpaRepository).save(captured.capture());
+        assertThat(captured.getValue().getId()).isEqualTo(entity.getId());
+        assertThat(captured.getValue().getUserId()).isEqualTo(entity.getUserId());
+        assertThat(captured.getValue().getTokenHash()).isEqualTo(entity.getTokenHash());
+        assertThat(captured.getValue().getCreatedAt()).isEqualTo(entity.getCreatedAt());
+        assertThat(captured.getValue().getExpiresAt()).isEqualTo(entity.getExpiresAt());
+        assertThat(captured.getValue().getStatus()).isEqualTo(entity.getStatus());
+        assertThat(captured.getValue().getMethod()).isEqualTo(entity.getMethod());
+        assertThat(captured.getValue().getResolvedAt()).isEqualTo(entity.getResolvedAt());
+        assertThat(captured.getValue().getCancelledAt()).isEqualTo(entity.getCancelledAt());
     }
 
     @Test

@@ -59,7 +59,14 @@ class SessionRepositoryAdapterTest {
         assertThat(saved.getId()).isEqualTo(1L);
         assertThat(saved.getUserId()).isEqualTo(10L);
         assertThat(saved.getStatus()).isEqualTo(SessionStatus.ACTIVE);
-        verify(jpaRepository).save(any(SessionEntity.class));
+        var captured = org.mockito.ArgumentCaptor.forClass(SessionEntity.class);
+        verify(jpaRepository).save(captured.capture());
+        assertThat(captured.getValue().getId()).isEqualTo(entity.getId());
+        assertThat(captured.getValue().getUserId()).isEqualTo(entity.getUserId());
+        assertThat(captured.getValue().getCreatedAt()).isEqualTo(entity.getCreatedAt());
+        assertThat(captured.getValue().getExpiresAt()).isEqualTo(entity.getExpiresAt());
+        assertThat(captured.getValue().getLoggedOutAt()).isEqualTo(entity.getLoggedOutAt());
+        assertThat(captured.getValue().getStatus()).isEqualTo(entity.getStatus());
     }
 
     @Test

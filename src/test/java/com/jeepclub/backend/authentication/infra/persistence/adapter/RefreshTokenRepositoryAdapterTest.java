@@ -81,7 +81,15 @@ class RefreshTokenRepositoryAdapterTest {
         assertThat(saved.getId()).isEqualTo(100L);
         assertThat(saved.getTokenHash()).isEqualTo(TOKEN_HASH);
         assertThat(saved.getSession().getId()).isEqualTo(1L);
-        verify(jpaRepository).save(any(RefreshTokenEntity.class));
+        var captured = org.mockito.ArgumentCaptor.forClass(RefreshTokenEntity.class);
+        verify(jpaRepository).save(captured.capture());
+        assertThat(captured.getValue().getId()).isEqualTo(tokenEntity.getId());
+        assertThat(captured.getValue().getSessionId()).isEqualTo(tokenEntity.getSessionId());
+        assertThat(captured.getValue().getTokenHash()).isEqualTo(tokenEntity.getTokenHash());
+        assertThat(captured.getValue().getCreatedAt()).isEqualTo(tokenEntity.getCreatedAt());
+        assertThat(captured.getValue().getExpiresAt()).isEqualTo(tokenEntity.getExpiresAt());
+        assertThat(captured.getValue().getStatus()).isEqualTo(tokenEntity.getStatus());
+        assertThat(captured.getValue().getReplacedByTokenId()).isEqualTo(tokenEntity.getReplacedByTokenId());
     }
 
     @Test
