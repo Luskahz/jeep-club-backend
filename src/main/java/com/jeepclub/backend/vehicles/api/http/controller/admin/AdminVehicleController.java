@@ -9,8 +9,8 @@ import com.jeepclub.backend.vehicles.api.http.dto.detailforedit.DetailForEditRes
 import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestDTO;
 import com.jeepclub.backend.vehicles.api.http.dto.edit.EditRequestFieldReader;
 import com.jeepclub.backend.vehicles.api.http.dto.include.IncludeRequestDTO;
-import com.jeepclub.backend.vehicles.api.http.dto.list.ListResponseDTO;
-import com.jeepclub.backend.vehicles.api.http.dto.list.VehiclePageResponseSchema;
+import com.jeepclub.backend.vehicles.api.http.dto.list.AdminListResponseDTO;
+import com.jeepclub.backend.vehicles.api.http.dto.list.AdminVehiclePageResponseSchema;
 import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
 import com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -102,17 +102,17 @@ public class AdminVehicleController {
             summary = "Listar todos os veículos",
             description = "Retorna uma página zero-based de todos os veículos ACTIVE. `size` é 10 por padrão e limitado globalmente a 50; `sort` usa `id` por padrão.",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Página de veículos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = VehiclePageResponseSchema.class))),
+                    @ApiResponse(responseCode = "200", description = "Página de veículos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = AdminVehiclePageResponseSchema.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<PageResponse<ListResponseDTO>> listAllVehicles(
+    public ResponseEntity<PageResponse<AdminListResponseDTO>> listAllVehicles(
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-                adminVehicleService.findAll(pageable).map(ListResponseDTO::from)
+                adminVehicleService.findAllWithOwners(pageable).map(AdminListResponseDTO::from)
         ));
     }
 
