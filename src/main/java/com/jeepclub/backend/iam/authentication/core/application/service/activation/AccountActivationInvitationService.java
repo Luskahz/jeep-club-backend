@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.authentication.core.application.service.activation;
 
+import com.jeepclub.backend.iam.identity.api.module.UserIdentityLock;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.ActivationInvitationException;
 import com.jeepclub.backend.iam.authentication.core.application.service.internal.CredentialRevocationService;
 import com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount;
@@ -31,6 +32,7 @@ public class AccountActivationInvitationService {
     private final AccountActivationInvitationRepository invitations;
     private final AuthenticationAccountRepository accounts;
     private final UserQuery users;
+    private final UserIdentityLock identityLock;
     private final MembershipIdentityOwnership membershipIdentityOwnership;
     private final RefreshTokenGenerator tokenGenerator;
     private final RefreshTokenHashService tokenHashService;
@@ -66,9 +68,9 @@ public class AccountActivationInvitationService {
     }
 
     private void issue(Long userId) {
-        AuthenticationAccount account = accounts.findByIdentityIdForUpdate(userId)
+        UserDetails user = identityLock.byId(userId)
                 .orElseThrow(() -> new ActivationInvitationException(true));
-        UserDetails user = users.findById(userId)
+        AuthenticationAccount account = accounts.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new ActivationInvitationException(true));
         if (!account.isPendingFirstAccess() || account.isBlockedForLogin() || !user.administrativelyActive()
                 || user.email() == null || user.email().isBlank()
@@ -101,6 +103,7 @@ public class AccountActivationInvitationService {
         // Account and invitation mutations share a fixed lock order with issue/reissue.
         Long identityId = invitations.findIdentityIdByTokenHash(hash)
                 .orElseThrow(() -> new ActivationInvitationException(false));
+        identityLock.byId(identityId).orElseThrow(() -> new ActivationInvitationException(false));
         AuthenticationAccount account = accounts.findByIdentityIdForUpdate(identityId)
                 .orElseThrow(() -> new ActivationInvitationException(false));
         AccountActivationInvitation invitation = invitations.findByTokenHashForUpdate(hash)
@@ -117,7 +120,8 @@ public class AccountActivationInvitationService {
     private void requireValid(AccountActivationInvitation invitation) {
         AuthenticationAccount account = accounts.findByIdentityId(invitation.identityId())
                 .orElseThrow(() -> new ActivationInvitationException(false));
-        if (invitation.usedAt() != null || !Instant.now(clock).isBefore(invitation.expiresAt())
+        if (invitation.usedAt() != null || "INVALIDATED".equals(invitation.deliveryStatus())
+                || !Instant.now(clock).isBefore(invitation.expiresAt())
                 || !account.isPendingFirstAccess() || account.isBlockedForLogin()
                 || !users.isAdministrativelyActive(invitation.identityId())
                 || membershipIdentityOwnership.ownsIdentity(invitation.identityId())) {

@@ -41,6 +41,11 @@ public class AccountActivationInvitation {
         usedAt = Objects.requireNonNull(now);
     }
 
+    public void invalidate(Instant now) {
+        expiresAt = Objects.requireNonNull(now);
+        deliveryStatus = "INVALIDATED";
+    }
+
     public Long identityId() { return identityId; }
     public String tokenHash() { return tokenHash; }
     public Instant expiresAt() { return expiresAt; }

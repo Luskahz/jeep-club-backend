@@ -1,5 +1,11 @@
 package com.jeepclub.backend.iam.identity.api.http.controller.admin;
 
+import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUpdateUserRequestDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.user.UserProfileDataDTO;
+import com.jeepclub.backend.iam.identity.api.http.dto.user.UserProfileResponseDTO;
+import jakarta.validation.Validator;
+import org.springframework.http.CacheControl;
+import tools.jackson.databind.JsonNode;
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserFilterDTO;
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserResponseDTO;
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminCreateUserRequestDTO;
@@ -53,8 +59,71 @@ import java.net.URI;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final Validator validator;
     private final UserRegistration userRegistration;
     private final Clock clock;
+
+    @PatchMapping(value = "/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAuthority('IDENTITY_USER_UPDATE')")
+    @RequiredPermission("IDENTITY_USER_UPDATE")
+    @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
+    @Operation(summary = "Editar cadastro completo do usuário", description = "Edição parcial dos sete campos cadastrais. "
+            + "Omitir preserva; null limpa opcionais; {} preserva updatedAt. CPF/e-mail alterados revogam sessões/challenges "
+            + "e invalidam links pendentes afetados. Reenvio é explícito. Outro administrador não altera CPF/e-mail de ROOT. "
+            + "Não altera lifecycle, credenciais, roles, IDs ou vínculos históricos.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    content = @Content(schema = @Schema(implementation = AdminUpdateUserRequestDTO.class))))
+    @ApiResponse(responseCode = "200", description = "Cadastro atualizado ou preservado para no-op.", content = @Content(schema = @Schema(implementation = AdminUserResponseDTO.class)))
+    @ApiResponse(responseCode = "400", description = "Payload, CPF, e-mail, data ou referência de imagem inválidos.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Sem IDENTITY_USER_UPDATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário ou imagem inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "CPF/e-mail/RG duplicado, identificador ROOT protegido, conta de Authentication ausente ou conflito concorrente (reler e repetir).", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<AdminUserResponseDTO> update(@PathVariable @Positive Long userId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody JsonNode body) {
+        var update = AdminUpdateUserRequestDTO.read(body, validator);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(AdminUserResponseDTO.from(adminUserService.update(userId, principal.getUserId(), update)));
+    }
+
+    @GetMapping("/{userId}/profile")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_READ')")
+    @RequiredPermission("IDENTITY_USER_READ")
+    @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
+    @Operation(summary = "Consultar perfil complementar do usuário", description = "Perfil ausente retorna blocos null e pendência, sem criar registro.")
+    @ApiResponse(responseCode = "200", description = "Perfil complementar.", content = @Content(schema = @Schema(implementation = UserProfileResponseDTO.class)))
+    @ApiResponse(responseCode = "400", description = "ID inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Sem IDENTITY_USER_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<UserProfileResponseDTO> getProfile(@PathVariable @Positive Long userId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(UserProfileResponseDTO.from(adminUserService.getProfile(userId)));
+    }
+
+    @PutMapping(value = "/{userId}/profile", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasAuthority('IDENTITY_USER_UPDATE')")
+    @RequiredPermission("IDENTITY_USER_UPDATE")
+    @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
+    @Operation(summary = "Substituir perfil complementar do usuário", description = "Upsert integral: omissão/null/branco remove; {} limpa. "
+            + "Reutiliza regras do perfil próprio, aceita dados parciais, sem alterar lifecycle ou cadastro básico.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    content = @Content(schema = @Schema(implementation = UserProfileDataDTO.class))))
+    @ApiResponse(responseCode = "200", description = "Perfil substituído.", content = @Content(schema = @Schema(implementation = UserProfileResponseDTO.class)))
+    @ApiResponse(responseCode = "400", description = "Payload, CEP, UF ou tamanho inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Sem IDENTITY_USER_UPDATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Conflito concorrente; reler e repetir a substituição.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<UserProfileResponseDTO> replaceProfile(@PathVariable @Positive Long userId,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestBody JsonNode body) {
+        var data = UserProfileDataDTO.read(body);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(UserProfileResponseDTO.from(adminUserService.replaceProfile(userId, principal.getUserId(),
+                        data.workProfile() == null ? null : data.workProfile().toDomain(), data.address() == null ? null : data.address().toDomain())));
+    }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAuthority('IDENTITY_USER_CREATE')")

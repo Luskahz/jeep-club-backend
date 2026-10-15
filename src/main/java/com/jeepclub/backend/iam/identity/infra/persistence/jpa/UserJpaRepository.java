@@ -27,6 +27,12 @@ public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
 
     Optional<UserEntity> findByCpf(String cpf);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UserEntity u where u.cpf = :cpf")
+    Optional<UserEntity> findByCpfForUpdate(String cpf);
+
+    boolean existsByCpfAndIdNot(String cpf, Long id);
+
     boolean existsByCpf(String cpf);
 
     boolean existsByEmail(String email);

@@ -16,6 +16,9 @@ public interface MemberActivationTokenJpaRepository
 
     Optional<MemberActivationTokenEntity> findByTokenHash(String tokenHash);
 
+    @Query("select t.applicationId from MemberActivationTokenEntity t where t.tokenHash = :tokenHash")
+    Optional<Long> findApplicationIdByTokenHash(String tokenHash);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT t FROM MemberActivationTokenEntity t WHERE t.tokenHash = :tokenHash")
     Optional<MemberActivationTokenEntity> findByTokenHashForUpdate(

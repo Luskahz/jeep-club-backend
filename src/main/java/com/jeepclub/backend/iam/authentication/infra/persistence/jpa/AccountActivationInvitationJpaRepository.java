@@ -15,7 +15,7 @@ public interface AccountActivationInvitationJpaRepository extends JpaRepository<
 
     @Modifying
     @Query("update AccountActivationInvitationEntity invitation set invitation.deliveryStatus = :status "
-            + "where invitation.identityId = :userId and invitation.tokenHash = :tokenHash")
+            + "where invitation.identityId = :userId and invitation.tokenHash = :tokenHash and invitation.deliveryStatus <> 'INVALIDATED'")
     int updateDeliveryStatusIfCurrent(Long userId, String tokenHash, String status);
     Optional<AccountActivationInvitationEntity> findByTokenHash(String tokenHash);
 

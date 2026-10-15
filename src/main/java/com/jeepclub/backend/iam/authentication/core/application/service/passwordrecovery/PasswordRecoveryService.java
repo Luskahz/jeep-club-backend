@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery;
 
+import com.jeepclub.backend.iam.identity.api.module.UserIdentityLock;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.tokenhash.TokenInvalidException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.tokenhash.TokenNotFoundException;
 import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
@@ -16,7 +17,6 @@ import com.jeepclub.backend.iam.authentication.core.port.RefreshTokenHashService
 import com.jeepclub.backend.iam.authentication.core.repository.PasswordRecoveryRequestRepository;
 import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
-import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +29,7 @@ import java.time.Instant;
 public class PasswordRecoveryService {
 
     private final AuthenticationAccountRepository accountRepository;
-    private final UserQuery identityQuery;
+    private final UserIdentityLock identityLock;
     private final PasswordRecoveryRequestRepository requestRepository;
     private final PasswordRecoveryRequestManager requestManager;
     private final NotificationPort notificationPort;
@@ -41,8 +41,8 @@ public class PasswordRecoveryService {
 
     @Transactional
     public PublicPasswordRecoveryResult request(String cpf) {
+        UserDetails identity = identityLock.byCpf(cpf).orElse(null);
         Instant now = Instant.now(clock);
-        UserDetails identity = identityQuery.findByCpf(cpf).orElse(null);
         if (identity != null && identity.administrativelyActive()
                 && accountRepository.existsByIdentityId(identity.id())) {
             requestManager.getOrCreate(identity.id(), now);
@@ -52,8 +52,8 @@ public class PasswordRecoveryService {
 
     @Transactional
     public PublicPasswordRecoveryResult sendEmailToken(String cpf) {
+        UserDetails identity = identityLock.byCpf(cpf).orElse(null);
         Instant now = Instant.now(clock);
-        UserDetails identity = identityQuery.findByCpf(cpf).orElse(null);
         if (identity == null || !identity.administrativelyActive()
                 || !accountRepository.existsByIdentityId(identity.id())
                 || identity.email() == null || identity.email().isBlank()) {
