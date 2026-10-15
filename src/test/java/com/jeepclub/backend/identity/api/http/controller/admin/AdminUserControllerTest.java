@@ -83,7 +83,7 @@ class AdminUserControllerTest {
         pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
         pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, userRegistration, Clock.systemUTC()))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, validator, userRegistration, Clock.systemUTC()))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(pageableResolver)
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
