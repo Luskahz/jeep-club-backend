@@ -1,0 +1,60 @@
+{
+  "task": "BACK-245",
+  "base": "b00f492e755f56d9818fda17d8d0a863e9b31216",
+  "java": "Microsoft OpenJDK 17.0.20",
+  "os": "Windows",
+  "tests": {
+    "final-tree-test.log": {
+      "tests": 1747,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "final-tree-verify.log": {
+      "tests": 1747,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    }
+  },
+  "jacoco": {
+    "INSTRUCTION": {
+      "missed": 1047,
+      "covered": 6995,
+      "percent": 86.98
+    },
+    "BRANCH": {
+      "missed": 177,
+      "covered": 477,
+      "percent": 72.94
+    },
+    "LINE": {
+      "missed": 167,
+      "covered": 1719,
+      "percent": 91.15
+    },
+    "COMPLEXITY": {
+      "missed": 244,
+      "covered": 599,
+      "percent": 71.06
+    },
+    "METHOD": {
+      "missed": 84,
+      "covered": 431,
+      "percent": 83.69
+    },
+    "CLASS": {
+      "missed": 18,
+      "covered": 154,
+      "percent": 89.53
+    }
+  },
+  "pit": {
+    "KILLED": 217
+  },
+  "residual_mutants": [],
+  "source_fingerprint_sha256": "2377154d9b7209e32c2d66154a00768ca54b950b0f0e7d1ba66b277c261921d8",
+  "fingerprint_scope": "pom.xml + src/**/*.java; local working-tree bytes",
+  "scope": "Focal profile, not whole project mutation",
+  "ci": "See PR checks at published HEAD; CI evidence posted separately after push"
+}
