@@ -23,8 +23,53 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import(MembershipApplicantBlockRepositoryAdapter.class)
+@Import({MembershipApplicantBlockRepositoryAdapter.class,
+        com.jeepclub.backend.memberships.infra.persistence.adapter.MembershipApplicationRepositoryAdapter.class})
 class MembershipApplicantBlockJpaRepositoryTest {
+
+    @Autowired
+    private com.jeepclub.backend.memberships.infra.persistence.adapter.MembershipApplicationRepositoryAdapter applications;
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
+    @Test
+    void applicationQueriesPreserveStatusSortAndPaginationAfterDatabaseRoundTrip() {
+        var first = applications.save(com.jeepclub.backend.memberships.core.domain.model.MembershipApplication.create(
+                "First", "52998224725", "first@example.com", "11999999999", "First message", NOW));
+        var second = applications.save(com.jeepclub.backend.memberships.core.domain.model.MembershipApplication.create(
+                "Second", "16899535009", "second@example.com", "11988888888", null, NOW.plusSeconds(1)));
+        first.approve(10L, 20L, NOW.plusSeconds(2));
+        applications.save(first);
+        entityManager.flush();
+        entityManager.clear();
+
+        var pageRequest = org.springframework.data.domain.PageRequest.of(0, 1,
+                org.springframework.data.domain.Sort.by("id").descending());
+        var page = applications.findAll(pageRequest);
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.getContent()).extracting(com.jeepclub.backend.memberships.core.domain.model.MembershipApplication::getId)
+                .containsExactly(second.getId());
+        assertThat(applications.findAll(pageRequest.next()).getContent())
+                .extracting(com.jeepclub.backend.memberships.core.domain.model.MembershipApplication::getId)
+                .containsExactly(first.getId());
+        var approved = applications.findAllByStatus(MembershipApplicationStatus.APPROVED, pageRequest);
+        assertThat(approved.getTotalElements()).isEqualTo(1);
+        assertThat(approved.getContent().get(0).getCreatedUserId()).isEqualTo(20L);
+        assertThat(approved.getContent().get(0).getReviewedByUserId()).isEqualTo(10L);
+        assertThat(approved.getContent().get(0).getMessage()).isEqualTo("First message");
+        assertThat(applications.findAllByStatus(MembershipApplicationStatus.PENDING))
+                .extracting(com.jeepclub.backend.memberships.core.domain.model.MembershipApplication::getId)
+                .containsExactly(second.getId());
+        assertThat(applications.findByCpf("52998224725")).get()
+                .extracting(com.jeepclub.backend.memberships.core.domain.model.MembershipApplication::getStatus)
+                .isEqualTo(MembershipApplicationStatus.APPROVED);
+        assertThat(applications.existsByCpf("52998224725")).isTrue();
+        assertThat(applications.existsByCpf("11144477735")).isFalse();
+        assertThat(applications.existsByEmail("first@example.com")).isTrue();
+        assertThat(applications.existsByEmail("absent@example.com")).isFalse();
+        assertThat(applications.findAll()).hasSize(2);
+    }
 
     private static final String CPF = "52998224725";
     private static final Instant NOW = Instant.parse("2026-08-08T12:00:00Z");
