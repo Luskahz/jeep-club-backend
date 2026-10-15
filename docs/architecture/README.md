@@ -85,6 +85,10 @@ proposta para revisão, sem alteração do comportamento de produção.
 4. [Armazenamento global](../../src/main/java/com/jeepclub/backend/platform/storage/docs/README.md)
    — contrato especializado de `shared.storage` e `platform.storage`.
 
+5. [Persistência, migrations e adoção do legado](../database/README.md) — auditoria,
+   política Flyway e procedimento operacional de banco, com infraestrutura em
+   `platform.database`.
+
 `contract-sensitive-findings.md` é um registro de achados pendentes de trabalhos
 anteriores, não uma fonte arquitetural. Revalide cada item contra a `develop`
 antes de usá-lo.

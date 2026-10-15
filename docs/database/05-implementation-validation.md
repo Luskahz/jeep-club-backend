@@ -2,6 +2,8 @@
 
 Branch: `codex/flyway-schema-baseline`, criada de develop `9d3fba3`, sem alterar master/develop nem reescrever #98/#99. PR para develop: [#101](https://github.com/Luskahz/jeep-club-backend/pull/101); CI e SHA final registrados em validation.json. Integração não é automática.
 
+Commits de implementação: `e5adeca`, `7856137`, `a39573d`; consolidação documental posterior não altera código ou SQL.
+
 Arquivos principais: pom.xml (starter/module/testcontainers/perfil Failsafe), application.properties (política segura), compose.yaml (validate/Flyway), SchemaSafetyConfiguration, três SQL em db/migration, SchemaMappings/SchemaMappingExportTest/SchemaSafetyConfigurationTest/MySqlMigrationIT, workflow com gate MySQL, scripts de coleta/comparação e vps-deploy.sh com interrupção segura de falha. Sem alteração de entidades de negócio, nomes de volumes ou credenciais.
 
 Verificações:
@@ -17,7 +19,7 @@ Metadados de auto_increment corrente e ordem de colunas não alteram equivalênc
 
 Dois slices JPA antigos não selecionavam o profile test; agora o declaram explicitamente para usar a configuração H2 prevista.
 
-Exportação local inicial: 14 verificações de configuração/mapping aprovadas. Docker Desktop falhou ao inicializar seu Inference manager; testes MySQL serão executados no runner Linux do CI, sem mascarar falha local como sucesso. Validação local completa: Maven verify, 1.867 testes, zero falhas/erros, um skip Windows (symlink), BUILD SUCCESS; o empacotamento `-DskipTests package` usado no Dockerfile também passou. Resultados MySQL/CI serão registrados após execução.
+Exportação local inicial: 14 verificações de configuração/mapping aprovadas. Docker Desktop falhou ao inicializar seu Inference manager; os testes MySQL foram executados no runner Linux do CI, sem mascarar a indisponibilidade local como sucesso. Validação local completa: Maven verify, 1.867 testes, zero falhas/erros, um skip Windows (symlink), BUILD SUCCESS; o empacotamento `-DskipTests package` usado no Dockerfile também passou. CI do código final `a39573d`: [run 38826294521](https://github.com/Luskahz/jeep-club-backend/actions/runs/38826294521), Maven verify **1.867 testes, zero falhas/erros/skips**, MySQL **12 testes, zero falhas/erros/skips**. Deploy foi skipped por ser PR. Inclui execução real do coletor e rejeição de schema futuro na autoconfiguração Spring. [Artifact MySQL/Failsafe](https://github.com/Luskahz/jeep-club-backend/actions/runs/38826294521/artifacts/12015525812). Esta consolidação documental preserva o mesmo código/SQL validado; checks do head mais recente estão no PR #101.
 
 Limite explícito: Hibernate validate verifica tabelas/colunas/tipos; não é auditoria completa de FKs/índices/defaults/collation. Flyway validate verifica histórico/checksums; também não prova ausência de drift físico manual. Por isso a comparação estrutural e o ensaio da cópia real são critérios obrigatórios antes da baseline e promoção. Logs locais completos ficam em target/audit-evidence (ignorados pelo Git); CI publica artifacts de Failsafe.
 

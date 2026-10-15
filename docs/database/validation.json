@@ -1,5 +1,5 @@
 {
-  "status": "CI_PENDING",
+  "status": "REPOSITORY_IMPLEMENTATION_VALIDATED_VPS_PENDING",
   "references": {
     "initial_reference": "e4aa00e4a492900b26cec78839dcfae480712b0b",
     "master": "6865bc4f600462c5fcc6cf1212c9660591eff4db",
@@ -20,7 +20,8 @@
   "implementation_pr": "https://github.com/Luskahz/jeep-club-backend/pull/101",
   "implementation_commits": [
     "e5adecaf7416303c795ac49bca470b91cb4b7965",
-    "78561378c95af7452ee24e294f4d4efa0bd19ec6"
+    "78561378c95af7452ee24e294f4d4efa0bd19ec6",
+    "a39573dc35eddea3d162e5bc45ded2a437d338e6"
   ],
   "migration_sha256": {
     "V1__initial_deploy_schema.sql": "c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e",
@@ -42,15 +43,27 @@
     "result": "BUILD SUCCESS",
     "duration": "17.909s"
   },
-  "ci_mysql_prior_code_validation": {
-    "sha": "78561378c95af7452ee24e294f4d4efa0bd19ec6",
-    "run_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38825889283",
-    "job": 116733509908,
-    "tests": 11,
-    "failures": 0,
-    "errors": 0,
-    "skipped": 0,
-    "result": "BUILD SUCCESS",
-    "note": "Final collector integration and Spring future-history assertion pending next head CI"
+  "ci": {
+    "tested_code_sha": "a39573dc35eddea3d162e5bc45ded2a437d338e6",
+    "run_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38826294521",
+    "maven_verify": {
+      "job_id": 116734422231,
+      "tests": 1867,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "result": "success"
+    },
+    "mysql_migrations": {
+      "job_id": 116734422544,
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "result": "success",
+      "mysql_image": "mysql:8.0.44",
+      "artifact_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38826294521/artifacts/12015525812"
+    },
+    "deploy": "skipped (pull request event)"
   }
 }
