@@ -37,6 +37,37 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AdminMembershipApplicationServiceTest {
 
+    @Test
+    void rejectionNotificationUsesPersistedRecipientAndTrimmedReason() {
+        MembershipApplication application = pendingApplication();
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        service.reject(1L, 10L, "  Not eligible  ");
+        assertThat(application.getRejectionReason()).isEqualTo("Not eligible");
+        verify(mailSender).sendRejectionNotice("candidate@example.com", "Candidate", "Not eligible");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"   "})
+    void rejectionWithAbsentReasonDoesNotSendMail(String reason) {
+        MembershipApplication application = pendingApplication();
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        service.reject(1L, 10L, reason);
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void findByIdReturnsExistingApplicationAndMissingApprovalOrResendDoesNotProvision() {
+        MembershipApplication application = pendingApplication();
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        assertThat(service.findById(1L)).isSameAs(application);
+        assertThatThrownBy(() -> service.approveWithAccessLink(999L, 10L))
+                .isInstanceOf(MembershipApplicationNotFoundException.class);
+        assertThatThrownBy(() -> service.resendActivationLink(999L))
+                .isInstanceOf(MembershipApplicationNotFoundException.class);
+        verifyNoInteractions(createUserPort, activationTokenService);
+    }
+
     private static final Instant NOW = Instant.parse("2026-08-08T12:00:00Z");
     private static final String CPF = "52998224725";
 

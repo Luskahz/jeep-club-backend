@@ -29,6 +29,18 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class MembershipApplicationServiceTest {
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"   ", "  Hello club  "})
+    void creationNormalizesOptionalMessageWithoutLosingNonBlankText(String message) {
+        when(applicationRepository.save(any(MembershipApplication.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        var result = service.ensure("Candidate", CPF, null, "(11) 99999-9999", message);
+        assertThat(result.application().getMessage())
+                .isEqualTo(message == null || message.isBlank() ? null : "Hello club");
+        assertThat(result.application().getPhoneNumber()).isEqualTo("11999999999");
+    }
+
     private static final Instant NOW = Instant.parse("2026-08-08T12:00:00Z");
     private static final String CPF = "52998224725";
     private static final String FORMATTED_CPF = "529.982.247-25";

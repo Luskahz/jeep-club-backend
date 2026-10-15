@@ -45,6 +45,34 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class MembershipAdminSecurityIntegrationTest {
 
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0} {1} rejects unrelated authority")
+    @org.junit.jupiter.params.provider.CsvSource({
+            "POST, /admin/membership-applications/1/approve/temporary-password",
+            "POST, /admin/membership-applications/1/approve/access-link",
+            "POST, /admin/membership-applications/1/activation-link/resend",
+            "POST, /admin/membership-applications/1/reject",
+            "POST, /admin/membership-applications/1/reject-and-block",
+            "POST, /admin/membership-applications/blocks/52998224725/unblock",
+            "GET, /admin/membership-applications/export",
+            "GET, /admin/membership-applications/blocks/export"
+    })
+    void mutationAndExportEndpointsRejectReadOnlyAuthority(String method, String path) throws Exception {
+        authenticate("read-only-audit", 107L, List.of("MEMBERSHIP_MEMBERSHIP_REQUEST_READ"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(
+                        org.springframework.http.HttpMethod.valueOf(method), path)
+                        .header("Authorization", "Bearer read-only-audit")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Audit rejection\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        org.mockito.Mockito.verifyNoInteractions(adminMembershipApplicationService,
+                adminMembershipApplicantBlockService, membershipApplicationExportService,
+                applicantBlockExportService);
+    }
+
     private static final Instant NOW = Instant.parse("2026-10-14T12:00:00Z");
 
     @Autowired

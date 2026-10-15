@@ -29,6 +29,40 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class MemberActivationTokenServiceTest {
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void completionRejectsExpiredOrUsedTokenBeforeCallingAuthentication(boolean used) {
+        MemberActivationToken token = MemberActivationToken.reconstitute(10L, 1L, "hash",
+                used ? NOW.plusSeconds(3600) : NOW.minusSeconds(1),
+                used ? NOW.minusSeconds(1) : null, NOW.minusSeconds(3600));
+        when(hashPort.hash("raw")).thenReturn("hash");
+        when(tokenRepository.findApplicationIdByTokenHash("hash")).thenReturn(Optional.of(1L));
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(approvedApplication()));
+        when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
+        when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
+        assertThatThrownBy(() -> service.complete("raw", "new-password"))
+                .isInstanceOf(used ? MemberActivationTokenAlreadyUsedException.class : MemberActivationTokenExpiredException.class);
+        verifyNoInteractions(firstAccessPort);
+        verify(tokenRepository, never()).save(any());
+        verify(applicationRepository, never()).save(any());
+    }
+
+    @Test
+    void missingApplicationOrIdentityCannotValidateCompleteOrIssueInvitation() {
+        when(hashPort.hash("raw")).thenReturn("hash");
+        when(tokenRepository.findByTokenHash("hash")).thenReturn(Optional.of(validToken()));
+        assertThatThrownBy(() -> service.validate("raw"))
+                .isInstanceOf(com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException.class);
+        when(tokenRepository.findApplicationIdByTokenHash("hash")).thenReturn(Optional.of(1L));
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(approvedApplication()));
+        assertThatThrownBy(() -> service.complete("raw", "new-password"))
+                .isInstanceOf(com.jeepclub.backend.memberships.core.application.exception.MembershipFirstAccessConflictException.class);
+        assertThatThrownBy(() -> service.issueAndSend(approvedApplication()))
+                .isInstanceOf(com.jeepclub.backend.memberships.core.application.exception.MembershipFirstAccessConflictException.class);
+        verifyNoInteractions(firstAccessPort, mailSender);
+        verify(tokenRepository, never()).save(any());
+    }
     private static final Instant NOW = Instant.parse("2026-09-19T12:00:00Z");
     @Mock MemberActivationTokenRepository tokenRepository;
     @Mock MemberActivationTokenHashPort hashPort;
