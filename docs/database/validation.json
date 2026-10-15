@@ -16,5 +16,41 @@
     "database_changed": false,
     "baseline_executed": false
   },
-  "release_100": "BLOCKED_PENDING_VPS_EVIDENCE_AND_FLYWAY_INTEGRATION"
+  "release_100": "BLOCKED_PENDING_VPS_EVIDENCE_AND_FLYWAY_INTEGRATION",
+  "implementation_pr": "https://github.com/Luskahz/jeep-club-backend/pull/101",
+  "implementation_commits": [
+    "e5adecaf7416303c795ac49bca470b91cb4b7965",
+    "78561378c95af7452ee24e294f4d4efa0bd19ec6"
+  ],
+  "migration_sha256": {
+    "V1__initial_deploy_schema.sql": "c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e",
+    "V2__identity_user_profiles.sql": "c82bc02dea548d93c127ddd565df1ca05fcd6eaf58f2b2b500becdcdd8196963",
+    "V3__account_activation_invitations.sql": "b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"
+  },
+  "local_verify": {
+    "command": "./mvnw.cmd -B -ntp verify",
+    "tests": 1867,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "skip_reason": "Windows symbolic link unavailable",
+    "result": "BUILD SUCCESS",
+    "duration": "03:45"
+  },
+  "docker_package_command": {
+    "command": "./mvnw.cmd -B -ntp -DskipTests package",
+    "result": "BUILD SUCCESS",
+    "duration": "17.909s"
+  },
+  "ci_mysql_prior_code_validation": {
+    "sha": "78561378c95af7452ee24e294f4d4efa0bd19ec6",
+    "run_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38825889283",
+    "job": 116733509908,
+    "tests": 11,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "result": "BUILD SUCCESS",
+    "note": "Final collector integration and Spring future-history assertion pending next head CI"
+  }
 }

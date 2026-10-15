@@ -94,6 +94,8 @@ class MySqlMigrationIT {
                     + "values(4,'4','Future fixture','SQL','V4__future_fixture.sql',123,'fixture',0,1)");
         }
         assertThatThrownBy(flyway::validate).isInstanceOf(FlywayException.class);
+        springContext(db).run(context -> assertThat(context).hasFailed().getFailure()
+                .hasStackTraceContaining("Validate failed"));
     }
 
     @Test void databaseEnforcesUniqueNotNullAndForeignKeyConstraints() throws Exception {
@@ -147,6 +149,37 @@ class MySqlMigrationIT {
                 .withPropertyValues("spring.datasource.url=" + url(db),
                         "spring.datasource.username=" + MYSQL.getUsername(),
                         "spring.datasource.password=" + MYSQL.getPassword());
+    }
+
+    @Test void readOnlyCollectorExportsCompleteMetadataWithoutChangingTheDatabase() throws Exception {
+        String db = MYSQL.getDatabaseName(); flyway(db, "3").migrate();
+        try (var c = connection(db); var statement = c.createStatement()) {
+            statement.executeUpdate("insert into identity_users(name,cpf,status,created_at) "
+                    + "values('Collector fixture','00000000000','ACTIVE',UTC_TIMESTAMP(6))");
+        }
+        List<String> before = snapshot(db);
+        var parent = java.nio.file.Path.of("target/audit-evidence");
+        java.nio.file.Files.createDirectories(parent);
+        var directory = parent.resolve("collector-" + UUID.randomUUID());
+        var log = parent.resolve(directory.getFileName() + ".log");
+        String bash = System.getProperty("os.name").startsWith("Windows")
+                ? "C:/Program Files/Git/bin/bash.exe" : "bash";
+        var builder = new ProcessBuilder(bash, "deploy/audit-schema.sh", directory.toString())
+                .redirectErrorStream(true).redirectOutput(log.toFile());
+        builder.environment().put("MYSQL_CONTAINER", MYSQL.getContainerId());
+        builder.environment().put("BACKEND_CONTAINER", "no-backend-in-migration-fixture");
+        var process = builder.start();
+        try {
+            assertThat(process.waitFor(90, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThat(process.exitValue()).withFailMessage(java.nio.file.Files.readString(log)).isZero();
+        } finally { if (process.isAlive()) process.destroyForcibly(); }
+        assertThat(snapshot(db)).isEqualTo(before);
+        assertThat(count(db, "identity_users")).isEqualTo(1);
+        assertThat(java.nio.file.Files.readAllLines(directory.resolve("tables.tsv"))).hasSize(60);
+        assertThat(java.nio.file.Files.readString(directory.resolve("flyway-history-present.txt")).trim()).isEqualTo("1");
+        assertThat(java.nio.file.Files.readString(directory.resolve("schema.sql"))).contains("CREATE TABLE `identity_users`");
+        assertThat(java.nio.file.Files.readString(directory.resolve("counts.tsv"))).contains("identity_users\t1");
+        assertThat(java.nio.file.Files.readString(log)).doesNotContain(MYSQL.getPassword());
     }
 
     private static Flyway flyway(String db, String target) {

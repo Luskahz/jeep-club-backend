@@ -26,7 +26,7 @@ Required repository secrets: `JEEPCLUB_DEPLOY_HOST`, `JEEPCLUB_DEPLOY_USER`, `JE
 
 Install `deploy/vps-deploy.sh` as `/usr/local/sbin/jeep-club-deploy` with root ownership and mode `700`. It uses the clone at `/opt/jeep-club-repo` and the private environment file at `/opt/jeep-club-compose/.env`.
 
-Deployment builds an image tagged with the tested commit, backs up the existing database/uploads, and waits for container health checks. Concurrent deployments are serialized. If startup fails, the script attempts to restore the previous application image; database schema changes are not reversed automatically. Keep the pre-deployment database backup for recovery.
+Deployment builds an image tagged with the tested commit, backs up the existing database/uploads, and waits for container health checks. Concurrent deployments are serialized. For migration-aware releases, the revised hook blocks an unversioned VPS database before deployment and stops the backend on startup failure instead of restoring an older image onto potentially committed DDL. The installed hook must be reviewed and updated explicitly; a Git merge does not update /usr/local/sbin. Follow the [database adoption runbook](../docs/database/06-vps-runbook.md) and keep a restore-tested pre-deployment backup.
 
 After a successful deployment, the image tag is saved in the private environment file and `/var/lib/jeep-club-deploy`. Do not remove these image tags until the corresponding release is no longer needed for rollback. Database credentials remain on the VPS and are not needed in GitHub Actions.
 
@@ -53,7 +53,20 @@ docker compose up -d --build --wait
 
 The Docker build packages the application without running tests. Run `mvn verify` separately before releasing a change. Do not use `docker compose down -v` when you need to preserve the database or uploaded files.
 
+## Database schema adoption
+
+Flyway owns DDL; Hibernate uses validate in every application profile. Empty databases
+apply V1–V3. Existing databases must be compared with a matching reference and explicitly
+baselined only after a successful isolated restore rehearsal. Automatic baseline is disabled.
+The [seven audit reports](../docs/database/README.md) document the historical schema and
+release #100 blockers. Do not promote #100 before integrating/validating #101 and completing
+the real VPS checks. No active database operation is authorized by these instructions.
+
 ## Backup and migration
+
+The commands below change service/database state. For the existing VPS, obtain explicit
+approval and follow the full runbook, including routines/events/triggers and restore verification,
+before running them. A restored legacy dump still needs the verified Flyway adoption step.
 
 Copy this project and the private `.env` to the new server. To transfer data, stop writes first, take a MySQL dump and archive uploaded files:
 
