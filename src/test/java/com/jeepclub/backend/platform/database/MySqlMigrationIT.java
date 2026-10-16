@@ -113,7 +113,7 @@ class MySqlMigrationIT {
         }
     }
 
-    @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+    @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
     @org.springframework.boot.persistence.autoconfigure.EntityScan("com.jeepclub.backend")
     @org.springframework.context.annotation.Import(SchemaSafetyConfiguration.class)
     static class DatabaseContext { }
