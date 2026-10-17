@@ -18,7 +18,10 @@ class SchemaSafetyConfigurationTest {
             "spring.jpa.generate-ddl,true", "spring.sql.init.mode,always",
             "spring.jpa.properties.hibernate.hbm2ddl.auto,update",
             "spring.jpa.properties.jakarta.persistence.schema-generation.database.action,create",
-            "spring.jpa.defer-datasource-initialization,true"
+            "spring.jpa.defer-datasource-initialization,true",
+            "spring.flyway.out-of-order,true", "spring.flyway.ignore-migration-patterns,*:future",
+            "spring.flyway.validate-migration-naming,false", "spring.flyway.locations,filesystem:/tmp/sql",
+            "spring.flyway.url,jdbc:mysql://other/database", "spring.flyway.target,2"
     })
     void rejectsUnsafeOverrides(String key, String value) {
         assertThatThrownBy(() -> SchemaSafetyConfiguration.validate(new MockEnvironment().withProperty(key, value)))

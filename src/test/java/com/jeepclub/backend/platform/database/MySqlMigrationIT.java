@@ -22,7 +22,7 @@ import static org.assertj.core.api.Assertions.*;
 @Testcontainers
 class MySqlMigrationIT {
     @Container
-    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.44")
+    static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
             .withUsername("root").withPassword("migration-test-only")
             .withCommand("--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci");
 
@@ -77,25 +77,55 @@ class MySqlMigrationIT {
                 .hasStackTraceContaining("missing column [street]"));
     }
 
-    @Test void flywayRejectsAlteredChecksumAndCleanIsDisabled() throws Exception {
-        String db = database(); var flyway = flyway(db, "3"); flyway.migrate();
-        try (var c = connection(db); var s = c.createStatement()) {
-            s.executeUpdate("update flyway_schema_history set checksum=0 where version='2'");
+    private static java.nio.file.Path experimentalMigrations(String sql) throws Exception {
+        var dir = java.nio.file.Files.createTempDirectory("flyway-experiment-");
+        try (var files = java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/db/migration"))) {
+            for (var file : files.toList()) java.nio.file.Files.copy(file, dir.resolve(file.getFileName()));
         }
-        assertThatThrownBy(flyway::validate).isInstanceOf(FlywayException.class);
-        assertThatThrownBy(flyway::clean).isInstanceOf(FlywayException.class);
-        assertThat(count(db, "identity_users")).isZero();
+        if (sql != null) java.nio.file.Files.writeString(dir.resolve("V4__lab_only.sql"), sql);
+        return dir;
     }
 
-    @Test void refusesSchemaHistoryFromANewerApplicationVersion() throws Exception {
-        String db = database(); var flyway = flyway(db, "3"); flyway.migrate();
-        try (var c = connection(db); var s = c.createStatement()) {
-            s.executeUpdate("insert into flyway_schema_history(installed_rank,version,description,type,script,checksum,installed_by,execution_time,success) "
-                    + "values(4,'4','Future fixture','SQL','V4__future_fixture.sql',123,'fixture',0,1)");
-        }
-        assertThatThrownBy(flyway::validate).isInstanceOf(FlywayException.class);
+    private static Flyway experimentalFlyway(String db, java.nio.file.Path dir) {
+        return Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
+                .locations("filesystem:" + dir).baselineOnMigrate(false).cleanDisabled(true)
+                .ignoreMigrationPatterns(new String[0]).load();
+    }
+
+    @Test void flywayRejectsChangedScriptWithoutEditingHistory() throws Exception {
+        String db = database(); flyway(db, "3").migrate();
+        var dir = experimentalMigrations(null);
+        java.nio.file.Files.writeString(dir.resolve("V2__identity_user_profiles.sql"), "-- changed checksum\n",
+                java.nio.file.StandardOpenOption.APPEND);
+        assertThatThrownBy(experimentalFlyway(db, dir)::validate).isInstanceOf(FlywayException.class);
+        assertThat(flyway(db, "3").getConfiguration().isCleanDisabled()).isTrue();
+    }
+
+    @Test void newMigrationRunsOnceAndOldApplicationRefusesFutureHistory() throws Exception {
+        String db = database(); flyway(db, "3").migrate();
+        var dir = experimentalMigrations("CREATE TABLE migration_lab_probe(id BIGINT PRIMARY KEY); INSERT INTO migration_lab_probe VALUES(1);");
+        var next = experimentalFlyway(db, dir);
+        assertThat(next.migrate().migrationsExecuted).isEqualTo(1);
+        next.validate(); validateJpa(db);
+        assertThat(next.migrate().migrationsExecuted).isZero();
+        assertThat(count(db, "migration_lab_probe")).isEqualTo(1);
+        assertThat(count(db, "flyway_schema_history")).isEqualTo(4);
+        assertThatThrownBy(flyway(db, "3")::validate).isInstanceOf(FlywayException.class);
         springContext(db).run(context -> assertThat(context).hasFailed().getFailure()
                 .hasStackTraceContaining("Validate failed"));
+    }
+
+    @Test void invalidMigrationLeavesVisibleFailureAndDoesNotRepairHistory() throws Exception {
+        String db = database(); flyway(db, "3").migrate();
+        var dir = experimentalMigrations("CREATE TABLE migration_lab_partial(id BIGINT PRIMARY KEY); INVALID SQL;");
+        var next = experimentalFlyway(db, dir);
+        assertThatThrownBy(next::migrate).isInstanceOf(FlywayException.class);
+        assertThatThrownBy(next::validate).isInstanceOf(FlywayException.class);
+        assertThat(count(db, "migration_lab_partial")).isZero();
+        try (var c = connection(db); var s = c.createStatement();
+             var r = s.executeQuery("select success from flyway_schema_history where version='4'")) {
+            assertThat(r.next()).isTrue(); assertThat(r.getBoolean(1)).isFalse();
+        }
     }
 
     @Test void databaseEnforcesUniqueNotNullAndForeignKeyConstraints() throws Exception {

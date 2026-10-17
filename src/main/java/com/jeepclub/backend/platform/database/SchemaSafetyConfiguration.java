@@ -27,6 +27,13 @@ public class SchemaSafetyConfiguration {
                 "Automatic baseline is forbidden; verify equivalence and baseline explicitly");
         require(env.getProperty("spring.flyway.clean-disabled", Boolean.class, true), "Flyway clean must be disabled");
         require(env.getProperty("spring.flyway.validate-on-migrate", Boolean.class, true), "Flyway validation must be enabled");
+        require(!env.getProperty("spring.flyway.out-of-order", Boolean.class, false), "Out-of-order migrations are forbidden");
+        require(env.getProperty("spring.flyway.ignore-migration-patterns", "").isBlank(), "Migration history cannot be ignored");
+        require(env.getProperty("spring.flyway.validate-migration-naming", Boolean.class, true), "Migration names must be validated");
+        require("classpath:db/migration".equals(env.getProperty("spring.flyway.locations", "classpath:db/migration")),
+                "Only packaged migrations are allowed");
+        require(!env.containsProperty("spring.flyway.url"), "Flyway must use the application datasource");
+        require(!env.containsProperty("spring.flyway.target"), "All pending migrations must execute");
         require(!env.getProperty("spring.jpa.generate-ddl", Boolean.class, false), "JPA DDL generation is forbidden");
         require("never".equals(env.getProperty("spring.sql.init.mode", "never")), "SQL initializer must be disabled");
         require("validate".equals(env.getProperty("spring.jpa.properties.hibernate.hbm2ddl.auto", "validate")),
