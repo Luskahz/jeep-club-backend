@@ -46,6 +46,8 @@ jobs:
         run: |
           for script in deploy/*.sh; do bash -n "$script"; done
           python3 deploy/test-deploy.py
+          python3 deploy/test-snapshot.py
+          python3 -m py_compile deploy/snapshot-vps.py
           docker compose config --quiet
           docker compose -f compose.local.yaml config --quiet
 
