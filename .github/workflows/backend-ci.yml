@@ -64,8 +64,12 @@ jobs:
           java-version: "17"
           cache: maven
       - run: chmod +x mvnw
+      - name: Verify frozen historical fixture hashes
+        run: cd src/test/resources/database/historical && sha256sum -c SHA256SUMS
       - name: Validate empty and historical MySQL schemas
         run: ./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify
+      - name: Verify next migration without fixed-version test edits
+        run: bash deploy/test-future-migration.sh
       - name: Preserve migration test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,6 +78,7 @@ jobs:
           path: |
             target/failsafe-reports
             target/audit-evidence
+            target/forward-migration-evidence
 
   deploy:
     name: Deploy to VPS

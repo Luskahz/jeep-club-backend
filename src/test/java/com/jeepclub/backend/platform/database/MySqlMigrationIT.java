@@ -28,12 +28,13 @@ class MySqlMigrationIT {
 
     @Test void emptyDatabaseMatchesEveryJpaMappingAndIsIdempotent() throws Exception {
         String fresh = database();
-        assertThat(flyway(fresh, "3").migrate().migrationsExecuted).isEqualTo(3);
+        assertThat(flyway(fresh).migrate().migrationsExecuted).isEqualTo(migrationVersions().size());
         validateJpa(fresh);
-        String expected = historicalDatabase(3);
+        String expected = database();
+        jpa(expected, 3, "create-only");
         assertThat(snapshot(fresh)).isEqualTo(snapshot(expected));
-        assertThat(flyway(fresh, "3").migrate().migrationsExecuted).isZero();
-        assertThat(count(fresh, "flyway_schema_history")).isEqualTo(3);
+        assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
+        assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
     }
 
     @ParameterizedTest @ValueSource(ints = {1, 2, 3})
@@ -47,10 +48,10 @@ class MySqlMigrationIT {
                 .baselineVersion(Integer.toString(version)).baselineDescription("Verified historical fixture")
                 .baselineOnMigrate(false).cleanDisabled(true).load();
         baseline.baseline();
-        assertThat(baseline.migrate().migrationsExecuted).isEqualTo(3 - version);
+        assertThat(baseline.migrate().migrationsExecuted).isEqualTo(migrationVersions().size() - version);
         validateJpa(existing);
         String fresh = database();
-        flyway(fresh, "3").migrate();
+        flyway(fresh).migrate();
         assertThat(snapshot(existing)).isEqualTo(snapshot(fresh));
         assertThat(count(existing, "identity_users")).isEqualTo(1);
         try (var c = connection(existing); var s = c.createStatement();
@@ -63,12 +64,12 @@ class MySqlMigrationIT {
     @Test void refusesNonEmptyUnversionedSchemaWithoutAutomaticBaseline() throws Exception {
         String existing = historicalDatabase(1);
         List<String> before = snapshot(existing);
-        assertThatThrownBy(() -> flyway(existing, "3").migrate()).isInstanceOf(FlywayException.class);
+        assertThatThrownBy(() -> flyway(existing).migrate()).isInstanceOf(FlywayException.class);
         assertThat(snapshot(existing)).isEqualTo(before);
     }
 
     @Test void hibernateRejectsMissingColumnInsteadOfRepairingIt() throws Exception {
-        String db = database(); flyway(db, "3").migrate();
+        String db = database(); flyway(db).migrate();
         try (var c = connection(db); var s = c.createStatement()) {
             s.execute("alter table identity_user_profiles rename column street to legacy_street");
         }
@@ -82,7 +83,7 @@ class MySqlMigrationIT {
         try (var files = java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/db/migration"))) {
             for (var file : files.toList()) java.nio.file.Files.copy(file, dir.resolve(file.getFileName()));
         }
-        if (sql != null) java.nio.file.Files.writeString(dir.resolve("V4__lab_only.sql"), sql);
+        if (sql != null) java.nio.file.Files.writeString(dir.resolve("V" + experimentalVersion() + "__lab_only.sql"), sql);
         return dir;
     }
 
@@ -93,43 +94,43 @@ class MySqlMigrationIT {
     }
 
     @Test void flywayRejectsChangedScriptWithoutEditingHistory() throws Exception {
-        String db = database(); flyway(db, "3").migrate();
+        String db = database(); flyway(db).migrate();
         var dir = experimentalMigrations(null);
         java.nio.file.Files.writeString(dir.resolve("V2__identity_user_profiles.sql"), "-- changed checksum\n",
                 java.nio.file.StandardOpenOption.APPEND);
         assertThatThrownBy(experimentalFlyway(db, dir)::validate).isInstanceOf(FlywayException.class);
-        assertThat(flyway(db, "3").getConfiguration().isCleanDisabled()).isTrue();
+        assertThat(flyway(db).getConfiguration().isCleanDisabled()).isTrue();
     }
 
     @Test void newMigrationRunsOnceAndOldApplicationRefusesFutureHistory() throws Exception {
-        String db = database(); flyway(db, "3").migrate();
+        String db = database(); flyway(db).migrate();
         var dir = experimentalMigrations("CREATE TABLE migration_lab_probe(id BIGINT PRIMARY KEY); INSERT INTO migration_lab_probe VALUES(1);");
         var next = experimentalFlyway(db, dir);
         assertThat(next.migrate().migrationsExecuted).isEqualTo(1);
         next.validate(); validateJpa(db);
         assertThat(next.migrate().migrationsExecuted).isZero();
         assertThat(count(db, "migration_lab_probe")).isEqualTo(1);
-        assertThat(count(db, "flyway_schema_history")).isEqualTo(4);
-        assertThatThrownBy(flyway(db, "3")::validate).isInstanceOf(FlywayException.class);
+        assertThat(count(db, "flyway_schema_history")).isEqualTo(migrationVersions().size() + 1);
+        assertThatThrownBy(flyway(db)::validate).isInstanceOf(FlywayException.class);
         springContext(db).run(context -> assertThat(context).hasFailed().getFailure()
                 .hasStackTraceContaining("Validate failed"));
     }
 
     @Test void invalidMigrationLeavesVisibleFailureAndDoesNotRepairHistory() throws Exception {
-        String db = database(); flyway(db, "3").migrate();
+        String db = database(); flyway(db).migrate();
         var dir = experimentalMigrations("CREATE TABLE migration_lab_partial(id BIGINT PRIMARY KEY); INVALID SQL;");
         var next = experimentalFlyway(db, dir);
         assertThatThrownBy(next::migrate).isInstanceOf(FlywayException.class);
         assertThatThrownBy(next::validate).isInstanceOf(FlywayException.class);
         assertThat(count(db, "migration_lab_partial")).isZero();
         try (var c = connection(db); var s = c.createStatement();
-             var r = s.executeQuery("select success from flyway_schema_history where version='4'")) {
+             var r = s.executeQuery("select success from flyway_schema_history where version='" + experimentalVersion() + "'")) {
             assertThat(r.next()).isTrue(); assertThat(r.getBoolean(1)).isFalse();
         }
     }
 
     @Test void databaseEnforcesUniqueNotNullAndForeignKeyConstraints() throws Exception {
-        String db = database(); flyway(db, "3").migrate();
+        String db = database(); flyway(db).migrate();
         try (var c = connection(db); var s = c.createStatement()) {
             assertThatThrownBy(() -> s.executeUpdate("insert into identity_users(name,cpf,status,created_at) "
                     + "values(null,'00000000000','ACTIVE',UTC_TIMESTAMP(6))")).isInstanceOf(java.sql.SQLException.class);
@@ -153,9 +154,9 @@ class MySqlMigrationIT {
         springContext(db).run(context -> {
             assertThat(context).hasNotFailed();
             assertThat(context.getBean(jakarta.persistence.EntityManagerFactory.class).isOpen()).isTrue();
-            assertThat(context.getBean(Flyway.class).info().current().getVersion().toString()).isEqualTo("3");
+            assertThat(context.getBean(Flyway.class).info().current().getVersion().toString()).isEqualTo(latestVersion());
         });
-        assertThat(count(db, "flyway_schema_history")).isEqualTo(3);
+        assertThat(count(db, "flyway_schema_history")).isEqualTo(migrationVersions().size());
     }
 
     @Test void unsafeOverrideIsRejectedBeforeFlywayCanWriteAnything() throws Exception {
@@ -182,7 +183,7 @@ class MySqlMigrationIT {
     }
 
     @Test void readOnlyCollectorExportsCompleteMetadataWithoutChangingTheDatabase() throws Exception {
-        String db = MYSQL.getDatabaseName(); flyway(db, "3").migrate();
+        String db = MYSQL.getDatabaseName(); flyway(db).migrate();
         try (var c = connection(db); var statement = c.createStatement()) {
             statement.executeUpdate("insert into identity_users(name,cpf,status,created_at) "
                     + "values('Collector fixture','00000000000','ACTIVE',UTC_TIMESTAMP(6))");
@@ -205,16 +206,36 @@ class MySqlMigrationIT {
         } finally { if (process.isAlive()) process.destroyForcibly(); }
         assertThat(snapshot(db)).isEqualTo(before);
         assertThat(count(db, "identity_users")).isEqualTo(1);
-        assertThat(java.nio.file.Files.readAllLines(directory.resolve("tables.tsv"))).hasSize(60);
+        try (var c = connection(db); var statement = c.createStatement(); var rows = statement.executeQuery(
+                "select count(*) from information_schema.tables where table_schema=database() and table_name<>'flyway_schema_history'")) {
+            rows.next();
+            assertThat(java.nio.file.Files.readAllLines(directory.resolve("tables.tsv"))).hasSize(rows.getInt(1));
+        }
         assertThat(java.nio.file.Files.readString(directory.resolve("flyway-history-present.txt")).trim()).isEqualTo("1");
         assertThat(java.nio.file.Files.readString(directory.resolve("schema.sql"))).contains("CREATE TABLE `identity_users`");
         assertThat(java.nio.file.Files.readString(directory.resolve("counts.tsv"))).contains("identity_users\t1");
         assertThat(java.nio.file.Files.readString(log)).doesNotContain(MYSQL.getPassword());
     }
 
-    private static Flyway flyway(String db, String target) {
+    private static List<org.flywaydb.core.api.MigrationVersion> migrationVersions() {
+        try (var files = java.nio.file.Files.list(java.nio.file.Path.of("src/main/resources/db/migration"))) {
+            return files.map(path -> path.getFileName().toString())
+                    .filter(name -> name.startsWith("V") && name.endsWith(".sql") && name.contains("__"))
+                    .map(name -> org.flywaydb.core.api.MigrationVersion.fromVersion(name.substring(1, name.indexOf("__"))))
+                    .sorted().toList();
+        } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+    }
+    private static String latestVersion() {
+        var versions = migrationVersions();
+        return versions.get(versions.size() - 1).toString();
+    }
+    private static String experimentalVersion() {
+        return new java.math.BigInteger(latestVersion().split("\\.")[0]).add(java.math.BigInteger.ONE).toString();
+    }
+
+    private static Flyway flyway(String db) {
         return Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
-                .locations("classpath:db/migration").target(target).baselineOnMigrate(false)
+                .locations("classpath:db/migration").baselineOnMigrate(false)
                 .cleanDisabled(true).ignoreMigrationPatterns(new String[0]).validateOnMigrate(true).validateMigrationNaming(true).outOfOrder(false).load();
     }
     private static String database() throws Exception {
@@ -227,7 +248,11 @@ class MySqlMigrationIT {
     }
     private static String historicalDatabase(int version) throws Exception {
         String name = database();
-        jpa(name, version, "create-only");
+        // Frozen exports from the audited historical mappings; never regenerate from future entities.
+        var resource = new org.springframework.core.io.ClassPathResource("database/historical/v" + version + ".sql");
+        try (var c = connection(name)) {
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c, resource);
+        }
         return name;
     }
     private static void validateJpa(String name) throws Exception { jpa(name, 3, "validate"); }
