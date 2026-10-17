@@ -70,7 +70,7 @@ class MySqlMigrationIT {
     @Test void hibernateRejectsMissingColumnInsteadOfRepairingIt() throws Exception {
         String db = database(); flyway(db, "3").migrate();
         try (var c = connection(db); var s = c.createStatement()) {
-            s.execute("alter table identity_user_profiles drop column street");
+            s.execute("alter table identity_user_profiles rename column street to legacy_street");
         }
         assertThatThrownBy(() -> validateJpa(db)).hasStackTraceContaining("missing column [street]");
         springContext(db).run(context -> assertThat(context).hasFailed().getFailure()

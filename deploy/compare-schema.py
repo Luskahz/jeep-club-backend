@@ -4,7 +4,8 @@ import difflib
 import pathlib
 import sys
 FILES = ("tables.tsv", "columns.tsv", "indexes.tsv", "constraints.tsv", "keys.tsv",
-         "foreign-keys.tsv", "checks.tsv", "views.tsv", "triggers.tsv", "routines.tsv", "events.tsv")
+         "foreign-keys.tsv", "checks.tsv", "views.tsv", "triggers.tsv", "routines.tsv", "events.tsv",
+         "table-options.tsv", "index-options.tsv", "view-definitions.tsv")
 
 def compare(reference, actual):
     changed = False

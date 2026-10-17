@@ -21,7 +21,7 @@ sha=${BASH_REMATCH[1]}
 [[ $(git -C "$repo" remote get-url origin) == "$origin" ]] || { echo 'Unexpected repository origin.' >&2; exit 1; }
 git -C "$repo" -c core.hooksPath=/dev/null fetch --no-tags "$origin" +refs/heads/master:refs/remotes/origin/master
 git -C "$repo" cat-file -e "$sha^{commit}"
-git -C "$repo" merge-base --is-ancestor "$sha" refs/remotes/origin/master
+git -C "$repo" merge-base --is-ancestor "$sha" refs/remotes/origin/master || { echo 'Requested SHA does not belong to origin/master.' >&2; exit 1; }
 # Reject stale queued runs and older schema/image releases.
 [[ $(git -C "$repo" rev-parse refs/remotes/origin/master) == "$sha" ]] || { echo 'Requested SHA is no longer master HEAD; deploy the latest tested master.' >&2; exit 1; }
 if [[ -f $state/current-commit ]]; then
