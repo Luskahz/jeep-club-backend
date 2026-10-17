@@ -52,7 +52,7 @@ Adoção concluída em 17/10/2026 UTC (16/10 no fuso do usuário). Backup final 
 | Uploads do backup final | `4d62df1e88d69d1f86ff255eb1fe846bc18a4a24229a7a3ecf3e99c70c3a7ef1` |
 | Configuração privada de recuperação | `0f883cbdaca5ca559ef8d98eb962206125fe8000075597fdda3bfa0b4f43b570` |
 | Todos os registros, antes/depois da reconciliação/baseline | `dc6e22e43f8e35a7bd541aec48dad6a6962862ead4e5457be77cd85b58399504` |
-| Wrapper instalado, idêntico ao Git | `dd3d4a95f3ea41492079895a33be555dedf5538a92d7718e10b20df63bb3cbbe` |
+| Wrapper instalado, idêntico ao Git | `7895e31c4b48846905ff54dc99cbe4bdcb6d343e2b09ee06ede874f19190737b` |
 | Backup instalado, idêntico ao Git | `ce98e2f8e0c05c878ac310820c2d41335b74aef1836d435ba5513ce6c281d06f` |
 
 History ativa: `installed_rank=1`, `version=3`, `type=BASELINE`, `description=Verified_reconciled_legacy`, `checksum=NULL`, `success=1`. Nenhum INSERT/UPDATE/DELETE manual na history, clean ou repair. `migrate` confirmou nenhuma pendência; `validate` passou. Comparação final estrita com V3 passou também após o restart.

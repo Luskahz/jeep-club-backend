@@ -32,6 +32,8 @@ fi
 # Refuse legacy commits without migration-aware deployment logic.
 for path in deploy/vps-deploy.sh deploy/vps-backup.sh src/main/resources/db/migration/V1__initial_deploy_schema.sql; do
     git -C "$repo" cat-file -e "$sha:$path"
+    mode=$(git -C "$repo" ls-tree --format='%(objectmode)' "$sha" -- "$path")
+    [[ $mode == 100644 || $mode == 100755 ]] || { echo 'Release entrypoints and migrations must be regular Git files.' >&2; exit 1; }
 done
 release=$(mktemp -d "$state/release-$sha-XXXXXX")
 git -C "$repo" archive "$sha" | tar -xf - -C "$release"
