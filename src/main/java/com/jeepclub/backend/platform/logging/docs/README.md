@@ -81,6 +81,11 @@ a auditorias exigidas pelo caso de uso; não muda o logging HTTP operacional.
 usam este contrato: a operação e seu evento de auditoria confirmam ou revertem
 juntos. Assim não há HTTP 500 posterior a um commit de negócio por falha de
 auditoria. A tabela e retenção de `platform_logs` permanecem as mesmas.
+A edição administrativa BACK-522 também usa `recordInTransaction`: um evento por
+campo efetivamente modificado, com nome do campo no `action`, alvo no `path`,
+ator e instante. Valores cadastrais não são registrados. Falha de auditoria
+reverte cadastro, efeitos de Authentication e invalidação de convites juntos.
+
 ## Request ID e `X-Request-Id`
 
 O request ID é criado no início do request e devolvido no header

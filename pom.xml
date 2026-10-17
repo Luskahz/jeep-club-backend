@@ -30,6 +30,7 @@
         <pitest.version>1.19.0</pitest.version>
         <pitest.junit5.plugin.version>1.2.3</pitest.junit5.plugin.version>
         <surefireArgLine></surefireArgLine>
+        <skipUnitTests>false</skipUnitTests>
     </properties>
 
     <dependencies>
@@ -100,6 +101,25 @@
         <!-- ========================= -->
         <!-- BANCO DE DADOS            -->
         <!-- ========================= -->
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>com.mysql</groupId>
@@ -257,6 +277,16 @@
                         </goals>
                     </execution>
                     <execution>
+                        <id>membership-report</id>
+                        <phase>verify</phase>
+                        <goals><goal>report</goal></goals>
+                        <configuration>
+                            <includes><include>com/jeepclub/backend/memberships/**</include></includes>
+                            <outputDirectory>${project.reporting.outputDirectory}/jacoco-membership</outputDirectory>
+                            <formats><format>HTML</format><format>XML</format><format>CSV</format></formats>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>authentication-report</id>
                         <phase>verify</phase>
                         <goals>
@@ -265,6 +295,7 @@
                         <configuration>
                             <includes>
                                 <include>com/jeepclub/backend/authentication/**</include>
+                                <include>com/jeepclub/backend/iam/authentication/**</include>
                             </includes>
                             <outputDirectory>${project.reporting.outputDirectory}/jacoco-authentication</outputDirectory>
                             <formats>
@@ -310,6 +341,47 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>mysql-migrations</id>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration><skipTests>${skipUnitTests}</skipTests></configuration>
+            </plugin><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration><argLine>@{surefireArgLine}</argLine></configuration>
+                <executions><execution><goals>
+                    <goal>integration-test</goal><goal>verify</goal>
+                </goals></execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>membership-mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <configuration>
+                            <targetClasses combine.self="override">
+                                <param>com.jeepclub.backend.memberships.core.domain.model.MembershipApplication</param>
+                                <param>com.jeepclub.backend.memberships.core.domain.model.MembershipApplicantBlock</param>
+                                <param>com.jeepclub.backend.memberships.core.domain.model.MemberActivationToken</param>
+                                <param>com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenService</param>
+                                <param>com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationService</param>
+                                <param>com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipApplicationService</param>
+                            </targetClasses>
+                            <targetTests combine.self="override">
+                                <param>com.jeepclub.backend.memberships.core.*</param>
+                            </targetTests>
+                            <excludedClasses combine.self="override" />
+                            <reportsDirectory>${project.build.directory}/pit-reports/membership</reportsDirectory>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>health-mutation</id>
             <build>
@@ -385,6 +457,33 @@
                                 <param>com.jeepclub.backend.tools.core.application.service.tool.*</param>
                             </targetTests>
                             <excludedClasses combine.self="override" />
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>authentication-mutation</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.pitest</groupId>
+                        <artifactId>pitest-maven</artifactId>
+                        <configuration>
+                            <targetClasses combine.self="override">
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.Session</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.RefreshToken</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.PasswordRecoveryRequest</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.application.service.refreshtoken.RefreshTokenService</param>
+                            </targetClasses>
+                            <targetTests combine.self="override">
+                                <param>com.jeepclub.backend.authentication.core.domain.model.*</param>
+                                <param>com.jeepclub.backend.authentication.core.application.service.refreshtoken.*</param>
+                                <param>com.jeepclub.backend.iam.authentication.core.*</param>
+                            </targetTests>
+                            <excludedClasses combine.self="override" />
+                            <reportsDirectory>${project.build.directory}/pit-reports/authentication</reportsDirectory>
                         </configuration>
                     </plugin>
                 </plugins>

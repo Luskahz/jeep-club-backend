@@ -1,9 +1,10 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipapplication;
 
-import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.AdminMembershipApplicantBlockService;
+import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationAlreadyProcessedException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipApplicationNotFoundException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipEmailRequiredException;
 import com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenService;
+import com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.AdminMembershipApplicantBlockService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
@@ -16,10 +17,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +36,37 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminMembershipApplicationServiceTest {
+
+    @Test
+    void rejectionNotificationUsesPersistedRecipientAndTrimmedReason() {
+        MembershipApplication application = pendingApplication();
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        service.reject(1L, 10L, "  Not eligible  ");
+        assertThat(application.getRejectionReason()).isEqualTo("Not eligible");
+        verify(mailSender).sendRejectionNotice("candidate@example.com", "Candidate", "Not eligible");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"   "})
+    void rejectionWithAbsentReasonDoesNotSendMail(String reason) {
+        MembershipApplication application = pendingApplication();
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        service.reject(1L, 10L, reason);
+        verifyNoInteractions(mailSender);
+    }
+
+    @Test
+    void findByIdReturnsExistingApplicationAndMissingApprovalOrResendDoesNotProvision() {
+        MembershipApplication application = pendingApplication();
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        assertThat(service.findById(1L)).isSameAs(application);
+        assertThatThrownBy(() -> service.approveWithAccessLink(999L, 10L))
+                .isInstanceOf(MembershipApplicationNotFoundException.class);
+        assertThatThrownBy(() -> service.resendActivationLink(999L))
+                .isInstanceOf(MembershipApplicationNotFoundException.class);
+        verifyNoInteractions(createUserPort, activationTokenService);
+    }
 
     private static final Instant NOW = Instant.parse("2026-08-08T12:00:00Z");
     private static final String CPF = "52998224725";
@@ -166,6 +203,50 @@ class AdminMembershipApplicationServiceTest {
         assertThatThrownBy(() -> service.findById(999L))
                 .isInstanceOf(MembershipApplicationNotFoundException.class)
                 .hasMessageContaining("999");
+    }
+
+    @Test
+    void listAllDelegatesToRepository() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<MembershipApplication> page = new PageImpl<>(List.of(pendingApplication()));
+        when(applicationRepository.findAll(pageable)).thenReturn(page);
+
+        Page<MembershipApplication> result = service.listAll(pageable);
+
+        assertThat(result).isSameAs(page);
+        verify(applicationRepository).findAll(pageable);
+    }
+
+    @Test
+    void listByStatusDelegatesToRepository() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<MembershipApplication> page = new PageImpl<>(List.of(pendingApplication()));
+        when(applicationRepository.findAllByStatus(MembershipApplicationStatus.PENDING, pageable))
+                .thenReturn(page);
+
+        Page<MembershipApplication> result = service.listByStatus(MembershipApplicationStatus.PENDING, pageable);
+
+        assertThat(result).isSameAs(page);
+        verify(applicationRepository).findAllByStatus(MembershipApplicationStatus.PENDING, pageable);
+    }
+
+    @Test
+    void operationsOnNonPendingApplicationThrowAlreadyProcessedException() {
+        MembershipApplication approvedApp = pendingApplication();
+        approvedApp.approve(10L, 20L, NOW);
+        when(applicationRepository.findById(1L)).thenReturn(Optional.of(approvedApp));
+
+        assertThatThrownBy(() -> service.approveWithTemporaryPassword(1L, 10L))
+                .isInstanceOf(MembershipApplicationAlreadyProcessedException.class);
+
+        assertThatThrownBy(() -> service.approveWithAccessLink(1L, 10L))
+                .isInstanceOf(MembershipApplicationAlreadyProcessedException.class);
+
+        assertThatThrownBy(() -> service.reject(1L, 10L, "reason"))
+                .isInstanceOf(MembershipApplicationAlreadyProcessedException.class);
+
+        assertThatThrownBy(() -> service.rejectAndBlock(1L, 10L, "reason"))
+                .isInstanceOf(MembershipApplicationAlreadyProcessedException.class);
     }
 
     private MembershipApplication pendingApplication() {

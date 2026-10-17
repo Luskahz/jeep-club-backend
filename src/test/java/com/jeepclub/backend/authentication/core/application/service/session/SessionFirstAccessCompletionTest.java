@@ -42,6 +42,7 @@ class SessionFirstAccessCompletionTest {
     @Mock PasswordChangeChallengeIssuer challengeIssuer;
     @Mock TokenIssuanceService tokenIssuanceService;
     @Mock UserQuery userQuery;
+    @Mock com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLock;
     @Mock MembershipOnboardingCompletion membershipOnboardingCompletion;
     @Mock Clock clock;
     @InjectMocks SessionService service;
@@ -63,6 +64,7 @@ class SessionFirstAccessCompletionTest {
         when(challengeRepository.findByTokenHashForUpdate("challenge-hash"))
                 .thenReturn(Optional.of(challenge));
         when(passwordHasher.hash("new-password")).thenReturn("new-hash");
+        when(identityLock.byId(42L)).thenAnswer(invocation -> userQuery.findById(42L));
         when(userQuery.findById(42L)).thenReturn(Optional.of(new UserDetails(
                 42L, "Member", null, null, "52998224725", null, null, null,
                 true, NOW.minusSeconds(3600), null, null

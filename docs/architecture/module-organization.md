@@ -89,11 +89,10 @@ context. Notas adicionais são orientadas por necessidade, não por template.
 - Associações JPA legadas entre módulos não devem ser alteradas apenas para
   satisfazer a organização de pacotes. Sua remoção ou refatoração exige escopo
   funcional/persistente explícito e análise das relações existentes.
-- Na fase atual, alterações de schema são representadas pelas Entities JPA e o
-  banco de desenvolvimento pode ser ajustado ou recriado quando necessário;
-  isso não implica criar migration versionada. Se o projeto adotar migrations
-  futuramente, essa política deverá ser definida por decisão arquitetural
-  própria.
+- Alterações de mapping, enums persistidos, conversores e constraints devem ser
+  avaliadas quanto ao DDL e à compatibilidade de dados. Mudanças físicas usam
+  migrations Flyway versionadas, conforme a [política de persistência](../database/04-flyway-strategy.md).
+  Não recrie bancos existentes automaticamente para acomodar uma feature.
 - A associação física legada de `AuthenticationAccountEntity` com `UserEntity`
   é uma exceção já existente e não autoriza novos imports cross-module de JPA.
 - Helpers compartilhados por services normal e administrativo ficam em
@@ -140,11 +139,14 @@ domínio não depende de entity JPA. Foreign key, join ou compartilhamento do
 mesmo banco não autorizam consultas diretas ao modelo persistente de outro
 bounded context.
 
-O estado atual não possui política global de migrations versionadas. A
-aplicação usa modelagem por entities/Hibernate (`ddl-auto=update` por padrão),
-mantém Flyway desabilitado e não contém scripts de migration. Não introduza
-Flyway, Liquibase ou obrigação de migration por inferência documental; uma
-mudança dessa natureza exige decisão e escopo próprios.
+A decisão arquitetural de adoção do Flyway está registrada na
+[estratégia de migrations](../database/04-flyway-strategy.md), com cadeia histórica,
+política de baseline e requisitos de validação. Flyway passa a ser proprietário
+do DDL; Hibernate usa `validate`. A composição e a proteção de configuração são
+infraestrutura técnica transversal em `platform.database`, sem transferir
+ownership dos dados entre bounded contexts. O
+[runbook operacional](../database/06-vps-runbook.md) define a adesão de bancos
+existentes, sujeita à comparação estrutural e autorização de operação.
 
 ### Identity, Authentication e Authorization
 

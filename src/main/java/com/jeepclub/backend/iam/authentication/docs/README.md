@@ -141,3 +141,28 @@ afetados conforme as [regras globais](../../../../../../../../../docs/architectu
 AUTHENTICATION_EXPORT permite contas (identityId), sessões, metadados de refresh e recuperação (id). Cada projection lista apenas campos administrativos e não seleciona passwordHash/tokenHash. PasswordChangeChallenge continua sem export.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+## Correção administrativa de CPF/e-mail — BACK-522
+
+Identity chama `UserAuthenticationAdministrationPort.identityChanged` na mesma
+transação após flush dos novos dados. Authentication trava a conta, revoga
+sessões/refresh/challenges sem mudar senha, CredentialStatus, lock ou acesso
+administrativo. E-mail substituído cancela todas as solicitações EMAIL_TOKEN abertas e torna
+o convite administrativo expirado com deliveryStatus `INVALIDATED`. Reenvio
+explícito rotaciona o token para o e-mail cadastral atual; conta inativa/sem e-mail
+continua inelegível. CPF corrigido passa a resolver o mesmo identityId no login;
+nenhum CPF duplicado é armazenado aqui.
+
+Login, conclusão de challenge, emissão/consumo de convite e solicitação de
+recuperação por CPF usam `identity.api.module.UserIdentityLock` antes dos locks de
+Authentication, evitando aceitar dados lidos antes da correção concorrente.
+`AccountActivationCurrentDelivery` abre uma transação nova no envio AFTER_COMMIT,
+trava Identity e a conta, confirma e-mail/atividade, conta pendente e habilitada,
+hash vigente e expiração antes de chamar SMTP. Eventos substituídos, expirados ou
+com endereço obsoleto são ignorados, inclusive na rotação para o mesmo e-mail. O resultado tardio do SMTP
+não substitui o estado `INVALIDATED`. Não há nova fila/outbox persistida.
+
+Validações de expiração nos caminhos com lock usam o Clock depois da espera.
+A conclusão de challenge revalida após adquirir a solicitação de recuperação;
+Membership revalida o convite após o efeito em Authentication e reverte toda a
+transação se o token tiver expirado durante essa etapa.

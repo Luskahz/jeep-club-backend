@@ -67,6 +67,16 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Optional<User> findByCpfForUpdate(String cpf) {
+        return cpf == null ? Optional.empty() : jpaRepository.findByCpfForUpdate(User.normalizeCpf(cpf)).map(mapper::toDomain);
+    }
+
+    @Override
+    public boolean existsByCpfAndIdNot(String cpf, Long id) {
+        return cpf != null && id != null && jpaRepository.existsByCpfAndIdNot(cpf, id);
+    }
+
+    @Override
     public boolean existsById(Long id) {
         return jpaRepository.existsById(id);
     }

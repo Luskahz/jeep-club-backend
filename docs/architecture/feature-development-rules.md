@@ -160,9 +160,12 @@ root directory, provider, bucket, hostname ou URL física no lugar da chave.
   consumer-owned + `infra.integration` para traduzir/isolar a necessidade;
 - relação física no banco não elimina boundaries lógicos.
 
-Não há política global de migrations versionadas nesta fase. Não adicione
-Flyway, Liquibase ou migrations obrigatórias sem decisão arquitetural e escopo
-explícitos.
+Mudanças de persistência seguem a
+[política Flyway](../database/04-flyway-strategy.md). Avalie também enums,
+conversores, queries e contratos de dados, mesmo quando a entity não mudar.
+DDL físico exige nova migration imutável e validação em MySQL real; Hibernate
+não atualiza schema. Banco existente exige equivalência comprovada antes de
+baseline explícita, conforme o [runbook](../database/06-vps-runbook.md).
 
 ## Testes mínimos
 
@@ -175,6 +178,10 @@ que prove o comportamento alterado. Quando aplicável, cubra:
 - tradução de erros relevantes;
 - repository/adapter ou integração transversal afetada;
 - concorrência ou compensação quando fizer parte da regra.
+
+O workflow exige `Maven verify` e o gate `MySQL migrations` antes do deploy.
+Slices H2 em memória com profile `test` não substituem a validação de migrations
+no MySQL, nem o ensaio sobre cópia real quando houver adoção/evolução do legado.
 
 Preserve os testes existentes. Se um teste contradisser o contrato real, não
 deforme produção apenas para fazê-lo passar: caracterize a divergência e

@@ -1,0 +1,71 @@
+{
+  "task": "BACK-284",
+  "base": "b00f492e755f56d9818fda17d8d0a863e9b31216",
+  "java": "Microsoft OpenJDK 17.0.20",
+  "os": "Windows",
+  "tests": {
+    "final-tree-test.log": {
+      "tests": 1696,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "final-tree-verify.log": {
+      "tests": 1697,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    }
+  },
+  "jacoco": {
+    "INSTRUCTION": {
+      "missed": 200,
+      "covered": 3173,
+      "percent": 94.07
+    },
+    "BRANCH": {
+      "missed": 57,
+      "covered": 156,
+      "percent": 73.24
+    },
+    "LINE": {
+      "missed": 24,
+      "covered": 747,
+      "percent": 96.89
+    },
+    "COMPLEXITY": {
+      "missed": 62,
+      "covered": 275,
+      "percent": 81.6
+    },
+    "METHOD": {
+      "missed": 9,
+      "covered": 221,
+      "percent": 96.09
+    },
+    "CLASS": {
+      "missed": 5,
+      "covered": 80,
+      "percent": 94.12
+    }
+  },
+  "pit": {
+    "KILLED": 105,
+    "SURVIVED": 1
+  },
+  "residual_mutants": [
+    {
+      "detected": "false",
+      "status": "SURVIVED",
+      "numberOfTestsRun": "6",
+      "mutatedClass": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationService",
+      "mutatedMethod": "rejectApplication",
+      "lineNumber": "148",
+      "description": "replaced return value with null for com/jeepclub/backend/memberships/core/application/service/membershipapplication/AdminMembershipApplicationService::rejectApplication"
+    }
+  ],
+  "source_fingerprint_sha256": "692959878b3ebf3e1f5447ab0aa7a8007d747dd14ef754b68d16124a19a8e54d",
+  "fingerprint_scope": "pom.xml + src/**/*.java; local working-tree bytes",
+  "scope": "Focal profile, not whole project mutation",
+  "ci": "See PR checks at published HEAD; CI evidence posted separately after push"
+}

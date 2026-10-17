@@ -40,6 +40,81 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 class AuthenticationSecurityIntegrationTest {
 
+    @Autowired private com.jeepclub.backend.iam.authentication.infra.persistence.jpa.RefreshTokenJpaRepository auditRefreshTokens;
+    @Autowired private com.jeepclub.backend.iam.authentication.core.port.RefreshTokenHashService auditTokenHashes;
+    @Autowired private com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.PasswordRecoveryService auditRecovery;
+    @Autowired private com.jeepclub.backend.iam.authentication.infra.persistence.jpa.PasswordRecoveryRequestJpaRepository auditRecoveryRows;
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0} {1} requires {2}")
+    @org.junit.jupiter.params.provider.CsvSource({
+            "GET, /sessions, AUTHENTICATION_SESSION_READ",
+            "GET, /sessions/{sessionId}, AUTHENTICATION_SESSION_READ",
+            "GET, /users/{userId}/sessions, AUTHENTICATION_SESSION_READ",
+            "PATCH, /sessions/{sessionId}/logout, AUTHENTICATION_SESSION_LOGOUT",
+            "GET, /refresh-tokens, AUTHENTICATION_REFRESH_TOKEN_READ",
+            "GET, /refresh-tokens/{tokenId}, AUTHENTICATION_REFRESH_TOKEN_READ",
+            "GET, /users/{userId}/refresh-tokens, AUTHENTICATION_REFRESH_TOKEN_READ",
+            "PATCH, /refresh-tokens/{tokenId}/revoke, AUTHENTICATION_REFRESH_TOKEN_REVOKE",
+            "GET, /password-recovery/requests, AUTHENTICATION_PASSWORD_RECOVERY_READ",
+            "GET, /password-recovery/requests/{requestId}, AUTHENTICATION_PASSWORD_RECOVERY_READ",
+            "GET, /password-recovery/requests/users/{userId}, AUTHENTICATION_PASSWORD_RECOVERY_READ",
+            "PATCH, /password-recovery/requests/{requestId}/cancel, AUTHENTICATION_PASSWORD_RECOVERY_CANCEL",
+            "POST, /password-recovery/requests/users/{userId}/temporary-password, AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE",
+            "POST, /password-recovery/requests/users/{userId}/reset-link, AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE"
+    })
+    @Transactional
+    void authenticationAdministrationEnforcesEachPermission(
+            String method, String route, String requiredPermission) throws Exception {
+        Instant now = Instant.now(clock);
+        UserAuthenticationTokens actor = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData("Audit Actor", null, null, "11144477735",
+                        null, null, null, now), "AuditPassword@123");
+        Long actorId = userQuery.findByCpf("11144477735").orElseThrow().id();
+        UserAuthenticationTokens target = userRegistration.registerAndAuthenticate(
+                new UserRegistrationData("Audit Target", null, "audit-target@example.com", "16899535009",
+                        null, null, null, now), "AuditPassword@123");
+        Long targetId = userQuery.findByCpf("16899535009").orElseThrow().id();
+        var token = auditRefreshTokens.findByTokenHash(auditTokenHashes.hash(target.refreshToken())).orElseThrow();
+        auditRecovery.request("16899535009");
+        Long requestId = auditRecoveryRows.findByUserIdOrderByCreatedAtDesc(targetId).get(0).getId();
+        String path = "/authentication/admin" + route.replace("{sessionId}", token.getSessionId().toString())
+                .replace("{tokenId}", token.getId().toString()).replace("{userId}", targetId.toString())
+                .replace("{requestId}", requestId.toString());
+        var httpMethod = org.springframework.http.HttpMethod.valueOf(method);
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(httpMethod, path))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
+        String bearer = "Bearer " + actor.accessToken();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(httpMethod, path)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        Role role = roleRepository.save(Role.create("session-refresh-audit", "Audit", now));
+        userRoleRepository.save(UserRole.create(actorId, role.getId(), now));
+        grant(role, PermissionCode.IDENTITY_USER_READ, now);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(httpMethod, path)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isForbidden());
+        assertThat(auditRefreshTokens.findById(token.getId()).orElseThrow().getStatus())
+                .isEqualTo(com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus.ACTIVE);
+
+        grant(role, PermissionCode.valueOf(requiredPermission), now);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.request(httpMethod, path)
+                        .header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk());
+        if (route.endsWith("/revoke")) {
+            assertThat(auditRefreshTokens.findById(token.getId()).orElseThrow().getStatus())
+                    .isEqualTo(com.jeepclub.backend.iam.authentication.core.domain.enums.RefreshTokenStatus.REVOKED);
+        }
+        if (route.endsWith("/logout")) {
+            mockMvc.perform(get("/authentication/me").header(HttpHeaders.AUTHORIZATION,
+                            "Bearer " + target.accessToken())).andExpect(status().isUnauthorized());
+        }
+    }
+
     @Autowired
     private MockMvc mockMvc;
 
