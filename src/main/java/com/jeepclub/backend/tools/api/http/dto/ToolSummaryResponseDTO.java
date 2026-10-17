@@ -14,9 +14,12 @@ public record ToolSummaryResponseDTO(
         String name,
 
         @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE"})
-        ToolStatus status
+        ToolStatus status,
+
+        @Schema(description = "Chave da foto no storage global.", nullable = true)
+        String photoStorageKey
 ) {
     public ToolSummaryResponseDTO(Tool tool) {
-        this(tool.getId(), tool.getName(), tool.getStatus());
+        this(tool.getId(), tool.getName(), tool.getStatus(), tool.getPhotoStorageKey());
     }
 }

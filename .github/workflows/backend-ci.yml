@@ -45,16 +45,45 @@ jobs:
           SECURITY_JWT_SECRET: ci-placeholder
         run: |
           for script in deploy/*.sh; do bash -n "$script"; done
+          python3 deploy/test-deploy.py
           docker compose config --quiet
           docker compose -f compose.local.yaml config --quiet
 
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
+  mysql-migrations:
+    name: MySQL migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - run: chmod +x mvnw
+      - name: Verify frozen historical fixture hashes
+        run: cd src/test/resources/database/historical && sha256sum -c SHA256SUMS
+      - name: Validate empty and historical MySQL schemas
+        run: ./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify
+      - name: Verify next migration without fixed-version test edits
+        run: bash deploy/test-future-migration.sh
+      - name: Preserve migration test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mysql-migration-evidence
+          path: |
+            target/failsafe-reports
+            target/audit-evidence
+            target/forward-migration-evidence
+
   deploy:
     name: Deploy to VPS
-    needs: verify
-    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: [verify, mysql-migrations]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:

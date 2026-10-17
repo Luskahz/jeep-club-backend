@@ -172,3 +172,15 @@ sem duplicar o contrato detalhado do Swagger.
 MEMBERSHIP_EXPORT permite solicitações e bloqueios, todos/id e filtros administrativos de status/período aplicáveis. Activation tokens, hashes, version e activeCpf não são campos dos relatórios.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+## Correção cadastral administrativa — BACK-522
+
+Identity notifica `UserContactChangePort` quando o e-mail atual do User muda.
+`IdentityContactChangeAdapter` invalida tokens da solicitação APPROVED vinculada
+a esse ID na mesma transação; não altera o e-mail/CPF histórico da solicitação.
+Reenvio lê o destinatário atual por `UserIdentityLock`, mantendo a ordem User antes
+de token/Authentication. Consumo resolve inicialmente o applicationId por projeção
+escalar e só carrega/trava o token depois de bloquear Identity, evitando uma entity
+previamente carregada com estado antigo. Correção de CPF preserva o createdUserId
+e o vínculo de primeiro acesso; não transforma convite de Membership em convite
+administrativo de Authentication.

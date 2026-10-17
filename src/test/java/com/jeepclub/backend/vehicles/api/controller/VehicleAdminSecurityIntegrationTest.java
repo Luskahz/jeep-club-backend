@@ -143,9 +143,9 @@ class VehicleAdminSecurityIntegrationTest {
     @Test
     void adminWithReadAuthorityCanListAdminVehicles() throws Exception {
         authenticate("admin-token", 99L, List.of("VEHICLES_VEHICLE_READ"));
-        Page<com.jeepclub.backend.vehicles.core.domain.model.Vehicle> emptyPage =
+        Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSummary> emptyPage =
                 new PageImpl<>(List.of());
-        when(adminVehicleService.findAll(any())).thenReturn(emptyPage);
+        when(adminVehicleService.findAllWithOwners(any())).thenReturn(emptyPage);
 
         mockMvc.perform(get("/vehicles/list/admin")
                         .header("Authorization", "Bearer admin-token"))

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.springframework.test.context.ActiveProfiles("test")
 @DataJpaTest
 @Import({MemberChargeAdapter.class, MemberChargeMapper.class})
 class MemberChargeMembershipQueryAdapterTest {

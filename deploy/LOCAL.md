@@ -79,6 +79,20 @@ docker compose --env-file .env.local -f compose.local.yaml logs --tail=100 mysql
 A porta `3307` evita conflitos com instalações comuns de MySQL na `3306`.
 Se ela já estiver ocupada, altere `MYSQL_LOCAL_PORT` e também a URL JDBC abaixo.
 
+## Migrations e banco local existente
+
+Em banco vazio, o backend executa Flyway V1–V3 antes de Hibernate `validate`.
+Não configure `ddl-auto=update` nem `spring.flyway.enabled=false` no arquivo local.
+Se o volume já contém tabelas criadas pelo Hibernate, o startup será bloqueado até
+comparar a estrutura com uma referência e registrar a baseline correspondente.
+Preserve o volume e seus dados; não use reset para contornar o erro. Consulte a
+[estratégia de adoção](../docs/database/04-flyway-strategy.md) e adapte o
+[runbook](../docs/database/06-vps-runbook.md) ao banco local, sem usar credenciais da VPS.
+
+Além de `./mvnw verify`, execute `./mvnw -Pmysql-migrations -DskipUnitTests=true verify`
+com Docker disponível para validar DDL em MySQL real. Esse gate é obrigatório no CI;
+os slices H2 em memória continuam reservados ao profile `test`.
+
 ## 4. Rodar o Spring Boot pelo IntelliJ
 
 Copie o exemplo local se ainda não houver um arquivo configurado:

@@ -14,6 +14,7 @@ O projeto fornece uma API REST responsável pelo gerenciamento de associados, de
 - JWT
 - Spring Data JPA
 - MySQL
+- Flyway (migrations versionadas)
 - Maven
 - Swagger / OpenAPI
 
@@ -52,6 +53,9 @@ Antes de executar o projeto é necessário possuir instalado:
 Para desenvolver com **MySQL no Docker, backend no IntelliJ e frontend com
 `npm run dev`**, siga o [tutorial do ambiente local](deploy/LOCAL.md).
 Ele usa `compose.local.yaml` e um banco persistente na porta `3307`.
+A evolução de schema usa Flyway com Hibernate `validate`; consulte a
+[auditoria, estratégia de baseline e runbook](docs/database/README.md) antes de
+atualizar um banco existente.
 
 ## 1. Clone o repositório
 

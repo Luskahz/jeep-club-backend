@@ -52,11 +52,20 @@ public class MemberActivationTokenService {
 
     @Transactional
     public void complete(String rawToken, String newPassword) {
-        Instant now = Instant.now(clock);
         String tokenHash = tokenHashPort.hash(rawToken);
+        // Resolve without locking the token, then establish the global Identity -> token/account order.
+        Long applicationId = memberActivationTokenRepository.findApplicationIdByTokenHash(tokenHash)
+                .orElseThrow(MemberActivationTokenNotFoundException::new);
+        MembershipApplication candidateApplication = requireApprovedApplication(applicationId);
+        if (candidateApplication.getCreatedUserId() == null) {
+            throw new MembershipFirstAccessConflictException("Approved membership application has no created User.");
+        }
+        activationRecipientPort.findByIdentityId(candidateApplication.getCreatedUserId())
+                .orElseThrow(() -> new MembershipFirstAccessConflictException("Created Identity User was not found."));
         MemberActivationToken token = memberActivationTokenRepository
                 .findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(MemberActivationTokenNotFoundException::new);
+        Instant now = Instant.now(clock);
         token.validateOrThrow(now);
 
         MembershipApplication application = requireApprovedApplication(token.getApplicationId());
@@ -65,6 +74,9 @@ public class MemberActivationTokenService {
         }
 
         completeFirstAccessPort.complete(application.getCreatedUserId(), newPassword);
+        // Authentication may wait for its account lock. Expiry here must roll back its changes too.
+        now = Instant.now(clock);
+        token.validateOrThrow(now);
         token.markAsUsed(now);
         application.complete(now);
         memberActivationTokenRepository.save(token);

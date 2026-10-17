@@ -16,6 +16,16 @@ import java.util.Optional;
 public interface PasswordRecoveryRequestJpaRepository
         extends JpaRepository<PasswordRecoveryRequestEntity, Long> {
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT request FROM PasswordRecoveryRequestEntity request
+            WHERE request.userId = :userId
+              AND request.status = com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus.OPEN
+              AND request.method = com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestMethod.EMAIL_TOKEN
+            ORDER BY request.id
+            """)
+    List<PasswordRecoveryRequestEntity> findOpenEmailTokensByUserIdForUpdate(@Param("userId") Long userId);
+
     Optional<PasswordRecoveryRequestEntity> findByTokenHash(
             String tokenHash
     );

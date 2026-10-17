@@ -15,7 +15,6 @@ import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecover
 import com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus;
 import com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository;
 import com.jeepclub.backend.iam.identity.api.module.UserDetails;
-import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,8 +39,7 @@ class RequestPasswordRecoveryServiceTest {
 
     @Mock
     private AuthenticationAccountRepository accountRepository;
-    @Mock
-    private UserQuery identityQuery;
+    @Mock private com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLock;
     @Mock
     private PasswordRecoveryRequestManager requestManager;
     @Mock private PasswordRecoveryRequestRepository requestRepository;
@@ -57,7 +55,7 @@ class RequestPasswordRecoveryServiceTest {
     void setUp() {
         service = new PasswordRecoveryService(
                 accountRepository,
-                identityQuery,
+                identityLock,
                 requestRepository,
                 requestManager,
                 notificationPort,
@@ -80,12 +78,12 @@ class RequestPasswordRecoveryServiceTest {
     @Test
     void unknownCpfReturnsSamePublicRepresentationAsExistingUser() {
         when(requestManager.genericResult(NOW)).thenReturn(genericResult);
-        when(identityQuery.findByCpf(CPF))
+        when(identityLock.byCpf(CPF))
                 .thenReturn(Optional.empty());
 
         PublicPasswordRecoveryResult unknown = service.request(CPF);
 
-        when(identityQuery.findByCpf(CPF)).thenReturn(Optional.of(activeIdentity()));
+        when(identityLock.byCpf(CPF)).thenReturn(Optional.of(activeIdentity()));
         when(accountRepository.existsByIdentityId(1L)).thenReturn(true);
         PublicPasswordRecoveryResult existing = service.request(CPF);
 
@@ -99,7 +97,7 @@ class RequestPasswordRecoveryServiceTest {
                 1L, "Lucas", null, null, CPF, null, null,
                 null, true, NOW.minusSeconds(3600), null, null
         );
-        when(identityQuery.findByCpf(CPF)).thenReturn(Optional.of(withoutEmail));
+        when(identityLock.byCpf(CPF)).thenReturn(Optional.of(withoutEmail));
         when(accountRepository.existsByIdentityId(1L)).thenReturn(true);
         when(requestManager.genericEmailResult(NOW)).thenReturn(genericResult);
 
@@ -115,7 +113,7 @@ class RequestPasswordRecoveryServiceTest {
         IssuedPasswordResetToken token = new IssuedPasswordResetToken(
                 "raw", "hash", "https://client/reset?token=raw"
         );
-        when(identityQuery.findByCpf(CPF)).thenReturn(Optional.of(activeIdentity()));
+        when(identityLock.byCpf(CPF)).thenReturn(Optional.of(activeIdentity()));
         when(accountRepository.existsByIdentityId(1L)).thenReturn(true);
         when(requestManager.getOrCreate(1L, NOW)).thenReturn(request);
         when(tokenIssuer.issue()).thenReturn(token);

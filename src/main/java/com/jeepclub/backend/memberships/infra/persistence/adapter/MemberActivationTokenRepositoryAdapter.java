@@ -18,6 +18,11 @@ public class MemberActivationTokenRepositoryAdapter implements MemberActivationT
     private final MemberActivationTokenJpaRepository jpaRepository;
 
     @Override
+    public Optional<Long> findApplicationIdByTokenHash(String tokenHash) {
+        return jpaRepository.findApplicationIdByTokenHash(tokenHash);
+    }
+
+    @Override
     public MemberActivationToken save(MemberActivationToken token) {
         return MemberActivationTokenMapper.toDomain(
                 jpaRepository.save(MemberActivationTokenMapper.toEntity(token))

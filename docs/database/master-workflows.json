@@ -1,0 +1,186 @@
+[
+  {
+    "id": 38433026697,
+    "sha": "6865bc4f600462c5fcc6cf1212c9660591eff4db",
+    "date": "2026-10-13T16:44:53Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38433026697",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 115419830138,
+        "name": "Maven verify",
+        "started_at": "2026-10-13T16:44:57Z",
+        "completed_at": "2026-10-13T16:47:50Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38433026697/job/115419830138"
+      },
+      {
+        "id": 115421196435,
+        "name": "Deploy to VPS",
+        "started_at": "2026-10-13T16:47:53Z",
+        "completed_at": "2026-10-13T16:49:46Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/38433026697/job/115421196435"
+      }
+    ]
+  },
+  {
+    "id": 37707229805,
+    "sha": "bde973f9a079cb5e6e6d60f2a2413f12cddef998",
+    "date": "2026-10-08T00:20:18Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37707229805",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 113084376264,
+        "name": "Maven verify",
+        "started_at": "2026-10-08T00:20:21Z",
+        "completed_at": "2026-10-08T00:23:45Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37707229805/job/113084376264"
+      },
+      {
+        "id": 113085384881,
+        "name": "Deploy to VPS",
+        "started_at": "2026-10-08T00:23:48Z",
+        "completed_at": "2026-10-08T00:27:16Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37707229805/job/113085384881"
+      }
+    ]
+  },
+  {
+    "id": 37649374328,
+    "sha": "ec7690da92387df073f11d77fadc8fc8b62c31b7",
+    "date": "2026-10-07T16:06:02Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37649374328",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 112888489018,
+        "name": "Maven verify",
+        "started_at": "2026-10-07T16:06:21Z",
+        "completed_at": "2026-10-07T16:09:14Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37649374328/job/112888489018"
+      },
+      {
+        "id": 112889847814,
+        "name": "Deploy to VPS",
+        "started_at": "2026-10-07T16:09:17Z",
+        "completed_at": "2026-10-07T16:11:42Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37649374328/job/112889847814"
+      }
+    ]
+  },
+  {
+    "id": 37649279836,
+    "sha": "724ecaba4d1ed24d883b0d453e7f9e57902fac86",
+    "date": "2026-10-07T16:05:21Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37649279836",
+    "conclusion": "cancelled",
+    "jobs": []
+  },
+  {
+    "id": 37645002751,
+    "sha": "49024edf0a270666faf771902459a9aeb11d7721",
+    "date": "2026-10-07T15:34:30Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37645002751",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "id": 112873365783,
+        "name": "Maven verify",
+        "started_at": "2026-10-07T15:34:34Z",
+        "completed_at": "2026-10-07T15:36:47Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37645002751/job/112873365783"
+      },
+      {
+        "id": 112874429738,
+        "name": "Deploy to VPS",
+        "started_at": "2026-10-07T15:36:51Z",
+        "completed_at": "2026-10-07T15:44:03Z",
+        "conclusion": "failure",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37645002751/job/112874429738"
+      }
+    ]
+  },
+  {
+    "id": 37635409005,
+    "sha": "e9a2ad4869e7a9c6f2b66216ee6be3b31e9d45f9",
+    "date": "2026-10-07T14:17:07Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37635409005",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 112840189130,
+        "name": "Maven verify",
+        "started_at": "2026-10-07T14:17:11Z",
+        "completed_at": "2026-10-07T14:19:57Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37635409005/job/112840189130"
+      },
+      {
+        "id": 112841549537,
+        "name": "Deploy to VPS",
+        "started_at": "2026-10-07T14:20:02Z",
+        "completed_at": "2026-10-07T14:22:43Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37635409005/job/112841549537"
+      }
+    ]
+  },
+  {
+    "id": 37627035648,
+    "sha": "c60a39738334e2d4aa7a254ff20d873582d46fea",
+    "date": "2026-10-07T13:15:10Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37627035648",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 112811343782,
+        "name": "Maven verify",
+        "started_at": "2026-10-07T13:15:14Z",
+        "completed_at": "2026-10-07T13:17:51Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37627035648/job/112811343782"
+      }
+    ]
+  },
+  {
+    "id": 37079857968,
+    "sha": "e4aa00e4a492900b26cec78839dcfae480712b0b",
+    "date": "2026-10-02T23:56:01Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37079857968",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 111077753931,
+        "name": "Maven verify",
+        "started_at": "2026-10-02T23:56:04Z",
+        "completed_at": "2026-10-02T23:58:33Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/37079857968/job/111077753931"
+      }
+    ]
+  },
+  {
+    "id": 36945407802,
+    "sha": "ef81689794a242ef4b0136954e497307d24a7828",
+    "date": "2026-10-02T00:19:28Z",
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/36945407802",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "id": 110646280478,
+        "name": "Maven verify",
+        "started_at": "2026-10-02T00:19:33Z",
+        "completed_at": "2026-10-02T00:22:26Z",
+        "conclusion": "success",
+        "html_url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/36945407802/job/110646280478"
+      }
+    ]
+  }
+]
