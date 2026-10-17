@@ -1,70 +1,59 @@
 #!/bin/bash
+# Invoked only by the root-owned wrapper after validating the exact master SHA.
 set -euo pipefail
 umask 077
-
-repo=/opt/jeep-club-repo
+sha=${1:?Validated SHA required}
+release=${2:?Immutable release directory required}
+state=/var/lib/jeep-club-deploy
 env_file=/opt/jeep-club-compose/.env
-state_dir=/var/lib/jeep-club-deploy
-mkdir -p "$state_dir"
-exec 9>"$state_dir/deploy.lock"
-flock -w 1200 9
-cd "$repo"
-
-if [[ "${SSH_ORIGINAL_COMMAND:-}" == status ]]; then
-    docker compose --env-file "$env_file" ps
-    exit 0
-fi
-
-if [[ ! "${SSH_ORIGINAL_COMMAND:-}" =~ ^deploy\ ([a-f0-9]{40})$ ]]; then
-    echo 'Only deploy <commit SHA> and status are supported.' >&2
-    exit 1
-fi
-sha=${BASH_REMATCH[1]}
-git fetch --prune origin master
-git cat-file -e "$sha^{commit}"
-git merge-base --is-ancestor "$sha" origin/master
-
-previous_commit=$(git rev-parse HEAD)
-previous_image=$(docker inspect --format '{{.Config.Image}}' jeep-club-backend-1)
-compose() { docker compose --env-file "$env_file" "$@"; }
-# First adoption is an explicit operation, never an implicit deploy side effect.
-if git cat-file -e "$sha:src/main/resources/db/migration" 2>/dev/null; then
-    history_present=$(docker exec jeep-club-mysql-1 sh -c '
-        export MYSQL_PWD="$MYSQL_PASSWORD"
-        mysql --batch --skip-column-names -u"$MYSQL_USER" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\"flyway_schema_history\";"
-    ')
-    if [[ "$history_present" != 1 ]]; then
-        echo 'Deploy blocked: existing VPS database must be audited and explicitly adopted by Flyway first. See docs/database/06-vps-runbook.md.' >&2
-        exit 1
+[[ $sha =~ ^[a-f0-9]{40}$ && $release == "$state/release-$sha-"* ]]
+[[ /proc/$$/fd/9 -ef $state/deploy.lock ]] || { echo 'Missing wrapper deployment lock.' >&2; exit 1; }
+cd "$release"
+mkdir -p "$state/logs"
+log="$state/logs/$sha-$(date -u +%Y%m%dT%H%M%SZ).log"
+# Private raw logs stay on VPS. Actions receives stage/error identifiers only.
+exec 3>&1 4>&2
+exec >>"$log" 2>&1
+stage=preflight
+cutover=false
+compose() { docker compose --project-name jeep-club --project-directory "$release" -f "$release/compose.yaml" --env-file "$env_file" "$@"; }
+fail() {
+    rc=$?
+    trap - EXIT
+    if (( rc != 0 )); then
+        if [[ $cutover == true ]]; then
+            compose stop backend || docker stop jeep-club-backend-1 || true
+        fi
+        docker logs --tail 300 jeep-club-backend-1 > "$log.backend" 2>&1 || true
+        printf 'FAILED sha=%s stage=%s log=%s; no automatic image/schema rollback.\n' "$sha" "$stage" "$log" >&4
+        printf 'Inspect private backend log and Flyway history; follow docs/database/06-vps-runbook.md.\n' >&4
+        printf '%s %s %s\n' "$sha" "$stage" "$log" > "$state/last-failure"
     fi
-fi
-
-git switch --detach "$sha"
+    exit "$rc"
+}
+trap fail EXIT
+progress() { stage=$1; printf 'Deploy %s: %s\n' "$sha" "$stage" >&3; }
 export BACKEND_IMAGE="jeep-club-backend:$sha"
 compose config --quiet
+history=$(docker exec jeep-club-mysql-1 sh -c 'export MYSQL_PWD="$MYSQL_PASSWORD"; mysql --batch --skip-column-names -u"$MYSQL_USER" "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=\"flyway_schema_history\""')
+[[ $history == 1 ]] || { echo 'Explicit verified legacy adoption required.' >&4; exit 1; }
+progress build
 compose build backend
-/usr/local/sbin/jeep-club-backup
-
-if ! compose up -d --no-build --wait --wait-timeout 240; then
-    if [[ -d src/main/resources/db/migration ]]; then
-        compose stop backend || true
-        echo 'Migration-aware deployment failed; backend stopped. Automatic image rollback is disabled because MySQL DDL may already be committed.' >&2
-        echo 'Keep traffic blocked and follow docs/database/06-vps-runbook.md with the verified backup.' >&2
-        exit 1
-    fi
-    echo 'Deployment failed; restoring previous application image.' >&2
-    git switch --detach "$previous_commit"
-    export BACKEND_IMAGE="$previous_image"
-    compose up -d --no-build --wait --wait-timeout 240 || true
-    echo 'The database backup is available in /var/backups/jeep-club; schema changes are not automatically reverted.' >&2
-    exit 1
-fi
-
-printf '%s\n' "$sha" > "$state_dir/current-commit"
-printf '%s\n' "$BACKEND_IMAGE" > "$state_dir/current-image"
+progress backup
+cutover=true
+bash "$release/deploy/vps-backup.sh" --deployment
+progress startup-flyway-hibernate-health
+compose up -d --no-build --wait --wait-timeout 300
+progress persist-success
+# State only changes after migrations, Hibernate validation and health succeed.
 tmp_env=$(mktemp "${env_file}.XXXXXX")
 awk -v image="$BACKEND_IMAGE" '!/^BACKEND_IMAGE=/ { print } END { print "BACKEND_IMAGE=" image }' "$env_file" > "$tmp_env"
 chmod 600 "$tmp_env"
 mv "$tmp_env" "$env_file"
+printf '%s\n' "$sha" > "$state/current-commit.tmp"
+printf '%s\n' "$BACKEND_IMAGE" > "$state/current-image.tmp"
+mv "$state/current-image.tmp" "$state/current-image"
+mv "$state/current-commit.tmp" "$state/current-commit"
+printf '%s\n' "$release" > "$state/current-release"
 compose ps
-echo "Deployed commit $sha"
+printf 'Deployed commit %s; migrations and health checks succeeded. Private log: %s\n' "$sha" "$log" >&3
