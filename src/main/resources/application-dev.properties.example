@@ -3,6 +3,9 @@
 # Ative o perfil dev. O arquivo copiado é ignorado pelo Git.
 # Passo a passo: deploy/LOCAL.md. O Docker lê .env.local; Spring lê este arquivo.
 
+# Schema: Flyway enabled + Hibernate validate are inherited. Do not override them.
+# Existing Hibernate-created databases need verified explicit baseline; see docs/database.
+
 # ========= DATABASE =========
 # compose.local.yaml cria o banco jeepclub e publica a porta 3307 apenas em 127.0.0.1.
 # Se mudar MYSQL_LOCAL_PORT, ajuste também a porta desta URL.

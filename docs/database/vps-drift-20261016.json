@@ -1,0 +1,781 @@
+{
+  "only_difference": "collation",
+  "changed_metadata_rows": {
+    "tables.tsv": 32,
+    "columns.tsv": 123
+  },
+  "tables": [
+    "authentication_accounts",
+    "authentication_password_change_challenges",
+    "authentication_password_recovery_requests",
+    "authentication_refresh_tokens",
+    "authentication_sessions",
+    "authorization_permissions",
+    "authorization_role_permissions",
+    "authorization_roles",
+    "authorization_user_roles",
+    "billing_all_members_charge_assignments",
+    "billing_charge_assignments",
+    "billing_charge_cycles",
+    "billing_charge_definitions",
+    "billing_event_participants_charge_assignments",
+    "billing_member_charges",
+    "billing_member_payments",
+    "billing_member_refunds",
+    "billing_role_charge_assignments",
+    "billing_user_charge_assignments",
+    "dependents_dependent",
+    "dependents_dependent_history",
+    "identity_users",
+    "medical_profiles",
+    "medical_profiles_history",
+    "membership_activation_tokens",
+    "membership_applicant_blocks",
+    "membership_applications",
+    "platform_logs",
+    "tools",
+    "tools_tool_history",
+    "vehicles_vehicle",
+    "vehicles_vehicle_history"
+  ],
+  "columns": [
+    {
+      "table": "authentication_accounts",
+      "column": "access_status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_accounts",
+      "column": "authentication_status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_accounts",
+      "column": "credential_status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_accounts",
+      "column": "password_hash",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_password_change_challenges",
+      "column": "token_hash",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_password_recovery_requests",
+      "column": "method",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_password_recovery_requests",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_password_recovery_requests",
+      "column": "token_hash",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_refresh_tokens",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_refresh_tokens",
+      "column": "token_hash",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authentication_sessions",
+      "column": "session_status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_permissions",
+      "column": "code",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_permissions",
+      "column": "description",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_permissions",
+      "column": "module",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_roles",
+      "column": "description",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_roles",
+      "column": "kind",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_roles",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "authorization_roles",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_assignments",
+      "column": "assignment_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_cycles",
+      "column": "charge_definition_description_snapshot",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_cycles",
+      "column": "charge_definition_name_snapshot",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_cycles",
+      "column": "charge_definition_payment_acceptance_policy_snapshot",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_cycles",
+      "column": "charge_definition_recurrence_type_snapshot",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_cycles",
+      "column": "code",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_cycles",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_definitions",
+      "column": "description",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_definitions",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_definitions",
+      "column": "payment_acceptance_policy",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_definitions",
+      "column": "recurrence_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_charge_definitions",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_charges",
+      "column": "payment_acceptance_policy",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_charges",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_payments",
+      "column": "notes",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_payments",
+      "column": "payment_method",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_payments",
+      "column": "receipt_storage_key",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_payments",
+      "column": "rejection_reason",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_payments",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_refunds",
+      "column": "reason",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_refunds",
+      "column": "rejection_reason",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "billing_member_refunds",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent",
+      "column": "cpf",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent",
+      "column": "phone_number",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent",
+      "column": "relationship_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent_history",
+      "column": "cpf",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent_history",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent_history",
+      "column": "phone_number",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent_history",
+      "column": "relationship_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "dependents_dependent_history",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "cpf",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "email",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "phone_number",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "profile_photo_url",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "rg",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "identity_users",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "allergies",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "blood_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "chronic_conditions",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "continuous_medications",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "emergency_contact_name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "emergency_contact_phone",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "emergency_contact_relationship",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "health_insurance_number",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "health_insurance_plan",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "health_insurance_provider",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "observations",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles",
+      "column": "owner_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "allergies",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "blood_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "chronic_conditions",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "continuous_medications",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "emergency_contact_name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "emergency_contact_phone",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "emergency_contact_relationship",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "health_insurance_number",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "health_insurance_plan",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "health_insurance_provider",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "observations",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "medical_profiles_history",
+      "column": "owner_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_activation_tokens",
+      "column": "token_hash",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applicant_blocks",
+      "column": "active_cpf",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applicant_blocks",
+      "column": "cpf",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applicant_blocks",
+      "column": "reason",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "cpf",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "email",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "message",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "phone_number",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "rejection_reason",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "membership_applications",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "platform_logs",
+      "column": "action",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "platform_logs",
+      "column": "method",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "platform_logs",
+      "column": "outcome",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "platform_logs",
+      "column": "path",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "platform_logs",
+      "column": "request_id",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools",
+      "column": "description",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools",
+      "column": "photo_storage_key",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools_tool_history",
+      "column": "description",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools_tool_history",
+      "column": "name",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools_tool_history",
+      "column": "photo_storage_key",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "tools_tool_history",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "brand",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "color",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "fuel_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "model",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "nickname",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "photo",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "plate",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "renavam",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "brand",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "color",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "fuel_type",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "model",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "nickname",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "photo",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "plate",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "renavam",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    },
+    {
+      "table": "vehicles_vehicle_history",
+      "column": "status",
+      "before": "utf8mb4_unicode_ci",
+      "reference": "utf8mb4_0900_ai_ci"
+    }
+  ]
+}
