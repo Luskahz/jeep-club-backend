@@ -1,5 +1,7 @@
 # Relatório 4 — Estratégia Flyway
 
+> Registro histórico anterior à execução por SSH. Para o estado vigente, consultar [relatório operacional 8](08-operational-adoption.md) e [runbook atualizado](06-vps-runbook.md).
+
 Estratégia preferida: preservar estrutura e dados; não recriar automaticamente. A cadeia é baseada em mudanças físicas comprovadas do Git. A versão de adoção de B permanece **condicional à equivalência**, sem baseline de produção escolhida às cegas.
 
 | Migration | Referência | Bancos novos | Banco existente equivalente |

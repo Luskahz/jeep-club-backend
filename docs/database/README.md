@@ -8,4 +8,6 @@
 6. [Runbook de implantação e recuperação](06-vps-runbook.md)
 7. [Decisão sobre #100 e bloqueadores](07-release-decision.md)
 
-A VPS não foi alterada. Nenhuma baseline é autorizada por este documento. master/develop/#98/#99 foram preservados. Resultados automatizados finais em validation.json.
+8. [Adoção operacional real e automação permanente](08-operational-adoption.md)
+
+Os relatórios 1–7 preservam a auditoria anterior. O relatório 8 e o runbook atualizado registram a execução por SSH e substituem afirmações anteriores de ausência de acesso. Evidências privadas e dados nunca são incluídos no Git. #100 não será integrado nesta execução.

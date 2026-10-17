@@ -1,0 +1,36 @@
+{
+  "no_new_migration": {
+    "health": "UP",
+    "history_unchanged": true
+  },
+  "new_migration": {
+    "executions": 1,
+    "second_start": "UP",
+    "hibernate_validate": true
+  },
+  "invalid_migration": {
+    "startup": "FAILED",
+    "success_history": false,
+    "partial_ddl_preserved": true,
+    "repair": false,
+    "rollback": false
+  },
+  "drift": {
+    "startup": "FAILED",
+    "hibernate_updated_schema": false
+  },
+  "recovery": {
+    "separate_database_restore": "UP",
+    "failed_schema_preserved": true
+  },
+  "smoke": {
+    "registration": 201,
+    "login": 200,
+    "identity_me": 200,
+    "profile": 200,
+    "membership_create": 201,
+    "membership_repeat": 200,
+    "real_emails": false,
+    "existing_users_modified": false
+  }
+}

@@ -20,13 +20,13 @@ For the existing VPS, `NGINX_CONFIG=/etc/jeep-club/nginx-https.conf` and `APP_SE
 
 ## GitHub Actions deployment
 
-The existing Backend CI workflow runs Maven verification for pull requests. On a push to `master`, or a manual run selecting `master`, the deployment job starts only after verification succeeds. Pull requests and other branches do not deploy.
+The existing Backend CI workflow runs Maven verification for pull requests. Only on a push to `master`, the deployment job starts after both Maven and MySQL migration verification succeed. Manual workflow runs run checks only. Pull requests and other branches do not deploy.
 
 Required repository secrets: `JEEPCLUB_DEPLOY_HOST`, `JEEPCLUB_DEPLOY_USER`, `JEEPCLUB_DEPLOY_SSH_KEY`, and `JEEPCLUB_DEPLOY_KNOWN_HOSTS`. Use a dedicated SSH key constrained with `restrict,command="/usr/local/sbin/jeep-club-deploy"` in `authorized_keys`. The key permits only `status` and `deploy <40-character commit SHA>`, and the server validates that the commit belongs to `origin/master`.
 
-Install `deploy/vps-deploy.sh` as `/usr/local/sbin/jeep-club-deploy` with root ownership and mode `700`. It uses the clone at `/opt/jeep-club-repo` and the private environment file at `/opt/jeep-club-compose/.env`.
+Install `deploy/vps-deploy-wrapper.sh` as `/usr/local/sbin/jeep-club-deploy` with root ownership and mode `700`. It uses the clone at `/opt/jeep-club-repo` and the private environment file at `/opt/jeep-club-compose/.env`.
 
-Deployment builds an image tagged with the tested commit, backs up the existing database/uploads, and waits for container health checks. Concurrent deployments are serialized. For migration-aware releases, the revised hook blocks an unversioned VPS database before deployment and stops the backend on startup failure instead of restoring an older image onto potentially committed DDL. The installed hook must be reviewed and updated explicitly; a Git merge does not update /usr/local/sbin. Follow the [database adoption runbook](../docs/database/06-vps-runbook.md) and keep a restore-tested pre-deployment backup.
+Deployment builds an image tagged with the tested commit, backs up the existing database/uploads, and waits for container health checks. Concurrent deployments are serialized. For migration-aware releases, the revised hook blocks an unversioned VPS database before deployment and stops the backend on startup failure instead of restoring an older image onto potentially committed DDL. The stable wrapper validates the exact current master commit and extracts its versioned `deploy/vps-deploy.sh` and backup logic into a private release directory. Normal migrations and runtime changes require no manual hook reinstall. The root-owned wrapper itself remains an extraordinary maintenance operation. Follow the [database adoption runbook](../docs/database/06-vps-runbook.md) and keep a restore-tested pre-deployment backup.
 
 After a successful deployment, the image tag is saved in the private environment file and `/var/lib/jeep-club-deploy`. Do not remove these image tags until the corresponding release is no longer needed for rollback. Database credentials remain on the VPS and are not needed in GitHub Actions.
 

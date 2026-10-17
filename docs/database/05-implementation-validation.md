@@ -1,5 +1,7 @@
 # Relatório 5 — Implementação e validação
 
+> Registro histórico anterior à execução por SSH. Para o estado vigente, consultar [relatório operacional 8](08-operational-adoption.md) e [runbook atualizado](06-vps-runbook.md).
+
 Branch: `codex/flyway-schema-baseline`, criada de develop `9d3fba3`, sem alterar master/develop nem reescrever #98/#99. PR para develop: [#101](https://github.com/Luskahz/jeep-club-backend/pull/101); CI e SHA final registrados em validation.json. Integração não é automática.
 
 Commits de implementação: `e5adeca`, `7856137`, `a39573d`; consolidação documental posterior não altera código ou SQL.

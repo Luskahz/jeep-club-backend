@@ -1,48 +1,48 @@
-# Relatório 6 — Plano operacional (NÃO EXECUTADO)
+# Runbook operacional de Flyway e deploy
 
-Este runbook prepara operações; não autoriza executá-las no banco ativo. Coleta somente de leitura foi autorizada. Baseline, migrations, instalação do hook, edição de configuração, interrupção/restart, restauração ou troca de tráfego aguardam confirmação expressa do responsável. Nunca `docker compose down -v`, reset, clean ou repair.
+O relatório [08-operational-adoption.md](08-operational-adoption.md) registra a execução real autorizada em 16/10/2026. Não repetir baseline nem reconciliação em releases normais. A autorização daquela adoção não permite apagar dados, sobrescrever o banco ativo ou editar histórico Flyway.
 
-## Pré-requisitos e coleta
+## Release normal, sem SSH manual
 
-1. Restabelecer SSH por rede autorizada; confirmar host/IP, porta e chave do host. Conferir SHA em /var/lib/jeep-club-deploy/current-commit, git HEAD e imagem/digest do backend. Último deploy remoto comprovado: 6865bc4 em 13/10, não confirmação do estado atual.
-2. Executar audit-schema.sh (relatório 3). Guardar resultados privados com hashes. Confirmar MySQL patch/digest, sql_mode, charset/collation, database da aplicação, profiles e DDL efetivo; conferir volumes mysql-data/uploads e mountpoints sem divulgar env privado.
-3. Revisar cópias reais de /usr/local/sbin/jeep-club-deploy e jeep-club-backup; o código Git não prova que arquivos externos coincidem. Identificar scheduler de backup, retenção, espaço livre e concorrência com deploy (mesmo flock /var/lib/jeep-club-deploy/deploy.lock).
+1. Acrescentar `V4__descricao.sql`, `V5__descricao.sql` etc. Nunca editar V1–V3 nem qualquer migration aplicada. Revisar compatibilidade de dados e locks/DDL; não inserir operações de teste na cadeia produtiva.
+2. PR para develop: Maven verify e MySQL migrations obrigatórios. H2 não substitui MySQL. CI testa a cadeia SQL empacotada, legado histórico, Hibernate validate, falhas de checksum/histórico, migration futura e DDL parcial.
+3. Integrar develop e abrir/atualizar PR develop → master. Ambos os gates também precisam passar nesse PR. O responsável aprova a release; esta execução não integra #100.
+4. Push aprovado na master dispara Actions com o SHA exato. A chave existente envia apenas `deploy <SHA>`. O wrapper exige origem fixa, master HEAD atual, progressão da release e código com suporte a Flyway.
+5. Build exato → backend parado → backup completo → Compose da release → Flyway valida/aplica pendências → Hibernate validate → health. Estado de sucesso só é persistido no final. Não executar SQL, baseline ou `flyway migrate` manual em cada release.
 
-## Backup e ensaio isolado
+## Componentes instalados e estado
 
-4. Reservar janela de manutenção. Bloquear tráfego e parar workers/backend durante o backup final e corte; registrar início e plano de comunicação. Não presumir consistência entre arquivos/uploads e SQL com aplicação escrevendo.
-5. Backup lógico completo do database, incluindo triggers/routines/events, com --single-transaction --no-tablespaces --set-gtid-purged=OFF e sem senha em argumentos; confirmar InnoDB e ausência de DDL concorrente. Usar MYSQL_PWD somente dentro do container e saída para diretório privado umask 077. Guardar dump estrutural, contagens, SHA256, imagem anterior, configuração .env, hook, certificados/config proxy e uploads em backup protegido; não publicar dump/segredos em CI/Git/chat.
-6. Restaurar primeiro em **instância isolada**, mesma imagem MySQL/digest e configurações de B, com volume e rede próprios (nenhuma referência a mysql-data/uploads reais). Conferir exit codes, hashes, tabela por tabela/contagens, FKs/órfãos, dados críticos privadamente e leitura pelo backend. Só backup restaurado com sucesso conta como recuperável. Não confundir validação SHA256 com restauração testada.
-7. Criar também bancos referência V1/V2/V3 pela cadeia Flyway: para uma referência vazia, migrate -target=1, 2 ou 3. Coletar metadados pelo script com MYSQL_CONTAINER do laboratório. Comparar B restaurado contra cada referência usando compare-schema.py. Mesma collation/versão evita diferenças artificiais. Documentar quaisquer diferenças do Hibernate e objetos extras. Se nenhuma referência corresponder, PARAR: plano corretivo incremental e nova revisão; não forçar baseline.
+- `/usr/local/sbin/jeep-club-deploy`: wrapper estável, root:root 0700, fonte `deploy/vps-deploy-wrapper.sh`.
+- `/usr/local/sbin/jeep-club-backup`: backup diário consistente, fonte `deploy/vps-backup.sh`. O deploy usa a cópia versionada do mesmo script no SHA aprovado.
+- `/opt/jeep-club-repo`: clone usado para buscar/verificar master. Não é necessariamente o diretório da aplicação ativa depois do primeiro deploy pelo wrapper.
+- `/var/lib/jeep-club-deploy/release-<SHA>-<id>`: árvore extraída do commit exato, privada. Compose recebe `--project-name jeep-club`, `--project-directory` e `-f` explícitos. O `.env` vem de `/opt/jeep-club-compose/.env`.
+- `current-commit`, `current-image`, `current-release`: última release concluída. `last-failure` e `logs/` indicam uma tentativa interrompida; não confundir checkout Git com release bem-sucedida.
+- O lock `/var/lib/jeep-club-deploy/deploy.lock` é compartilhado por deploy, backup diário e operações extraordinárias.
+- A preparação inicial cria `compose.override.yaml` no clone legado para trocar somente configuração de startup por Hibernate validate e flags Flyway seguras. A imagem antiga não contém o starter Flyway; execução automática efetiva começa com a release que inclui #101. O Compose explícito das novas releases já contém essas proteções e não depende do override.
 
-## Ferramenta administrativa e baseline experimental
+O wrapper não se atualiza automaticamente: isso é intencional, pois define a fronteira de confiança. Atualizações comuns do runtime de deploy, do backup usado no deploy e de migrations são extraídas do commit aprovado; não exigem reinstalar o wrapper. Mudanças no contrato do wrapper exigem manutenção administrativa extraordinária, revisão e cópia preservada da versão anterior. Nunca substituir a chave restrita por acesso administrativo do Actions.
 
-8. Usar Flyway CLI **11.14.1**, verificado da distribuição oficial. CLI não inclui Connector/J MySQL por licença: instalar `com.mysql:mysql-connector-j:9.6.0` na pasta drivers e confirmar `flyway info` antes do ensaio. Não depender do fallback MariaDB. Configuração privada fora do repo, modo 0600, URL do laboratório e user/password provisionados por canal privado. Locations aponta à cópia imutável dos SQL desta release. Não passar segredo em flags nem ativar debug/set -x. A documentação oficial explica [driver e módulo MySQL](https://documentation.red-gate.com/flyway/reference/database-driver-reference/mysql).
-9. Após equivalência estrutural integral e backup/restore comprovados, registrar a versão correspondente **na cópia**, nunca no ativo nesta fase. Exemplo abaixo usa V3 somente se B corresponder a V3. Se corresponder a V1/V2, usar exatamente 1/2 e depois aplicar incrementos.
+## Backup e evidências
 
-```bash
-# Config privado aponta EXCLUSIVAMENTE à cópia isolada, driver MySQL instalado.
-flyway -configFiles=/root/jeepclub-lab.conf info
-python3 deploy/compare-schema.py /root/reference-v3 /root/restored-b-audit
-# Apenas após equivalência e revisão; esta linha escreve o histórico na cópia.
-flyway -configFiles=/root/jeepclub-lab.conf -baselineVersion=3 -baselineDescription=Verified_legacy_schema -baselineOnMigrate=false -cleanDisabled=true baseline
-flyway -configFiles=/root/jeepclub-lab.conf -baselineOnMigrate=false -cleanDisabled=true migrate
-flyway -configFiles=/root/jeepclub-lab.conf validate
-flyway -configFiles=/root/jeepclub-lab.conf info
-```
+O backup diário continua agendado para 03:00 UTC. Agora aguarda o lock e pausa o backend durante SQL/uploads. Em modo diário, reativa o mesmo container após a coleta. Em deploy, deixa o backend parado até o startup da release. O dump inclui routines/events/triggers, usa transação consistente, hex-blob, sem tablespaces ou alteração de GTID. Uploads são montados somente para leitura em container sem rede. Configuração, certificados, imagens e estado ficam em arquivo privado.
 
-Arquivo privado contém flyway.url, flyway.user, flyway.password, flyway.driver=com.mysql.cj.jdbc.Driver, flyway.locations=filesystem:/caminho/revisado/db/migration, flyway.cleanDisabled=true e baselineOnMigrate=false. Não há modelo com valores reais versionado. Referências novas não recebem baseline; migrate cria suas tabelas. Na cópia adotada exigir history BASELINE versão correta + somente incrementos posteriores, todos success=1; banco novo exige SQL V1,V2,V3. Comparar schemas finais entre novo e cópia, bem como contagens antes/depois (history cresce; tabelas novas esperadas vazias).
+Cada backup fica em `/var/backups/jeep-club/release-<UTC>-<id>`, fora de volume efêmero, modo privado, com SHA256. Não há exclusão automática de backups neste script. Planejar retenção externa e acompanhar espaço livre. Backup local não protege contra perda física da VPS; nenhuma cópia externa foi declarada como existente.
 
-10. Subir **imagem candidata exata** na rede isolada, profile/config equivalente e ddl-auto=validate; SMTP simulado/desativado e storage isolado. Confirmar Flyway antes de Hibernate, readiness UP e nenhum DDL automático. Smoke tests com contas de laboratório: login/refresh/logout/recuperação; criação administrativa/convite/reenvio/invalidação; alteração CPF/e-mail e conflitos unique; inscrição/aprovação/ativação Membership; perfil; listagem Vehicle/Tool; permissão ROOT estável após restart. Conferir timestamps/timezone, enums e logs SQL/locks. Não disparar e-mails para pessoas reais.
+Para testar recuperação, criar instância MySQL independente com o mesmo digest, rede interna e diretório/volume **novo**, sem portas públicas. Conferir mounts antes de restaurar. Restaurar SQL, extrair uploads em diretório privado próprio, comparar metadata com `audit-schema.sh` + `compare-schema.py`, contagens tabela a tabela, hashes dos arquivos e dump determinístico dos registros. Hash do arquivo sozinho não comprova restore.
 
-## Corte sujeito a aprovação
+O coletor aceita `MYSQL_CONTAINER`, `BACKEND_CONTAINER` e opcionalmente `AUDIT_DATABASE` para bases de laboratório. Sempre confirmar `DATABASE()` e a URL da aplicação. Um diretório de saída deve ser novo. Metadados também podem conter literais sensíveis: revisar antes de compartilhar. Nunca publicar env, dumps, tokens, logs brutos de requisições ou dados pessoais em GitHub.
 
-11. Apresentar diagnóstico A/B/C, versão de baseline comprovada, diffs explicados, backup restaurado, CI/commit imutável, resultado do ensaio, duração medida e riscos. Obter autorização expressa antes de qualquer mudança ativa.
-12. Na janela autorizada, bloquear tráfego/escritas, obter backup final recuperável e repetir coleta/comparação fresca; cancelar se B mudou. Instalar hook revisado (incluindo nova proteção de falha) e conferir permissões/forced command. Aplicar **somente a baseline verificada** no ativo e incrementos necessários pelo mesmo conjunto imutável de scripts; registrar history antes/depois. Não registrar versão 3 se faltar qualquer objeto V3.
-13. Aplicar configurações validate/Flyway, executar deploy do commit aprovado pelo fluxo protegido, validar readiness/logs/contagens/metadata/history e smoke tests. Liberar tráfego progressivamente, registrar imagem/digest/SHA/migration checksum/backup utilizado. Após integração do PR Flyway em develop, #100 precisa conter esse commit e ambos os gates verdes no merge candidato; integração e promoção dependem de revisão humana.
+## Adoção inicial, já distinta do fluxo normal
 
-## Monitoramento e recuperação
+Foi encontrado legado equivalente a V3 exceto por collation herdada do dump pré-Docker: 32 tabelas/123 colunas. A reconciliação específica fica em `deploy/adoption/reconcile-legacy-collation.sql`; não pertence a `db/migration` e não é executada pelo pipeline. Somente equivalência estrita, restore comprovado, preservação de registros e ausência de incompatibilidades permitem registrar baseline V3. Consultar o relatório operacional para resultado efetivo e hashes.
 
-14. Acompanhar startup/readiness, falhas SQL/constraint, conexões e pool, deadlocks/timeouts, erros de envio e volume de 5xx; revisar imediatamente e após período acordado. Logs podem conter dados pessoais: usar redaction e acesso restrito.
-15. MySQL DDL tem commits implícitos. Em falha, parar backend, manter tráfego bloqueado, coletar history/SHOW CREATE/erro e não tentar repair, editar migration aplicada ou repetir cegamente. O hook novo interrompe a aplicação em vez de reinstalar automaticamente uma imagem com update. Se a falha ocorreu antes de qualquer alteração e o schema antigo foi comprovado intacto, rollback de imagem pode ser revisado; caso contrário requer plano de recuperação aprovado.
-16. Recuperação preferida ensaiada: restaurar o backup final **em novo volume/instância**, comparar estrutura/contagens, iniciar imagem/config anterior compatível e validar; trocar conexão/tráfego somente após autorização. Preservar volume original para investigação. Não sobrescrever o banco ativo automaticamente. Tempo de restore e indisponibilidade são medidos no ensaio, ainda desconhecidos; não prometer rollback transacional de DDL.
+Baseline via API oficial Flyway, `baselineOnMigrate=false`, `cleanDisabled=true`, versão explícita. Nunca INSERT/UPDATE/DELETE na history. V1–V3 não passam a ter checksums individuais numa baseline V3: a verificação inicial foi estrutural; a history recebe BASELINE 3 e futuros SQL recebem checksums normais. Nunca utilizar repair para ocultar falhas.
+
+## Incidente de deploy ou DDL parcial
+
+1. Falha após início do corte mantém o backend parado; Actions recebe falha, SHA, estágio e localização do log privado. Verificar `last-failure`, `logs/`, estado dos containers e history. Não reativar imagem antiga automaticamente.
+2. Preservar o volume afetado, a imagem, os SQL imutáveis, os logs e o backup anterior. Coletar `SHOW CREATE`/metadata para distinguir DDL aplicado de DDL pendente. MySQL pode fazer commits implícitos; não há promessa de rollback transacional de schema.
+3. Não executar clean, repair, baseline automática, Hibernate update ou repetir migration com erro sem diagnóstico. Um SQL parcialmente aplicado pode coexistir com history `success=0`; checksum/histórico não deve ser adulterado.
+4. Ensaio de recuperação: restaurar o backup pré-deploy em **outra instância e armazenamento**, iniciar a imagem compatível com esse backup e validar health, dados, uploads e integridade. Este procedimento foi testado preservando o schema de falha no laboratório.
+5. Trocar conexão/tráfego para a instância recuperada exige autorização operacional específica e reconciliação das escritas posteriores ao backup. Restauração sobre o ativo, remoção de volume ou operação destrutiva exigem autorização explícita. Nunca executar `docker compose down -v`.
+6. Só após evidência de compatibilidade decidir entre recuperação pelo backup ou correção incremental revisada. Publicar correções por PR; não modificar migrations já aplicadas para fazer a falha desaparecer.

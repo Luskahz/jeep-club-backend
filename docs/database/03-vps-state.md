@@ -1,5 +1,7 @@
 # Relatório 3 — Estado real do banco e comparação A/B/C
 
+> Registro histórico anterior à execução por SSH. Para o estado vigente, consultar [relatório operacional 8](08-operational-adoption.md) e [runbook atualizado](06-vps-runbook.md).
+
 **B está pendente.** Acesso root por SSH foi autorizado pelo usuário; duas conexões à porta 22 expiraram antes da autenticação em 15/10. A senha não foi enviada à VPS, salva em arquivos nem incluída em comandos/logs. Usuário informou possível bloqueio da rede de origem. Nenhum comando remoto foi executado e nenhum dado ativo foi alterado. Não há resultado de SELECT/SHOW CREATE oriundo da VPS.
 
 | Item | A: referência 02/10 (`e4aa00e`) | B: VPS atual | C: develop (`9d3fba3`) |
