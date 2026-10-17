@@ -20,8 +20,9 @@ O quarto argumento opcional informa a versão da referência (padrão `3`).
 Exemplo após V4: `bash deploy/snapshot-vps.sh /root/snapshot-v4
 /root/reference-v4 /root/restore-evidence-v4.json 4`.
 O terceiro argumento opcional é um JSON privado com `backup` (nome do diretório
-do backup atual), `restoredTableCount`, `schemaMatch`, `rowsMatch`, `releaseSha`
-e `flywayCliValidated`. Só o forneça depois de executar a restauração isolada e
+do backup atual), `restoredTableCount`, `schemaMatch`, `rowsMatch`,
+`uploadsRestored`, `releaseSha` e `flywayCliValidated`. Só o forneça depois de
+executar a restauração isolada do SQL e dos uploads e
 o `flyway info validate`; sem isso, a restauração e a validação CLI ficam `null`.
 
 O diretório de saída contém `jeep-club-vps-snapshot.json`,

@@ -283,7 +283,10 @@ def collect(output, audit, reference, restore_evidence, audit_ok, script_dir, re
     if restore_evidence:
         try:
             proof = json.loads(Path(restore_evidence).read_text())
-            if backup_path and proof.get("backup") == backup_path.name and proof.get("restoredTableCount") == len(tables) + 1 and proof.get("schemaMatch") is True and proof.get("rowsMatch") is True:
+            if (backup_path and proof.get("backup") == backup_path.name and
+                    proof.get("restoredTableCount") == len(tables) + 1 and
+                    proof.get("schemaMatch") is True and proof.get("rowsMatch") is True and
+                    proof.get("uploadsRestored") is True):
                 restore_ok = True
             if proof.get("releaseSha") == deployed_sha and proof.get("flywayCliValidated") is True:
                 cli_validation = True
@@ -362,6 +365,7 @@ def collect(output, audit, reference, restore_evidence, audit_ok, script_dir, re
                        "automaticMigrationsReady": deploy_ready, "restrictedSshCommand": restricted_key},
         "backups": {"lastBackupUtc": iso_mtime(backup_path) if backup_path else None, "latestBackupId": backup_path.name if backup_path else None,
                     "latestArchiveBytes": backup_sizes, "checksumVerified": backup_ok, "restoreVerified": restore_ok,
+                    "uploadsRestoreVerified": restore_ok,
                     "scheduleActive": timer_state.get("ActiveState") == "active" and timer_state.get("UnitFileState") == "enabled",
                     "offsiteBackup": None, "retentionPolicy": "no automatic pruning in installed backup script",
                     "warnings": ["Cópia fora da VPS não comprovada."]},
@@ -398,7 +402,7 @@ def write_report(path, data):
     for h in f["history"]:
         lines.append(f"| {h['installed_rank']} | {h['version']} | {h['description']} | {h['type']} | {h['script']} | {h['checksum']} | {h['success']} |")
     lines += ["", "## Deploy e backups", "", f"- Wrapper restrito confere: {dep['deployWrapperVerified']}; backup antes do deploy: {dep['backupBeforeDeploy']}; migrations automáticas prontas: {dep['automaticMigrationsReady']}.",
-              f"- Backup mais recente: {b['lastBackupUtc']}; checksums: {b['checksumVerified']}; restauração isolada: {b['restoreVerified']}; agendamento: {b['scheduleActive']}.",
+              f"- Backup mais recente: {b['lastBackupUtc']}; checksums: {b['checksumVerified']}; restauração isolada de SQL e uploads: {b['restoreVerified']}; agendamento: {b['scheduleActive']}.",
               "- Retenção: sem remoção automática no script instalado; há risco de crescimento futuro do uso de disco.",
               "- Cópia externa: não comprovada. O snapshot não contém conteúdo de `.env`, logs brutos nem linhas de usuários.", "", "## Achados", ""]
     lines.extend("- " + x for x in data["findings"])
