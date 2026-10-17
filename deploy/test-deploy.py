@@ -43,6 +43,7 @@ fi
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertLess(trace.index('build backend'), trace.index('BACKUP'))
         self.assertLess(trace.index('BACKUP'), trace.index('up -d'))
+        self.assertLess(trace.index('up -d'), trace.index('nginx -s reload'))
         self.assertEqual((state/'current-commit').read_text().strip(), SHA)
         self.assertIn(SHA, env.read_text())
 

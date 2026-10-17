@@ -44,6 +44,10 @@ cutover=true
 bash "$release/deploy/vps-backup.sh" --deployment
 progress startup-flyway-hibernate-health
 compose up -d --no-build --wait --wait-timeout 300
+progress proxy-reload
+# Nginx may retain the address of a replaced backend until its configuration reloads.
+compose exec -T proxy nginx -t
+compose exec -T proxy nginx -s reload
 progress persist-success
 # State only changes after migrations, Hibernate validation and health succeed.
 tmp_env=$(mktemp "${env_file}.XXXXXX")
