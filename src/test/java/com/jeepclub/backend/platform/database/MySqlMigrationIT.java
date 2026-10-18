@@ -57,9 +57,12 @@ class MySqlMigrationIT {
                     + "values(700,'Migration fixture','00000000000','ACTIVE',UTC_TIMESTAMP(6))");
             statement.executeUpdate("insert into membership_applications(id,created_user_id,name,cpf,status,requested_at,version) "
                     + "values(800,700,'Synthetic existing application','00000000000','APPROVED',UTC_TIMESTAMP(6),0)");
+            statement.executeUpdate("insert into authorization_permissions(id,code,module,description,created_at) "
+                    + "values(901,'IDENTITY_USER_READ','IDENTITY','Synthetic existing permission',UTC_TIMESTAMP(6))");
         }
         var usersBefore=fixtureRows(existing,"identity_users");
         var applicationsBefore=fixtureRows(existing,"membership_applications");
+        var permissionsBefore=fixtureRows(existing,"authorization_permissions");
         var baseline = Flyway.configure().dataSource(url(existing), MYSQL.getUsername(), MYSQL.getPassword())
                 .baselineVersion(Integer.toString(version)).baselineDescription("Verified historical fixture")
                 .baselineOnMigrate(false).cleanDisabled(true).load();
@@ -72,6 +75,7 @@ class MySqlMigrationIT {
         assertThat(count(existing, "identity_users")).isEqualTo(1);
         assertThat(fixtureRows(existing,"identity_users")).isEqualTo(usersBefore);
         assertThat(fixtureRows(existing,"membership_applications")).isEqualTo(applicationsBefore);
+        assertThat(fixtureRows(existing,"authorization_permissions")).isEqualTo(permissionsBefore);
         assertThat(count(existing,"membership_members")).isZero();
         try(var c=connection(existing);var st=c.createStatement();var rows=st.executeQuery("select next_value from membership_registry_sequence where id=1")) {
             assertThat(rows.next()).isTrue();assertThat(rows.getObject(1)).isNull();

@@ -67,11 +67,16 @@ public class CreateUserWithPendingFirstAccessAdapter
             String rawPassword
     ) {
         Instant now = Instant.now(clock);
-        return userRegistration.createPendingFirstAccess(
-                new UserRegistrationData(
-                        name, null, email, cpf, null, phoneNumber, null, now
-                ),
-                rawPassword
-        );
+        try {
+            return userRegistration.createPendingFirstAccess(
+                    new UserRegistrationData(
+                            name, null, email, cpf, null, phoneNumber, null, now
+                    ),
+                    rawPassword
+            );
+        } catch (com.jeepclub.backend.iam.identity.api.module.exception.UserRegistrationConflictException conflict) {
+            throw new com.jeepclub.backend.memberships.core.application.exception.MembershipFirstAccessConflictException(
+                    "Membership identity creation conflicts with an existing identity.");
+        }
     }
 }
