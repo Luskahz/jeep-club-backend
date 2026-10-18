@@ -1,5 +1,23 @@
 # Identity
 
+## Projeção da matrícula — BACK-531
+
+User.id continua a chave técnica e não é matrícula. A SPI pública
+`UserMembershipNumberProjection` expressa a necessidade de apresentação de
+Identity; o adapter em `platform.composition.membership` consulta
+`memberships.api.module.MemberRegistrationQuery`. O lookup não depende dos
+serviços de escrita de Identity, evitando ciclo de beans. Não existe coluna
+membershipNumber em Identity nem cache da matrícula.
+
+As respostas de `/identity/me`, perfis complementares, detalhe administrativo e
+listagem administrativa adicionam `membershipNumber`. Na listagem a projeção em
+lote acompanha resultados com ID selecionado (padrão). IDs técnicos continuam
+disponíveis. Para usuário sem Member o campo é null, ou omitido no DTO
+administrativo que já usa NON_NULL. Exportações de usuários acrescentam a coluna
+Matrícula e resolvem os números por lote de 200. A pesquisa por matrícula vigente
+pertence à API administrativa do registry. Veja as
+[regras do registry](../../../memberships/docs/member-registry.md).
+
 Criação administrativa de User e integração com Authentication: [BACK-511](../../../../../../../../../docs/back-511-admin-user-creation.md).
 
 Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
@@ -275,3 +293,20 @@ cobertura proporcional conforme as
 UserQuery.findByIds e findAfterId oferecem leitura administrativa em lote de até 500, incluindo cadastros desativados para auditoria. Export mantém filtros AdminUserFilter existentes; foto aparece somente como booleano. IDENTITY_USER_EXPORT é independente de READ.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+
+## Matrícula cadastral — revisão BACK-526
+
+Matrícula vigente é o identificador principal de apresentação do associado;
+User.id é técnico e continua aceito nas operações. A seleção MEMBERSHIP_NUMBER
+independe de ID: a persistência recupera a chave auxiliar sem expô-la quando não
+solicitada. O lookup usa a SPI pública implementada por composição da query de
+Memberships. Sem Member, não há fallback artificial.
+
+A consulta administrativa aceita `membershipNumber` exata e inclui matrícula
+vigente exata no OR de `q`, combinando com filtros/paginação no banco. Histórico
+não participa. Sort por matrícula não é suportado em Identity (400); use a
+listagem de associados para ordenação global. CSV/PDF priorizam matrícula em
+layout MEMBER; TECHNICAL preserva a ordem/cabeçalhos anteriores para integrações.
+Disable/enable e alterações cadastrais preservam o vínculo. Não existe endpoint
+atual de exclusão física; a FK restritiva será considerada pela BACK-512.

@@ -119,3 +119,15 @@ com IDs de User existentes. Se já houver um titular ROOT, não atribui ROOT a q
 ocupar o CPF originalmente configurado após uma correção cadastral. O CPF de
 bootstrap é usado para estabelecer o primeiro vínculo, não como identidade
 permanente de uma conta privilegiada.
+
+## Gestão do registro de associados — BACK-530
+
+O catálogo separa READ, REGISTRATION_MANAGE, AUDIT_READ, NUMBER_RESERVE,
+NUMBER_ISSUE e IMPORT sob o prefixo `MEMBERSHIP_MEMBER_`. Os grants são
+independentes: leitura não concede escrita e MANAGE não permite importação.
+Veja a [matriz proprietária de Memberships](../../../memberships/docs/member-registry.md#autorizações-separadas-e-habilitação-da-importação).
+PreAuthorize e RequiredPermission coincidem por operação. ROOT recebe as novas
+permissions estruturalmente; CUSTOM não recebe concessão automática. A V4 amplia
+o ENUM acrescentando valores ao final, preservando posições existentes; V1–V3
+continuam imutáveis. Importação também exige habilitação operacional própria,
+além da permission. Não há exceção por identidade pessoal de administrador.

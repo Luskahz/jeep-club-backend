@@ -71,7 +71,7 @@ public class MemberActivationTokenController {
     @SwaggerOperationGroup(value = "Rotas públicas", order = 10)
     @Operation(
             summary = "Concluir primeiro acesso por token de ativação",
-            description = "Define a senha definitiva em Authentication e, somente após sucesso, consome o token e conclui a MembershipApplication.",
+            description = "Define a senha definitiva em Authentication e, somente após sucesso, consome o token e conclui a MembershipApplication. Quando a emissão de matrícula estiver habilitada e homologada, cria ou preserva o Member na mesma transação. Com emissão desabilitada, conclui sem matrícula.",
             security = {},
             responses = {
                     @ApiResponse(responseCode = "204", description = "Primeiro acesso concluído."),
@@ -81,7 +81,7 @@ public class MemberActivationTokenController {
                     @ApiResponse(responseCode = "404", description = "Token ou recurso vinculado não encontrado.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
-                    @ApiResponse(responseCode = "409", description = "Token usado ou estado incompatível.",
+                    @ApiResponse(responseCode = "409", description = "Token usado, estado incompatível ou conflito na emissão de matrícula habilitada.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "410", description = "Token expirado.",

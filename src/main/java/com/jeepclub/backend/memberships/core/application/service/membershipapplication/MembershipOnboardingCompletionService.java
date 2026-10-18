@@ -15,6 +15,7 @@ import java.util.Objects;
 public class MembershipOnboardingCompletionService implements MembershipOnboardingCompletion {
 
     private final MembershipApplicationRepository repository;
+    private final com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService memberRegistry;
 
     @Override
     @Transactional
@@ -25,6 +26,7 @@ public class MembershipOnboardingCompletionService implements MembershipOnboardi
                 .ifPresent(application -> {
                     application.complete(now);
                     repository.save(application);
+                    memberRegistry.issueOnCompletion(identityId);
                 });
     }
 }

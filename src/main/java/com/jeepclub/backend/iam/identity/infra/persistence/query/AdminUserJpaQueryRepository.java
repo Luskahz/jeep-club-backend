@@ -69,7 +69,9 @@ public class AdminUserJpaQueryRepository {
 
     private List<Selection<?>> selections(Root<UserEntity> user, Set<AdminUserField> fields) {
         List<Selection<?>> result = new ArrayList<>();
-        for (AdminUserField field : fields) {
+        Set<AdminUserField> persisted = java.util.EnumSet.copyOf(fields);
+        if (persisted.remove(AdminUserField.MEMBERSHIP_NUMBER)) persisted.add(AdminUserField.ID);
+        for (AdminUserField field : persisted) {
             String property = property(field);
             result.add(user.get(property).alias(property));
         }
@@ -82,6 +84,8 @@ public class AdminUserJpaQueryRepository {
             CriteriaBuilder cb
     ) {
         List<Predicate> result = new ArrayList<>();
+        if (filter.membershipNumber() != null) result.add(filter.membershipIdentityId() == null
+                ? cb.disjunction() : cb.equal(user.get("id"), filter.membershipIdentityId()));
         if (filter.id() != null) result.add(cb.equal(user.get("id"), filter.id()));
         if (filter.name() != null) result.add(cb.like(cb.lower(user.get("name")), like(filter.name())));
         if (filter.birthDate() != null) result.add(cb.equal(user.get("birthDate"), filter.birthDate()));
@@ -111,7 +115,8 @@ public class AdminUserJpaQueryRepository {
                     cb.like(cb.lower(user.get("email")), search),
                     cb.like(user.get("cpf"), search),
                     cb.like(user.get("rg"), search),
-                    cb.like(user.get("phoneNumber"), search)
+                    cb.like(user.get("phoneNumber"), search),
+                    filter.queryMembershipIdentityId() == null ? cb.disjunction() : cb.equal(user.get("id"),filter.queryMembershipIdentityId())
             ));
         }
         return result;
@@ -142,7 +147,7 @@ public class AdminUserJpaQueryRepository {
 
     private AdminUserResult toResult(Tuple tuple, Set<AdminUserField> fields) {
         return new AdminUserResult(
-                get(tuple, fields, AdminUserField.ID, "id", Long.class),
+                fields.contains(AdminUserField.ID) || fields.contains(AdminUserField.MEMBERSHIP_NUMBER) ? tuple.get("id", Long.class) : null,
                 get(tuple, fields, AdminUserField.NAME, "name", String.class),
                 get(tuple, fields, AdminUserField.BIRTH_DATE, "birthDate", LocalDate.class),
                 get(tuple, fields, AdminUserField.EMAIL, "email", String.class),
@@ -170,6 +175,7 @@ public class AdminUserJpaQueryRepository {
     private static String property(AdminUserField field) {
         return switch (field) {
             case ID -> "id";
+            case MEMBERSHIP_NUMBER -> throw new IllegalArgumentException("Membership projection is resolved outside Identity persistence");
             case NAME -> "name";
             case BIRTH_DATE -> "birthDate";
             case EMAIL -> "email";

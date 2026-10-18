@@ -67,15 +67,23 @@ public record AdminUserFilterDTO(
                 format = "date-time", nullable = true)
         @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant updatedTo,
 
-        @Schema(description = "Busca textual livre em nome, e-mail, CPF, RG e telefone.", example = "lucas",
+        @Schema(description = "Busca textual em nome, e-mail, CPF, RG, telefone ou matrícula vigente exata.", example = "lucas",
                 maxLength = 150, nullable = true)
-        @Size(max = 150) String q
+        @Size(max = 150) String q,
+
+        @Schema(description = "Matrícula vigente exata de Membership, preservando zeros. Não busca histórico. Combinável com todos os filtros.", example = "027", maxLength = 64)
+        @Size(min = 1, max = 64) String membershipNumber
 ) {
+    public AdminUserFilterDTO(Long id, String name, LocalDate birthDate, String email, String cpf, String rg,
+            String phoneNumber, UserStatus status, Instant createdFrom, Instant createdTo,
+            Instant updatedFrom, Instant updatedTo, String q) {
+        this(id,name,birthDate,email,cpf,rg,phoneNumber,status,createdFrom,createdTo,updatedFrom,updatedTo,q,null);
+    }
     public AdminUserFilter toFilter() {
         return new AdminUserFilter(
                 id, normalize(name), birthDate, normalize(email), digits(cpf), digits(rg),
                 digits(phoneNumber), status, createdFrom, createdTo, updatedFrom, updatedTo,
-                normalize(q)
+                normalize(q), membershipNumber, null, null
         );
     }
 

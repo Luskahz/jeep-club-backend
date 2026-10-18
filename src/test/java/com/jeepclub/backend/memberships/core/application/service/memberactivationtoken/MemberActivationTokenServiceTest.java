@@ -80,7 +80,7 @@ class MemberActivationTokenServiceTest {
                 tokenRepository, hashPort, tokenGenerator, timeProperties,
                 applicationRepository, firstAccessPort, recipientPort, mailSender,
                 Clock.fixed(NOW, ZoneOffset.UTC)
-        );
+        , org.mockito.Mockito.mock(com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService.class));
     }
 
     @Test
@@ -219,7 +219,7 @@ class MemberActivationTokenServiceTest {
         Clock changing=mock(Clock.class);
         when(changing.instant()).thenAnswer(call -> current.get());
         service=new MemberActivationTokenService(tokenRepository,hashPort,tokenGenerator,timeProperties,
-                applicationRepository,firstAccessPort,recipientPort,mailSender,changing);
+                applicationRepository,firstAccessPort,recipientPort,mailSender,changing, org.mockito.Mockito.mock(com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService.class));
         MemberActivationToken token=MemberActivationToken.reconstitute(10L,1L,"hash",NOW.plusSeconds(60),null,NOW.minusSeconds(60));
         MembershipApplication application=approvedApplication();
         when(hashPort.hash("raw")).thenReturn("hash");

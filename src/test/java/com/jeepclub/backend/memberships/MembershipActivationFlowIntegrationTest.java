@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** Committed HTTP transactions with real Identity/Authentication and H2 persistence. */
-@SpringBootTest
+@SpringBootTest(properties={"memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.issuance.initial-number=1000","memberships.registry.issuance.width=4","memberships.registry.issuance.prefix="})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -54,12 +54,18 @@ class MembershipActivationFlowIntegrationTest {
     @Autowired PermissionRepository permissions;
     @Autowired RolePermissionRepository rolePermissions;
     @Autowired Clock clock;
+    @Autowired com.jeepclub.backend.memberships.api.module.MemberRegistrationQuery registryQuery;
+    @Autowired com.jeepclub.backend.memberships.infra.persistence.jpa.MemberRegistrySequenceJpaRepository registrySequence;
+    @MockitoSpyBean com.jeepclub.backend.memberships.infra.persistence.jpa.MemberRegistryAuditJpaRepository registryAudits;
     @MockitoSpyBean MembershipApplicationRepository applications;
     @MockitoBean MemberActivationMailSender mail;
     private String admin;
 
     @BeforeEach
     void administratorWithRealCredentialsAndApprovalPermission() throws Exception {
+        if(!registrySequence.existsById(1L)) {
+            var row=new com.jeepclub.backend.memberships.infra.persistence.entity.MemberRegistrySequenceEntity();row.setId(1L);registrySequence.saveAndFlush(row);
+        }
         String cpf = "73045198279";
         if (!identities.existsByCpf(cpf)) {
             Long id = registration.createWithPermanentCredential(new UserRegistrationData(
@@ -82,6 +88,7 @@ class MembershipActivationFlowIntegrationTest {
         approve(id).andExpect(status().isOk());
         var approved = applications.findById(id).orElseThrow();
         Long userId = approved.getCreatedUserId();
+        assertThat(registryQuery.byIdentityUserId(userId)).isEmpty();
         assertThat(approved.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         assertThat(identities.findById(userId).orElseThrow().cpf()).isEqualTo("52998224725");
         assertThat(accounts.findById(userId).orElseThrow().getCredentialStatus())
@@ -97,8 +104,10 @@ class MembershipActivationFlowIntegrationTest {
         complete(raw).andExpect(status().isNoContent());
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.COMPLETED);
         assertThat(applications.findById(id).orElseThrow().getFinishedAt()).isNotNull();
+        assertThat(registryQuery.byIdentityUserId(applications.findById(id).orElseThrow().getCreatedUserId())).isPresent();
         var account = accounts.findById(userId).orElseThrow();
         assertThat(account.getCredentialStatus()).isEqualTo(CredentialStatus.PERMANENT);
+        assertThat(registryQuery.byIdentityUserId(userId)).isPresent();
         assertThat(passwords.matches(PASSWORD, account.getPasswordHash())).isTrue();
         assertThat(tokens.findById(persistedToken.getId()).orElseThrow().getUsedAt()).isNotNull();
         String access = json(login("52998224725", PASSWORD).andExpect(status().isOk())
@@ -185,6 +194,7 @@ class MembershipActivationFlowIntegrationTest {
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         complete(raw).andExpect(status().isNoContent());
         assertThat(accounts.findById(userId).orElseThrow().getCredentialStatus()).isEqualTo(CredentialStatus.PERMANENT);
+        assertThat(registryQuery.byIdentityUserId(userId)).isPresent();
     }
 
     @Test
@@ -199,6 +209,51 @@ class MembershipActivationFlowIntegrationTest {
                 .andExpect(status().isOk());
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.COMPLETED);
         assertThat(applications.findById(id).orElseThrow().getFinishedAt()).isNotNull();
+        assertThat(registryQuery.byIdentityUserId(applications.findById(id).orElseThrow().getCreatedUserId())).isPresent();
+    }
+
+    @Test
+    void registryAuditFailureRollsBackActivationCredentialTokenAndApplication() throws Exception {
+        Long id=submit("98500199997");approve(id).andExpect(status().isOk());String raw=deliveredToken(1);
+        Long userId=applications.findById(id).orElseThrow().getCreatedUserId();
+        String hash=accounts.findById(userId).orElseThrow().getPasswordHash();
+        doThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic registry audit failure")).when(registryAudits).saveAndFlush(any());
+        try { complete(raw).andExpect(status().isInternalServerError()); }
+        finally { reset(registryAudits); }
+        assertThat(registryQuery.byIdentityUserId(userId)).isEmpty();
+        assertThat(accounts.findById(userId).orElseThrow().getPasswordHash()).isEqualTo(hash);
+        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+        assertThat(tokens.findByTokenHash(hashes.hash(raw)).orElseThrow().getUsedAt()).isNull();
+        complete(raw).andExpect(status().isNoContent());assertThat(registryQuery.byIdentityUserId(userId)).isPresent();
+    }
+
+    @Test
+    void concurrentApprovalsCreateOneIdentityAndDeferMemberUntilFirstAccess() throws Exception {
+        String cpf="98500200162";Long id=submit(cpf);long before=accounts.count();
+        var ready=new java.util.concurrent.CountDownLatch(2);var go=new java.util.concurrent.CountDownLatch(1);
+        var executor=java.util.concurrent.Executors.newFixedThreadPool(2);
+        org.springframework.test.web.servlet.MvcResult winner;
+        try {
+            java.util.concurrent.Callable<org.springframework.test.web.servlet.MvcResult> approve=() -> {
+                ready.countDown();go.await();
+                return mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password",id).header("Authorization",admin)).andReturn();
+            };
+            var first=executor.submit(approve);var second=executor.submit(approve);
+            assertThat(ready.await(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue();go.countDown();
+            var a=first.get(30,java.util.concurrent.TimeUnit.SECONDS);var b=second.get(30,java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(java.util.List.of(a.getResponse().getStatus(),b.getResponse().getStatus())).containsExactlyInAnyOrder(200,409);
+            winner=a.getResponse().getStatus()==200?a:b;
+        } finally {go.countDown();executor.shutdownNow();}
+        Long userId=applications.findById(id).orElseThrow().getCreatedUserId();
+        assertThat(accounts.count()).isEqualTo(before+1);assertThat(identities.findByCpf(cpf).orElseThrow().id()).isEqualTo(userId);
+        assertThat(registryQuery.byIdentityUserId(userId)).isEmpty();
+        String temporary=JsonPath.read(winner.getResponse().getContentAsString(),"$.temporaryPassword");
+        String challenge=json(login(cpf,temporary).andExpect(status().isOk()),"$.passwordChangeToken");
+        mvc.perform(post("/authentication/login/password-change").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"passwordChangeToken\":\""+challenge+"\",\"newPassword\":\""+PASSWORD+"\"}"))
+                .andExpect(status().isOk());
+        assertThat(registryQuery.byIdentityUserId(userId)).isPresent();
+        mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password",id).header("Authorization",admin)).andExpect(status().isConflict());
     }
 
     private Long submit(String cpf) throws Exception {

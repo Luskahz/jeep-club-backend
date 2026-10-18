@@ -115,6 +115,9 @@ public class SessionController {
             description = """
                     Troca a senha provisória por uma senha definitiva.
                     Após a troca, autentica o usuário e retorna access token e refresh token.
+                    Quando existe solicitação de Membership aprovada, conclui esse processo na mesma transação.
+                    Emissão de matrícula habilitada e homologada também registra o Member; desabilitada,
+                    o primeiro acesso continua normalmente sem atribuir matrícula. Usuários técnicos não são associados automaticamente.
                     """,
             security = {},
             responses = {
@@ -152,7 +155,7 @@ public class SessionController {
                     ),
                     @ApiResponse(
                             responseCode = "409",
-                            description = "A troca obrigatória não está mais pendente para a conta.",
+                            description = "A troca obrigatória não está mais pendente ou existe conflito na emissão de matrícula habilitada.",
                             content = @Content(
                                     mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)

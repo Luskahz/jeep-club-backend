@@ -2,6 +2,7 @@ package com.jeepclub.backend.iam.identity.core.application.query.user;
 
 public enum AdminUserField {
     ID,
+    MEMBERSHIP_NUMBER,
     NAME,
     BIRTH_DATE,
     EMAIL,

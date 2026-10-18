@@ -35,11 +35,12 @@ import tools.jackson.databind.JsonNode;
 @Tag(name = "Identity - Users", description = "Cadastro e consulta dos dados cadastrais dos usuários.")
 public class CurrentUserController {
     private final UserQuery userQuery;
+    private final com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
     private final UserProfileQuery userProfileQuery;
     private final CurrentUserProfileService currentUserProfileService;
 
     private CurrentUserResponseDTO response(UserDetails user) {
-        return CurrentUserResponseDTO.from(user, userProfileQuery.hasPendingProfileCompletion(user.id()));
+        return CurrentUserResponseDTO.from(user, userProfileQuery.hasPendingProfileCompletion(user.id()), membershipNumbers.currentNumber(user.id()));
     }
 
     @GetMapping("/me")

@@ -1,0 +1,266 @@
+{
+  "story": "BACK-526",
+  "branch": "feat/back-526-membership-registry",
+  "baseCommit": "ccca1f48126ef5bbdd8aacbc38cca8503a101feb",
+  "generatedAtUTC": "2026-10-18T05:51:57.499748+00:00",
+  "functionalCodeCommit": "e49dd22fa4e015de2d971572999f8bbf21ba0872",
+  "verifyCommit": "e49dd22fa4e015de2d971572999f8bbf21ba0872",
+  "environment": {
+    "java": "17.0.18",
+    "mysql": "8.0.46",
+    "mysqlImageDigest": "sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b"
+  },
+  "gates": {
+    "verify": {
+      "command": "./mvnw --batch-mode --no-transfer-progress verify",
+      "tests": 1933,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "focusedSuites": [
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryImportDisabledIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.identity.api.http.controller.admin.AdminUserControllerTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "skippedTests": [
+        {
+          "suite": "com.jeepclub.backend.platform.storage.local.LocalFileStorageTest",
+          "test": "shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot",
+          "reason": "Symbolic links are unavailable in the local Windows test environment."
+        }
+      ]
+    },
+    "mysqlMigrations": {
+      "command": "./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "futureMigration": {
+      "command": "bash deploy/test-future-migration.sh",
+      "tests": 50,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "temporaryVersion": 5,
+      "isolatedGitArchive": true,
+      "archiveCommit": "e49dd22fa4e015de2d971572999f8bbf21ba0872"
+    }
+  },
+  "historicalMigrationHashes": {
+    "algorithm": "SHA-256 over UTF-8 text with LF line endings",
+    "unchangedFromBase": true,
+    "files": {
+      "V1__initial_deploy_schema.sql": "c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e",
+      "V2__identity_user_profiles.sql": "c82bc02dea548d93c127ddd565df1ca05fcd6eaf58f2b2b500becdcdd8196963",
+      "V3__account_activation_invitations.sql": "b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"
+    }
+  },
+  "staticValidation": {
+    "gitDiffCheck": true,
+    "utf8": true,
+    "composeProductionAndLocalConfig": true,
+    "shellSyntax": true,
+    "htmlSlides": 37,
+    "htmlEndpointInventoryDate": "2026-10-02"
+  },
+  "production": {
+    "accessed": false,
+    "migrated": false,
+    "realDataImported": false,
+    "deployed": false
+  },
+  "issuanceEnabledByDefault": false,
+  "preMergeReview": {
+    "initialHead": "dd0c7cc168451ef5f2c15923ec9209adaf8d0055",
+    "targetBranch": "develop",
+    "pr": 104,
+    "focused": {
+      "tests": 81,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "note": "Focused suites included in final full verify; initial directed aggregate run had 80 cases before the final import-only case."
+    },
+    "permissions": [
+      "MEMBERSHIP_MEMBER_READ",
+      "MEMBERSHIP_MEMBER_REGISTRATION_MANAGE",
+      "MEMBERSHIP_MEMBER_AUDIT_READ",
+      "MEMBERSHIP_MEMBER_NUMBER_RESERVE",
+      "MEMBERSHIP_MEMBER_NUMBER_ISSUE",
+      "MEMBERSHIP_MEMBER_IMPORT"
+    ],
+    "defaults": {
+      "issuanceEnabled": false,
+      "importApplyEnabled": false
+    },
+    "importConfirmation": "Human administrative declaration; backend technical validation only, no official external source integration.",
+    "verification": {
+      "oldEnumPositionsPreserved": 128,
+      "newEnumValuesAppended": 5,
+      "tableAndFkDdlUnchanged": true,
+      "historicalMigrationsUnchanged": true,
+      "productionAccessed": false
+    },
+    "gates": {
+      "verify": {
+        "tests": 1933,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      "mysql": {
+        "command": "./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+        "tests": 50,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "futureMigration": {
+        "command": "bash deploy/test-future-migration.sh",
+        "tests": 50,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "temporaryVersion": 5,
+        "isolatedGitArchive": true,
+        "archiveCommit": "e49dd22fa4e015de2d971572999f8bbf21ba0872"
+      }
+    },
+    "sharedV4ApplicationStatus": "Remote master/develop V1-V3 only, PR open, previous deploy skipped. V4 amendment follows user authorization; no shared database accessed. Out-of-band manual application must be reported before merge.",
+    "codeCommit": "e49dd22fa4e015de2d971572999f8bbf21ba0872",
+    "verifiedAtUTC": "2026-10-18T05:51:57.499748+00:00",
+    "staticValidation": {
+      "composeSyntheticConfig": true,
+      "defaultImportApplyDisabled": true,
+      "defaultIssuanceDisabled": true,
+      "ddlAutoValidate": true,
+      "utf8": true,
+      "relativeDocumentLinks": true,
+      "htmlSlides": 37
+    }
+  },
+  "initialImplementationEvidence": {
+    "functionalCodeCommit": "6fe33a41e17ce2d11ec1167bc9b2b2114d52aa7b",
+    "verifyCommit": "d052aad7fd5dea5f75463ba6434d4871596decf4",
+    "gates": {
+      "verify": {
+        "command": "./mvnw --batch-mode --no-transfer-progress verify",
+        "tests": 1913,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1,
+        "skippedTests": [
+          {
+            "suite": "com.jeepclub.backend.platform.storage.local.LocalFileStorageTest",
+            "test": "shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot",
+            "reason": "Symbolic links are unavailable in the local Windows test environment."
+          }
+        ],
+        "focusedRegistrySuites": [
+          {
+            "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+            "tests": 22,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          },
+          {
+            "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+            "tests": 8,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0
+          }
+        ]
+      },
+      "mysqlMigrations": {
+        "command": "./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "futureMigration": {
+        "command": "bash deploy/test-future-migration.sh",
+        "temporaryVersion": 5,
+        "isolatedGitArchive": true,
+        "tests": 45,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "ciFixtureFollowUp": {
+      "firstRunId": 39085850356,
+      "firstRunMySqlFailure": "Synthetic disabled-user fixture used CURRENT_TIMESTAMP with lower precision than created_at.",
+      "fix": "Reuse created_at for synthetic disabled_at and updated_at; keep Identity temporal invariants unchanged.",
+      "productionCodeChanged": false,
+      "checkedAtUTC": "2026-10-18T01:23:24.487102+00:00",
+      "h2Focused": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "mysqlFocused": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "importApplyEnabledByDefault": false,
+  "ci": {
+    "source": "Required checks on https://github.com/Luskahz/jeep-club-backend/pull/104",
+    "note": "Final live CI results are linked in the PR; this file records reproducible local gates without claiming an unobserved future run."
+  }
+}

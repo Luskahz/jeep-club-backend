@@ -3,6 +3,14 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    MEMBERSHIP_MEMBER_READ(PermissionCode.MEMBERSHIP_MEMBER_READ, ModuleCode.MEMBERSHIP, "Consultar e pesquisar registros de associados"),
+    MEMBERSHIP_MEMBER_AUDIT_READ(PermissionCode.MEMBERSHIP_MEMBER_AUDIT_READ, ModuleCode.MEMBERSHIP, "Consultar auditoria de matrículas"),
+    MEMBERSHIP_MEMBER_NUMBER_RESERVE(PermissionCode.MEMBERSHIP_MEMBER_NUMBER_RESERVE, ModuleCode.MEMBERSHIP, "Reservar números de matrícula permanentemente"),
+    MEMBERSHIP_MEMBER_NUMBER_ISSUE(PermissionCode.MEMBERSHIP_MEMBER_NUMBER_ISSUE, ModuleCode.MEMBERSHIP, "Emitir matrículas administrativamente"),
+    MEMBERSHIP_MEMBER_IMPORT(PermissionCode.MEMBERSHIP_MEMBER_IMPORT, ModuleCode.MEMBERSHIP, "Simular e aplicar conciliação histórica autorizada"),
+
+    MEMBERSHIP_MEMBER_REGISTRATION_MANAGE(PermissionCode.MEMBERSHIP_MEMBER_REGISTRATION_MANAGE, ModuleCode.MEMBERSHIP, "Atribuir e retificar matrículas de associados"),
+
     IDENTITY_USER_EXPORT(PermissionCode.IDENTITY_USER_EXPORT, ModuleCode.IDENTITY, "Permite exportação administrativa de IDENTITY"),
     AUTHENTICATION_EXPORT(PermissionCode.AUTHENTICATION_EXPORT, ModuleCode.AUTHENTICATION, "Permite exportação administrativa de AUTHENTICATION"),
     AUTHORIZATION_EXPORT(PermissionCode.AUTHORIZATION_EXPORT, ModuleCode.AUTHORIZATION, "Permite exportação administrativa de AUTHORIZATION"),

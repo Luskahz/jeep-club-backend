@@ -26,12 +26,24 @@ class MySqlMigrationIT {
             .withUsername("root").withPassword("migration-test-only")
             .withCommand("--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci");
 
+    @Test void historicalMigrationSourcesAreImmutable() throws Exception {
+        var expected=Map.ofEntries(
+            Map.entry("V1__initial_deploy_schema.sql","c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e"),
+            Map.entry("V2__identity_user_profiles.sql","c82bc02dea548d93c127ddd565df1ca05fcd6eaf58f2b2b500becdcdd8196963"),
+            Map.entry("V3__account_activation_invitations.sql","b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"));
+        for(var entry:expected.entrySet()) {
+            String text=java.nio.file.Files.readString(java.nio.file.Path.of("src/main/resources/db/migration",entry.getKey())).replace("\r\n","\n");
+            var digest=java.security.MessageDigest.getInstance("SHA-256").digest(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            assertThat(java.util.HexFormat.of().formatHex(digest)).isEqualTo(entry.getValue());
+        }
+    }
     @Test void emptyDatabaseMatchesEveryJpaMappingAndIsIdempotent() throws Exception {
         String fresh = database();
         assertThat(flyway(fresh).migrate().migrationsExecuted).isEqualTo(migrationVersions().size());
         validateJpa(fresh);
         String expected = database();
-        jpa(expected, 3, "create-only");
+        jpa(expected, Integer.MAX_VALUE, "create-only");
+        registryPhysicalConstraints(expected);
         assertThat(snapshot(fresh)).isEqualTo(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -43,7 +55,14 @@ class MySqlMigrationIT {
         try (var c = connection(existing); var statement = c.createStatement()) {
             statement.executeUpdate("insert into identity_users(id,name,cpf,status,created_at) "
                     + "values(700,'Migration fixture','00000000000','ACTIVE',UTC_TIMESTAMP(6))");
+            statement.executeUpdate("insert into membership_applications(id,created_user_id,name,cpf,status,requested_at,version) "
+                    + "values(800,700,'Synthetic existing application','00000000000','APPROVED',UTC_TIMESTAMP(6),0)");
+            statement.executeUpdate("insert into authorization_permissions(id,code,module,description,created_at) "
+                    + "values(901,'IDENTITY_USER_READ','IDENTITY','Synthetic existing permission',UTC_TIMESTAMP(6))");
         }
+        var usersBefore=fixtureRows(existing,"identity_users");
+        var applicationsBefore=fixtureRows(existing,"membership_applications");
+        var permissionsBefore=fixtureRows(existing,"authorization_permissions");
         var baseline = Flyway.configure().dataSource(url(existing), MYSQL.getUsername(), MYSQL.getPassword())
                 .baselineVersion(Integer.toString(version)).baselineDescription("Verified historical fixture")
                 .baselineOnMigrate(false).cleanDisabled(true).load();
@@ -54,6 +73,13 @@ class MySqlMigrationIT {
         flyway(fresh).migrate();
         assertThat(snapshot(existing)).isEqualTo(snapshot(fresh));
         assertThat(count(existing, "identity_users")).isEqualTo(1);
+        assertThat(fixtureRows(existing,"identity_users")).isEqualTo(usersBefore);
+        assertThat(fixtureRows(existing,"membership_applications")).isEqualTo(applicationsBefore);
+        assertThat(fixtureRows(existing,"authorization_permissions")).isEqualTo(permissionsBefore);
+        assertThat(count(existing,"membership_members")).isZero();
+        try(var c=connection(existing);var st=c.createStatement();var rows=st.executeQuery("select next_value from membership_registry_sequence where id=1")) {
+            assertThat(rows.next()).isTrue();assertThat(rows.getObject(1)).isNull();
+        }
         try (var c = connection(existing); var s = c.createStatement();
              var r = s.executeQuery("select name from identity_users where id=700")) {
             assertThat(r.next()).isTrue();
@@ -193,8 +219,7 @@ class MySqlMigrationIT {
         java.nio.file.Files.createDirectories(parent);
         var directory = parent.resolve("collector-" + UUID.randomUUID());
         var log = parent.resolve(directory.getFileName() + ".log");
-        String bash = System.getProperty("os.name").startsWith("Windows")
-                ? "C:/Program Files/Git/bin/bash.exe" : "bash";
+        String bash = testBash();
         var builder = new ProcessBuilder(bash, "deploy/audit-schema.sh", directory.toString())
                 .redirectErrorStream(true).redirectOutput(log.toFile());
         builder.environment().put("MYSQL_CONTAINER", MYSQL.getContainerId());
@@ -215,6 +240,19 @@ class MySqlMigrationIT {
         assertThat(java.nio.file.Files.readString(directory.resolve("schema.sql"))).contains("CREATE TABLE `identity_users`");
         assertThat(java.nio.file.Files.readString(directory.resolve("counts.tsv"))).contains("identity_users\t1");
         assertThat(java.nio.file.Files.readString(log)).doesNotContain(MYSQL.getPassword());
+    }
+
+    private static String testBash() {
+        String configured=System.getProperty("test.bash");
+        if(configured!=null && !configured.isBlank()) return configured;
+        if(!System.getProperty("os.name").startsWith("Windows")) return "bash";
+        var local=System.getenv("LOCALAPPDATA");
+        var roots=List.of(java.nio.file.Path.of("C:/Program Files/Git"),
+                java.nio.file.Path.of(local==null ? System.getProperty("user.home")+"/AppData/Local" : local,"Programs","Git"));
+        for(var root:roots) {
+            var candidate=root.resolve("bin/bash.exe");if(java.nio.file.Files.isRegularFile(candidate))return candidate.toString();
+        }
+        throw new IllegalStateException("Set -Dtest.bash to a Git Bash executable to run the collector test.");
     }
 
     private static List<org.flywaydb.core.api.MigrationVersion> migrationVersions() {
@@ -255,7 +293,17 @@ class MySqlMigrationIT {
         }
         return name;
     }
-    private static void validateJpa(String name) throws Exception { jpa(name, 3, "validate"); }
+    // Scalar cross-context keys and binary business-number collation are physical contracts,
+    // deliberately not JPA associations. Apply them only to this JPA-generated comparison fixture.
+    private static void registryPhysicalConstraints(String name) throws Exception {
+        try (var c=connection(name);var statement=c.createStatement()) {
+            statement.execute("ALTER TABLE authorization_permissions MODIFY COLUMN code ENUM ('AUTHENTICATION_EXPORT','AUTHENTICATION_PASSWORD_RECOVERY_CANCEL','AUTHENTICATION_PASSWORD_RECOVERY_READ','AUTHENTICATION_REFRESH_TOKEN_READ','AUTHENTICATION_REFRESH_TOKEN_REVOKE','AUTHENTICATION_SESSION_LOGOUT','AUTHENTICATION_SESSION_READ','AUTHENTICATION_USER_PASSWORD_RESET_LINK_GENERATE','AUTHENTICATION_USER_TEMPORARY_PASSWORD_GENERATE','AUTHORIZATION_EXPORT','AUTHORIZATION_PERMISSION_ASSIGN','AUTHORIZATION_PERMISSION_READ','AUTHORIZATION_PERMISSION_REVOKE','AUTHORIZATION_ROLE_CREATE','AUTHORIZATION_ROLE_DELETE','AUTHORIZATION_ROLE_DISABLE','AUTHORIZATION_ROLE_ENABLE','AUTHORIZATION_ROLE_READ','AUTHORIZATION_ROLE_UPDATE','AUTHORIZATION_USER_ROLE_ASSIGN','AUTHORIZATION_USER_ROLE_READ','AUTHORIZATION_USER_ROLE_REVOKE','BILLING_CHARGE_ASSIGNMENT_CREATE','BILLING_CHARGE_ASSIGNMENT_READ','BILLING_CHARGE_ASSIGNMENT_UPDATE','BILLING_CHARGE_CYCLE_ARCHIVE','BILLING_CHARGE_CYCLE_CANCEL','BILLING_CHARGE_CYCLE_FINISH','BILLING_CHARGE_CYCLE_GENERATE','BILLING_CHARGE_CYCLE_READ','BILLING_CHARGE_DEFINITION_CREATE','BILLING_CHARGE_DEFINITION_READ','BILLING_CHARGE_DEFINITION_UPDATE','BILLING_EXPORT','BILLING_MEMBER_CHARGE_CANCEL','BILLING_MEMBER_CHARGE_READ','BILLING_MEMBER_CHARGE_UPDATE','BILLING_PAYMENT_CONFIRM','BILLING_PAYMENT_READ','BILLING_PAYMENT_REJECT','BILLING_REFUND_APPROVE','BILLING_REFUND_CANCEL','BILLING_REFUND_EXPIRE','BILLING_REFUND_MARK_AS_REFUNDED','BILLING_REFUND_READ','BILLING_REFUND_REJECT','DEPENDENTS_DEPENDENT_EXPORT','DEPENDENTS_DEPENDENT_READ','HEALTH_MEDICAL_PROFILE_DELETE','HEALTH_MEDICAL_PROFILE_EXPORT','HEALTH_MEDICAL_PROFILE_READ','HEALTH_MEDICAL_PROFILE_UPDATE','IDENTITY_USER_CREATE','IDENTITY_USER_DISABLE','IDENTITY_USER_ENABLE','IDENTITY_USER_EXPORT','IDENTITY_USER_READ','IDENTITY_USER_UPDATE','MEMBERSHIP_BILLING_CONFIGURATION_READ','MEMBERSHIP_BILLING_CONFIGURATION_UPDATE','MEMBERSHIP_EXPORT','MEMBERSHIP_MEMBERSHIP_APPLICANT_BLOCK','MEMBERSHIP_MEMBERSHIP_APPLICANT_UNBLOCK','MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE','MEMBERSHIP_MEMBERSHIP_REQUEST_INVITE_RESEND','MEMBERSHIP_MEMBERSHIP_REQUEST_READ','MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT','PUBLICATIONS_COMMENT_CREATE','PUBLICATIONS_COMMENT_READ','PUBLICATIONS_EVENT_ADMIN_DASHBOARD_READ','PUBLICATIONS_EVENT_CANCEL','PUBLICATIONS_EVENT_CREATE','PUBLICATIONS_EVENT_DELETE','PUBLICATIONS_EVENT_FINISH','PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE','PUBLICATIONS_EVENT_GUEST_ADMIN_READ','PUBLICATIONS_EVENT_GUEST_APPROVE','PUBLICATIONS_EVENT_GUEST_REJECT','PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE','PUBLICATIONS_EVENT_GUEST_REQUEST_READ','PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ','PUBLICATIONS_EVENT_PUBLISH','PUBLICATIONS_EVENT_READ','PUBLICATIONS_EVENT_READ_ADMIN','PUBLICATIONS_EVENT_REGISTER','PUBLICATIONS_EVENT_REGISTRATION_CANCEL','PUBLICATIONS_EVENT_REGISTRATION_READ','PUBLICATIONS_EVENT_RIDE_OFFER_READ','PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND','PUBLICATIONS_EVENT_RIDE_OFFER_SELECT','PUBLICATIONS_EVENT_UPDATE','PUBLICATIONS_EXPORT','PUBLICATIONS_FEED_READ','PUBLICATIONS_INTERACTION_LIKE','PUBLICATIONS_NOTICE_ARCHIVE','PUBLICATIONS_NOTICE_CREATE','PUBLICATIONS_NOTICE_DELETE','PUBLICATIONS_NOTICE_PUBLISH','PUBLICATIONS_NOTICE_READ','PUBLICATIONS_NOTICE_UPDATE','PUBLICATIONS_PUBLICATION_READ','PUBLICATIONS_SERVICE_ADMIN_DELETE','PUBLICATIONS_SERVICE_ADMIN_READ','PUBLICATIONS_SERVICE_CHANGE_REQUEST_ADMIN_READ','PUBLICATIONS_SERVICE_CHANGE_REQUEST_APPROVE','PUBLICATIONS_SERVICE_CHANGE_REQUEST_CREATE','PUBLICATIONS_SERVICE_CHANGE_REQUEST_READ','PUBLICATIONS_SERVICE_CHANGE_REQUEST_REJECT','PUBLICATIONS_SERVICE_DELETE','PUBLICATIONS_SERVICE_READ','PUBLICATIONS_SERVICE_REQUEST_ADMIN_READ','PUBLICATIONS_SERVICE_REQUEST_APPROVE','PUBLICATIONS_SERVICE_REQUEST_CREATE','PUBLICATIONS_SERVICE_REQUEST_READ','PUBLICATIONS_SERVICE_REQUEST_REJECT','TOOLS_TOOL_ACTIVATE','TOOLS_TOOL_CREATE','TOOLS_TOOL_DEACTIVATE','TOOLS_TOOL_DELETE','TOOLS_TOOL_EXPORT','TOOLS_TOOL_READ','TOOLS_TOOL_UPDATE','VEHICLES_VEHICLE_CREATE','VEHICLES_VEHICLE_DELETE','VEHICLES_VEHICLE_EXPORT','VEHICLES_VEHICLE_READ','VEHICLES_VEHICLE_UPDATE','MEMBERSHIP_MEMBER_REGISTRATION_MANAGE','MEMBERSHIP_MEMBER_READ','MEMBERSHIP_MEMBER_AUDIT_READ','MEMBERSHIP_MEMBER_NUMBER_RESERVE','MEMBERSHIP_MEMBER_NUMBER_ISSUE','MEMBERSHIP_MEMBER_IMPORT') NOT NULL");
+            statement.execute("alter table membership_members modify membership_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_member_identity foreign key (identity_user_id) references identity_users(id)");
+            statement.execute("alter table membership_number_claims modify membership_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_claim_member foreign key (member_id) references membership_members(id)");
+            statement.execute("alter table membership_member_audits modify previous_number varchar(64) character set utf8mb4 collate utf8mb4_bin null, modify new_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_audit_member foreign key (member_id) references membership_members(id)");
+        }
+    }
+    private static void validateJpa(String name) throws Exception { jpa(name, Integer.MAX_VALUE, "validate"); }
     private static void jpa(String name, int version, String action) throws Exception {
         var registry = SchemaMappings.registry(Map.of(
                 "hibernate.connection.url", url(name), "hibernate.connection.username", MYSQL.getUsername(),
@@ -270,6 +318,13 @@ class MySqlMigrationIT {
     }
     private static Connection connection(String name) throws Exception {
         return DriverManager.getConnection(url(name), MYSQL.getUsername(), MYSQL.getPassword());
+    }
+    private static List<String> fixtureRows(String name,String table) throws Exception {
+        var result=new ArrayList<String>();
+        try(var c=connection(name);var st=c.createStatement();var rows=st.executeQuery("select * from "+table+" order by id")) {
+            while(rows.next()) { var cells=new ArrayList<String>();for(int i=1;i<=rows.getMetaData().getColumnCount();i++)cells.add(rows.getString(i));result.add(cells.toString()); }
+        }
+        return result;
     }
     private static long count(String name, String table) throws Exception {
         try (var c = connection(name); var s = c.createStatement();

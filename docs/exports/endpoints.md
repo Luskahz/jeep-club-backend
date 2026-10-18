@@ -20,7 +20,7 @@ Todas as rotas são GET e administrativas. `format=CSV` (padrão) ou `PDF`, tamb
 | iam/authorization | `/authorization/admin/permissions/export` | `AUTHORIZATION_EXPORT` | format, id |
 | iam/authorization | `/authorization/admin/roles/export` | `AUTHORIZATION_EXPORT` | format, id, name, status |
 | iam/authorization | `/authorization/admin/users/export` | `AUTHORIZATION_EXPORT` | userId, format |
-| iam/identity | `/identity/admin/users/export` | `IDENTITY_USER_EXPORT` | format, AdminUserFilterDTO: mesmos filtros de Identity |
+| iam/identity | `/identity/admin/users/export` | `IDENTITY_USER_EXPORT` | format, layout=MEMBER/TECHNICAL, AdminUserFilterDTO incluindo matrícula vigente |
 | memberships | `/admin/membership-applications/blocks/export` | `MEMBERSHIP_EXPORT` | format, id, from, to |
 | memberships | `/admin/membership-applications/export` | `MEMBERSHIP_EXPORT` | format, id, name, status, from, to |
 | publications | `/admin/events/{eventId}/reports/manifest/export` | `PUBLICATIONS_EXPORT` | eventId, format, status, type, withVehicle, view |
@@ -60,3 +60,12 @@ Nas cinco rotas de Billing, eventId é validado por EventChargeContext. Contexto
 O financeiro de Event apresenta inscrição, effectiveStatus da cobrança e status do pagamento em colunas independentes. A coluna Situação para participação usa a regra real de confirmação, inclusive o horário de submissão e cutoff. Obrigação satisfeita com PENDING_VALIDATION continua identificando a espera por validação. CANCELED não é sinônimo de PAID e inscrição CONFIRMED não oculta pendências. Regras opcionais são identificadas explicitamente.
 
 OpenAPI é verificado automaticamente nas 38 rotas: 31 cadastrais, seis relatórios e emergência individual. O teste exige permissions, media types exatos, string/binary, Content-Disposition, Cache-Control e respostas 400/401/403/404/413/500 em application/problem+json. Emergência declara somente application/pdf.
+
+
+### Identificação cadastral de Identity — BACK-526
+
+Matrícula vigente é a primeira coluna no layout MEMBER (padrão) de CSV/PDF;
+ID técnico aparece na última coluna. TECHNICAL preserva cabeçalhos e ordem
+anteriores para consumidores posicionais; a coluna ID é técnica. Ambos aceitam
+pesquisa por membershipNumber e resolvem valores atuais por lote. Ausência é
+célula vazia; documentos financeiros/históricos anteriores não são alterados.

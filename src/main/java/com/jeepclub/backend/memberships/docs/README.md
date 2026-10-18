@@ -1,5 +1,11 @@
 # Memberships
 
+O registro persistente `Member` e a matrícula histórica/vigente também pertencem
+a este contexto. Consulte [Registro de associados — BACK-526](member-registry.md)
+para domínio, concorrência, conciliação, projeções do frontend e habilitação segura
+da emissão e da importação (ambas desabilitadas por padrão), permissions separadas
+e matrícula como identificação cadastral principal. `MembershipApplication` permanece o processo de admissão.
+
 Memberships é o bounded context do processo de admissão e da política de acesso
 de membros do Jeep Club. Ele é proprietário da `MembershipApplication`, da
 decisão administrativa sobre a solicitação, dos bloqueios de novos pedidos por
