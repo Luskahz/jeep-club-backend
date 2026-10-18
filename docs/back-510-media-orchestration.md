@@ -67,4 +67,17 @@ The real servlet HTTP test exercises 5 MiB and 5 MiB+1 rather than assuming Mock
 
 ## Validation
 
-Final verify, MySQL, forward-migration and published CI evidence are recorded after execution. Focused tests cover success with/without photo, DTO/multipart/file rejection, actual servlet limits, storage failure, real JPA constraint failure, outer rollback, cleanup failure/original exception, concurrent duplicate creation, previous reference retention, member ownership, admin permissions/owner eligibility and generated OpenAPI.
+Executed on code commit `c96450deeaf5ac2e7778642abd8b7aa62bc32cfd`, with Java 17.0.18 and local disposable MySQL 8.0.46 containers:
+
+| Gate | Tests | Failures / errors | Skips | Result |
+| --- | ---: | --- | ---: | --- |
+| Full `mvnw.cmd --batch-mode --no-transfer-progress verify` | 1977 | 0 / 0 | 1 | Passed |
+| Complete `-Pmysql-migrations -DskipUnitTests=true verify` | 115 | 0 / 0 | 0 | Passed |
+| Unchanged `deploy/test-future-migration.sh`, Windows environment adapter | 115 | 0 / 0 | 0 | Passed |
+| Focal Vehicles/Platform before final transport additions | 200 | 0 / 0 | 1 | Passed |
+| Focal MySQL before final additional multipart case | 15 | 0 / 0 | 0 | Passed |
+| Final HTTP/transport/Platform focal | 82 | 0 / 0 | 1 | Passed |
+
+The Windows skip is the existing symlink capability test; no test was weakened or disabled. The future-migration gate uses a temporary V5 only in a Git archive and cleans that private copy; it adds no release migration. MySQL suites: Registry onboarding 8, Registry 28, migration/legacy 14, Event/Billing 49 and Vehicle media 16. Counts across repeated gates overlap and must not be added as unique scenarios. GitHub CI results are recorded in the PR after observation; local evidence is [machine-readable](back-510-test-evidence.json).
+
+Focused tests cover success with/without photo, DTO/multipart/file rejection, actual servlet limits, storage failure, real JPA constraint failure, outer rollback, cleanup failure/original exception, concurrent duplicate creation, previous reference retention, member ownership, admin permissions/owner eligibility and generated OpenAPI. No merge, deploy, VPS access, shared/production DB change or real import was performed.
