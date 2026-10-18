@@ -38,7 +38,7 @@ public abstract class MemberRegistryScenarios {
     @Autowired protected JdbcTemplate jdbc;
     @Autowired protected org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired protected UserQuery identities;
-    @Autowired protected UserMembershipNumberProjection projection;
+    @MockitoSpyBean protected UserMembershipNumberProjection projection;
     @Autowired protected EntityManagerFactory emf;
     private static final AtomicInteger SOURCE=new AtomicInteger(910000000);
     protected Long first,second;
@@ -206,6 +206,52 @@ public abstract class MemberRegistryScenarios {
         var history=admin.history(first,PageRequest.of(0,10)).getContent().get(0);
         var event=audits.findById(history.id()).orElseThrow();event.setReason("Attempted rewrite");audits.saveAndFlush(event);
         assertThat(audits.findById(history.id()).orElseThrow().getReason()).isEqualTo("Original audit reason");
+    }
+    @Autowired protected com.jeepclub.backend.iam.identity.core.application.service.user.AdminUserService adminUsers;
+    @Test void hundredUserProjectionUsesOnlyAuxiliaryIdsAndOneMembershipLookup() {
+        for(int i=0;i<100;i++) { Long id=identity();admin.assign(id,"PAGE-"+id,id,"Synthetic batch fixture"); }
+        var stats=emf.unwrap(org.hibernate.SessionFactory.class).getStatistics();stats.setStatisticsEnabled(true);stats.clear();
+        try {
+            var filter=new com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserFilter(null,null,null,null,null,null,null,null,null,null,null,null,null);
+            var page=adminUsers.findAll(filter,java.util.Set.of(com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserField.MEMBERSHIP_NUMBER),PageRequest.of(0,100));
+            assertThat(page.getContent()).hasSize(100).allSatisfy(u -> {assertThat(u.id()).isNotNull();assertThat(u.name()).isNull();assertThat(u.cpf()).isNull();});
+            projection.currentNumbers(page.getContent().stream().map(u -> u.id()).toList());
+            assertThat(stats.getPrepareStatementCount()).isEqualTo(3); // tuple page, count, single registry IN
+        } finally { stats.setStatisticsEnabled(false); }
+    }
+    @Test void concurrentImportsOfSameBindingAreIdempotentAndAuditedOnce() throws Exception {
+        var rows=List.of(row(first,number()));String reason="Synthetic concurrent source";
+        var plan=importer.dryRun(rows,first,reason);long count=audits.count();
+        var result=race(() -> importer.apply(rows,first,reason,plan.dryRunToken()),() -> importer.apply(rows,first,reason,plan.dryRunToken()));
+        assertThat(result).allSatisfy(r -> assertThat(r.rows().get(0).outcome()).isIn("APPLIED","ALREADY_LINKED"));
+        assertThat(query.byIdentityUserId(first)).isPresent();assertThat(audits.count()).isEqualTo(count+1);
+        var event=admin.history(first,PageRequest.of(0,10)).getContent().get(0);
+        assertThat(event.actorUserId()).isEqualTo(first);assertThat(event.reason()).contains("IMPORT synthetic-source-verified:",reason);
+    }
+    @Test void unconfirmedImportAndChangedSourceCannotWrite() {
+        var unconfirmed=List.of(new MemberImportRow(first,number(),false,"synthetic-source"));
+        var plan=importer.dryRun(unconfirmed,first,"Synthetic source");
+        assertThat(importer.apply(unconfirmed,first,"Synthetic source",plan.dryRunToken()).rows().get(0).outcome()).isEqualTo("UNVERIFIED");
+        var rows=List.of(row(first,number()));var valid=importer.dryRun(rows,first,"Synthetic source");
+        var changed=List.of(new MemberImportRow(first,number(),true,"another-source"));
+        assertThatThrownBy(() -> importer.apply(changed,first,"Synthetic source",valid.dryRunToken())).isInstanceOf(MemberRegistryException.class);
+        assertThat(query.byIdentityUserId(first)).isEmpty();
+    }
+    @Autowired protected com.jeepclub.backend.iam.identity.core.application.service.user.UserExportService userExport;
+    @Test void hundredMemberExportResolvesBusinessNumbersOncePerChunk() {
+        String name="Synthetic export fixture "+first;
+        for(int i=0;i<100;i++) {Long id=identity();jdbc.update("update identity_users set name=? where id=?",name,id);admin.assign(id,"EXPORT-BATCH-"+id,id,"Synthetic source");}
+        var filter=new com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserFilter(null,name,null,null,null,null,null,null,null,null,null,null,null);
+        var context=org.springframework.security.core.context.SecurityContextHolder.getContext();var previous=context.getAuthentication();
+        context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(
+                new com.jeepclub.backend.platform.security.principal.UserPrincipal(first,999L,"Synthetic export",Instant.now().plusSeconds(3600)),null,List.of()));
+        clearInvocations(projection);
+        try {
+            var file=userExport.export(filter,com.jeepclub.backend.shared.export.ExportFormat.CSV);
+            assertThat(new String(file.bytes(),java.nio.charset.StandardCharsets.UTF_8).lines().count()).isEqualTo(101);
+            verify(projection,times(1)).currentNumbers(argThat(ids -> ids.size()==100));
+            verify(projection,never()).currentNumber(any());
+        } finally {context.setAuthentication(previous);}
     }
     private MemberImportRow row(Long id,String number) { return new MemberImportRow(id,number,true,"synthetic-source-verified"); }
     private String attempt(Runnable action) { try { action.run();return "SUCCESS"; } catch(MemberRegistryException conflict) { return conflict.getKind().name(); } }

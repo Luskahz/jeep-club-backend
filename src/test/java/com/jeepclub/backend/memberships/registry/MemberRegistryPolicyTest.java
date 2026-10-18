@@ -50,7 +50,25 @@ class MemberRegistryPolicyTest {
     @Test void previewProofExpiresAndCannotBeReusedAcrossProcesses() {
         var now=Instant.parse("2026-10-17T00:00:00Z");var clock=org.mockito.Mockito.mock(Clock.class);org.mockito.Mockito.when(clock.instant()).thenReturn(now);var proof=new MemberImportProof(clock);
         var rows=List.of(new MemberImportRow(1L,"027",true,"synthetic-source"));String token=proof.issue(2L,rows,"Verified");proof.verify(token,2L,rows,"Verified");
-        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(901));assertThatThrownBy(() -> proof.verify(token,2L,rows,"Verified")).isInstanceOf(RuntimeException.class);
+        org.mockito.Mockito.when(clock.instant()).thenReturn(now.plusSeconds(900));assertThatThrownBy(() -> proof.verify(token,2L,rows,"Verified")).isInstanceOf(RuntimeException.class);
         var another=new MemberImportProof(Clock.fixed(now,ZoneOffset.UTC));assertThatThrownBy(() -> another.verify(token,2L,rows,"Verified")).isInstanceOf(RuntimeException.class);
+    }
+    @Test void proofBindsActorSourceReasonRowsAndConfirmation() {
+        var proof=new MemberImportProof(Clock.fixed(Instant.parse("2026-10-18T00:00:00Z"),ZoneOffset.UTC));
+        var rows=List.of(new MemberImportRow(1L,"027",true,"synthetic/source-v1/line-1"));
+        String token=proof.issue(2L,rows,"Synthetic reason");
+        assertThatThrownBy(() -> proof.verify(token,3L,rows,"Synthetic reason")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> proof.verify(token,2L,rows,"Changed reason")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> proof.verify(token,2L,List.of(new MemberImportRow(1L,"027",true,"synthetic/source-v2/line-1")),"Synthetic reason")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> proof.verify(token,2L,List.of(new MemberImportRow(1L,"027",false,"synthetic/source-v1/line-1")),"Synthetic reason")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> proof.verify(token,2L,List.of(new MemberImportRow(1L,"037",true,"synthetic/source-v1/line-1")),"Synthetic reason")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> proof.verify(token+"altered",2L,rows,"Synthetic reason")).isInstanceOf(RuntimeException.class);
+    }
+    @Test void importApplicationIsDisabledByDefaultAndExplicitEnvironmentBinds() {
+        var p=new com.jeepclub.backend.memberships.infra.config.MemberImportProperties();assertThat(p.applyEnabled()).isFalse();
+        var env=new org.springframework.core.env.StandardEnvironment();
+        env.getPropertySources().addFirst(new org.springframework.core.env.SystemEnvironmentPropertySource("synthetic-import-env",java.util.Map.of("MEMBERSHIPS_REGISTRY_IMPORTS_APPLY_ENABLED","true")));
+        var bound=org.springframework.boot.context.properties.bind.Binder.get(env).bind("memberships.registry.imports",org.springframework.boot.context.properties.bind.Bindable.of(com.jeepclub.backend.memberships.infra.config.MemberImportProperties.class)).get();
+        assertThat(bound.applyEnabled()).isTrue();
     }
 }

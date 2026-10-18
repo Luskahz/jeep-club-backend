@@ -8,7 +8,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
-@SpringBootTest(properties={"memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.issuance.initial-number=100","memberships.registry.issuance.width=3","memberships.registry.issuance.prefix=","spring.jpa.hibernate.ddl-auto=validate","spring.flyway.enabled=true","spring.sql.init.mode=never"})
+@SpringBootTest(properties={"memberships.registry.imports.apply-enabled=true","memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.issuance.initial-number=100","memberships.registry.issuance.width=3","memberships.registry.issuance.prefix=","spring.jpa.hibernate.ddl-auto=validate","spring.flyway.enabled=true","spring.sql.init.mode=never"})
 @ActiveProfiles("test") @Testcontainers
 @org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class MemberRegistryMySqlIT extends MemberRegistryScenarios {
@@ -20,6 +20,11 @@ class MemberRegistryMySqlIT extends MemberRegistryScenarios {
     }
     @Test void physicalForeignKeyPreventsSilentlyDeletingLinkedIdentity() {
         admin.assign(first,"FK-"+first,first,"Verified");
+        var before=admin.byIdentity(first);long auditCount=audits.count(),claimCount=claims.count();
         assertThatThrownBy(() -> jdbc.update("delete from identity_users where id=?",first)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(admin.byIdentity(first)).isEqualTo(before);assertThat(audits.count()).isEqualTo(auditCount);assertThat(claims.count()).isEqualTo(claimCount);
+    }
+    @Test void allSixRegistryPermissionsArePersistedByNormalCatalogSynchronization() {
+        assertThat(jdbc.queryForObject("select count(*) from authorization_permissions where code in ('MEMBERSHIP_MEMBER_READ','MEMBERSHIP_MEMBER_REGISTRATION_MANAGE','MEMBERSHIP_MEMBER_AUDIT_READ','MEMBERSHIP_MEMBER_NUMBER_RESERVE','MEMBERSHIP_MEMBER_NUMBER_ISSUE','MEMBERSHIP_MEMBER_IMPORT')",Long.class)).isEqualTo(6);
     }
 }
