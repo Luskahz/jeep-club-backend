@@ -44,6 +44,7 @@ class AdminVehicleServiceTest {
     private UserPort userPort;
     @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaService images;
 
+    @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
     private AdminVehicleService service;
 
     @BeforeEach
@@ -51,7 +52,7 @@ class AdminVehicleServiceTest {
         service = new AdminVehicleService(
                 vehicleRepository,
                 userPort,
-                Clock.fixed(NOW, ZoneOffset.UTC), images
+                Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand
         );
     }
 
@@ -85,7 +86,7 @@ class AdminVehicleServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Vehicle vehicle = service.createForOwner(
-                "Trovão", "photo", "  abc1d23  ", "382.492.064-28", "Jeep",
+                "Trovão", upload(), "  abc1d23  ", "382.492.064-28", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
                 2.0, true, 7L
         );
@@ -226,7 +227,7 @@ class AdminVehicleServiceTest {
 
     private Vehicle createVehicle() {
         return service.createForOwner(
-                "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
+                "Trovão", upload(), "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
                 2.0, true, 7L
         );
@@ -274,5 +275,10 @@ class AdminVehicleServiceTest {
                 nickname, photo, plate, renavam, brand, model, manufacturingYear,
                 modelYear, color, seatingCapacity, fuelType, engineDisplacement, towing
         );
+    }
+
+    private static com.jeepclub.backend.platform.storage.image.ImageUpload upload() {
+        return new com.jeepclub.backend.platform.storage.image.ImageUpload("vehicle.png", "image/png",
+            new byte[]{(byte)137,80,78,71,13,10,26,10});
     }
 }

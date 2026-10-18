@@ -1,5 +1,14 @@
 # Contrato global de armazenamento de arquivos
 
+## Orquestração de imagens — BACK-510
+
+`platform.storage.image.ImageMediaCommand` oferece escrita interna de imagem nova
+durante uma transação JPA. Usa a mesma infraestrutura, sem expor filesystem/provider.
+Commit mantém o objeto; rollback compensa somente a chave recém-gerada. Falha de
+limpeza registra categoria sanitizada e preserva a falha original. Resultado de
+commit UNKNOWN conserva o objeto para reconciliação. Não apaga imagem anterior ou
+compartilhada. Consulte `docs/back-510-media-orchestration.md` na raiz.
+
 ## Objetivo e fronteiras
 
 A capacidade global de storage armazena bytes sem conhecer a semântica do

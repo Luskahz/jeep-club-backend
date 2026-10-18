@@ -14,11 +14,10 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class ImageMediaService {
-    private static final int MAX_BYTES = 5 * 1024 * 1024;
     private final FileStorage storage;
 
     public String store(String filename, String contentType, byte[] bytes) {
-        if (filename == null || contentType == null || bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
+        if (filename == null || contentType == null || bytes == null || bytes.length == 0 || bytes.length > ImageUpload.MAX_BYTES) {
             throw new InvalidStorageFileException("Image filename, content type and non-empty content up to 5 MB are required.");
         }
         int dot = filename.lastIndexOf('.');

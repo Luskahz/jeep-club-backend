@@ -50,7 +50,6 @@ class VehicleAdminSecurityIntegrationTest {
     private static final String INCLUDE_REQUEST = """
             {
               "nickname": "Trovão",
-              "photo": "photo",
               "plate": "ABC1D23",
               "renavam": "38249206428",
               "brand": "Jeep",
@@ -109,7 +108,7 @@ class VehicleAdminSecurityIntegrationTest {
                 .andExpect(status().isCreated());
 
         verify(adminVehicleService).createForOwner(
-                "Trovão", "photo", "ABC1D23", "38249206428", "Jeep", "Wrangler",
+                "Trovão", null, "ABC1D23", "38249206428", "Jeep", "Wrangler",
                 2023, 2024, "Verde", 5,
                 com.jeepclub.backend.vehicles.core.domain.enums.FuelType.DIESEL,
                 2.0, true, 1L

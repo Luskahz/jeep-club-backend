@@ -2,6 +2,8 @@ package com.jeepclub.backend.vehicles.core.application.service.vehicle;
 
 import com.jeepclub.backend.vehicles.core.application.VehicleEditFields;
 import com.jeepclub.backend.platform.storage.image.ImageMediaService;
+import com.jeepclub.backend.platform.storage.image.ImageMediaCommand;
+import com.jeepclub.backend.platform.storage.image.ImageUpload;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotActiveException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.UserNotFoundException;
 import com.jeepclub.backend.vehicles.core.application.exceptions.VehicleIdNotFoundException;
@@ -30,11 +32,12 @@ public class AdminVehicleService {
     private final UserPort userPort;
     private final Clock clock;
     private final ImageMediaService images;
+    private final ImageMediaCommand mediaCommand;
 
     @Transactional
     public Vehicle createForOwner(
             String nickname,
-            String photo,
+            ImageUpload photoImage,
             String plate,
             String renavam,
             String brand,
@@ -51,7 +54,6 @@ public class AdminVehicleService {
         String canonicalPlate = Vehicle.normalizePlate(plate);
         String canonicalRenavam = Vehicle.normalizeRenavam(renavam);
         assertUniquePlateAndRenavam(canonicalPlate, canonicalRenavam);
-        images.requireExisting(photo);
 
         if (!userPort.existsById(ownerId)) {
             throw new UserNotFoundException("User id not found.");
@@ -60,6 +62,8 @@ public class AdminVehicleService {
         if (!userPort.existsActiveById(ownerId)) {
             throw new UserNotActiveException("User is not administratively active.");
         }
+
+        String photo = photoImage == null ? null : mediaCommand.storeInTransaction(photoImage);
 
         Vehicle vehicle = Vehicle.create(
                 nickname,
