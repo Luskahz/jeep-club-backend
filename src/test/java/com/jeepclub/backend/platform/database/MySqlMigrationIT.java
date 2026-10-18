@@ -31,7 +31,8 @@ class MySqlMigrationIT {
         assertThat(flyway(fresh).migrate().migrationsExecuted).isEqualTo(migrationVersions().size());
         validateJpa(fresh);
         String expected = database();
-        jpa(expected, 3, "create-only");
+        jpa(expected, Integer.MAX_VALUE, "create-only");
+        registryPhysicalConstraints(expected);
         assertThat(snapshot(fresh)).isEqualTo(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -255,7 +256,16 @@ class MySqlMigrationIT {
         }
         return name;
     }
-    private static void validateJpa(String name) throws Exception { jpa(name, 3, "validate"); }
+    // Scalar cross-context keys and binary business-number collation are physical contracts,
+    // deliberately not JPA associations. Apply them only to this JPA-generated comparison fixture.
+    private static void registryPhysicalConstraints(String name) throws Exception {
+        try (var c=connection(name);var statement=c.createStatement()) {
+            statement.execute("alter table membership_members modify membership_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_member_identity foreign key (identity_user_id) references identity_users(id)");
+            statement.execute("alter table membership_number_claims modify membership_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_claim_member foreign key (member_id) references membership_members(id)");
+            statement.execute("alter table membership_member_audits modify previous_number varchar(64) character set utf8mb4 collate utf8mb4_bin null, modify new_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_audit_member foreign key (member_id) references membership_members(id)");
+        }
+    }
+    private static void validateJpa(String name) throws Exception { jpa(name, Integer.MAX_VALUE, "validate"); }
     private static void jpa(String name, int version, String action) throws Exception {
         var registry = SchemaMappings.registry(Map.of(
                 "hibernate.connection.url", url(name), "hibernate.connection.username", MYSQL.getUsername(),

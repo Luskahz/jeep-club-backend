@@ -20,7 +20,7 @@ final class SchemaMappings {
                 .applySettings(settings).build();
     }
     static Metadata metadata(StandardServiceRegistry registry) throws Exception {
-        return metadata(registry, 3);
+        return metadata(registry, Integer.MAX_VALUE);
     }
     static Metadata metadata(StandardServiceRegistry registry, int version) throws Exception {
         var sources = new MetadataSources(registry);
@@ -32,6 +32,8 @@ final class SchemaMappings {
                 String name = reader.getClassMetadata().getClassName();
                 if (version < 2 && name.endsWith(".UserProfileEntity")) continue;
                 if (version < 3 && name.endsWith(".AccountActivationInvitationEntity")) continue;
+                if (version < 4 && (name.endsWith(".MemberEntity") || name.endsWith(".MembershipNumberClaimEntity")
+                        || name.endsWith(".MemberRegistryAuditEntity") || name.endsWith(".MemberRegistrySequenceEntity"))) continue;
                 sources.addAnnotatedClass(Class.forName(name));
             }
         }
