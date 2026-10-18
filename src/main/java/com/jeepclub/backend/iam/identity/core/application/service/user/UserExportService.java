@@ -13,10 +13,13 @@ public class UserExportService {
     private final ExportRenderer renderer;
     private final com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
-    public ExportFile export(AdminUserFilter filter, ExportFormat format) {
+    public ExportFile export(AdminUserFilter filter, ExportFormat format) { return export(filter,format,UserExportLayout.MEMBER); }
+    @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
+    public ExportFile export(AdminUserFilter filter, ExportFormat format, UserExportLayout layout) {
         if(filter.id()!=null && query.findById(filter.id()).isEmpty()) throw new ExportException(ExportException.Reason.NOT_FOUND);
         var filters=new ArrayList<String>();
-        if(filter.id()!=null) filters.add("ID: "+filter.id());
+        if(filter.id()!=null) filters.add("ID técnico: "+filter.id());
+        if(filter.membershipNumber()!=null) filters.add("Matrícula: "+filter.membershipNumber());
         if(filter.name()!=null) filters.add("Nome: "+filter.name());
         if(filter.birthDate()!=null) filters.add("Nascimento: "+ExportValues.text(filter.birthDate()));
         if(filter.email()!=null) filters.add("E-mail: "+filter.email());
@@ -29,11 +32,16 @@ public class UserExportService {
         if(filter.updatedFrom()!=null) filters.add("Atualização desde: "+ExportValues.text(filter.updatedFrom()));
         if(filter.updatedTo()!=null) filters.add("Atualização até: "+ExportValues.text(filter.updatedTo()));
         if(filter.query()!=null) filters.add("Busca: "+filter.query());
-        return renderer.render(new ExportDocument("usuarios","Usuários",List.of("ID","Matrícula","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em"),filters,
+        var headers = layout == UserExportLayout.TECHNICAL
+                ? List.of("ID","Matrícula","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em")
+                : List.of("Matrícula","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em","ID técnico");
+        return renderer.render(new ExportDocument("usuarios","Usuários",headers,filters,
             sink -> ExportPages.read(offset -> {
                 var batch=query.findAll(filter,EnumSet.allOf(AdminUserField.class),PageRequest.of(offset/ExportPages.CHUNK,ExportPages.CHUNK,Sort.by("id"))).getContent();
                 var numbers=membershipNumbers.currentNumbers(batch.stream().map(u -> u.id()).toList());
-                return batch.stream().map(u -> ExportRow.of(u.id(),numbers.get(u.id()),u.name(),u.birthDate(),u.email(),u.cpf(),u.rg(),u.phoneNumber(),u.profilePhotoStorageKey()!=null,u.status(),u.createdAt(),u.disabledAt(),u.updatedAt())).toList();
+                return batch.stream().map(u -> layout == UserExportLayout.TECHNICAL
+                        ? ExportRow.of(u.id(),numbers.get(u.id()),u.name(),u.birthDate(),u.email(),u.cpf(),u.rg(),u.phoneNumber(),u.profilePhotoStorageKey()!=null,u.status(),u.createdAt(),u.disabledAt(),u.updatedAt())
+                        : ExportRow.of(numbers.get(u.id()),u.name(),u.birthDate(),u.email(),u.cpf(),u.rg(),u.phoneNumber(),u.profilePhotoStorageKey()!=null,u.status(),u.createdAt(),u.disabledAt(),u.updatedAt(),u.id())).toList();
             },sink::accept)),format);
     }
 }
