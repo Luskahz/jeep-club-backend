@@ -1,0 +1,103 @@
+{
+  "ticket": "BACK-460",
+  "subtasks": [
+    "BACK-464",
+    "BACK-465",
+    "BACK-466"
+  ],
+  "date": "2026-10-18",
+  "branch": "feat/back-460-event-billing-fixes",
+  "base": "7c8df2e39dd218d5cbc6eb6042d3151b511840b9",
+  "codeCommit": "16265a1cbd90cf5b5f3746f22396c5789f7347cc",
+  "environment": {
+    "java": "Microsoft OpenJDK 17.0.18",
+    "os": "Windows",
+    "mysql": "8.0.46",
+    "database": "Local disposable Testcontainers only"
+  },
+  "gates": [
+    {
+      "name": "Full verify",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "tests": 1951,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "skip": "Pre-existing Windows symlink capability test",
+      "result": "passed"
+    },
+    {
+      "name": "Complete MySQL profile",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "tests": 99,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "result": "passed"
+    },
+    {
+      "name": "Future migration",
+      "command": "bash deploy/test-future-migration.sh (Windows environment adapter supplies Python3 and confines temporary cleanup)",
+      "tests": 99,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "temporaryMigration": "V5 in Git archive only",
+      "result": "passed"
+    },
+    {
+      "name": "Focused Event and Billing MySQL",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true -Dit.test=EventOperationsMySqlIT verify",
+      "tests": 49,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "result": "passed"
+    }
+  ],
+  "mysqlSuites": {
+    "MembershipRegistryOnboardingMySqlIT": 8,
+    "MemberRegistryMySqlIT": 28,
+    "MySqlMigrationIT": 14,
+    "EventOperationsMySqlIT": 49
+  },
+  "developmentFindings": [
+    {
+      "gate": "First complete MySQL profile before correction",
+      "tests": 99,
+      "failures": 4,
+      "errors": 0,
+      "skips": 0,
+      "failedTests": [
+        "concurrentLateConfirmCreatesSingleRefund",
+        "concurrentCycleAndMemberChargeCreationIsIdempotent",
+        "confirmationRacingCancellationAlwaysKeepsOneRefundAndOriginalPayment",
+        "oldRepeatableReadSnapshotCannotOverwriteConfirmedMoneyOrFinishedAudit"
+      ],
+      "resolution": "Retain database locks while detaching/reloading managed aggregates; use current locking reads for Event context and charge lookup. Same regression cases subsequently passed."
+    }
+  ],
+  "acceptanceCoverage": {
+    "BACK_464": "All Event contexts, active/finished/archived, audit/amount preservation, paid/pending payments, repeated cancellation, another Event isolation and transactional rollback.",
+    "BACK_465": "Days 29/30/31, full late-confirmation window, exact expiration/request/approval boundaries, duplicate prevention and rejected receipts.",
+    "BACK_466": "Open/paid/pending financial facts retained by explicit policy; personal pending guests rejected, accepted offers declined, approved guest controlled conflict, registration remains canceled after payment."
+  },
+  "securityAndContracts": "Existing method/path/DTO/permission and ownership contracts preserved; full verify includes Billing/Events OpenAPI and HTTP/security suites.",
+  "migrations": "None. V1-V4 unchanged; V5 remains available in the release ancestry.",
+  "reviewPoints": [
+    "Individual withdrawal preserves debt and uses the existing Billing refund request flow; review business policy.",
+    "Approved guest blocks withdrawal. No new undo-approval endpoint is provided.",
+    "Accepted ride offer becomes DECLINED and retains its original response time; no new withdrawal-specific history vocabulary.",
+    "Locking reload performs additional queries; production-scale load testing was not performed.",
+    "Full retention policy is tracked separately under BACK-487."
+  ],
+  "githubCI": "Consult the PR checks and description after publication. This file records local gates only.",
+  "operations": {
+    "merge": false,
+    "protectedBranchPush": false,
+    "deploy": false,
+    "vpsAccess": false,
+    "sharedOrProductionDatabaseAccess": false,
+    "realImport": false
+  }
+}

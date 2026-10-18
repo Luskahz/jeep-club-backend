@@ -39,6 +39,19 @@ Existing method/path/DTO/security contracts are preserved; OpenAPI now describes
 
 ## Validation
 
+Final code commit: `16265a1cbd90cf5b5f3746f22396c5789f7347cc`. Later commits contain documentation/evidence only.
+
+| Gate | Cases | Failures | Errors | Skips |
+| --- | ---: | ---: | ---: | ---: |
+| Full `mvnw.cmd --batch-mode --no-transfer-progress verify` | 1,951 | 0 | 0 | 1 |
+| Complete `-Pmysql-migrations -DskipUnitTests=true verify` | 99 | 0 | 0 | 0 |
+| `bash deploy/test-future-migration.sh` with temporary V5 | 99 | 0 | 0 | 0 |
+| Focused `-Dit.test=EventOperationsMySqlIT` | 49 | 0 | 0 | 0 |
+
+These are gate execution counts, not a count of unique cases across repeated runs. The single skip is the pre-existing Windows symbolic-link capability test. MySQL suites comprise migration/schema validation (14), Registry persistence/security/concurrency (28), Registry onboarding (8) and Event operations/concurrency (49). The forward probe executed the unchanged tracked script using a Windows environment adapter for Python3 and verified workspace-confined temporary cleanup. Its V5 never entered the release SQL directory. CI is observed after PR publication and recorded in the PR description; these local results do not predict CI.
+
+Machine-readable [sanitized evidence](back-460-test-evidence.json). Both cancellation requests keep their existing body-free contract; the authenticated principal supplies the actor. Performance under production-scale Event volume was not load tested; fresh locking reloads deliberately add queries to preserve correctness.
+
 Final-tree Maven, real MySQL, forward-migration and CI results are recorded here after execution. The shared MySQL integration class repeats the complete Event suite against MySQL 8.0.46 with Flyway and Hibernate validate, including synthetic data only. H2 success alone is insufficient. The first full MySQL run found four race/snapshot failures after H2 passed; those regressions remain enabled and drive the current-read correction, rather than being skipped or weakened.
 
-Known review points: individual debt retention and approved-guest restriction are deliberate business choices, not silently waived obligations. Ride-offer withdrawal uses the existing DECLINED vocabulary and preserves its original response time; a dedicated withdrawal audit vocabulary would be a separate contract/schema evolution. Full retention policy remains BACK-487.
+Known review points: individual debt retention and approved-guest restriction are deliberate business choices, not silently waived obligations. This PR preserves the approved-guest guard and does not add an endpoint to undo approval; the administrative resolution workflow remains outside this delivery and must be considered during review. Ride-offer withdrawal uses the existing DECLINED vocabulary and preserves its original response time; a dedicated withdrawal audit vocabulary would be a separate contract/schema evolution. Full retention policy remains BACK-487.
