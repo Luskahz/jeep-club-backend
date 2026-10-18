@@ -36,6 +36,7 @@ public class MemberActivationTokenService {
     private final ActivationRecipientPort activationRecipientPort;
     private final MemberActivationMailSender mailSender;
     private final Clock clock;
+    private final com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService memberRegistry;
 
     @Transactional(readOnly = true)
     public void validate(String rawToken) {
@@ -81,6 +82,7 @@ public class MemberActivationTokenService {
         application.complete(now);
         memberActivationTokenRepository.save(token);
         applicationRepository.save(application);
+        memberRegistry.issueOnCompletion(application.getCreatedUserId());
     }
 
     @Transactional
