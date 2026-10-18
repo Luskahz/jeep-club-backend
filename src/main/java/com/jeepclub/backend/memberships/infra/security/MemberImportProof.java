@@ -24,7 +24,7 @@ public class MemberImportProof implements MemberImportProofPort {
     public void verify(String token,Long actor,List<MemberImportRow> rows,String reason) {
         try {
             String[] parts=token.split("\\.",-1);
-            if(parts.length!=2 || Long.parseLong(parts[0])<clock.instant().getEpochSecond()
+            if(parts.length!=2 || Long.parseLong(parts[0])<=clock.instant().getEpochSecond()
                     || Long.parseLong(parts[0])>clock.instant().plusSeconds(900).getEpochSecond()
                     || !MessageDigest.isEqual(Base64.getUrlDecoder().decode(parts[1]),mac(parts[0],actor,rows,reason))) throw new IllegalArgumentException();
         } catch(RuntimeException invalid) { throw new MemberRegistryException(MemberRegistryException.Kind.INVALID); }
@@ -34,7 +34,7 @@ public class MemberImportProof implements MemberImportProofPort {
             var bytes=new ByteArrayOutputStream();var data=new DataOutputStream(bytes);
             data.writeUTF(expiry);data.writeLong(actor);data.writeUTF(reason);data.writeInt(rows.size());
             for(var row:rows) {
-                data.writeLong(row.identityUserId());data.writeUTF(row.membershipNumber());data.writeBoolean(row.verified());data.writeUTF(row.verificationReference());
+                data.writeLong(row.identityUserId());data.writeUTF(row.membershipNumber());data.writeBoolean(row.administrativelyConfirmed());data.writeUTF(row.sourceReference());
             }
             var mac=Mac.getInstance("HmacSHA256");mac.init(new SecretKeySpec(key,"HmacSHA256"));return mac.doFinal(bytes.toByteArray());
         } catch(GeneralSecurityException|IOException impossible) { throw new IllegalStateException(impossible); }

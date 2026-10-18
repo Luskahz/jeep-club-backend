@@ -14,6 +14,7 @@ public class MemberRegistryImportService {
     private final MemberIdentityPort identities;
     private final MemberImportProofPort proof;
     private final AdminMemberService admin;
+    private final MemberImportApplicationPolicy policy;
     @Transactional(readOnly=true)
     public MemberImportReport dryRun(List<MemberImportRow> rows,Long actor,String reason) {
         validate(rows,actor,reason);
@@ -21,6 +22,7 @@ public class MemberRegistryImportService {
     }
     @Transactional(propagation=Propagation.NOT_SUPPORTED)
     public MemberImportReport apply(List<MemberImportRow> rows,Long actor,String reason,String token) {
+        if(!policy.applyEnabled()) throw new MemberRegistryException(MemberRegistryException.Kind.IMPORT_DISABLED);
         validate(rows,actor,reason);proof.verify(token,actor,rows,reason);
         var preview=preview(rows);var result=new ArrayList<MemberImportReport.Row>();
         for(var entry:preview) {
@@ -28,7 +30,7 @@ public class MemberRegistryImportService {
             var row=rows.get(entry.index());
             try {
                 // No importer transaction: each call crosses the transactional service proxy.
-                admin.assign(row.identityUserId(),row.membershipNumber(),actor,"IMPORT "+row.verificationReference()+": "+reason);
+                admin.assign(row.identityUserId(),row.membershipNumber(),actor,"IMPORT "+row.sourceReference()+": "+reason);
                 result.add(new MemberImportReport.Row(entry.index(),entry.outcome().equals("ALREADY_LINKED")?"ALREADY_LINKED":"APPLIED"));
             } catch(MemberRegistryException conflict) {
                 result.add(new MemberImportReport.Row(entry.index(),conflict.getKind().name()));
@@ -44,7 +46,7 @@ public class MemberRegistryImportService {
         var result=new ArrayList<MemberImportReport.Row>();
         for(int i=0;i<rows.size();i++) {
             var r=rows.get(i);var key=new MembershipNumber(r.membershipNumber()).claimKey();String outcome;
-            if(!r.verified()) outcome="UNVERIFIED";
+            if(!r.administrativelyConfirmed()) outcome="UNVERIFIED";
             else if(ids.get(r.identityUserId())>1 || numbers.get(key)>1) outcome="DUPLICATE_SOURCE";
             else if(!identities.exists(r.identityUserId())) outcome="IDENTITY_NOT_FOUND";
             else if(!identities.isActive(r.identityUserId())) outcome="IDENTITY_INACTIVE";
@@ -61,9 +63,9 @@ public class MemberRegistryImportService {
         AdminMemberService.validateActorReason(actor,reason);
         if(reason.length()>300 || rows==null || rows.isEmpty() || rows.size()>500) throw invalid();
         for(var r:rows) {
-            if(r==null || r.identityUserId()==null || r.identityUserId()<=0 || r.verificationReference()==null
-                || r.verificationReference().isBlank() || r.verificationReference().length()>100
-                || r.verificationReference().chars().anyMatch(Character::isISOControl)) throw invalid();
+            if(r==null || r.identityUserId()==null || r.identityUserId()<=0 || r.sourceReference()==null
+                || r.sourceReference().isBlank() || r.sourceReference().length()>100
+                || !r.sourceReference().matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}")) throw invalid();
             new MembershipNumber(r.membershipNumber());
         }
     }

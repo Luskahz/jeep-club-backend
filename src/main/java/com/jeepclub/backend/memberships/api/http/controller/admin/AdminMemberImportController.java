@@ -19,8 +19,8 @@ import com.jeepclub.backend.memberships.api.http.dto.member.MemberImportReportDT
 import com.jeepclub.backend.memberships.core.application.service.member.MemberRegistryImportService;
 @RestController @RequestMapping(value="/admin/members/imports",produces=MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor @Tag(name="Membership Registry")
-@PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_REGISTRATION_MANAGE')")
-@RequiredPermission("MEMBERSHIP_MEMBER_REGISTRATION_MANAGE")
+@PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_IMPORT')")
+@RequiredPermission("MEMBERSHIP_MEMBER_IMPORT")
 @ApiResponses({
     @ApiResponse(responseCode="400",description="Entrada inválida.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
     @ApiResponse(responseCode="401",description="Não autenticado.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
@@ -32,12 +32,12 @@ public class AdminMemberImportController {
     @ModelAttribute
     void preventCaching(jakarta.servlet.http.HttpServletResponse response) { response.setHeader("Cache-Control","no-store"); }
     private final MemberRegistryImportService service;
-    @PostMapping("/dry-run") @Operation(summary="Simular conciliação histórica sem escrita",description="Até 500 vínculos explicitamente verificados. Retorna índices e outcomes sanitizados e comprovante válido por 15 minutos, para este administrador e fonte exata.")
+    @PostMapping("/dry-run") @Operation(summary="Simular conciliação histórica sem escrita",description="Até 500 vínculos cuja conferência humana é declarada por administrativelyConfirmed e sourceReference sem dados pessoais. O backend não verifica fonte oficial externa. Retorna índices e outcomes sanitizados e comprovante válido por 15 minutos, para este administrador e fonte exata.")
     @ApiResponse(responseCode="200",description="Simulação sem escrita e comprovante.")
     public MemberImportReportDTO dryRun(@Valid @RequestBody MemberRegistryRequests.ImportRequest request,@AuthenticationPrincipal UserPrincipal actor) {
         return MemberImportReportDTO.from(service.dryRun(request.rows().stream().map(MemberRegistryRequests.ImportRow::command).toList(),actor.getUserId(),request.reason()));
     }
-    @PostMapping("/apply") @Operation(summary="Aplicar conciliação previamente simulada",description="Exige dryRunToken da mesma fonte, motivo e ator. Revalida conflitos. Cada vínculo é confirmado em transação independente com auditoria. Reexecutar pendências requer novo dry-run.")
+    @PostMapping("/apply") @Operation(summary="Aplicar conciliação previamente simulada",description="Desabilitada por padrão (409 sem escrita); exige memberships.registry.imports.apply-enabled=true, permission IMPORT e dryRunToken da mesma fonte, motivo e ator. Revalida conflitos. Cada vínculo é confirmado em transação independente com auditoria. Reexecutar pendências requer novo dry-run.")
     @ApiResponse(responseCode="200",description="Relatório por índice, incluindo aplicação parcial, conflitos e vínculos idempotentes.")
     public MemberImportReportDTO apply(@Valid @RequestBody MemberRegistryRequests.ImportRequest request,@AuthenticationPrincipal UserPrincipal actor) {
         return MemberImportReportDTO.from(service.apply(request.rows().stream().map(MemberRegistryRequests.ImportRow::command).toList(),actor.getUserId(),request.reason(),request.dryRunToken()));
