@@ -55,17 +55,18 @@ class BillingEventBoundaryTest {
     @Test void existingDebtIsReturnedWithoutNewWritesUnderDefinitionLock() {
         when(events.existsEventById(30L)).thenReturn(true); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
         when(contexts.find(30L, 3L)).thenReturn(Optional.of(new EventChargeContext(30L, 3L, 5L, 4L)));
-        when(cycles.findById(4L)).thenReturn(Optional.of(cycle())); when(charges.findByChargeCycleIdAndUserId(4L, 10L)).thenReturn(Optional.of(charge()));
+        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle())); when(charges.findByChargeCycleIdAndUserId(4L, 10L)).thenReturn(Optional.of(charge()));
         assertThat(service().ensureEventMemberCharge(30L, 3L, 10L, DUE.plusDays(5), 99L)).isEqualTo(2L);
         verify(charges, never()).save(any()); verify(cycles, never()).save(any()); verify(contexts, never()).save(any());
     }
-    @Test void cancellationDelegatesOnlyGeneratedCyclesBelongingToEvent() {
-        var generated = cycle(); var finished = withId(cycle(), 8L); finished.finish(99L, NOW);
+    @Test void cancellationDelegatesEveryContextBelongingToEventWithoutFilteringClosingState() {
         when(contexts.findByEvent(30L)).thenReturn(List.of(new EventChargeContext(30L, 3L, 5L, 4L), new EventChargeContext(30L, 6L, 7L, 8L)));
         when(definitions.findByIdForUpdate(anyLong())).thenReturn(Optional.of(definition()));
-        when(cycles.findById(4L)).thenReturn(Optional.of(generated)); when(cycles.findById(8L)).thenReturn(Optional.of(finished));
-        service().cancelEventCycles(30L, 99L); verify(administration).cancel(4L, 99L); verify(administration, never()).cancel(8L, 99L);
-        verifyNoInteractions(charges, payments); // BACK-464: characterized current behavior, policy change is separate.
+        service().cancelEventCycles(30L, 99L);
+        verify(administration).cancelForEvent(4L, 99L);
+        verify(administration).cancelForEvent(8L, 99L);
+        verifyNoMoreInteractions(administration);
+        verifyNoInteractions(charges, payments);
     }
     @Test void inactiveExistingEventAssignmentIsRejectedAfterParentLock() {
         var a = EventParticipantsChargeAssignment.create(3L, 30L, NOW); a.deactivate(NOW);
@@ -78,7 +79,7 @@ class BillingEventBoundaryTest {
         assertThatThrownBy(() -> service().ensureAssignment(404L, 3L)).isInstanceOf(EventBillingException.class);
         when(events.existsEventById(30L)).thenReturn(true); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
         when(contexts.find(30L, 3L)).thenReturn(Optional.of(new EventChargeContext(30L, 3L, 5L, 4L)));
-        var c = cycle(); c.finish(99L, NOW); when(cycles.findById(4L)).thenReturn(Optional.of(c));
+        var c = cycle(); c.finish(99L, NOW); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(c));
         assertThatThrownBy(() -> service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isInstanceOf(EventBillingException.class);
         verifyNoInteractions(charges);
     }
@@ -89,7 +90,7 @@ class BillingEventBoundaryTest {
         var rightEvent = EventParticipantsChargeAssignment.reconstitute(5L, 3L, 30L, true, NOW, null);
         when(assignments.findByChargeDefinitionId(3L, Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(wrongEvent, rightEvent)));
         when(cycles.save(any())).thenAnswer(i -> withId(i.getArgument(0), 4L));
-        when(cycles.findById(4L)).thenReturn(Optional.of(cycle()));
+        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle()));
         when(charges.save(any())).thenReturn(charge());
         assertThat(service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isEqualTo(2L);
         verify(contexts).save(new EventChargeContext(30L, 3L, 5L, 4L));
@@ -103,7 +104,7 @@ class BillingEventBoundaryTest {
         when(assignments.findByChargeDefinitionId(3L, Pageable.unpaged())).thenReturn(Page.empty());
         when(assignments.save(any())).thenReturn(EventParticipantsChargeAssignment.reconstitute(5L, 3L, 30L, true, NOW, null));
         when(cycles.save(any())).thenAnswer(i -> withId(i.getArgument(0), 4L));
-        when(cycles.findById(4L)).thenReturn(Optional.of(cycle()));
+        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle()));
         when(charges.save(any())).thenReturn(charge());
         assertThat(service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isEqualTo(2L);
         verify(contexts).save(new EventChargeContext(30L, 3L, 5L, 4L));

@@ -31,7 +31,8 @@ integrações consumidas estão descritas em [Fluxos](flows.md).
 
 Para Event, `EventChargeCatalogQuery` consulta definições ACTIVE/ONE_TIME,
 `EventBillingCommand` cria definição inline, garante assignment/ciclo/cobrança
-e cancela os ciclos ainda `GENERATED` daquele Event; `EventFinancialQuery` consulta
+e cancela obrigações nos seus ciclos `GENERATED`, `FINISHED` e `ARCHIVED`;
+`EventFinancialQuery` consulta
 estado efetivo, estado de pagamento e instante da submissão, em lote.
 `evaluate` distingue também `CHARGE_NOT_FOUND`. Nenhum desses contratos expõe
 entity ou repository. Criação inline força ONE_TIME e AFTER_DUE_DATE.
@@ -100,9 +101,15 @@ Métodos, paths, parâmetros, multipart, schemas, permissions, paginação e err
 HTTP têm uma única fonte: `/v3/api-docs` e Swagger UI. As listagens usam o
 envelope transversal `PageResponse<T>` na fronteira HTTP.
 
-As Entities JPA representam o schema nesta fase. Não há Flyway, Liquibase nem
-política de migrations versionadas; nenhuma mudança de schema deve inferir essa
-obrigação sem decisão arquitetural própria.
+Flyway versiona o schema e Hibernate usa `validate`, conforme a política atual em
+`docs/database`. A BACK-460 não altera schema nem migrations V1–V4.
+
+## Cancelamentos — BACK-460
+
+Cancelamento de Event inclui ciclos finalizados/arquivados sem apagar histórico.
+Confirmações tardias recebem 30 dias completos desde a confirmação. Desistência
+individual mantém obrigações financeiras e permite request pelo Billing.
+Decisões, limitações e checklist: `docs/back-460-event-billing.md` na raiz.
 
 ## Testes relevantes
 

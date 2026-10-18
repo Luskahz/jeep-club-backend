@@ -93,7 +93,12 @@ public class AdminEventService {
     public Event publish(Long id) { var e = events.locked(id); e.publish(events.now()); return (Event) publications.save(e); }
     public Event finish(Long id) { var e = events.locked(id); events.refreshed(id); e.finish(events.now()); return (Event) publications.save(e); }
     public Event cancel(Long id, Long actor) {
-        var e = events.locked(id); e.cancel(events.now()); billing.cancelEventCycles(id, actor);
+        var e = events.locked(id);
+        if (e.getEventStatus() == EventStatus.CANCELLED) {
+            billing.cancelEventCycles(id, actor);
+            return e;
+        }
+        e.cancel(events.now()); billing.cancelEventCycles(id, actor);
         return (Event) publications.save(e);
     }
     public void delete(Long id, Long actor) {

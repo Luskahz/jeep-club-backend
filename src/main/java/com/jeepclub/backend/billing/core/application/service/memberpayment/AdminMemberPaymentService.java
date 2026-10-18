@@ -48,10 +48,12 @@ public class AdminMemberPaymentService {
     public MemberPaymentResult confirm(Long paymentId, Long confirmedByUserId) {
         Objects.requireNonNull(confirmedByUserId, "confirmedByUserId cannot be null");
         Instant now = Instant.now(clock);
+        var cycleId = memberPaymentRepository.findChargeCycleIdById(paymentId)
+                .orElseThrow(() -> new MemberPaymentNotFoundException("Member payment not found."));
+        var cycle = cycles.findByIdForUpdate(cycleId).orElseThrow();
         MemberPayment memberPayment = findMemberPaymentForUpdateOrThrow(paymentId);
         MemberCharge memberCharge = findMemberChargeForUpdateOrThrow(memberPayment.getMemberChargeId());
 
-        var cycle = cycles.findById(memberCharge.getChargeCycleId()).orElseThrow();
         boolean canceledCycle = cycle.getCanceledAt() != null;
         if (!canceledCycle) ensureChargeCanBeMarkedAsPaid(memberCharge);
         ensurePaymentAmountStillMatchesCharge(memberPayment, memberCharge);

@@ -26,8 +26,10 @@
 9. Cancelar um ciclo `GENERATED` cancela suas cobranças ainda abertas e cria
    elegibilidades de reembolso por 30 dias para pagamentos `CONFIRMED`
    que ainda não possuam refund ativo ou concluído. `PENDING_VALIDATION` continua
-   analisável: confirmação posterior garante elegibilidade com a mesma janela,
-   ancorada no cancelamento; rejeição não gera refund.
+   analisável: confirmação posterior garante 30 dias completos a partir do maior
+   instante entre cancelamento e confirmação; rejeição não gera refund.
+   O comando específico de Event também reverte ciclos FINISHED/ARCHIVED,
+   preservando auditoria de fechamento; o cancelamento genérico continua GENERATED-only.
 10. Somente ciclos `FINISHED` ou `CANCELED` podem ser arquivados. Arquivamento é
     organização histórica e não produz novo efeito financeiro.
 11. `MemberCharge` persiste `PENDING`, `PAID` ou `CANCELED`. `OVERDUE` e

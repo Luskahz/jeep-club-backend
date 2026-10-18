@@ -13,6 +13,11 @@ public record EventRideOffer(Long id, Long eventId, Long guestRequestId, Long re
             throw new IllegalArgumentException("Inconsistent ride selection.");
     }
     public enum Status { ACCEPTED, DECLINED, SELECTED }
+    public EventRideOffer decline() {
+        if (status != Status.ACCEPTED) throw new IllegalStateException("Only accepted offers can be withdrawn.");
+        return new EventRideOffer(id, eventId, guestRequestId, registrationId, userId, vehicleId,
+            Status.DECLINED, respondedAt, null);
+    }
     public EventRideOffer select(Instant now) {
         if (status != Status.ACCEPTED) throw new IllegalStateException("Offer is not accepted.");
         return new EventRideOffer(id, eventId, guestRequestId, registrationId, userId, vehicleId, Status.SELECTED, respondedAt, now);

@@ -235,6 +235,20 @@ public class ChargeCycle {
         this.updatedAt = now;
     }
 
+    /** Event cancellation reverses financial availability without erasing closing audit. */
+    public boolean cancelForEvent(Long actorId, Instant now) {
+        validateId(actorId, "canceledByUserId");
+        Objects.requireNonNull(now, "now cannot be null");
+        if (canceledAt != null) return false;
+        if (finishedAt != null && now.isBefore(finishedAt))
+            throw new IllegalArgumentException("Event cancellation cannot precede cycle finishing.");
+        if (status != ChargeCycleStatus.ARCHIVED) status = ChargeCycleStatus.CANCELED;
+        canceledAt = now;
+        canceledByUserId = actorId;
+        updatedAt = now;
+        return true;
+    }
+
     public void archive(Long archivedByUserId, Instant now) {
         validateId(archivedByUserId, "archivedByUserId");
         Objects.requireNonNull(now, "now cannot be null");
@@ -288,8 +302,9 @@ public class ChargeCycle {
 
         if (status == ChargeCycleStatus.CANCELED) {
             requireCancellationData();
-            ensureNoFinishData();
+            if (finishedAt != null || finishedByUserId != null) requireFinishData();
             ensureNoArchiveData();
+            validateFinancialReversalHistory();
         }
 
         if (status == ChargeCycleStatus.FINISHED) {
@@ -301,7 +316,15 @@ public class ChargeCycle {
         if (status == ChargeCycleStatus.ARCHIVED) {
             requireArchiveData();
             ensureArchivedSourceIsValid();
+            validateFinancialReversalHistory();
         }
+    }
+
+    private void validateFinancialReversalHistory() {
+        if (canceledAt != null || canceledByUserId != null) requireCancellationData();
+        if (finishedAt != null || finishedByUserId != null) requireFinishData();
+        if (canceledAt != null && finishedAt != null && canceledAt.isBefore(finishedAt))
+            throw new IllegalArgumentException("Event cancellation cannot precede cycle finishing.");
     }
 
     private void requireCancellationData() {
@@ -313,8 +336,8 @@ public class ChargeCycle {
     }
 
     private void requireFinishData() {
-        if (finishedAt == null) {
-            throw new IllegalArgumentException("finishedAt is required when charge cycle is finished.");
+        if (finishedAt == null || finishedByUserId == null) {
+            throw new IllegalArgumentException("Finishing requires both timestamp and actor.");
         }
 
         validateId(finishedByUserId, "finishedByUserId");
@@ -329,7 +352,7 @@ public class ChargeCycle {
     }
 
     private void ensureArchivedSourceIsValid() {
-        boolean archivedCanceledCycle = hasCancellationData() && !hasFinishData();
+        boolean archivedCanceledCycle = hasCancellationData();
         boolean archivedFinishedCycle = hasFinishData() && !hasCancellationData();
 
         if (!archivedCanceledCycle && !archivedFinishedCycle) {

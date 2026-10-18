@@ -1,5 +1,15 @@
 # Publications
 
+## Cancelamentos de Event e inscrição — BACK-460
+
+O cancelamento de Event trata todos os seus contextos financeiros, inclusive ciclos
+finalizados/arquivados, preserva pagamentos e garante elegibilidade de refund com
+janela completa na confirmação tardia. Desistência individual mantém a obrigação
+financeira; rejeita guests pessoais pendentes e encerra offers aceitas. Guest já
+aprovado impede a desistência até resolução administrativa. Operações repetidas
+de cancelamento são idempotentes. Consulte a
+[decisão e validação BACK-460](../../../../../../../../docs/back-460-event-billing.md).
+
 Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../docs/architecture/feature-development-rules.md).
@@ -250,8 +260,9 @@ operação que exige confirmação reavalia requisitos; CONFIRMED nunca é rebai
 pela situação financeira posterior. Cancelamento de inscrição preserva a linha,
 não permite reinscrição duplicada e é limitado ao período OPEN. Cancelar o Event
 preserva as inscrições como fatos e solicita ao Billing o cancelamento dos ciclos
-financeiros próprios ainda em estado `GENERATED`. Ciclos já `FINISHED` não são
-cancelados por esse comando.
+financeiros próprios, inclusive `FINISHED` e `ARCHIVED`, mantendo os metadados de
+fechamento. Desistência individual mantém cobranças/pagamentos, encerra requests
+pessoais pendentes e ofertas aceitas; guests aprovados exigem resolução administrativa.
 
 Dependents ativos próprios são validados pelo contrato público de Dependents.
 Podem estar alocados a um veículo ou presentes em `unallocatedDependentIds`.
@@ -492,8 +503,8 @@ snapshot proposto, reviewer, estado e `@Version`. Sua galeria está em
 O índice único em `pending_service_publication_id` impede duas propostas PENDING para
 o mesmo Service sem impedir várias propostas aprovadas/rejeitadas ao longo do tempo.
 
-O projeto continua seguindo a política global vigente de schema derivado das entities /
-Hibernate; não introduzir Flyway/Liquibase isoladamente neste módulo.
+O projeto usa Flyway como proprietário do DDL e Hibernate `validate`, conforme
+a política global em `docs/database`. A BACK-460 não altera o schema.
 
 ## Hard delete e histórico
 

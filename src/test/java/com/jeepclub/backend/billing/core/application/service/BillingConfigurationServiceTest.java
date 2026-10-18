@@ -139,13 +139,13 @@ class BillingConfigurationServiceTest {
     }
     @Test void cancellationLocksPaymentsInIdOrderThenReloadsChargesAndCreatesRefunds() {
         var c = cycle(); var open = charge(); var becamePaid = charge(); becamePaid.markAsPaid(NOW, NOW);
-        when(cycles.findById(4L)).thenReturn(Optional.of(c)); when(cycles.save(c)).thenReturn(c);
-        when(charges.findByChargeCycleId(4L)).thenReturn(List.of(open)); when(payments.findByMemberChargeIdIn(List.of(2L))).thenReturn(List.of(payment()));
+        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(c)); when(cycles.save(c)).thenReturn(c);
+        when(charges.findByChargeCycleId(4L)).thenReturn(List.of(open)); when(payments.findByMemberChargeIdForUpdate(2L)).thenReturn(List.of(payment()));
         when(charges.findOpenByChargeCycleId(4L)).thenReturn(List.of(open)); when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(becamePaid));
         assertThat(cycleService.cancel(4L, 99L).status()).isEqualTo(ChargeCycleStatus.CANCELED);
         assertThat(c.getCanceledAt()).isEqualTo(NOW);
         var order = inOrder(payments, charges, cycles, refunds);
-        order.verify(payments).findByIdForUpdate(1L); order.verify(charges).findByIdForUpdate(2L);
+        order.verify(payments).findByMemberChargeIdForUpdate(2L); order.verify(charges).findByIdForUpdate(2L);
         order.verify(cycles).save(c); order.verify(refunds).createEligibilityForCanceledCycle(4L, 99L, NOW);
         assertThat(becamePaid.isPaid()).isTrue(); verify(charges, never()).save(any());
     }
@@ -172,10 +172,10 @@ class BillingConfigurationServiceTest {
         assertThat(assignmentService.assignToEventParticipants(3L, 30L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.EVENT_PARTICIPANTS);
     }
     @Test void cancellationCancelsStillOpenChargeAndFinishArchiveHaveNoFinancialSideEffects() {
-        var c = cycle(); var debt = charge(); when(cycles.findById(4L)).thenReturn(Optional.of(c)); when(cycles.save(c)).thenReturn(c);
+        var c = cycle(); var debt = charge(); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(c)); when(cycles.save(c)).thenReturn(c);
         when(charges.findOpenByChargeCycleId(4L)).thenReturn(List.of(debt)); when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(debt));
         cycleService.cancel(4L, 99L); assertThat(debt.isCanceled()).isTrue(); verify(charges).save(debt);
-        reset(charges, payments, refunds); var finished = cycle(); when(cycles.findById(4L)).thenReturn(Optional.of(finished)); when(cycles.save(finished)).thenReturn(finished);
+        reset(charges, payments, refunds); var finished = cycle(); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(finished)); when(cycles.save(finished)).thenReturn(finished);
         cycleService.finish(4L, 99L); cycleService.archive(4L, 99L);
         assertThat(finished.isArchived()).isTrue(); verifyNoInteractions(charges, payments, refunds);
     }

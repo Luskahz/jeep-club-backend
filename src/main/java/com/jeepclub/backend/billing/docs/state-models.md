@@ -32,6 +32,11 @@ generate -> GENERATED --finish--> FINISHED --archive--> ARCHIVED
 Cancelar um ciclo já cancelado tem erro específico; qualquer transição fora dos
 caminhos acima é conflito.
 
+Exceção explícita BACK-460: cancelamento do Event também cancela um ciclo FINISHED,
+preservando os campos de finalização. Se ARCHIVED, mantém esse status e registra
+`canceledAt/canceledByUserId`, sem apagar o arquivamento. O comando genérico de ciclo
+mantém as transições acima; repetição do cancelamento do Event é idempotente.
+
 ## MemberCharge
 
 Estados persistidos:

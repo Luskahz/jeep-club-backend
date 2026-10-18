@@ -108,7 +108,7 @@ public class AdminEventController {
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_CANCEL')")
     @RequiredPermission("PUBLICATIONS_EVENT_CANCEL")
-    @Operation(summary="Cancel event and its own financial cycles")
+    @Operation(summary="Cancel event and its own financial cycles", description="Idempotent. Cancels open debt in all Event contexts, including finished/archived cycles; preserves payments and closing audit. Confirmed payments receive one refund eligibility window; late confirmation starts a new 30-day window at confirmation.")
     @ApiResponse(responseCode="200", description="Cancel event and its own financial cycles")
     public EventResponseDTO cancel(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return response(service.cancel(id, principal.getUserId()));

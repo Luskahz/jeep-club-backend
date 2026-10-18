@@ -69,7 +69,7 @@ public class EventBillingService implements EventBillingCommand, EventChargeCata
             contexts.save(created);
             return created;
         });
-        var cycle = cycles.findById(context.cycleId()).orElseThrow();
+        var cycle = cycles.findByIdForUpdate(context.cycleId()).orElseThrow();
         if (!cycle.isGenerated()) throw new EventBillingException("Event charge cycle is closed.");
         return charges.findByChargeCycleIdAndUserId(cycle.getId(), userId).orElseGet(() -> charges.save(
             MemberCharge.create(userId, definitionId, cycle.getId(), cycle.getChargeDefinitionDefaultAmountSnapshot(),
@@ -79,10 +79,10 @@ public class EventBillingService implements EventBillingCommand, EventChargeCata
 
     @Override @Transactional
     public void cancelEventCycles(Long eventId, Long actorId) {
-        for (var context : contexts.findByEvent(eventId)) {
+        for (var context : contexts.findByEvent(eventId).stream()
+                .sorted(Comparator.comparing(EventChargeContext::chargeDefinitionId)).toList()) {
             definitions.findByIdForUpdate(context.chargeDefinitionId()).orElseThrow();
-            var cycle = cycles.findById(context.cycleId()).orElseThrow();
-            if (cycle.isGenerated()) administration.cancel(cycle.getId(), actorId);
+            administration.cancelForEvent(context.cycleId(), actorId);
         }
     }
 
