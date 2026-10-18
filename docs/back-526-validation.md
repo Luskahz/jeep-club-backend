@@ -105,7 +105,8 @@ introduzido em autenticação, autorização, membritude paga ou Billing.
 Código funcional validado: `6fe33a41e17ce2d11ec1167bc9b2b2114d52aa7b`.
 O verify final usou `d052aad7fd5dea5f75463ba6434d4871596decf4`; a diferença entre esses
 commits é somente documentação OpenAPI do primeiro acesso. Commits posteriores
-registram docs, HTML e evidências, sem alterar o comportamento validado.
+registram docs, HTML, evidências e o ajuste determinístico de uma fixture temporal,
+sem alterar o comportamento de produção validado.
 
 | Comando / verificação | Resultado local |
 | --- | --- |
@@ -121,6 +122,15 @@ Os comandos Maven foram executados pelo wrapper Windows `mvnw.cmd` com Java 17
 apenas no processo. Git Bash executou o script POSIX. A primeira rodada MySQL
 encontrou um caminho de Bash fixo inexistente; o teste agora localiza a instalação
 por usuário ou aceita `-Dtest.bash`, sem omitir o coletor. As rodadas finais passaram.
+
+O primeiro CI [39085850356](https://github.com/Luskahz/jeep-club-backend/actions/runs/39085850356)
+aprovou Maven verify e encontrou uma falha na fixture MySQL de usuário desativado:
+CURRENT_TIMESTAMP sem fração podia gerar disabled_at anterior a created_at no
+runner mais rápido. A fixture agora usa created_at como instante determinístico
+para disabled_at/updated_at, mantendo a validação de Identity. O caso foi repetido
+isoladamente com sucesso em H2 (1 teste) e MySQL (1 teste). Nenhuma regra de
+produção, constraint ou gate foi enfraquecido. O CI completo é reexecutado no HEAD
+da correção, e seu estado corrente consta do PR.
 
 O único skip é preexistente: `LocalFileStorageTest.shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot`,
 porque o ambiente Windows não permite criar o symlink de teste. Nenhum teste novo
