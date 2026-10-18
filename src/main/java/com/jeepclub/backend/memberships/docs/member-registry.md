@@ -3,7 +3,7 @@
 ## Decisão técnica (BACK-527)
 
 Member pertence a Memberships. User.id e Member.id são chaves técnicas imutáveis.
-identityUserId é escalar, único e obrigatório. Matrícula é texto vigente, opcional
+identityUserId é escalar, único e obrigatório. Matrícula é o identificador cadastral principal e visual do associado em todo o clube; é texto vigente, opcional
 na leitura de uma Identity. A ausência nunca é substituída por um ID técnico.
 Não há relacionamento JPA com entidades de outro contexto.
 
@@ -107,17 +107,34 @@ Identity compõem a matrícula atual. A API não altera JWT ou IDs para fazer is
 omite valores null por sua política NON_NULL preexistente. A coluna Matrícula
 fica vazia no CSV/PDF quando ausente.
 
-A listagem de Identity mantém filtros e seleção de campos. A matrícula é
-acrescentada quando ID participa da seleção, como acontece por padrão. A consulta
-separa IDs de uma página e executa um lookup em lote; não consulta por usuário.
+A listagem de Identity mantém filtros e paginação (20 por padrão, máximo HTTP 50).
+Sem `fields`, todos os campos, incluindo matrícula, são considerados.
+`fields=MEMBERSHIP_NUMBER` ou `fields=NAME,MEMBERSHIP_NUMBER` recupera somente as
+colunas solicitadas e o ID auxiliar interno, sem expor `id` no JSON. `fields=ID,NAME`
+omite matrícula intencionalmente. O lookup de matrículas é único por lote; não
+busca entidades completas nem consulta por linha. Ausências continuam omitidas.
+
+`membershipNumber=027` resolve o vínculo vigente exato pela query API pública de
+Membership, aplica o Identity ID como predicado adicional e combina com todos os
+filtros cadastrais antes de contar/paginar. Número ausente produz página vazia.
+`q` preserva a busca textual existente e inclui OR com o vínculo de matrícula
+vigente exata. Números antigos não encontram o associado pelo registry.
+`sort=membershipNumber` em Identity retorna 400: não se ordena uma página em memória.
+A listagem própria de associados permite essa ordenação global no banco.
+
+CSV/PDF padrão usam `layout=MEMBER`: Matrícula primeiro, Nome e cadastro em seguida,
+ID técnico na última coluna para operações administrativas. `layout=TECHNICAL`
+preserva exatamente os cabeçalhos e a ordem anteriores (`ID;Matrícula;Nome;...`);
+nesse contrato explícito de integração, ID significa chave técnica. Consumidores
+que dependem do CSV anterior devem solicitar TECHNICAL. Ambos resolvem matrícula
+vigente dinamicamente; ausência é coluna vazia. Não são reemitidos documentos antigos.
 Os exports usam lotes de 200. Registros financeiros e documentos históricos não
 são reescritos. Requests e IDs de Billing/Authentication/Authorization permanecem
 intactos. Nenhum DTO anterior anunciava um campo de matrícula próprio nesses
 contextos; o escopo de apresentação é o cadastro/perfil e sua exportação.
 
 Os contratos HTTP completos são gerados no OpenAPI sob a tag Membership Registry.
-As novas rotas estão em `/admin/members`, usando a permission
-`MEMBERSHIP_MEMBER_REGISTRATION_MANAGE`. Todas as respostas desse controller
+As novas rotas estão em `/admin/members`, com permissions por operação. Todas as respostas desse controller
 possuem Cache-Control: no-store. Listagens usam PageResponse, tamanho padrão 20 e máximo 50,
 ordenação permitida por id, identityUserId, membershipNumber, createdAt e updatedAt.
 O histórico é apresentado pelo ID do evento em ordem decrescente. Pesquisa por
@@ -146,14 +163,20 @@ sanitizado. A API não oferece edição ou exclusão do histórico.
 
 Uma fonte oficial deve ser conferida por pessoa autorizada. O contrato recebe
 vínculos explícitos, sem matching aproximado e sem deduzir matrícula de CPF ou ID.
-O boolean verified é uma declaração do administrador sobre essa conferência,
-com uma referência de evidência que não deve conter dados pessoais. Divergências
-ou correspondências ambíguas devem permanecer verified=false e não serão aplicadas.
+`administrativelyConfirmed=true` é a declaração explícita de conferência humana,
+feita pelo ator autenticado com acesso à fonte oficial. O backend valida somente
+integridade técnica, autorização, existência/vínculo e conflitos; não consulta nem
+comprova uma fonte oficial externa. O antigo campo `verified` não é o contrato vigente.
+`sourceReference` identifica versão/lote/linha da evidência, sem dados pessoais;
+aceita referência opaca ASCII `[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}`.
+Divergências devem permanecer não confirmadas; ausência da declaração é 400; false produz UNVERIFIED,
+sem aplicação. Referência alterada, declaração, motivo, linhas ou ator diferentes
+invalidam o comprovante da simulação.
 
 ```json
 {
-  "rows":[{"identityUserId":108,"membershipNumber":"027","verified":true,
-           "verificationReference":"fonte-homologada-linha-12"}],
+  "rows":[{"identityUserId":108,"membershipNumber":"027","administrativelyConfirmed":true,
+           "sourceReference":"fonte-homologada-linha-12"}],
   "reason":"Conciliação aprovada"
 }
 ```
@@ -174,6 +197,43 @@ confirmar. Outcomes de aplicação incluem APPLIED, ALREADY_LINKED, CONFLICT,
 NOT_FOUND e FAILED; este último exige investigação sanitizada antes de repetir.
 Reenvio do mesmo lote é idempotente. Para repetir só pendências, monte um subconjunto
 conferido e faça novo dry-run. Nenhuma fonte real foi importada nesta implementação.
+
+## Autorizações separadas e habilitação da importação
+
+| Permission | Operações |
+| --- | --- |
+| MEMBERSHIP_MEMBER_READ | Listagem, pesquisa vigente e consulta de vínculo |
+| MEMBERSHIP_MEMBER_REGISTRATION_MANAGE | Atribuição manual e retificação |
+| MEMBERSHIP_MEMBER_AUDIT_READ | Histórico de alterações |
+| MEMBERSHIP_MEMBER_NUMBER_RESERVE | Reserva permanente |
+| MEMBERSHIP_MEMBER_NUMBER_ISSUE | Emissão administrativa |
+| MEMBERSHIP_MEMBER_IMPORT | Dry-run e apply de reconciliação |
+
+Não existe MANAGE global no controller. Cada método usa PreAuthorize e a mesma
+RequiredPermission no OpenAPI. ROOT recebe o catálogo pelo bootstrap estrutural;
+CUSTOM exige concessão explícita. MANAGE não inclui IMPORT, READ não permite
+escrita, IMPORT não permite reserva/emissão. O número em DTOs Identity continua
+protegido pelas permissions existentes de Identity, sem exigir novo READ de Membership.
+
+`memberships.registry.imports.apply-enabled=false` é o default. No Compose,
+`MEMBERSHIPS_REGISTRY_IMPORTS_APPLY_ENABLED=false`. IMPORT sozinha não libera
+carregamento: apply também exige habilitação operacional explícita, conferência
+humana, fonte e comprovante exatos. Desabilitada retorna 409
+MEMBER_REGISTRY_IMPORT_DISABLED antes de qualquer escrita. Dry-run continua disponível.
+Habilitar exige autorização separada, fonte homologada, backup/restore e revisão
+sanitizada da simulação; ao concluir a janela, desabilitar novamente. Nenhum hook
+habilita importação nem executa dados no startup.
+
+## Compatibilidade com lifecycle de Identity
+
+Disable/enable e mudanças de nome/e-mail/CPF preservam Member, matrícula, claims e
+auditoria. Reativação não emite outro número. A FK não possui ON DELETE CASCADE;
+MySQL recusa exclusão física de Identity vinculada e mantém registros intactos.
+No código atual não há endpoint de exclusão física de Identity, portanto não há
+rota pública nova convertendo uma falha SQL em 500. BACK-512 deverá definir
+arquivamento/exclusão e tradução controlada para 409 antes de expor essa operação.
+Não há exclusão de Member, transferência de número ou nova exceção de autorização
+por ser associado. Claims antigos/reservas não são liberados por lifecycle.
 
 ## Configuração da emissão
 
@@ -206,7 +266,7 @@ ocupado ou houver overflow de long. Não há reutilização nem inferência MAX+
 2. O agente DevOps deve conferir SHA/release exatos, baseline V3, V1–V3 imutáveis,
    ausência de V4 concorrente, backup SQL/uploads e restauração isolada comprovada.
    Deve ensaiar a V4 sobre cópia autorizada equivalente à base ativa, conferir
-   dados de Identity e MembershipApplication antes/depois e manter emissão false.
+   dados de Identity e MembershipApplication antes/depois e manter emissão false e imports.apply-enabled false.
 3. Após futura instalação: Flyway history sem falhas, Hibernate validate, health,
    dados antigos preservados, zero backfill e APIs de autenticação/Billing normais.
    Verificar o ENUM de permissions e a concessão por role, sem exceções pessoais.

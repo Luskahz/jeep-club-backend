@@ -293,3 +293,20 @@ cobertura proporcional conforme as
 UserQuery.findByIds e findAfterId oferecem leitura administrativa em lote de até 500, incluindo cadastros desativados para auditoria. Export mantém filtros AdminUserFilter existentes; foto aparece somente como booleano. IDENTITY_USER_EXPORT é independente de READ.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+
+## Matrícula cadastral — revisão BACK-526
+
+Matrícula vigente é o identificador principal de apresentação do associado;
+User.id é técnico e continua aceito nas operações. A seleção MEMBERSHIP_NUMBER
+independe de ID: a persistência recupera a chave auxiliar sem expô-la quando não
+solicitada. O lookup usa a SPI pública implementada por composição da query de
+Memberships. Sem Member, não há fallback artificial.
+
+A consulta administrativa aceita `membershipNumber` exata e inclui matrícula
+vigente exata no OR de `q`, combinando com filtros/paginação no banco. Histórico
+não participa. Sort por matrícula não é suportado em Identity (400); use a
+listagem de associados para ordenação global. CSV/PDF priorizam matrícula em
+layout MEMBER; TECHNICAL preserva a ordem/cabeçalhos anteriores para integrações.
+Disable/enable e alterações cadastrais preservam o vínculo. Não existe endpoint
+atual de exclusão física; a FK restritiva será considerada pela BACK-512.

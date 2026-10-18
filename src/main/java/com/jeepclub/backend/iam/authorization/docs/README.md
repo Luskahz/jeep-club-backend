@@ -122,11 +122,12 @@ permanente de uma conta privilegiada.
 
 ## Gestão do registro de associados — BACK-530
 
-`MEMBERSHIP_MEMBER_REGISTRATION_MANAGE` é uma permission do ModuleCode.MEMBERSHIP.
-Ela protege leitura administrativa, histórico, atribuição, retificação, reservas,
-emissão explícita e conciliação. A sincronização normal do catálogo cria a
-permission; a V4 estende o ENUM físico `authorization_permissions.code`
-preservando as posições e valores anteriores. V1–V3 são imutáveis.
-ROOT recebe o catálogo pelo mecanismo vigente. Roles CUSTOM precisam de concessão
-explícita. Nenhuma exceção depende de nome, CPF ou ID pessoal de administrador.
-`@PreAuthorize` faz enforcement e `@RequiredPermission` anuncia o mesmo código.
+O catálogo separa READ, REGISTRATION_MANAGE, AUDIT_READ, NUMBER_RESERVE,
+NUMBER_ISSUE e IMPORT sob o prefixo `MEMBERSHIP_MEMBER_`. Os grants são
+independentes: leitura não concede escrita e MANAGE não permite importação.
+Veja a [matriz proprietária de Memberships](../../../memberships/docs/member-registry.md#autorizações-separadas-e-habilitação-da-importação).
+PreAuthorize e RequiredPermission coincidem por operação. ROOT recebe as novas
+permissions estruturalmente; CUSTOM não recebe concessão automática. A V4 amplia
+o ENUM acrescentando valores ao final, preservando posições existentes; V1–V3
+continuam imutáveis. Importação também exige habilitação operacional própria,
+além da permission. Não há exceção por identidade pessoal de administrador.
