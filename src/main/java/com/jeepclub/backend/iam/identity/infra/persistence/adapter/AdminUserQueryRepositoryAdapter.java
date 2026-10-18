@@ -18,6 +18,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AdminUserQueryRepositoryAdapter implements AdminUserQueryRepository {
     private final AdminUserJpaQueryRepository jpaQueryRepository;
+    private final com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
 
     @Override
     public Page<AdminUserResult> findAll(
@@ -25,7 +26,9 @@ public class AdminUserQueryRepositoryAdapter implements AdminUserQueryRepository
             Set<AdminUserField> fields,
             Pageable pageable
     ) {
-        return jpaQueryRepository.findAll(filter, fields, UserSortMapper.map(pageable));
+        Long exactId = filter.membershipNumber() == null ? null : membershipNumbers.identityIdByCurrentNumber(filter.membershipNumber()).orElse(0L);
+        Long queryId = filter.query() == null ? null : membershipNumbers.identityIdByCurrentNumber(filter.query()).orElse(null);
+        return jpaQueryRepository.findAll(filter.resolvedMembership(exactId,queryId), fields, UserSortMapper.map(pageable));
     }
 
     @Override

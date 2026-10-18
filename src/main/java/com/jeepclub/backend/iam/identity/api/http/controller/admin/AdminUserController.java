@@ -168,11 +168,16 @@ public class AdminUserController {
                 - paginação zero-based por `page` e `size` (padrão 20, máximo 50);
                 - ordenação por `sort`;
                 - filtros administrativos combináveis;
-                - busca textual por `q`;
+                - matrícula vigente exata por `membershipNumber`, combinável com os demais filtros;
+                - busca textual por `q`, incluindo matrícula vigente exata;
                 - seleção dos campos retornados por `fields`.
 
                 Quando `fields` não é informado, todos os campos disponíveis
-                em AdminUserResponse são considerados no retorno.
+                em AdminUserResponse são considerados no retorno, incluindo MEMBERSHIP_NUMBER.
+                fields=NAME,MEMBERSHIP_NUMBER não expõe id; sua chave auxiliar é interna.
+                fields=ID,NAME omite matrícula intencionalmente.
+                sort=membershipNumber não é suportado nesta superfície (400);
+                use /admin/members para ordenação global de associados por matrícula.
 
                 Os filtros, paginação, ordenação e seleção de campos são
                 aplicados na consulta de persistência.
@@ -243,10 +248,11 @@ public class AdminUserController {
                         : EnumSet.copyOf(fields);
 
         var page = adminUserService.findAll(filters.toFilter(), selectedFields, pageable);
-        var numbers = membershipNumbers.currentNumbers(page.getContent().stream().map(AdminUserResult::id)
-                .filter(java.util.Objects::nonNull).toList());
+        var numbers = selectedFields.contains(AdminUserField.MEMBERSHIP_NUMBER)
+                ? membershipNumbers.currentNumbers(page.getContent().stream().map(AdminUserResult::id)
+                    .filter(java.util.Objects::nonNull).toList()) : java.util.Map.<Long,String>of();
         PageResponse<AdminUserResponseDTO> response = PageResponse.from(
-                page.map(result -> AdminUserResponseDTO.from(result,result.id()==null ? null : numbers.get(result.id()))));
+                page.map(result -> AdminUserResponseDTO.from(result,result.id()==null ? null : numbers.get(result.id()),selectedFields.contains(AdminUserField.ID))));
 
         return ResponseEntity.ok(response);
     }

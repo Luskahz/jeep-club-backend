@@ -20,7 +20,7 @@ import java.util.Objects;
 )
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AdminUserResponseDTO(
-        @Schema(description = "Identificador único e estável do usuário.", example = "1")
+        @Schema(description = "ID técnico único e estável, usado em operações; não é a matrícula cadastral.", example = "1")
         Long id,
 
         @Schema(description = "Nome do usuário.", example = "Lucas Alves")
@@ -67,9 +67,12 @@ public record AdminUserResponseDTO(
 ) {
     public static AdminUserResponseDTO from(AdminUserResult result) { return from(result,null); }
     public static AdminUserResponseDTO from(AdminUserResult result, String membershipNumber) {
+        return from(result, membershipNumber, true);
+    }
+    public static AdminUserResponseDTO from(AdminUserResult result, String membershipNumber, boolean exposeId) {
         Objects.requireNonNull(result, "result cannot be null");
         return new AdminUserResponseDTO(
-                result.id(), result.name(), result.birthDate(), result.email(), result.cpf(),
+                exposeId ? result.id() : null, result.name(), result.birthDate(), result.email(), result.cpf(),
                 result.rg(), result.phoneNumber(), result.profilePhotoStorageKey(), result.status(),
                 result.createdAt(), result.disabledAt(), result.updatedAt(), membershipNumber
         );
