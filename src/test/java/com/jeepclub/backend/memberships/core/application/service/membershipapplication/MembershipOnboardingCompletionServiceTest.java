@@ -34,7 +34,7 @@ class MembershipOnboardingCompletionServiceTest {
         when(repository.findByCreatedUserIdAndStatus(42L, MembershipApplicationStatus.APPROVED))
                 .thenReturn(Optional.of(application));
         MembershipOnboardingCompletionService service =
-                new MembershipOnboardingCompletionService(repository);
+                new MembershipOnboardingCompletionService(repository, org.mockito.Mockito.mock(com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService.class));
 
         service.completeApprovedApplicationForIdentity(42L, NOW);
 

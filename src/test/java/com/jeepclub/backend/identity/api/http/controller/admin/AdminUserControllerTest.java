@@ -83,7 +83,7 @@ class AdminUserControllerTest {
         pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
         pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, validator, userRegistration, Clock.systemUTC()))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, org.mockito.Mockito.mock(com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection.class), validator, userRegistration, Clock.systemUTC()))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(pageableResolver)
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
