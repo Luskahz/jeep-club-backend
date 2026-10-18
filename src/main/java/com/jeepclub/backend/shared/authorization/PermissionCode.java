@@ -1,6 +1,8 @@
 package com.jeepclub.backend.shared.authorization;
 
 public enum PermissionCode {
+    MEMBERSHIP_MEMBER_REGISTRATION_MANAGE,
+
     IDENTITY_USER_EXPORT,
     AUTHENTICATION_EXPORT,
     AUTHORIZATION_EXPORT,

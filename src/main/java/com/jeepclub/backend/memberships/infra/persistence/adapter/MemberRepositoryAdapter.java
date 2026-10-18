@@ -17,11 +17,13 @@ import java.util.*;
 @Repository @RequiredArgsConstructor
 public class MemberRepositoryAdapter implements MemberRepository {
     private final MemberJpaRepository members;
+    private final jakarta.persistence.EntityManager entityManager;
     private final MembershipNumberClaimJpaRepository claims;
     private final MemberRegistryAuditJpaRepository audits;
     private final MemberRegistrySequenceJpaRepository sequences;
     public MemberRegistrySequence lockRegistry() {
         var s=sequences.lockCurrent().orElseThrow(() -> new MemberRegistryException(MemberRegistryException.Kind.CONFLICT));
+        entityManager.refresh(s,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         return new MemberRegistrySequence(s.getNextValue(),s.getFormatSignature());
     }
     public void advanceSequence(long next, String signature) {
@@ -29,7 +31,7 @@ public class MemberRepositoryAdapter implements MemberRepository {
     }
     public Optional<Member> byId(Long id) { return members.findById(id).map(MemberMapper::toDomain); }
     public Optional<Member> byIdentity(Long id) { return members.findByIdentityUserId(id).map(MemberMapper::toDomain); }
-    public Optional<Member> lockedByIdentity(Long id) { return members.lockByIdentity(id).map(MemberMapper::toDomain); }
+    public Optional<Member> lockedByIdentity(Long id) { return members.lockByIdentity(id).map(e -> { entityManager.refresh(e,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE); return MemberMapper.toDomain(e); }); }
     public Optional<Member> byNumber(String number) { return members.findByMembershipNumber(number).map(MemberMapper::toDomain); }
     public List<Member> byIdentities(Collection<Long> ids) { return ids.isEmpty() ? List.of() : members.findByIdentityUserIdIn(ids).stream().map(MemberMapper::toDomain).toList(); }
     public Page<Member> list(Pageable page) { return members.findAll(page).map(MemberMapper::toDomain); }
@@ -43,7 +45,7 @@ public class MemberRepositoryAdapter implements MemberRepository {
         if (claimedForUpdate(n.claimKey())) throw new MemberRegistryException(MemberRegistryException.Kind.CONFLICT);
         var e=new MembershipNumberClaimEntity(); e.setClaimKey(n.claimKey()); e.setMembershipNumber(n.value());
         e.setMemberId(memberId); e.setActorUserId(actor); e.setClaimedAt(now); e.setReason(reason);
-        try { claims.saveAndFlush(e); }
+        try { entityManager.persist(e); entityManager.flush(); }
         catch (DataIntegrityViolationException conflict) { throw new MemberRegistryException(MemberRegistryException.Kind.CONFLICT); }
     }
     public void audit(MemberRegistryAudit a) {
