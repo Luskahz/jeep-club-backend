@@ -1,0 +1,99 @@
+{
+  "story": "BACK-526",
+  "branch": "feat/back-526-membership-registry",
+  "baseCommit": "ccca1f48126ef5bbdd8aacbc38cca8503a101feb",
+  "generatedAtUTC": "2026-10-18T01:15:39.105279+00:00",
+  "functionalCodeCommit": "6fe33a41e17ce2d11ec1167bc9b2b2114d52aa7b",
+  "verifyCommit": "d052aad7fd5dea5f75463ba6434d4871596decf4",
+  "environment": {
+    "java": "17.0.18",
+    "mysql": "8.0.46",
+    "mysqlImageDigest": "sha256:7dcddc01f13bab2f15cde676d44d01f61fc9f99fe7785e86196dfc07d358ae2b"
+  },
+  "gates": {
+    "verify": {
+      "command": "./mvnw --batch-mode --no-transfer-progress verify",
+      "tests": 1913,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "skippedTests": [
+        {
+          "suite": "com.jeepclub.backend.platform.storage.local.LocalFileStorageTest",
+          "test": "shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot",
+          "reason": "Symbolic links are unavailable in the local Windows test environment."
+        }
+      ],
+      "focusedRegistrySuites": [
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 22,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    "mysqlMigrations": {
+      "command": "./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "futureMigration": {
+      "command": "bash deploy/test-future-migration.sh",
+      "temporaryVersion": 5,
+      "isolatedGitArchive": true,
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "historicalMigrationHashes": {
+    "algorithm": "SHA-256 over UTF-8 text with LF line endings",
+    "unchangedFromBase": true,
+    "files": {
+      "V1__initial_deploy_schema.sql": "c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e",
+      "V2__identity_user_profiles.sql": "c82bc02dea548d93c127ddd565df1ca05fcd6eaf58f2b2b500becdcdd8196963",
+      "V3__account_activation_invitations.sql": "b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"
+    }
+  },
+  "staticValidation": {
+    "gitDiffCheck": true,
+    "utf8": true,
+    "composeProductionAndLocalConfig": true,
+    "shellSyntax": true,
+    "htmlSlides": 37,
+    "htmlEndpointInventoryDate": "2026-10-02"
+  },
+  "production": {
+    "accessed": false,
+    "migrated": false,
+    "realDataImported": false,
+    "deployed": false
+  },
+  "issuanceEnabledByDefault": false
+}

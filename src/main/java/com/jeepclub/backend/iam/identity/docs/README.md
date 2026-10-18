@@ -1,5 +1,23 @@
 # Identity
 
+## Projeção da matrícula — BACK-531
+
+User.id continua a chave técnica e não é matrícula. A SPI pública
+`UserMembershipNumberProjection` expressa a necessidade de apresentação de
+Identity; o adapter em `platform.composition.membership` consulta
+`memberships.api.module.MemberRegistrationQuery`. O lookup não depende dos
+serviços de escrita de Identity, evitando ciclo de beans. Não existe coluna
+membershipNumber em Identity nem cache da matrícula.
+
+As respostas de `/identity/me`, perfis complementares, detalhe administrativo e
+listagem administrativa adicionam `membershipNumber`. Na listagem a projeção em
+lote acompanha resultados com ID selecionado (padrão). IDs técnicos continuam
+disponíveis. Para usuário sem Member o campo é null, ou omitido no DTO
+administrativo que já usa NON_NULL. Exportações de usuários acrescentam a coluna
+Matrícula e resolvem os números por lote de 200. A pesquisa por matrícula vigente
+pertence à API administrativa do registry. Veja as
+[regras do registry](../../../memberships/docs/member-registry.md).
+
 Criação administrativa de User e integração com Authentication: [BACK-511](../../../../../../../../../docs/back-511-admin-user-creation.md).
 
 Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a

@@ -68,3 +68,164 @@ Não há valor de produção predefinido. Não foi consultada nem alterada a VPS
 
 As queries públicas não têm cache: leitura seguinte ao commit resolve a matrícula
 vigente. Listagens resolvem um conjunto de IDs por consulta, sem lookup por linha.
+
+
+## Modelo físico e contratos
+
+A V4 cria `membership_members` (PK técnica, identidade única, matrícula vigente
+única, timestamps e version), `membership_number_claims` (chave de proteção única,
+número literal único, Member opcional, ator, instante e motivo),
+`membership_member_audits` (Member, de/para, ator, instante, motivo, operação e
+resultado) e `membership_registry_sequence` (singleton, próximo valor e assinatura
+de formato). A linha coordenadora começa sem faixa inicial e sem número emitido.
+As FKs físicas impedem apagar Member com histórico/claims e Identity vinculada.
+São colunas escalares no JPA, sem import de entities de outros contextos.
+A V4 também amplia o ENUM de permission, preservando a ordem dos códigos antigos.
+
+`MemberRegistrationQuery` publica leitura por Identity, lote de até 500 IDs e
+pesquisa reversa literal da matrícula vigente. Seu resultado é uma projeção
+imutável, sem entity/JPA. A implementação depende somente do repository do registry.
+`MemberIdentityPort` usa UserIdentityLock e UserQuery por adapter de integração.
+A SPI de apresentação de Identity é implementada em Platform por composição da
+query do registry. Isso evita que um serviço de Identity dependa de um service
+Membership que por sua vez dependa do mesmo serviço de Identity.
+
+## Adaptação do frontend
+
+O ID técnico continua disponível para operações do sistema, mas a matrícula
+vigente é o identificador cadastral exibido ao usuário. Exemplo ilustrativo:
+
+```json
+{"id":108,"membershipNumber":"027","name":"Associado sintético"}
+```
+
+Mostre `Matrícula 027`, mantendo `id=108` para os paths/requests já existentes.
+Se não houver Member, mostre ausência de matrícula. Nunca use o ID como fallback.
+Após retificação, releia o recurso: perfil, detalhe, listagem e exportação de
+Identity compõem a matrícula atual. A API não altera JWT ou IDs para fazer isso.
+`CurrentUserResponseDTO` e `UserProfileResponseDTO` retornam null; o DTO admin
+omite valores null por sua política NON_NULL preexistente. A coluna Matrícula
+fica vazia no CSV/PDF quando ausente.
+
+A listagem de Identity mantém filtros e seleção de campos. A matrícula é
+acrescentada quando ID participa da seleção, como acontece por padrão. A consulta
+separa IDs de uma página e executa um lookup em lote; não consulta por usuário.
+Os exports usam lotes de 200. Registros financeiros e documentos históricos não
+são reescritos. Requests e IDs de Billing/Authentication/Authorization permanecem
+intactos. Nenhum DTO anterior anunciava um campo de matrícula próprio nesses
+contextos; o escopo de apresentação é o cadastro/perfil e sua exportação.
+
+Os contratos HTTP completos são gerados no OpenAPI sob a tag Membership Registry.
+As novas rotas estão em `/admin/members`, usando a permission
+`MEMBERSHIP_MEMBER_REGISTRATION_MANAGE`. Todas as respostas desse controller
+possuem Cache-Control: no-store. Listagens usam PageResponse, tamanho padrão 20 e máximo 50,
+ordenação permitida por id, identityUserId, membershipNumber, createdAt e updatedAt.
+O histórico é apresentado pelo ID do evento em ordem decrescente. Pesquisa por
+matrícula é literal e vigente, sem procurar automaticamente no histórico.
+
+Atribuição individual (PUT por identityUserId):
+
+```json
+{"membershipNumber":"027","reason":"Conferência com fonte oficial validada"}
+```
+
+Retificação (PATCH do mesmo vínculo):
+
+```json
+{"membershipNumber":"037","expectedVersion":0,"reason":"Correção cadastral conferida"}
+```
+
+A mesma atribuição vigente repetida retorna o registro sem novo evento. Uma
+retificação exige a versão recebida no último GET e justificativa. Em conflito,
+releia e revise a decisão. Números retirados não retornam ao conjunto disponível.
+Sucessos persistem outcome SUCCESS. Falhas recusadas não produzem mudança parcial
+nem evento de alteração fictício; os outcomes do request seguem o contrato HTTP
+sanitizado. A API não oferece edição ou exclusão do histórico.
+
+## Conciliação e importação — BACK-534
+
+Uma fonte oficial deve ser conferida por pessoa autorizada. O contrato recebe
+vínculos explícitos, sem matching aproximado e sem deduzir matrícula de CPF ou ID.
+O boolean verified é uma declaração do administrador sobre essa conferência,
+com uma referência de evidência que não deve conter dados pessoais. Divergências
+ou correspondências ambíguas devem permanecer verified=false e não serão aplicadas.
+
+```json
+{
+  "rows":[{"identityUserId":108,"membershipNumber":"027","verified":true,
+           "verificationReference":"fonte-homologada-linha-12"}],
+  "reason":"Conciliação aprovada"
+}
+```
+
+Envie primeiro ao dry-run. A simulação não escreve no banco. O relatório contém
+índice zero-based da linha e outcome, sem CPF/e-mail ou eco de linha pessoal.
+Possíveis outcomes: READY, ALREADY_LINKED, UNVERIFIED, DUPLICATE_SOURCE,
+IDENTITY_NOT_FOUND, IDENTITY_INACTIVE, IDENTITY_ALREADY_LINKED e NUMBER_UNAVAILABLE.
+Para aplicar, reenvie a fonte e motivo exatos com o `dryRunToken` recebido.
+O comprovante HMAC é vinculado ao ator, expira após 15 minutos e é local ao
+processo. Restart ou outra instância exige novo dry-run (em múltiplas instâncias,
+encaminhar a operação para a mesma instância). Não é credencial nem substitui RBAC.
+
+A aplicação revalida o estado: cada atribuição usa o mesmo serviço de gestão, JPA,
+lock, claim e audit em uma transação. O motivo persistido inclui a referência da
+fonte. Uma linha em conflito não força sobrescrita. Outras linhas válidas podem
+confirmar. Outcomes de aplicação incluem APPLIED, ALREADY_LINKED, CONFLICT,
+NOT_FOUND e FAILED; este último exige investigação sanitizada antes de repetir.
+Reenvio do mesmo lote é idempotente. Para repetir só pendências, monte um subconjunto
+conferido e faça novo dry-run. Nenhuma fonte real foi importada nesta implementação.
+
+## Configuração da emissão
+
+Propriedades Spring sob `memberships.registry.issuance`:
+
+| Propriedade | Default / requisito |
+| --- | --- |
+| enabled | false |
+| approved | false, exige homologação para habilitar |
+| initial-number | ausente; número positivo explicitamente aprovado |
+| width | ausente; 1–64, limitada com o prefixo ao comprimento máximo |
+| prefix | ausente; explicitamente configurado, pode ser vazio |
+
+Os nomes de ambiente do Compose usam `MEMBERSHIPS_REGISTRY_ISSUANCE_` seguido de
+ENABLED, APPROVED, INITIAL_NUMBER, WIDTH e PREFIX. `.env.example` não fornece faixa
+arbitrária. Configuração habilitada incompleta/ilegítima impede startup com erro
+explícito, sem emitir número. Desabilitada permite startup e onboarding normais.
+A assinatura de configuração fixa início/formato após o primeiro uso; mudar o
+formato de contador já iniciado é conflito, exigindo revisão operacional.
+
+O lock permite pular claims históricas e reservas. Cada alocação faz no máximo
+10.000 tentativas, falhando sem escrita se o intervalo estiver excessivamente
+ocupado ou houver overflow de long. Não há reutilização nem inferência MAX+1.
+
+## Rollout e dependências — BACK-536
+
+1. Revisão humana e CI do PR para develop, sem merge nesta tarefa. Schema e código
+   podem ser integrados em develop sem deploy. O merge futuro em master é outra
+   autorização e executará o pipeline produtivo.
+2. O agente DevOps deve conferir SHA/release exatos, baseline V3, V1–V3 imutáveis,
+   ausência de V4 concorrente, backup SQL/uploads e restauração isolada comprovada.
+   Deve ensaiar a V4 sobre cópia autorizada equivalente à base ativa, conferir
+   dados de Identity e MembershipApplication antes/depois e manter emissão false.
+3. Após futura instalação: Flyway history sem falhas, Hibernate validate, health,
+   dados antigos preservados, zero backfill e APIs de autenticação/Billing normais.
+   Verificar o ENUM de permissions e a concessão por role, sem exceções pessoais.
+4. Conciliação histórica é fase separada, com fonte oficial e autorização própria.
+   Inventariar usuários por categoria de forma sanitizada. O snapshot agregado de
+   712 linhas em 61 tabelas não é uma contagem de usuários.
+5. Só depois da homologação, aprovar a faixa e reservas, conferir simulações,
+   preparar configuração e habilitar emissão. Contas COMPLETED sem matrícula são
+   conciliadas explicitamente; não há catch-up automático de startup.
+
+DDL MySQL pode confirmar parcialmente. Em falha, preservar volume, logs privados,
+history, release e backup, diagnosticar o DDL aplicado e ensaiar recuperação em
+instância separada. Não usar clean, repair, baseline automática, Hibernate update
+ou prometer rollback ACID do schema. Não reativar imagem antiga sobre schema
+incompatível automaticamente. A restauração real da VPS e autorização de release
+pertencem ao futuro agente DevOps, não foram executadas aqui.
+
+BACK-512 deverá definir lifecycle/arquivamento e políticas de retenção antes de
+liberar remoção de identidades vinculadas. BACK-523 poderá evoluir rejeição após
+aprovação enquanto primeiro acesso estiver pendente; como este momento ainda não
+emite matrícula, a correção não libera nem consome número indevidamente. O
+registry não introduz novo gate de membritude, autenticação ou Billing.

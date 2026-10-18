@@ -119,3 +119,14 @@ com IDs de User existentes. Se já houver um titular ROOT, não atribui ROOT a q
 ocupar o CPF originalmente configurado após uma correção cadastral. O CPF de
 bootstrap é usado para estabelecer o primeiro vínculo, não como identidade
 permanente de uma conta privilegiada.
+
+## Gestão do registro de associados — BACK-530
+
+`MEMBERSHIP_MEMBER_REGISTRATION_MANAGE` é uma permission do ModuleCode.MEMBERSHIP.
+Ela protege leitura administrativa, histórico, atribuição, retificação, reservas,
+emissão explícita e conciliação. A sincronização normal do catálogo cria a
+permission; a V4 estende o ENUM físico `authorization_permissions.code`
+preservando as posições e valores anteriores. V1–V3 são imutáveis.
+ROOT recebe o catálogo pelo mecanismo vigente. Roles CUSTOM precisam de concessão
+explícita. Nenhuma exceção depende de nome, CPF ou ID pessoal de administrador.
+`@PreAuthorize` faz enforcement e `@RequiredPermission` anuncia o mesmo código.
