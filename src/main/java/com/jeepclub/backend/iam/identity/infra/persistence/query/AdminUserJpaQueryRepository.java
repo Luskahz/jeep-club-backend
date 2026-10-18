@@ -84,7 +84,8 @@ public class AdminUserJpaQueryRepository {
             CriteriaBuilder cb
     ) {
         List<Predicate> result = new ArrayList<>();
-        if (filter.membershipIdentityId() != null) result.add(cb.equal(user.get("id"), filter.membershipIdentityId()));
+        if (filter.membershipNumber() != null) result.add(filter.membershipIdentityId() == null
+                ? cb.disjunction() : cb.equal(user.get("id"), filter.membershipIdentityId()));
         if (filter.id() != null) result.add(cb.equal(user.get("id"), filter.id()));
         if (filter.name() != null) result.add(cb.like(cb.lower(user.get("name")), like(filter.name())));
         if (filter.birthDate() != null) result.add(cb.equal(user.get("birthDate"), filter.birthDate()));

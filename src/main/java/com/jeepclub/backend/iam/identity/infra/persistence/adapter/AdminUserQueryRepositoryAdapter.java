@@ -26,7 +26,7 @@ public class AdminUserQueryRepositoryAdapter implements AdminUserQueryRepository
             Set<AdminUserField> fields,
             Pageable pageable
     ) {
-        Long exactId = filter.membershipNumber() == null ? null : membershipNumbers.identityIdByCurrentNumber(filter.membershipNumber()).orElse(0L);
+        Long exactId = filter.membershipNumber() == null ? null : membershipNumbers.identityIdByCurrentNumber(filter.membershipNumber()).orElse(null);
         Long queryId = filter.query() == null ? null : membershipNumbers.identityIdByCurrentNumber(filter.query()).orElse(null);
         return jpaQueryRepository.findAll(filter.resolvedMembership(exactId,queryId), fields, UserSortMapper.map(pageable));
     }
