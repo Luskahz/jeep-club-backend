@@ -24,8 +24,6 @@ import org.springframework.data.web.SortDefault;
 
 @RestController @RequestMapping(value="/admin/members",produces=MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor @Tag(name="Membership Registry",description="Gestão autorizada de matrículas, vínculos e histórico.")
-@PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_REGISTRATION_MANAGE')")
-@RequiredPermission("MEMBERSHIP_MEMBER_REGISTRATION_MANAGE")
 @ApiResponses({
     @ApiResponse(responseCode="400",description="Entrada inválida.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
     @ApiResponse(responseCode="401",description="Não autenticado.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
@@ -39,38 +37,54 @@ public class AdminMemberController {
     private final AdminMemberService service;
     @GetMapping @Operation(summary="Listar registros de associados",description="Página zero-based, tamanho padrão 20 e máximo 50. Ordenação por id, identityUserId, membershipNumber, createdAt ou updatedAt. Não inclui usuários ainda sem registro.")
     @ApiResponse(responseCode="200",description="Página de registros.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_READ')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_READ")
     public PageResponse<MemberResponseDTO> list(@ParameterObject @SortDefault(sort="id") Pageable page) {
         checkPage(page); return PageResponse.from(service.list(page).map(MemberResponseDTO::from));
     }
     @GetMapping("/by-number") @Operation(summary="Pesquisar matrícula vigente",description="Busca literal na matrícula atual. Números antigos só aparecem no histórico autorizado.")
     @ApiResponse(responseCode="200",description="Registro encontrado.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_READ')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_READ")
     public MemberResponseDTO byNumber(@RequestParam String membershipNumber) { return MemberResponseDTO.from(service.byNumber(membershipNumber)); }
     @GetMapping("/by-identity/{userId}") @Operation(summary="Consultar vínculo e matrícula de uma identidade")
     @ApiResponse(responseCode="200",description="Registro encontrado.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_READ')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_READ")
     public MemberResponseDTO get(@PathVariable @Positive Long userId) { return MemberResponseDTO.from(service.byIdentity(userId)); }
     @PutMapping("/by-identity/{userId}") @Operation(summary="Vincular Identity a matrícula histórica",description="Atribuição explícita. Repetir a mesma matrícula vigente é idempotente. Identity desativada não recebe novo vínculo.")
     @ApiResponse(responseCode="200",description="Registro criado ou vínculo idêntico preservado.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_REGISTRATION_MANAGE')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_REGISTRATION_MANAGE")
     public MemberResponseDTO assign(@PathVariable @Positive Long userId,@Valid @RequestBody MemberRegistryRequests.Assignment request,@AuthenticationPrincipal UserPrincipal actor) {
         return MemberResponseDTO.from(service.assign(userId,request.membershipNumber(),actor.getUserId(),request.reason()));
     }
     @PatchMapping("/by-identity/{userId}/membership-number") @Operation(summary="Retificar matrícula vigente",description="Exige versão e justificativa. Preserva IDs, mantém número antigo indisponível e acrescenta auditoria atômica. Não altera Identity, credenciais, roles ou Billing.")
     @ApiResponse(responseCode="200",description="Matrícula vigente e versão retornadas.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_REGISTRATION_MANAGE')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_REGISTRATION_MANAGE")
     public MemberResponseDTO correct(@PathVariable @Positive Long userId,@Valid @RequestBody MemberRegistryRequests.Correction request,@AuthenticationPrincipal UserPrincipal actor) {
         return MemberResponseDTO.from(service.correct(userId,request.membershipNumber(),request.expectedVersion(),actor.getUserId(),request.reason()));
     }
     @GetMapping("/by-identity/{userId}/history") @Operation(summary="Consultar histórico de matrícula",description="Eventos confirmados em ordem decrescente de ID. Somente leitura autorizada.")
     @ApiResponse(responseCode="200",description="Página de auditoria.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_AUDIT_READ')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_AUDIT_READ")
     public PageResponse<MemberAuditResponseDTO> history(@PathVariable @Positive Long userId,@ParameterObject Pageable page) {
         if(page.getPageSize()>50 || page.getOffset()>Integer.MAX_VALUE || page.getSort().stream().anyMatch(o -> !o.getProperty().equals("id"))) throw new MemberRegistryException(MemberRegistryException.Kind.INVALID);
         return PageResponse.from(service.history(userId,PageRequest.of(page.getPageNumber(),page.getPageSize())).map(MemberAuditResponseDTO::from));
     }
     @PostMapping("/by-identity/{userId}/generate") @Operation(summary="Emitir matrícula na faixa homologada",description="Só funciona quando emissão está explicitamente habilitada e configurada. Repetição para identidade já vinculada retorna o vínculo vigente.")
     @ApiResponse(responseCode="200",description="Matrícula emitida ou existente.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_NUMBER_ISSUE')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_NUMBER_ISSUE")
     public MemberResponseDTO generate(@PathVariable @Positive Long userId,@Valid @RequestBody MemberRegistryRequests.Generation request,@AuthenticationPrincipal UserPrincipal actor) {
         return MemberResponseDTO.from(service.generate(userId,actor.getUserId(),request.reason()));
     }
     @PostMapping("/reservations") @Operation(summary="Reservar número permanentemente",description="Reserva não cria associado e impede emissão ou atribuição posterior. Revisão prévia obrigatória pelo administrador.")
     @ApiResponse(responseCode="201",description="Número reservado.")
+    @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_NUMBER_RESERVE')")
+    @RequiredPermission("MEMBERSHIP_MEMBER_NUMBER_RESERVE")
     public ResponseEntity<Void> reserve(@Valid @RequestBody MemberRegistryRequests.Assignment request,@AuthenticationPrincipal UserPrincipal actor) {
         service.reserve(request.membershipNumber(),actor.getUserId(),request.reason());return ResponseEntity.status(201).build();
     }
