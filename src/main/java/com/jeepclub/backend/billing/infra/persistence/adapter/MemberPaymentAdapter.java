@@ -30,8 +30,8 @@ public class MemberPaymentAdapter implements MemberPaymentRepository {
     @Override
     public List<MemberPayment> findByMemberChargeIdForUpdate(Long id) {
         return jpa.findByMemberChargeIdForUpdate(id).stream().map(entity -> {
-            entityManager.refresh(entity, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-            return mapper.toDomain(entity);
+            entityManager.detach(entity);
+            return mapper.toDomain(jpa.findWithLockingById(entity.getId()).orElseThrow());
         }).toList();
     }
     @Override
@@ -57,8 +57,8 @@ public class MemberPaymentAdapter implements MemberPaymentRepository {
     public Optional<MemberPayment> findByIdForUpdate(Long id) {
         return jpa.findWithLockingById(id)
                 .map(entity -> {
-                    entityManager.refresh(entity, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-                    return mapper.toDomain(entity);
+                    entityManager.detach(entity);
+                    return mapper.toDomain(jpa.findWithLockingById(id).orElseThrow());
                 });
     }
 

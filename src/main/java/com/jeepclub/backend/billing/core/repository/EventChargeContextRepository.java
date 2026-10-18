@@ -6,6 +6,7 @@ import java.util.Optional;
 
 public interface EventChargeContextRepository {
     Optional<EventChargeContext> find(Long eventId, Long definitionId);
+    Optional<EventChargeContext> findForUpdate(Long eventId, Long definitionId);
     List<EventChargeContext> findByEvent(Long eventId);
     void save(EventChargeContext context);
 }

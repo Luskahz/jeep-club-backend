@@ -54,8 +54,8 @@ class BillingEventBoundaryTest {
     }
     @Test void existingDebtIsReturnedWithoutNewWritesUnderDefinitionLock() {
         when(events.existsEventById(30L)).thenReturn(true); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
-        when(contexts.find(30L, 3L)).thenReturn(Optional.of(new EventChargeContext(30L, 3L, 5L, 4L)));
-        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle())); when(charges.findByChargeCycleIdAndUserId(4L, 10L)).thenReturn(Optional.of(charge()));
+        when(contexts.findForUpdate(30L, 3L)).thenReturn(Optional.of(new EventChargeContext(30L, 3L, 5L, 4L)));
+        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle())); when(charges.findByChargeCycleIdAndUserIdForUpdate(4L, 10L)).thenReturn(Optional.of(charge()));
         assertThat(service().ensureEventMemberCharge(30L, 3L, 10L, DUE.plusDays(5), 99L)).isEqualTo(2L);
         verify(charges, never()).save(any()); verify(cycles, never()).save(any()); verify(contexts, never()).save(any());
     }
@@ -78,7 +78,7 @@ class BillingEventBoundaryTest {
     @Test void existingClosedContextCannotReceiveAnotherDebtAndMissingEventHasControlledFailure() {
         assertThatThrownBy(() -> service().ensureAssignment(404L, 3L)).isInstanceOf(EventBillingException.class);
         when(events.existsEventById(30L)).thenReturn(true); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
-        when(contexts.find(30L, 3L)).thenReturn(Optional.of(new EventChargeContext(30L, 3L, 5L, 4L)));
+        when(contexts.findForUpdate(30L, 3L)).thenReturn(Optional.of(new EventChargeContext(30L, 3L, 5L, 4L)));
         var c = cycle(); c.finish(99L, NOW); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(c));
         assertThatThrownBy(() -> service().ensureEventMemberCharge(30L, 3L, 10L, DUE, 99L)).isInstanceOf(EventBillingException.class);
         verifyNoInteractions(charges);

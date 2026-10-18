@@ -6,5 +6,7 @@ import java.util.*;
 
 public interface EventChargeContextJpaRepository extends JpaRepository<EventChargeContextEntity, Long> {
     Optional<EventChargeContextEntity> findByEventIdAndChargeDefinitionId(Long eventId, Long definitionId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    Optional<EventChargeContextEntity> findWithLockingByEventIdAndChargeDefinitionId(Long eventId, Long chargeDefinitionId);
     List<EventChargeContextEntity> findByEventIdOrderByChargeDefinitionId(Long eventId);
 }

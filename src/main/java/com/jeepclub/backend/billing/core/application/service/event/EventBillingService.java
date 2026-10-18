@@ -62,7 +62,7 @@ public class EventBillingService implements EventBillingCommand, EventChargeCata
         requireEvent(eventId);
         // Lock an existing parent even before the context exists. Serializes first creation and increments.
         var definition = eligibleLocked(definitionId);
-        var context = contexts.find(eventId, definitionId).orElseGet(() -> {
+        var context = contexts.findForUpdate(eventId, definitionId).orElseGet(() -> {
             var assignment = assignment(eventId, definitionId);
             var cycle = cycles.save(ChargeCycle.generate(definition, "EVENT-" + UUID.randomUUID(), dueDate, actorId, Instant.now(clock)));
             var created = new EventChargeContext(eventId, definitionId, assignment.getId(), cycle.getId());
@@ -71,7 +71,7 @@ public class EventBillingService implements EventBillingCommand, EventChargeCata
         });
         var cycle = cycles.findByIdForUpdate(context.cycleId()).orElseThrow();
         if (!cycle.isGenerated()) throw new EventBillingException("Event charge cycle is closed.");
-        return charges.findByChargeCycleIdAndUserId(cycle.getId(), userId).orElseGet(() -> charges.save(
+        return charges.findByChargeCycleIdAndUserIdForUpdate(cycle.getId(), userId).orElseGet(() -> charges.save(
             MemberCharge.create(userId, definitionId, cycle.getId(), cycle.getChargeDefinitionDefaultAmountSnapshot(),
                 cycle.getDueDate(), cycle.getChargeDefinitionPaymentAcceptancePolicySnapshot(),
                 cycle.getChargeDefinitionLatePaymentGraceDaysSnapshot(), Instant.now(clock)))).getId();

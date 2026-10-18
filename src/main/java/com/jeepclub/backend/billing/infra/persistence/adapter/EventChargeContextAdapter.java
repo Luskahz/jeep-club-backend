@@ -14,6 +14,9 @@ public class EventChargeContextAdapter implements EventChargeContextRepository {
     public Optional<EventChargeContext> find(Long event, Long definition) {
         return jpa.findByEventIdAndChargeDefinitionId(event, definition).map(this::domain);
     }
+    public Optional<EventChargeContext> findForUpdate(Long event, Long definition) {
+        return jpa.findWithLockingByEventIdAndChargeDefinitionId(event, definition).map(this::domain);
+    }
     public List<EventChargeContext> findByEvent(Long event) {
         return jpa.findByEventIdOrderByChargeDefinitionId(event).stream().map(this::domain).toList();
     }
