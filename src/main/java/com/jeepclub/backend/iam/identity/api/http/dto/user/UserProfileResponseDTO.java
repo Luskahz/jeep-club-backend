@@ -9,12 +9,14 @@ public record UserProfileResponseDTO(
         @Schema(description = "Endereço residencial atual, ou null quando ausente.", nullable = true) UserProfileDataDTO.Address address,
         @Schema(description = "Derivada dos dados. true enquanto ocupação, local de trabalho ou endereço estiverem incompletos. "
                 + "Informativa; não bloqueia login ou onboarding.", requiredMode = Schema.RequiredMode.REQUIRED,
-                accessMode = Schema.AccessMode.READ_ONLY) boolean profileCompletionPending) {
-    public static UserProfileResponseDTO from(UserProfile profile) {
+                accessMode = Schema.AccessMode.READ_ONLY) boolean profileCompletionPending,
+        @Schema(description="Matr�cula vigente em Memberships, ou null.",nullable=true,example="027") String membershipNumber) {
+    public static UserProfileResponseDTO from(UserProfile profile) { return from(profile,null); }
+    public static UserProfileResponseDTO from(UserProfile profile,String membershipNumber) {
         var work = profile.workProfile();
         var address = profile.address();
         return new UserProfileResponseDTO(work == null ? null : new UserProfileDataDTO.Work(work.occupation(), work.workplace()),
                 address == null ? null : new UserProfileDataDTO.Address(address.postalCode(), address.street(), address.number(),
-                        address.complement(), address.neighborhood(), address.city(), address.state()), profile.profileCompletionPending());
+                        address.complement(), address.neighborhood(), address.city(), address.state()), profile.profileCompletionPending(),membershipNumber);
     }
 }

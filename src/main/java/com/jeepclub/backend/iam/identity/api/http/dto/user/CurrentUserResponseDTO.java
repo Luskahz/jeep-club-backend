@@ -42,15 +42,17 @@ public record CurrentUserResponseDTO(
         Instant updatedAt,
         @Schema(description = "Pendência informativa derivada do perfil profissional e endereço residencial. Não bloqueia acesso.",
                 requiredMode = Schema.RequiredMode.REQUIRED, accessMode = Schema.AccessMode.READ_ONLY)
-        boolean profileCompletionPending
+        boolean profileCompletionPending,
+        @Schema(description="Matrícula vigente resolvida em Memberships, ausente quando não associado. Nunca é um ID técnico.", example="027", nullable=true) String membershipNumber
 ) {
-    public static CurrentUserResponseDTO from(UserDetails user, boolean profileCompletionPending) {
+    public static CurrentUserResponseDTO from(UserDetails user, boolean profileCompletionPending) { return from(user,profileCompletionPending,null); }
+    public static CurrentUserResponseDTO from(UserDetails user, boolean profileCompletionPending, String membershipNumber) {
         Objects.requireNonNull(user, "user cannot be null");
         return new CurrentUserResponseDTO(
                 user.id(), user.name(), user.birthDate(), user.email(), user.cpf(), user.rg(),
                 user.phoneNumber(), user.profilePhotoStorageKey(),
                 user.administrativelyActive() ? UserStatus.ACTIVE : UserStatus.DISABLED,
-                user.createdAt(), user.disabledAt(), user.updatedAt(), profileCompletionPending
+                user.createdAt(), user.disabledAt(), user.updatedAt(), profileCompletionPending, membershipNumber
         );
     }
 }

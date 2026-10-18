@@ -62,14 +62,16 @@ public record AdminUserResponseDTO(
 
         @Schema(description = "Instante da última atualização.", example = "2026-06-01T12:00:00Z",
                 format = "date-time", nullable = true)
-        Instant updatedAt
+        Instant updatedAt,
+        @Schema(description="Matrícula vigente resolvida em Memberships, ausente quando não associado. Nunca é um ID técnico.", example="027", nullable=true) String membershipNumber
 ) {
-    public static AdminUserResponseDTO from(AdminUserResult result) {
+    public static AdminUserResponseDTO from(AdminUserResult result) { return from(result,null); }
+    public static AdminUserResponseDTO from(AdminUserResult result, String membershipNumber) {
         Objects.requireNonNull(result, "result cannot be null");
         return new AdminUserResponseDTO(
                 result.id(), result.name(), result.birthDate(), result.email(), result.cpf(),
                 result.rg(), result.phoneNumber(), result.profilePhotoStorageKey(), result.status(),
-                result.createdAt(), result.disabledAt(), result.updatedAt()
+                result.createdAt(), result.disabledAt(), result.updatedAt(), membershipNumber
         );
     }
 }

@@ -11,6 +11,7 @@ import java.util.*;
 public class UserExportService {
     private final AdminUserQueryRepository query;
     private final ExportRenderer renderer;
+    private final com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
     public ExportFile export(AdminUserFilter filter, ExportFormat format) {
         if(filter.id()!=null && query.findById(filter.id()).isEmpty()) throw new ExportException(ExportException.Reason.NOT_FOUND);
@@ -28,8 +29,11 @@ public class UserExportService {
         if(filter.updatedFrom()!=null) filters.add("Atualização desde: "+ExportValues.text(filter.updatedFrom()));
         if(filter.updatedTo()!=null) filters.add("Atualização até: "+ExportValues.text(filter.updatedTo()));
         if(filter.query()!=null) filters.add("Busca: "+filter.query());
-        return renderer.render(new ExportDocument("usuarios","Usuários",List.of("ID","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em"),filters,
-            sink -> ExportPages.read(offset->query.findAll(filter,EnumSet.allOf(AdminUserField.class),PageRequest.of(offset/ExportPages.CHUNK,ExportPages.CHUNK,Sort.by("id"))).getContent(),
-                u->sink.accept(ExportRow.of(u.id(),u.name(),u.birthDate(),u.email(),u.cpf(),u.rg(),u.phoneNumber(),u.profilePhotoStorageKey()!=null,u.status(),u.createdAt(),u.disabledAt(),u.updatedAt())))),format);
+        return renderer.render(new ExportDocument("usuarios","Usuários",List.of("ID","Matr�cula","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em"),filters,
+            sink -> ExportPages.read(offset -> {
+                var batch=query.findAll(filter,EnumSet.allOf(AdminUserField.class),PageRequest.of(offset/ExportPages.CHUNK,ExportPages.CHUNK,Sort.by("id"))).getContent();
+                var numbers=membershipNumbers.currentNumbers(batch.stream().map(u -> u.id()).toList());
+                return batch.stream().map(u -> ExportRow.of(u.id(),numbers.get(u.id()),u.name(),u.birthDate(),u.email(),u.cpf(),u.rg(),u.phoneNumber(),u.profilePhotoStorageKey()!=null,u.status(),u.createdAt(),u.disabledAt(),u.updatedAt())).toList();
+            },sink::accept)),format);
     }
 }
