@@ -37,7 +37,7 @@ public class AdminMemberController {
     @ModelAttribute
     void preventCaching(jakarta.servlet.http.HttpServletResponse response) { response.setHeader("Cache-Control","no-store"); }
     private final AdminMemberService service;
-    @GetMapping @Operation(summary="Listar registros de associados",description="Página zero-based. Ordenação por id, identityUserId, membershipNumber, createdAt ou updatedAt. Não inclui usuários ainda sem registro.")
+    @GetMapping @Operation(summary="Listar registros de associados",description="Página zero-based, tamanho padrão 20 e máximo 50. Ordenação por id, identityUserId, membershipNumber, createdAt ou updatedAt. Não inclui usuários ainda sem registro.")
     @ApiResponse(responseCode="200",description="Página de registros.")
     public PageResponse<MemberResponseDTO> list(@ParameterObject @SortDefault(sort="id") Pageable page) {
         checkPage(page); return PageResponse.from(service.list(page).map(MemberResponseDTO::from));
@@ -61,7 +61,8 @@ public class AdminMemberController {
     @GetMapping("/by-identity/{userId}/history") @Operation(summary="Consultar histórico de matrícula",description="Eventos confirmados em ordem decrescente de ID. Somente leitura autorizada.")
     @ApiResponse(responseCode="200",description="Página de auditoria.")
     public PageResponse<MemberAuditResponseDTO> history(@PathVariable @Positive Long userId,@ParameterObject Pageable page) {
-        checkPage(page);return PageResponse.from(service.history(userId,page).map(MemberAuditResponseDTO::from));
+        if(page.getPageSize()>50 || page.getOffset()>Integer.MAX_VALUE || page.getSort().stream().anyMatch(o -> !o.getProperty().equals("id"))) throw new MemberRegistryException(MemberRegistryException.Kind.INVALID);
+        return PageResponse.from(service.history(userId,PageRequest.of(page.getPageNumber(),page.getPageSize())).map(MemberAuditResponseDTO::from));
     }
     @PostMapping("/by-identity/{userId}/generate") @Operation(summary="Emitir matrícula na faixa homologada",description="Só funciona quando emissão está explicitamente habilitada e configurada. Repetição para identidade já vinculada retorna o vínculo vigente.")
     @ApiResponse(responseCode="200",description="Matrícula emitida ou existente.")
@@ -75,6 +76,6 @@ public class AdminMemberController {
     }
     private void checkPage(Pageable page) {
         var allowed=java.util.Set.of("id","identityUserId","membershipNumber","createdAt","updatedAt");
-        if(page.getPageSize()>100 || page.getSort().stream().anyMatch(o -> !allowed.contains(o.getProperty()))) throw new MemberRegistryException(MemberRegistryException.Kind.INVALID);
+        if(page.getPageSize()>50 || page.getOffset()>Integer.MAX_VALUE || page.getSort().stream().anyMatch(o -> !allowed.contains(o.getProperty()))) throw new MemberRegistryException(MemberRegistryException.Kind.INVALID);
     }
 }

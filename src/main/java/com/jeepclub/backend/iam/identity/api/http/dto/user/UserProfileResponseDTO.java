@@ -10,7 +10,7 @@ public record UserProfileResponseDTO(
         @Schema(description = "Derivada dos dados. true enquanto ocupação, local de trabalho ou endereço estiverem incompletos. "
                 + "Informativa; não bloqueia login ou onboarding.", requiredMode = Schema.RequiredMode.REQUIRED,
                 accessMode = Schema.AccessMode.READ_ONLY) boolean profileCompletionPending,
-        @Schema(description="Matr�cula vigente em Memberships, ou null.",nullable=true,example="027") String membershipNumber) {
+        @Schema(description="Matrícula vigente em Memberships, ou null.",nullable=true,example="027") String membershipNumber) {
     public static UserProfileResponseDTO from(UserProfile profile) { return from(profile,null); }
     public static UserProfileResponseDTO from(UserProfile profile,String membershipNumber) {
         var work = profile.workProfile();

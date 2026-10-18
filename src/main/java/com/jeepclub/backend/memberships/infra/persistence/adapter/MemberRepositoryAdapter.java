@@ -46,7 +46,7 @@ public class MemberRepositoryAdapter implements MemberRepository {
         var e=new MembershipNumberClaimEntity(); e.setClaimKey(n.claimKey()); e.setMembershipNumber(n.value());
         e.setMemberId(memberId); e.setActorUserId(actor); e.setClaimedAt(now); e.setReason(reason);
         try { entityManager.persist(e); entityManager.flush(); }
-        catch (DataIntegrityViolationException conflict) { throw new MemberRegistryException(MemberRegistryException.Kind.CONFLICT); }
+        catch (DataIntegrityViolationException | org.hibernate.exception.ConstraintViolationException | jakarta.persistence.EntityExistsException conflict) { throw new MemberRegistryException(MemberRegistryException.Kind.CONFLICT); }
     }
     public void audit(MemberRegistryAudit a) {
         var e=new MemberRegistryAuditEntity(); e.setMemberId(a.memberId()); e.setPreviousNumber(a.previousNumber());

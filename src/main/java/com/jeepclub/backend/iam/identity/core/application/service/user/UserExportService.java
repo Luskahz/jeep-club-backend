@@ -29,7 +29,7 @@ public class UserExportService {
         if(filter.updatedFrom()!=null) filters.add("Atualização desde: "+ExportValues.text(filter.updatedFrom()));
         if(filter.updatedTo()!=null) filters.add("Atualização até: "+ExportValues.text(filter.updatedTo()));
         if(filter.query()!=null) filters.add("Busca: "+filter.query());
-        return renderer.render(new ExportDocument("usuarios","Usuários",List.of("ID","Matr�cula","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em"),filters,
+        return renderer.render(new ExportDocument("usuarios","Usuários",List.of("ID","Matrícula","Nome","Data de nascimento","E-mail","CPF","RG","Telefone","Possui foto","Situação","Criado em","Desativado em","Atualizado em"),filters,
             sink -> ExportPages.read(offset -> {
                 var batch=query.findAll(filter,EnumSet.allOf(AdminUserField.class),PageRequest.of(offset/ExportPages.CHUNK,ExportPages.CHUNK,Sort.by("id"))).getContent();
                 var numbers=membershipNumbers.currentNumbers(batch.stream().map(u -> u.id()).toList());

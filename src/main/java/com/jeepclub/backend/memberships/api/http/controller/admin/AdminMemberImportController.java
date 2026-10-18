@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import lombok.RequiredArgsConstructor;
 import com.jeepclub.backend.memberships.api.http.dto.member.MemberRegistryRequests;
-import com.jeepclub.backend.memberships.core.application.result.MemberImportReport;
+import com.jeepclub.backend.memberships.api.http.dto.member.MemberImportReportDTO;
 import com.jeepclub.backend.memberships.core.application.service.member.MemberRegistryImportService;
 @RestController @RequestMapping(value="/admin/members/imports",produces=MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor @Tag(name="Membership Registry")
@@ -34,12 +34,12 @@ public class AdminMemberImportController {
     private final MemberRegistryImportService service;
     @PostMapping("/dry-run") @Operation(summary="Simular conciliação histórica sem escrita",description="Até 500 vínculos explicitamente verificados. Retorna índices e outcomes sanitizados e comprovante válido por 15 minutos, para este administrador e fonte exata.")
     @ApiResponse(responseCode="200",description="Simulação sem escrita e comprovante.")
-    public MemberImportReport dryRun(@Valid @RequestBody MemberRegistryRequests.ImportRequest request,@AuthenticationPrincipal UserPrincipal actor) {
-        return service.dryRun(request.rows().stream().map(MemberRegistryRequests.ImportRow::command).toList(),actor.getUserId(),request.reason());
+    public MemberImportReportDTO dryRun(@Valid @RequestBody MemberRegistryRequests.ImportRequest request,@AuthenticationPrincipal UserPrincipal actor) {
+        return MemberImportReportDTO.from(service.dryRun(request.rows().stream().map(MemberRegistryRequests.ImportRow::command).toList(),actor.getUserId(),request.reason()));
     }
     @PostMapping("/apply") @Operation(summary="Aplicar conciliação previamente simulada",description="Exige dryRunToken da mesma fonte, motivo e ator. Revalida conflitos. Cada vínculo é confirmado em transação independente com auditoria. Reexecutar pendências requer novo dry-run.")
     @ApiResponse(responseCode="200",description="Relatório por índice, incluindo aplicação parcial, conflitos e vínculos idempotentes.")
-    public MemberImportReport apply(@Valid @RequestBody MemberRegistryRequests.ImportRequest request,@AuthenticationPrincipal UserPrincipal actor) {
-        return service.apply(request.rows().stream().map(MemberRegistryRequests.ImportRow::command).toList(),actor.getUserId(),request.reason(),request.dryRunToken());
+    public MemberImportReportDTO apply(@Valid @RequestBody MemberRegistryRequests.ImportRequest request,@AuthenticationPrincipal UserPrincipal actor) {
+        return MemberImportReportDTO.from(service.apply(request.rows().stream().map(MemberRegistryRequests.ImportRow::command).toList(),actor.getUserId(),request.reason(),request.dryRunToken()));
     }
 }
