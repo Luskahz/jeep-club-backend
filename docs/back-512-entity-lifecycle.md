@@ -1,6 +1,6 @@
-# BACK-512 — Lifecycle dos seis cadastros (em implementação)
+# BACK-512 — Lifecycle dos seis cadastros
 
-Base temporária: BACK-510, PR #106, `86573ea6d0803c7407e739c1b271fc636047eb38`. Cadeia: develop → BACK-460 → BACK-510 → BACK-512 → BACK-523 → BACK-524 → BACK-525. Este documento ainda não constitui evidência de conclusão; os gates e a matriz de aceite serão registrados após execução.
+Base temporária: BACK-510, PR #106, `86573ea6d0803c7407e739c1b271fc636047eb38`. Cadeia: develop → BACK-460 → BACK-510 → BACK-512 → BACK-523 → BACK-524 → BACK-525. Código funcional e validações locais registrados nesta entrega. A revisão humana e o resultado do CI do HEAD publicado são acompanhados na PR; este documento não autoriza merge ou deploy.
 
 ## Decisões e matriz de transições
 
@@ -31,9 +31,9 @@ Hibernate continua em validate e Flyway governa o schema. A evolução deve ampl
 
 Não há alteração de vocabulário de MembershipApplication, Authentication, Credential, Session, RefreshToken, MemberCharge, MemberPayment, Refund, ChargeCycle, Event ou Publication.
 
-## Validação e rollout pendentes
+## Validação e rollout
 
-Antes da publicação: testes dos seis agregados, HTTP/permissions/ownership/ROOT, auditoria/rollback, leitura após arquivamento, exclusões admissíveis e impeditivas, dados legados/upgrade/reexecução controlada, concorrência real em MySQL, OpenAPI/filtros/exports e os três gates completos. A interpretação adotada é conservadora para retenção e integridade; impedimentos não autorizam cascata destrutiva.
+Foram executados testes dos seis agregados, HTTP/permissions/ownership/ROOT, auditoria/rollback, leitura após arquivamento, exclusões admissíveis e impeditivas, dados legados/upgrade/reexecução controlada, concorrência real em MySQL, OpenAPI/filtros/exports e os três gates completos. Os detalhes e os resultados das tentativas corrigidas estão em [back-512-test-evidence.json](back-512-test-evidence.json). A interpretação adotada é conservadora para retenção e integridade; impedimentos não autorizam cascata destrutiva.
 
 O futuro rollout exige parada coordenada de escrita, backup/restauração verificada, frontend adaptado aos novos status, migrations antes do código incompatível com valores legados e startup com validate. Downgrade pode exigir restauração/forward fix após uso dos novos estados/históricos; não usar repair/clean. Preservar instruções de #103/#104, emissão/importação Registry desabilitadas e nenhuma operação na VPS nesta missão.
 
@@ -92,7 +92,7 @@ Eventos com publicação operacional ou referência órfã sem snapshot impedem 
 
 ## Rastreabilidade das subtarefas
 
-Estado de publicação ainda pendente dos gates finais e do CI. A coluna abaixo registra o código e as verificações correspondentes, sem substituir a evidência de execução final.
+As nove subtarefas possuem implementação e validação local correspondentes. O CI do HEAD publicado e a revisão humana permanecem registrados na PR; a matriz não autoriza integração.
 
 | Jira | Implementação e evidência correspondente |
 | --- | --- |
@@ -105,3 +105,17 @@ Estado de publicação ainda pendente dos gates finais e do CI. A coluna abaixo 
 | [BACK-519](https://jeep-club-developers.atlassian.net/browse/BACK-519) | Exclusão restrita de ChargeDefinition com snapshot completo, guards de configuração/ciclos/assignments e locks dos escritores; estados financeiros preservados |
 | [BACK-520](https://jeep-club-developers.atlassian.net/browse/BACK-520) | Novos comandos e consultas de histórico, 20 permissions sem grants CUSTOM, RFC 9457, OpenAPI, ownership e orientação frontend |
 | [BACK-521](https://jeep-club-developers.atlassian.net/browse/BACK-521) | V5 incremental, preflight e dados legados, reexecução controlada, Hibernate validate, compatibilidade V4/Registry, testes e checklist de rollout |
+
+## Gates locais observados
+
+Código: `53de5981585ff8bff910e2b28b0b6891eb541e84`; commit posterior acrescenta apenas documentação/evidência.
+
+| Gate | Testes | Falhas | Erros | Skips |
+| --- | ---: | ---: | ---: | ---: |
+| Maven verify completo | 2013 | 0 | 0 | 1 |
+| Perfil MySQL completo | 148 | 0 | 0 | 0 |
+| Migration futura, V6 somente no Git archive | 148 | 0 | 0 | 0 |
+
+O skip é o teste preexistente de capacidade de symlink no Windows. As contagens dos gates repetem cenários e não devem ser somadas como casos únicos. Foram acrescentados 13 testes de domínio e 23 cenários integrados dos seis cadastros; o MySQL repete esses cenários e acrescenta sete disputas/snapshots, além de 17 cenários de migrations/schema no perfil completo. Todos os dados e bancos de validação são locais e sintéticos.
+
+Falhas intermediárias identificaram mocks desatualizados para locks, fixtures de dois estados, a chave do subtype UserChargeAssignment, tratamento restritivo demais de Events já historizados, remoção em lote de RolePermissions e documentação incompleta da resposta 200 de histórico. As correções foram verificadas nos gates finais; os testes e os critérios de aceite foram preservados.

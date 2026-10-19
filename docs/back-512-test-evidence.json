@@ -5,9 +5,9 @@
   "baseBranch": "feat/back-510-media-orchestration",
   "base": "86573ea6d0803c7407e739c1b271fc636047eb38",
   "previousPullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/106",
-  "codeCommit": null,
+  "codeCommit": "53de5981585ff8bff910e2b28b0b6891eb541e84",
   "publication": {
-    "result": "not_published"
+    "tracking": "Pull request and exact published-head CI results are recorded in the PR description and consolidated sprint audit. This file records local validation of the code commit."
   },
   "environment": {
     "java": "Microsoft OpenJDK17.0.18",
@@ -41,7 +41,14 @@
     {
       "name": "Future migration",
       "command": "bash deploy/test-future-migration.sh (Windows adapter; committed Git archive only)",
-      "result": "not_run"
+      "log": "target/back-512-forward-final.log",
+      "result": "passed",
+      "tests": 148,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "logSha256": "2ce84e71f9c7c9b5dd829ec155741d3089d73092f06e384e803ebc4ba7368f84",
+      "temporaryMigration": "V6 in isolated Git archive only; not part of this branch or release"
     }
   ],
   "windowsSkip": "Pre-existing symlink capability test; no new disabling or skip introduced.",
