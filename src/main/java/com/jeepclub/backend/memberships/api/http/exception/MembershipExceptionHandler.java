@@ -103,6 +103,11 @@ public class MembershipExceptionHandler extends ApiExceptionHandler {
         return buildErrorResponse("MEMBERSHIP_EMAIL_REQUIRED", ex.getMessage(), HttpStatus.CONFLICT);
     }
 
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentChange(org.springframework.dao.ConcurrencyFailureException ex) {
+        return buildErrorResponse("MEMBERSHIP_CONCURRENT_CHANGE", "Membership changed concurrently; retry the request.", HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(MembershipFirstAccessConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleFirstAccessConflict(MembershipFirstAccessConflictException ex) {
         return buildErrorResponse("MEMBERSHIP_FIRST_ACCESS_CONFLICT", ex.getMessage(), HttpStatus.CONFLICT);

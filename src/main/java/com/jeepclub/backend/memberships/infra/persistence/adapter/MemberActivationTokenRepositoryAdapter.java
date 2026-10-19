@@ -16,6 +16,7 @@ import java.time.Instant;
 public class MemberActivationTokenRepositoryAdapter implements MemberActivationTokenRepository {
 
     private final MemberActivationTokenJpaRepository jpaRepository;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     public Optional<Long> findApplicationIdByTokenHash(String tokenHash) {
@@ -37,8 +38,12 @@ public class MemberActivationTokenRepositoryAdapter implements MemberActivationT
 
     @Override
     public Optional<MemberActivationToken> findByTokenHashForUpdate(String tokenHash) {
-        return jpaRepository.findByTokenHashForUpdate(tokenHash)
-                .map(MemberActivationTokenMapper::toDomain);
+        return jpaRepository.findByTokenHashForUpdate(tokenHash).map(locked -> {
+            entityManager.detach(locked);
+            var current = entityManager.find(com.jeepclub.backend.memberships.infra.persistence.entity.MemberActivationTokenEntity.class,
+                    locked.getId(), jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            return MemberActivationTokenMapper.toDomain(current);
+        });
     }
 
     @Override

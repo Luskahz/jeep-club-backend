@@ -35,6 +35,8 @@ public class MemberActivationTokenService {
     private final CompletePendingFirstAccessPort completeFirstAccessPort;
     private final ActivationRecipientPort activationRecipientPort;
     private final MemberActivationMailSender mailSender;
+    private final com.jeepclub.backend.memberships.core.port.MemberActivationLinkFactory linkFactory;
+    private final com.jeepclub.backend.memberships.core.port.PendingMembershipAuthentication pendingAuthentication;
     private final Clock clock;
     private final com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService memberRegistry;
 
@@ -63,16 +65,14 @@ public class MemberActivationTokenService {
         }
         activationRecipientPort.findByIdentityId(candidateApplication.getCreatedUserId())
                 .orElseThrow(() -> new MembershipFirstAccessConflictException("Created Identity User was not found."));
-        MemberActivationToken token = memberActivationTokenRepository
-                .findByTokenHashForUpdate(tokenHash)
+        MembershipApplication application = requireApprovedApplicationForUpdate(applicationId);
+        if (!java.util.Objects.equals(application.getCreatedUserId(), candidateApplication.getCreatedUserId())) {
+            throw new MembershipFirstAccessConflictException("Membership provisioning changed concurrently.");
+        }
+        MemberActivationToken token = memberActivationTokenRepository.findByTokenHashForUpdate(tokenHash)
                 .orElseThrow(MemberActivationTokenNotFoundException::new);
         Instant now = Instant.now(clock);
         token.validateOrThrow(now);
-
-        MembershipApplication application = requireApprovedApplication(token.getApplicationId());
-        if (application.getCreatedUserId() == null) {
-            throw new MembershipFirstAccessConflictException("Approved membership application has no created User.");
-        }
 
         completeFirstAccessPort.complete(application.getCreatedUserId(), newPassword);
         // Authentication may wait for its account lock. Expiry here must roll back its changes too.
@@ -86,7 +86,7 @@ public class MemberActivationTokenService {
     }
 
     @Transactional
-    public void issueAndSend(MembershipApplication application) {
+    public String issueAndSend(MembershipApplication application) {
         if (application.getStatus() != MembershipApplicationStatus.APPROVED
                 || application.getCreatedUserId() == null) {
             throw new MembershipFirstAccessConflictException("Membership application is not ready for activation.");
@@ -98,6 +98,11 @@ public class MemberActivationTokenService {
             throw new MembershipEmailRequiredException();
         }
 
+        MembershipApplication current = requireApprovedApplicationForUpdate(application.getId());
+        if (!java.util.Objects.equals(current.getCreatedUserId(), application.getCreatedUserId())) {
+            throw new MembershipFirstAccessConflictException("Membership provisioning changed concurrently.");
+        }
+        pendingAuthentication.requirePending(current.getCreatedUserId());
         Instant now = Instant.now(clock);
         memberActivationTokenRepository.invalidateAllByApplicationId(application.getId(), now);
         String rawToken = tokenGenerator.generate();
@@ -108,7 +113,24 @@ public class MemberActivationTokenService {
                 now
         );
         memberActivationTokenRepository.save(token);
-        mailSender.sendActivationLink(recipient.email(), recipient.name(), rawToken);
+        try {
+            String link = linkFactory.create(rawToken);
+            mailSender.sendActivationLink(recipient.email(), recipient.name(), link);
+            return link;
+        } catch (RuntimeException providerFailure) {
+            // MailSendException may retain SimpleMailMessage (including the bearer link).
+            // Do not let it, its cause, or suppressed exceptions reach generic HTTP logging.
+            throw new com.jeepclub.backend.memberships.core.application.exception.MembershipInvitationDeliveryException();
+        }
+    }
+
+    private MembershipApplication requireApprovedApplicationForUpdate(Long id) {
+        MembershipApplication application = applicationRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new MembershipApplicationNotFoundException(id));
+        if (application.getStatus() != MembershipApplicationStatus.APPROVED) {
+            throw new MembershipFirstAccessConflictException("Membership application is not approved for activation.");
+        }
+        return application;
     }
 
     private MembershipApplication requireApprovedApplication(Long applicationId) {

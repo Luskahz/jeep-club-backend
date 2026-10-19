@@ -205,7 +205,7 @@ class MembershipAdminSecurityIntegrationTest {
         when(adminMembershipApplicationService.approveWithTemporaryPassword(eq(1L), eq(102L)))
                 .thenReturn(new PendingFirstAccessUser(200L, "Temp#Pass"));
         when(adminMembershipApplicationService.approveWithAccessLink(eq(1L), eq(102L)))
-                .thenReturn(new PendingFirstAccessIdentity(200L));
+                .thenReturn(new com.jeepclub.backend.memberships.core.port.AccessLinkApproval(200L, "https://app.example/activate?token=test-bearer"));
 
         mockMvc.perform(post("/admin/membership-applications/1/approve/temporary-password")
                         .header("Authorization", "Bearer token-approve"))

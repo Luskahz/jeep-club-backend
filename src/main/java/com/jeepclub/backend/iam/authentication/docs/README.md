@@ -166,3 +166,13 @@ Validações de expiração nos caminhos com lock usam o Clock depois da espera.
 A conclusão de challenge revalida após adquirir a solicitação de recuperação;
 Membership revalida o convite após o efeito em Authentication e reverte toda a
 transação se o token tiver expirado durante essa etapa.
+
+## Aprovação reversível de Membership (BACK-523)
+
+O adapter de `PendingMembershipAuthentication` verifica a credencial real sob
+lock; conta ausente, credencial concluída, troca de senha ou login definitivo
+impedem reversão. O lock público de Identity precede o lock da solicitação e
+serializa rejeição, convite/reenvio, ativação por link e primeiro acesso por senha
+provisória. A exclusão segura de Identity continua proprietária da revogação
+integral e recusa qualquer histórico de Session, preservando evidência de acesso.
+A criação administrativa independente da BACK-511 mantém seus contratos.

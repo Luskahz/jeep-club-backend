@@ -6,7 +6,7 @@ import com.jeepclub.backend.memberships.core.application.exception.MembershipApp
 import com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationService;
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
-import com.jeepclub.backend.memberships.core.port.PendingFirstAccessIdentity;
+import com.jeepclub.backend.memberships.core.port.AccessLinkApproval;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler;
@@ -166,11 +166,12 @@ class AdminMembershipApplicationControllerTest {
     @DisplayName("POST /admin/membership-applications/{id}/approve/access-link returns access link result")
     void approveWithAccessLinkReturnsSuccess() throws Exception {
         when(adminMembershipApplicationService.approveWithAccessLink(1L, ADMIN_USER_ID))
-                .thenReturn(new PendingFirstAccessIdentity(456L));
+                .thenReturn(new AccessLinkApproval(456L, "https://app.example/activate?token=test-bearer"));
 
         mockMvc.perform(post("/admin/membership-applications/1/approve/access-link"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(456L));
+                .andExpect(jsonPath("$.userId").value(456L))
+                .andExpect(header().string("Cache-Control", "no-store"));
 
         verify(adminMembershipApplicationService).approveWithAccessLink(1L, ADMIN_USER_ID);
     }

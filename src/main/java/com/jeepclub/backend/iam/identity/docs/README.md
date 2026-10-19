@@ -319,3 +319,12 @@ listagem de associados para ordenação global. CSV/PDF priorizam matrícula em
 layout MEMBER; TECHNICAL preserva a ordem/cabeçalhos anteriores para integrações.
 Disable/enable e alterações cadastrais preservam o vínculo. Não existe endpoint
 atual de exclusão física; a FK restritiva será considerada pela BACK-512.
+
+## Reversão de onboarding (BACK-523)
+
+Memberships reutiliza `UserAdministration.delete` após verificar primeiro acesso
+pendente e gravar a rejeição na mesma transação. O contrato de exclusão normaliza
+impedimentos privados de lifecycle em `UserDeletionConflictException` público;
+o HTTP administrativo devolve `USER_DELETION_CONFLICT` (409) para esses deletes.
+Member/FKs, finanças, histórico de sessão e retenções continuam impeditivos.
+A ausência de Authentication não autoriza reversão de aprovação em Memberships.
