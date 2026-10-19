@@ -52,7 +52,9 @@ class DependentServiceTest {
         service = new DependentService(
                 dependentRepository,
                 dependentUserPort,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaCommand.class),
+                org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.PrivateImageMediaQuery.class)
         , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 

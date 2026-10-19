@@ -70,6 +70,7 @@ class MySqlMigrationIT {
         jpa(expected, Integer.MAX_VALUE, "create-only");
         registryPhysicalConstraints(expected);
         lifecyclePhysicalConstraints(expected);
+        dependentPhotoPhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -349,6 +350,34 @@ class MySqlMigrationIT {
         }
     }
     private static void validateJpa(String name) throws Exception { jpa(name, Integer.MAX_VALUE, "validate"); }
+    private static void dependentPhotoPhysicalConstraints(String name) throws Exception {
+        try (var c=connection(name);var st=c.createStatement();var row=st.executeQuery("select column_type from information_schema.columns where table_schema=database() and table_name='authorization_permissions' and column_name='code'")) {
+            assertThat(row.next()).isTrue();String old=row.getString(1);
+            st.execute("alter table authorization_permissions modify code "+old.substring(0,old.length()-1)+",'DEPENDENTS_DEPENDENT_PHOTO_UPDATE') not null");
+        }
+    }
+
+    @Test void dependentPhotoMigrationPreservesLiveAndHistoricalDataAndReplaysWithoutLosingReferences() throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration")
+                .target("6").cleanDisabled(true).load().migrate();
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("INSERT INTO dependents_dependent(id,name,cpf,birth_date,relationship_type,user_id,status,created_at) VALUES(901,'Synthetic live photo fixture','00000000000','2015-01-01','CHILD',900,'ACTIVE',UTC_TIMESTAMP(6))");
+            st.executeUpdate("INSERT INTO dependents_dependent_history(dependent_id,name,cpf,birth_date,relationship_type,user_id,status,deleted_by_user_id,created_at,deleted_at) VALUES(902,'Synthetic history photo fixture','00000000001','2015-01-01','CHILD',900,'INACTIVE',900,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))");
+        }
+        var columns=fixtureColumns(db,"dependents_dependent");var before=fixtureRows(db,"dependents_dependent",columns);
+        var historyColumns=fixtureColumns(db,"dependents_dependent_history");var historyBefore=fixtureRows(db,"dependents_dependent_history",historyColumns);
+        flyway(db).migrate();validateJpa(db);
+        assertThat(fixtureRows(db,"dependents_dependent",columns)).isEqualTo(before);
+        assertThat(fixtureRows(db,"dependents_dependent_history",historyColumns)).isEqualTo(historyBefore);
+        try(var c=connection(db);var st=c.createStatement()) {
+            try(var row=st.executeQuery("SELECT photo_storage_key FROM dependents_dependent WHERE id=901")) {assertThat(row.next()).isTrue();assertThat(row.getString(1)).isNull();}
+            st.executeUpdate("UPDATE dependents_dependent SET photo_storage_key='private-images/2026/10/19/550e8400-e29b-41d4-a716-446655440000.png' WHERE id=901");
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V7__dependent_private_photo.sql"));
+            try(var row=st.executeQuery("SELECT photo_storage_key FROM dependents_dependent WHERE id=901")) {assertThat(row.next()).isTrue();assertThat(row.getString(1)).startsWith("private-images/");}
+        }
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+    }
     private static void jpa(String name, int version, String action) throws Exception {
         var registry = SchemaMappings.registry(Map.of(
                 "hibernate.connection.url", url(name), "hibernate.connection.username", MYSQL.getUsername(),

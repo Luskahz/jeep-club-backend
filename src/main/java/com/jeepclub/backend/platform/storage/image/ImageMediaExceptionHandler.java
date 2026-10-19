@@ -15,7 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
         "com.jeepclub.backend.platform.storage.image",
         "com.jeepclub.backend.iam.identity.api.http.controller",
         "com.jeepclub.backend.vehicles.api.http.controller",
-        "com.jeepclub.backend.tools.api.http.controller"
+        "com.jeepclub.backend.tools.api.http.controller",
+        "com.jeepclub.backend.dependents.api.http.controller"
 })
 public class ImageMediaExceptionHandler extends ApiExceptionHandler {
     @ExceptionHandler(com.jeepclub.backend.shared.storage.exception.StorageOperationException.class)

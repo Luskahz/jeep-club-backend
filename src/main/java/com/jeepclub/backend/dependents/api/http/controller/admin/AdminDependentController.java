@@ -62,7 +62,7 @@ public class AdminDependentController {
         List<DependentResponseDTO> response = adminDependentService
                 .findAllByUserId(userId)
                 .stream()
-                .map(DependentResponseDTO::from)
+                .map(DependentResponseDTO::fromAdmin)
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -106,7 +106,7 @@ public class AdminDependentController {
             @PathVariable Long id
     ) {
         return ResponseEntity.ok(
-                DependentResponseDTO.from(
+                DependentResponseDTO.fromAdmin(
                         adminDependentService.findByUserIdAndId(
                                 userId,
                                 id
@@ -123,7 +123,7 @@ public class AdminDependentController {
     public ResponseEntity<DependentResponseDTO> disable(@PathVariable @jakarta.validation.constraints.Positive Long userId,
             @PathVariable @jakarta.validation.constraints.Positive Long id,
             @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
-        return ResponseEntity.ok(DependentResponseDTO.from(lifecycle.disable(id,userId,principal.getUserId())));
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.disable(id,userId,principal.getUserId())));
     }
 
     @PatchMapping("/{id}/enable")
@@ -134,7 +134,7 @@ public class AdminDependentController {
     public ResponseEntity<DependentResponseDTO> enable(@PathVariable @jakarta.validation.constraints.Positive Long userId,
             @PathVariable @jakarta.validation.constraints.Positive Long id,
             @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
-        return ResponseEntity.ok(DependentResponseDTO.from(lifecycle.enable(id,userId,principal.getUserId())));
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.enable(id,userId,principal.getUserId())));
     }
 
     @PatchMapping("/{id}/archive")
@@ -145,7 +145,7 @@ public class AdminDependentController {
     public ResponseEntity<DependentResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long userId,
             @PathVariable @jakarta.validation.constraints.Positive Long id,
             @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
-        return ResponseEntity.ok(DependentResponseDTO.from(lifecycle.archive(id,userId,principal.getUserId())));
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.archive(id,userId,principal.getUserId())));
     }
 
     @PatchMapping("/{id}/unarchive")
@@ -156,7 +156,7 @@ public class AdminDependentController {
     public ResponseEntity<DependentResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long userId,
             @PathVariable @jakarta.validation.constraints.Positive Long id,
             @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
-        return ResponseEntity.ok(DependentResponseDTO.from(lifecycle.unarchive(id,userId,principal.getUserId())));
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.unarchive(id,userId,principal.getUserId())));
     }
 
     @DeleteMapping("/{id}")

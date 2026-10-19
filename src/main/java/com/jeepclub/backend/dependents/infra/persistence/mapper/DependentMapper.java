@@ -20,6 +20,7 @@ public class DependentMapper {
         entity.setBirthDate(domain.getBirthDate());
         entity.setRelationshipType(domain.getRelationshipType());
         entity.setPhoneNumber(domain.getPhoneNumber());
+        entity.setPhotoStorageKey(domain.getPhotoStorageKey());
         entity.setUserId(domain.getUserId());
         entity.setStatus(domain.getStatus());
         entity.setCreatedAt(domain.getCreatedAt());
@@ -45,7 +46,8 @@ public class DependentMapper {
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                entity.getArchivedAt()
+                entity.getArchivedAt(),
+                entity.getPhotoStorageKey()
         );
     }
 }

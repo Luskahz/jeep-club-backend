@@ -17,12 +17,21 @@ public class TransactionalImageMediaCommand implements ImageMediaCommand {
     private final FileStorage storage;
 
     @Override public String storeInTransaction(ImageUpload image) {
+        return store(image, false);
+    }
+
+    @Override public String storePrivateInTransaction(ImageUpload image) {
+        return store(image, true);
+    }
+
+    private String store(ImageUpload image, boolean privateImage) {
         Objects.requireNonNull(image, "image cannot be null");
         if (!TransactionSynchronizationManager.isActualTransactionActive()
                 || !TransactionSynchronizationManager.isSynchronizationActive()) {
             throw new IllegalStateException("Image upload requires an active database transaction.");
         }
-        String freshKey = images.store(image.filename(), image.contentType(), image.content());
+        String freshKey = privateImage ? images.storePrivate(image.filename(), image.contentType(), image.content())
+                : images.store(image.filename(), image.contentType(), image.content());
         try {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override public void afterCompletion(int status) {

@@ -141,3 +141,19 @@ Para adicionar um provider real no futuro:
 
 Não é necessário alterar os consumidores nem criar outra abstração. Um provider
 só deve ser anunciado quando seu adapter funcional existir.
+
+## Imagens privadas — BACK-524
+
+O mesmo ImageMediaCommand oferece storePrivateInTransaction(ImageUpload), com
+validação e compensação compartilhadas e namespace privado no mesmo FileStorage.
+Não há outro provider/root. ImageReference e o resolvedor HTTP público continuam
+aceitando somente images/. PrivateImageReference valida private-images/ e a query
+interna PrivateImageMediaQuery só pode ser chamada depois da autorização no contexto
+consumidor; seu resultado contém somente MIME/bytes, sem chave ou path. Dependents
+faz essa autorização por titular/READ, registra auditoria e responde no-store.
+
+O namespace disjunto torna órfãos de rollback inacessíveis na API global mesmo se
+uma linha do banco não existir. Substituição/desassociação/exclusão não removem
+arquivos antigos compartilhados. Conferir no rollout que nenhum proxy/CDN serve
+o volume diretamente e que acesso ao volume/backup é restrito. Esta missão não
+inspeciona ou altera a configuração privada da VPS.

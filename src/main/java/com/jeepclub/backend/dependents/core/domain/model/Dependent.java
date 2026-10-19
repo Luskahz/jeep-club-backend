@@ -21,6 +21,7 @@ public class Dependent {
     private LocalDate birthDate;
     private RelationshipType relationshipType;
     private String phoneNumber;
+    private String photoStorageKey;
     private Long userId;
 
     private DependentStatus status;
@@ -99,6 +100,12 @@ public class Dependent {
             Instant updatedAt,
             Instant archivedAt
     ) {
+        return reconstitute(id,name,cpf,birthDate,relationshipType,phoneNumber,userId,status,createdAt,updatedAt,archivedAt,null);
+    }
+
+    public static Dependent reconstitute(Long id, String name, String cpf, LocalDate birthDate,
+            RelationshipType relationshipType, String phoneNumber, Long userId, DependentStatus status,
+            Instant createdAt, Instant updatedAt, Instant archivedAt, String photoStorageKey) {
         if ((status == DependentStatus.ARCHIVED) != (archivedAt != null)) {
             throw new IllegalArgumentException("Archived state requires its archival timestamp only.");
         }
@@ -154,6 +161,7 @@ public class Dependent {
         dependent.updatedAt = updatedAt;
 
         dependent.archivedAt = archivedAt;
+        dependent.photoStorageKey = photoStorageKey == null ? null : com.jeepclub.backend.shared.storage.PrivateImageReference.require(photoStorageKey);
         return dependent;
     }
 
@@ -186,6 +194,16 @@ public class Dependent {
         this.relationshipType = relationshipType;
         this.phoneNumber = normalizePhoneNumber(phoneNumber);
         this.updatedAt = now;
+    }
+
+    public boolean changePhoto(String storageKey, Instant now) {
+        if (!isActive()) throw new DependentLifecycleConflictException("Only active dependents can change photos.");
+        validateMutationTime(now);
+        String reference = storageKey == null ? null : com.jeepclub.backend.shared.storage.PrivateImageReference.require(storageKey);
+        if (Objects.equals(photoStorageKey, reference)) return false;
+        photoStorageKey = reference;
+        updatedAt = now;
+        return true;
     }
 
     public void disable(Instant now) {

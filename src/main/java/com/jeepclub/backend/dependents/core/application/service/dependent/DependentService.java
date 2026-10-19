@@ -22,8 +22,16 @@ public class DependentService {
     private final DependentRepository dependentRepository;
     private final DependentUserPort dependentUserPort;
     private final Clock clock;
+    private final com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
+    private final com.jeepclub.backend.platform.storage.image.PrivateImageMediaQuery privateImages;
     private final com.jeepclub.backend.platform.logging.SystemLogService audit;
     private final java.util.List<com.jeepclub.backend.dependents.api.module.spi.DependentDeletionGuard> deletionGuards;
+
+    @Transactional
+    public DependentResult create(String name, String cpf, LocalDate birthDate,
+            RelationshipType relationshipType, String phoneNumber, Long userId) {
+        return create(name,cpf,birthDate,relationshipType,phoneNumber,userId,null);
+    }
 
     @Transactional
     public DependentResult create(
@@ -32,7 +40,8 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long userId
+            Long userId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo
     ) {
         assertUserCanOwnDependent(userId);
 
@@ -50,9 +59,10 @@ public class DependentService {
                 Instant.now(clock)
         );
 
-        return toResult(
-                dependentRepository.save(dependent)
-        );
+        if (photo != null) dependent.changePhoto(mediaCommand.storePrivateInTransaction(photo), Instant.now(clock));
+        var saved = dependentRepository.save(dependent);
+        if (photo != null) record(userId,saved.getId(),"PHOTO_CREATE","POST",201,Instant.now(clock));
+        return toResult(saved);
     }
 
     @Transactional(readOnly = true)
@@ -79,6 +89,12 @@ public class DependentService {
     }
 
     @Transactional
+    public DependentResult update(Long id, String name, String cpf, LocalDate birthDate,
+            RelationshipType relationshipType, String phoneNumber, Long requestingUserId) {
+        return update(id,name,cpf,birthDate,relationshipType,phoneNumber,requestingUserId,null);
+    }
+
+    @Transactional
     public DependentResult update(
             Long id,
             String name,
@@ -86,8 +102,10 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long requestingUserId
+            Long requestingUserId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo
     ) {
+        if (photo != null) assertUserCanOwnDependent(requestingUserId);
         Dependent dependent = findDependentForUpdate(id);
 
         assertBelongsTo(
@@ -105,18 +123,20 @@ public class DependentService {
             );
         }
 
+        Instant now = Instant.now(clock);
         dependent.update(
                 name,
                 normalizedCpf,
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                Instant.now(clock)
+                now
         );
 
-        return toResult(
-                dependentRepository.save(dependent)
-        );
+        if (photo != null) dependent.changePhoto(mediaCommand.storePrivateInTransaction(photo), now);
+        var saved = dependentRepository.save(dependent);
+        if (photo != null) record(requestingUserId,id,"PHOTO_REPLACE","PUT",200,now);
+        return toResult(saved);
     }
 
     @Transactional
@@ -141,6 +161,62 @@ public class DependentService {
         var now=Instant.now(clock);
         dependentRepository.delete(dependent,actorId,now);
         record(actorId,id,"DELETE","DELETE",204,now);
+    }
+
+    @Transactional
+    public DependentResult replacePhoto(Long id, Long ownerId, com.jeepclub.backend.platform.storage.image.ImageUpload photo) {
+        return changePhoto(id,ownerId,ownerId,java.util.Objects.requireNonNull(photo),false);
+    }
+
+    @Transactional
+    public DependentResult removePhoto(Long id, Long ownerId) { return changePhoto(id,ownerId,ownerId,null,false); }
+
+    @Transactional
+    public DependentResult replacePhotoForAdmin(Long id, Long ownerId, Long actorId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo) {
+        return changePhoto(id,ownerId,actorId,java.util.Objects.requireNonNull(photo),true);
+    }
+
+    @Transactional
+    public DependentResult removePhotoForAdmin(Long id, Long ownerId, Long actorId) { return changePhoto(id,ownerId,actorId,null,true); }
+
+    private DependentResult changePhoto(Long id,Long ownerId,Long actorId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo,boolean administrative) {
+        assertUserCanOwnDependent(ownerId); // User -> Dependent, before upload and every association change.
+        Dependent dependent=findDependentForUpdate(id);
+        authorizePhoto(dependent,ownerId,administrative);
+        if (!dependent.isActive()) throw new com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException("Only active dependents can change photos.");
+        String key=photo==null?null:mediaCommand.storePrivateInTransaction(photo);
+        Instant now=Instant.now(clock);
+        if (!dependent.changePhoto(key,now)) return toResult(dependent);
+        var saved=dependentRepository.save(dependent);
+        record(actorId,id,photo==null?"PHOTO_REMOVE":"PHOTO_REPLACE",photo==null?"DELETE":"PATCH",200,now);
+        return toResult(saved);
+    }
+
+    @Transactional
+    public com.jeepclub.backend.platform.storage.image.ImageMediaContent photo(Long id,Long ownerId) {
+        assertUserCanOwnDependent(ownerId);
+        return readPhoto(id,ownerId,ownerId,false);
+    }
+
+    @Transactional
+    public com.jeepclub.backend.platform.storage.image.ImageMediaContent photoForAdmin(Long id,Long ownerId,Long actorId) {
+        return readPhoto(id,ownerId,actorId,true);
+    }
+
+    private com.jeepclub.backend.platform.storage.image.ImageMediaContent readPhoto(Long id,Long ownerId,Long actorId,boolean administrative) {
+        Dependent dependent=findDependentForUpdate(id);
+        authorizePhoto(dependent,ownerId,administrative);
+        if(dependent.getPhotoStorageKey()==null) throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException();
+        var content=privateImages.loadPrivate(dependent.getPhotoStorageKey());
+        record(actorId,id,"PHOTO_READ","GET",200,Instant.now(clock));
+        return content;
+    }
+
+    private void authorizePhoto(Dependent dependent,Long ownerId,boolean administrative) {
+        if (administrative && !dependent.getUserId().equals(ownerId)) throw new DependentNotFoundException(dependent.getId());
+        assertBelongsTo(dependent,ownerId);
     }
 
     private Dependent findActiveDependentById(Long id) {
