@@ -164,7 +164,9 @@ class MembershipActivationFlowIntegrationTest {
         approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
         String raw = deliveredToken(1);
         var token = tokens.findByTokenHash(hashes.hash(raw)).orElseThrow();
-        token.setExpiresAt(Instant.now(clock));
+        // Prove an expired token without depending on wall-clock advancement
+        // between two fast requests or on database fractional-second rounding.
+        token.setExpiresAt(Instant.now(clock).minusSeconds(1));
         tokens.saveAndFlush(token);
         mvc.perform(get("/membership-applications/activate").param("token", raw))
                 .andExpect(status().isGone()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
