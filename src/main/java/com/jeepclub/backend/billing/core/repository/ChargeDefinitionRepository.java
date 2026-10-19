@@ -10,6 +10,8 @@ public interface ChargeDefinitionRepository {
 
     ChargeDefinition save(ChargeDefinition chargeDefinition);
 
+    void deleteWithHistory(Long definitionId, Long actorId, java.time.Instant now);
+
     Optional<ChargeDefinition> findById(Long id);
 
     Optional<ChargeDefinition> findByIdForUpdate(Long id);

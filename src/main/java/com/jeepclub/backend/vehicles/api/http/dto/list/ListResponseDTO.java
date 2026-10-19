@@ -25,7 +25,9 @@ public record ListResponseDTO(
         String model,
 
         @Schema(description = "Cor predominante do veículo", example = "Preto")
-        String color
+        String color,
+        @Schema(description="Disponibilidade operacional.")
+        com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus status
 
 ) {
     public static ListResponseDTO from(Vehicle vehicle) {
@@ -36,7 +38,8 @@ public record ListResponseDTO(
                 vehicle.getPhoto(),
                 vehicle.getModelYear(),
                 vehicle.getModel(),
-                vehicle.getColor()
+                vehicle.getColor(),
+                vehicle.getStatus()
         );
     }
 }

@@ -89,8 +89,8 @@ class AuthorizationControllerContractTest {
                 anyString(),
                 nullable(String.class)
         )).thenReturn(new RoleResult(role));
-        when(roleService.deactivateRole(anyLong())).thenReturn(new RoleResult(role));
-        when(roleService.activateRole(anyLong())).thenReturn(new RoleResult(role));
+        when(roleService.deactivateRole(anyLong(),anyLong())).thenReturn(new RoleResult(role));
+        when(roleService.activateRole(anyLong(),anyLong())).thenReturn(new RoleResult(role));
 
         AdminRolePermissionService rolePermissionService = mock(AdminRolePermissionService.class);
         when(rolePermissionService.findPermissionsByRoleId(anyLong()))
@@ -108,6 +108,18 @@ class AuthorizationControllerContractTest {
                         new AdminRolePermissionController(rolePermissionService),
                         new AdminUserRoleController(userRoleService)
                 )
+                .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    @Override public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                    }
+                    @Override public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer container,
+                            org.springframework.web.context.request.NativeWebRequest request,
+                            org.springframework.web.bind.support.WebDataBinderFactory factory) {
+                        return new com.jeepclub.backend.platform.security.principal.UserPrincipal(9L, 1L,
+                                "Synthetic contract actor", now.plusSeconds(3600));
+                    }
+                })
                 .setValidator(validator)
                 .build();
     }

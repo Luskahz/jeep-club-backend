@@ -9,4 +9,7 @@ public interface MembershipBillingConfigurationJpaRepository
         extends JpaRepository<MembershipBillingConfigurationEntity, Long> {
 
     Optional<MembershipBillingConfigurationEntity> findBySingletonKey(String singletonKey);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<MembershipBillingConfigurationEntity> findFirstByChargeDefinitionIdOrderById(Long id);
 }

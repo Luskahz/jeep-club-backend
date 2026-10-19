@@ -20,7 +20,8 @@ public class RoleMapper {
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt(),
-                entity.getDeletedAt()
+                entity.getDeletedAt(),
+                entity.getArchivedAt()
         );
     }
 
@@ -35,7 +36,8 @@ public class RoleMapper {
                 role.getStatus(),
                 role.getCreatedAt(),
                 role.getUpdatedAt(),
-                role.getDeletedAt()
+                role.getDeletedAt(),
+                role.getArchivedAt()
         );
     }
 }

@@ -2,6 +2,7 @@ package com.jeepclub.backend.tools.core.domain.model;
 
 import com.jeepclub.backend.tools.core.domain.enums.ToolStatus;
 import com.jeepclub.backend.tools.core.domain.exception.ToolAccessDeniedException;
+import com.jeepclub.backend.tools.core.domain.exception.ToolLifecycleConflictException;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public class Tool {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime archivedAt;
 
     private Tool(
             Long id,
@@ -57,10 +59,33 @@ public class Tool {
             LocalDateTime createdAt,
             LocalDateTime updatedAt
     ) {
-        return new Tool(id, name, description, status, userId, createdAt, updatedAt);
+        return reconstitute(id, name, description, status, userId, createdAt, updatedAt, null);
+    }
+
+    public static Tool reconstitute(
+            Long id,
+            String name,
+            String description,
+            ToolStatus status,
+            Long userId,
+            LocalDateTime createdAt,
+            LocalDateTime updatedAt,
+            LocalDateTime archivedAt
+    ) {
+        if ((status == ToolStatus.ARCHIVED) != (archivedAt != null)) {
+            throw new IllegalArgumentException("Archived state requires its archival timestamp only.");
+        }
+        if (archivedAt != null && (createdAt == null || archivedAt.isBefore(createdAt))) {
+            throw new IllegalArgumentException("archivedAt cannot be before createdAt.");
+        }
+
+        Tool tool = new Tool(id, name, description, status, userId, createdAt, updatedAt);
+        tool.archivedAt = archivedAt;
+        return tool;
     }
 
     public void updateDetails(String name, String description, LocalDateTime updatedAt) {
+        assertNotArchived();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
 
         if (name != null && !name.isBlank()) {
@@ -73,6 +98,7 @@ public class Tool {
     }
 
     public void updatePhoto(String storageKey, LocalDateTime updatedAt) {
+        assertNotArchived();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
         this.photoStorageKey = storageKey == null ? null
                 : com.jeepclub.backend.shared.storage.ImageReference.require(storageKey);
@@ -84,6 +110,7 @@ public class Tool {
     }
 
     public boolean activate(LocalDateTime updatedAt) {
+        assertNotArchived();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
         if (this.status == ToolStatus.ACTIVE) {
             return false;
@@ -95,6 +122,7 @@ public class Tool {
     }
 
     public boolean deactivate(LocalDateTime updatedAt) {
+        assertNotArchived();
         Objects.requireNonNull(updatedAt, "updatedAt cannot be null");
         if (this.status == ToolStatus.INACTIVE) {
             return false;
@@ -108,6 +136,35 @@ public class Tool {
     public void assertBelongsTo(Long currentUserId) {
         if (!this.userId.equals(currentUserId)) {
             throw new ToolAccessDeniedException("Acesso negado: Esta ferramenta não pertence a você.");
+        }
+    }
+
+    public boolean archive(LocalDateTime now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        if (now.isBefore(createdAt)) throw new IllegalArgumentException("now cannot be before createdAt.");
+        if (status == ToolStatus.ARCHIVED) return false;
+        status = ToolStatus.ARCHIVED;
+        archivedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean unarchive(LocalDateTime now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        if (now.isBefore(createdAt)) throw new IllegalArgumentException("now cannot be before createdAt.");
+        if (status == ToolStatus.INACTIVE) return false;
+        if (status != ToolStatus.ARCHIVED) {
+            throw new ToolLifecycleConflictException("Only an archived record can be unarchived.");
+        }
+        status = ToolStatus.INACTIVE;
+        archivedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void assertNotArchived() {
+        if (status == ToolStatus.ARCHIVED) {
+            throw new ToolLifecycleConflictException("Archived record requires explicit unarchive before this operation.");
         }
     }
 }

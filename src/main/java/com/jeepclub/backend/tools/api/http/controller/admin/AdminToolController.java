@@ -45,7 +45,7 @@ public class AdminToolController {
     @RequiredPermission("TOOLS_TOOL_READ")
     @Operation(
             summary = "Listar ferramentas administrativamente",
-            description = "Retorna uma página de ferramentas ACTIVE e INACTIVE. name aplica contains case-insensitive quando não vazio; status aplica igualdade exata; ambos podem ser combinados. A paginação usa os defaults globais: página zero-based e size 20, limitado a 50.",
+            description = "Retorna uma página de ferramentas ACTIVE, INACTIVE e ARCHIVED. name aplica contains case-insensitive quando não vazio; status aplica igualdade exata; ambos podem ser combinados. A paginação usa os defaults globais: página zero-based e size 20, limitado a 50.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Página de ferramentas retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = AdminToolSummaryPageResponseSchema.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -55,7 +55,7 @@ public class AdminToolController {
     public ResponseEntity<PageResponse<AdminToolSummaryResponseDTO>> listTools(
             @Parameter(description = "Trecho de nome para busca case-insensitive. Valor nulo ou vazio não filtra.", example = "macaco")
             @RequestParam(required = false) String name,
-            @Parameter(description = "Status exato da ferramenta.", schema = @Schema(allowableValues = {"ACTIVE", "INACTIVE"}), example = "ACTIVE")
+            @Parameter(description = "Status exato da ferramenta.", schema = @Schema(allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"}), example = "ACTIVE")
             @RequestParam(required = false) ToolStatus status,
             @ParameterObject Pageable pageable) {
         PageResponse<AdminToolSummaryResponseDTO> tools = PageResponse.from(adminToolService
@@ -89,7 +89,7 @@ public class AdminToolController {
     @RequiredPermission("TOOLS_TOOL_CREATE")
     @Operation(
             summary = "Criar ferramenta para um userId",
-            description = "Cria uma ferramenta ACTIVE para um usuário existente e administrativamente ativo. Usuários DISABLED não podem receber novas ferramentas.",
+            description = "Cria uma ferramenta ACTIVE para um usuário existente e administrativamente ativo. Usuários INACTIVE/ARCHIVED não podem receber novas ferramentas.",
             responses = {
                     @ApiResponse(responseCode = "201", description = "Ferramenta criada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ToolResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Payload inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -130,6 +130,7 @@ public class AdminToolController {
     }
 
     @PatchMapping("/{id}/activate")
+    @ApiResponse(responseCode="409",description="Ferramenta arquivada exige desarquivamento prévio.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @PreAuthorize("hasAuthority('TOOLS_TOOL_ACTIVATE')")
     @RequiredPermission("TOOLS_TOOL_ACTIVATE")
     @Operation(
@@ -144,12 +145,14 @@ public class AdminToolController {
     )
     public ResponseEntity<ToolResponseDTO> activateTool(
             @Parameter(description = "Identificador da ferramenta.", example = "42", required = true)
-            @PathVariable Long id
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.activateTool(id)));
+        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.activateTool(id,principal.getUserId())));
     }
 
     @PatchMapping("/{id}/deactivate")
+    @ApiResponse(responseCode="409",description="Ferramenta arquivada exige desarquivamento prévio.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @PreAuthorize("hasAuthority('TOOLS_TOOL_DEACTIVATE')")
     @RequiredPermission("TOOLS_TOOL_DEACTIVATE")
     @Operation(
@@ -164,9 +167,10 @@ public class AdminToolController {
     )
     public ResponseEntity<ToolResponseDTO> deactivateTool(
             @Parameter(description = "Identificador da ferramenta.", example = "42", required = true)
-            @PathVariable Long id
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.deactivateTool(id)));
+        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.deactivateTool(id,principal.getUserId())));
     }
 
     @DeleteMapping("/{id}")
@@ -189,5 +193,25 @@ public class AdminToolController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         adminToolService.deleteTool(id, userPrincipal.getUserId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/archive")
+    @PreAuthorize("hasAuthority('TOOLS_TOOL_ARCHIVE')")
+    @RequiredPermission("TOOLS_TOOL_ARCHIVE")
+    @Operation(summary="Arquivar ferramenta", description="Unarchive retorna a INACTIVE; requer ativação explícita.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<ToolResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.archiveTool(id,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    @PreAuthorize("hasAuthority('TOOLS_TOOL_UNARCHIVE')")
+    @RequiredPermission("TOOLS_TOOL_UNARCHIVE")
+    @Operation(summary="Desarquivar ferramenta", description="Unarchive retorna a INACTIVE; requer ativação explícita.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<ToolResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(new ToolResponseDTO(adminToolService.unarchiveTool(id,principal.getUserId())));
     }
 }

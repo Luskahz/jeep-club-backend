@@ -85,7 +85,7 @@ class UserTest {
     void repeatedAdministrativeTransitionIsRejected() {
         User active = persistedIdentity(UserStatus.ACTIVE, null, null);
         User disabled = persistedIdentity(
-                UserStatus.DISABLED,
+                UserStatus.INACTIVE,
                 CREATED_AT.plusSeconds(10),
                 CREATED_AT.plusSeconds(10)
         );
@@ -117,7 +117,7 @@ class UserTest {
                 null,
                 null,
                 null,
-                UserStatus.DISABLED,
+                UserStatus.INACTIVE,
                 CREATED_AT,
                 null,
                 null

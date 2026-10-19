@@ -42,7 +42,8 @@ class BillingConfigurationServiceTest {
     AdminChargeAssignmentService assignmentService;
     AdminChargeCycleService cycleService;
     @BeforeEach void setup() {
-        definitionService = new AdminChargeDefinitionService(definitions, assignments, CLOCK);
+        definitionService = new AdminChargeDefinitionService(definitions, assignments, CLOCK,
+                java.util.List.of(), mock(com.jeepclub.backend.platform.logging.SystemLogService.class));
         assignmentService = new AdminChargeAssignmentService(assignments, definitions, events, members, roles, CLOCK);
         cycleService = new AdminChargeCycleService(cycles, definitions, assignments, charges, refunds, members, roles, events, CLOCK, payments);
     }
@@ -58,7 +59,7 @@ class BillingConfigurationServiceTest {
     }
     @Test void archiveDeactivatesOnlyActiveAssignmentsAndPreservesHistory() {
         var d = definition(); var active = UserChargeAssignment.create(3L, 10L, NOW); var inactive = AllMembersChargeAssignment.create(3L, NOW); inactive.deactivate(NOW);
-        when(definitions.findById(3L)).thenReturn(Optional.of(d));
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(d));
         when(assignments.findByChargeDefinitionId(3L, Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(active, inactive)));
         when(definitions.save(d)).thenReturn(d);
         definitionService.archive(3L);
@@ -67,7 +68,7 @@ class BillingConfigurationServiceTest {
         verifyNoInteractions(cycles, charges, payments);
     }
     @Test void definitionLifecycleAndUpdateRespectUniqueness() {
-        var d = definition(); when(definitions.findById(3L)).thenReturn(Optional.of(d)); when(definitions.save(d)).thenReturn(d);
+        var d = definition(); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(d)); when(definitions.save(d)).thenReturn(d);
         definitionService.deactivate(3L); assertThat(d.isActive()).isFalse(); definitionService.activate(3L); assertThat(d.isActive()).isTrue();
         definitionService.update(3L, " FEE ", null, BigDecimal.TEN, ChargeRecurrenceType.YEARLY, false, PaymentAcceptancePolicy.AFTER_DUE_DATE, null);
         assertThat(d.getName()).isEqualTo("fee"); assertThat(d.getDefaultAmount()).isEqualByComparingTo(BigDecimal.TEN);
@@ -78,12 +79,12 @@ class BillingConfigurationServiceTest {
     }
     @ParameterizedTest @ValueSource(ints = {0, 1, 2, 3})
     void assignmentCreationChecksItsBoundaryAndDuplicate(int audience) {
-        when(definitions.findById(3L)).thenReturn(Optional.of(definition()));
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
         when(assignments.save(any())).thenAnswer(i -> i.getArgument(0));
         switch (audience) {
             case 0 -> { assertThat(assignmentService.assignToAllMembers(3L).active()).isTrue(); when(assignments.existsAllMembersAssignmentByChargeDefinitionId(3L)).thenReturn(true); }
-            case 1 -> { when(members.existsActiveMemberByUserId(10L)).thenReturn(true); assertThat(assignmentService.assignToUser(3L, 10L).userId()).isEqualTo(10L); when(assignments.existsUserAssignmentByChargeDefinitionIdAndUserId(3L, 10L)).thenReturn(true); }
-            case 2 -> { when(roles.existsActiveRoleById(20L)).thenReturn(true); assertThat(assignmentService.assignToRole(3L, 20L).roleId()).isEqualTo(20L); when(assignments.existsRoleAssignmentByChargeDefinitionIdAndRoleId(3L, 20L)).thenReturn(true); }
+            case 1 -> { when(members.existsActiveMemberByUserIdForUpdate(10L)).thenReturn(true); assertThat(assignmentService.assignToUser(3L, 10L).userId()).isEqualTo(10L); when(assignments.existsUserAssignmentByChargeDefinitionIdAndUserId(3L, 10L)).thenReturn(true); }
+            case 2 -> { when(roles.existsActiveRoleByIdForUpdate(20L)).thenReturn(true); assertThat(assignmentService.assignToRole(3L, 20L).roleId()).isEqualTo(20L); when(assignments.existsRoleAssignmentByChargeDefinitionIdAndRoleId(3L, 20L)).thenReturn(true); }
             default -> { when(events.existsEventById(30L)).thenReturn(true); assertThat(assignmentService.assignToEventParticipants(3L, 30L).eventId()).isEqualTo(30L); when(assignments.existsEventParticipantsAssignmentByChargeDefinitionIdAndEventId(3L, 30L)).thenReturn(true); }
         }
         assertThatThrownBy(() -> assign(audience)).isInstanceOf(ChargeAssignmentAlreadyExistsException.class);
@@ -94,13 +95,13 @@ class BillingConfigurationServiceTest {
     }
     @ParameterizedTest @ValueSource(ints = {1, 2, 3})
     void missingAssignmentTargetIsRejected(int audience) {
-        when(definitions.findById(3L)).thenReturn(Optional.of(definition()));
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
         assertThatThrownBy(() -> assign(audience)).isInstanceOf(BillingAssignmentTargetNotFoundException.class);
         verify(assignments, never()).save(any());
     }
     @Test void inactiveDefinitionCannotReceiveOrActivateAssignmentsButCanDeactivate() {
         var d = definition(); d.deactivate(NOW); var a = AllMembersChargeAssignment.create(3L, NOW);
-        when(definitions.findById(3L)).thenReturn(Optional.of(d)); when(assignments.findById(1L)).thenReturn(Optional.of(a));
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(d)); when(assignments.findById(1L)).thenReturn(Optional.of(a));
         assertThatThrownBy(() -> assignmentService.assignToAllMembers(3L)).isInstanceOf(ChargeDefinitionCannotChangeAssignmentsException.class);
         assertThatThrownBy(() -> assignmentService.activate(1L)).isInstanceOf(ChargeDefinitionCannotChangeAssignmentsException.class);
         when(assignments.save(a)).thenReturn(a); assignmentService.deactivate(1L); assertThat(a.isActive()).isFalse();
@@ -109,13 +110,14 @@ class BillingConfigurationServiceTest {
         assertThatThrownBy(() -> assignmentService.findById(404L)).isInstanceOf(ChargeAssignmentNotFoundException.class);
     }
     @Test void cycleGenerationDeduplicatesAudiencesFiltersInactiveUsersAndSkipsExistingCharge() {
-        when(definitions.findById(3L)).thenReturn(Optional.of(definition()));
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
         var ignored = UserChargeAssignment.create(3L, 99L, NOW); ignored.deactivate(NOW);
         when(assignments.findByChargeDefinitionId(3L, Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(
                 AllMembersChargeAssignment.create(3L, NOW), UserChargeAssignment.create(3L, 10L, NOW), RoleChargeAssignment.create(3L, 20L, NOW),
                 EventParticipantsChargeAssignment.create(3L, 30L, NOW), ignored)));
         when(members.findActiveMemberUserIds()).thenReturn(List.of(10L, 11L));
         when(members.existsActiveMemberByUserId(anyLong())).thenAnswer(i -> Set.of(10L, 12L).contains(i.getArgument(0)));
+        when(members.existsActiveMemberByUserIdForUpdate(anyLong())).thenAnswer(i -> Set.of(10L,11L,12L,14L).contains(i.getArgument(0)));
         when(roles.findUserIdsByRoleId(20L)).thenReturn(List.of(10L, 12L, 13L));
         when(events.findConfirmedParticipantUserIdsByEventId(30L)).thenReturn(List.of(11L, 14L));
         when(charges.existsByUserIdAndChargeCycleId(anyLong(), eq(4L))).thenAnswer(i -> i.getArgument(0).equals(11L));
@@ -128,7 +130,7 @@ class BillingConfigurationServiceTest {
         verify(members, never()).existsActiveMemberByUserId(99L); verify(cycles).existsByChargeDefinitionIdAndCode(3L, "SEP");
     }
     @Test void generationRejectsInactiveDuplicateAndEmptyAudience() {
-        var d = definition(); when(definitions.findById(3L)).thenReturn(Optional.of(d)); d.deactivate(NOW);
+        var d = definition(); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(d)); d.deactivate(NOW);
         assertThatThrownBy(() -> cycleService.generate(3L, "code", DUE, 99L)).isInstanceOf(InactiveChargeDefinitionException.class);
         d.activate(NOW); when(cycles.existsByChargeDefinitionIdAndCode(3L, "code")).thenReturn(true);
         assertThatThrownBy(() -> cycleService.generate(3L, "code", DUE, 99L)).isInstanceOf(ChargeCycleAlreadyExistsException.class);
@@ -161,10 +163,10 @@ class BillingConfigurationServiceTest {
         verify(assignments, never()).save(any()); verify(cycles, never()).save(any());
     }
     @Test void assignmentResultsPreserveAudienceAndTarget() {
-        when(definitions.findById(3L)).thenReturn(Optional.of(definition()));
+        when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(definition()));
         when(assignments.save(any())).thenAnswer(i -> i.getArgument(0));
-        when(members.existsActiveMemberByUserId(10L)).thenReturn(true);
-        when(roles.existsActiveRoleById(20L)).thenReturn(true);
+        when(members.existsActiveMemberByUserIdForUpdate(10L)).thenReturn(true);
+        when(roles.existsActiveRoleByIdForUpdate(20L)).thenReturn(true);
         when(events.existsEventById(30L)).thenReturn(true);
         assertThat(assignmentService.assignToAllMembers(3L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.ALL_MEMBERS);
         assertThat(assignmentService.assignToUser(3L, 10L).audienceType()).isEqualTo(com.jeepclub.backend.billing.core.domain.enums.assignment.ChargeAudienceType.USER);

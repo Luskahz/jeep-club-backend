@@ -57,10 +57,9 @@ public class DetailResponseDTO {
         private double engineDisplacement;
 
         @Schema(
-                description = "Status persistido do veículo. A única política de exclusão vigente é hard "
-                        + "delete com histórico; nenhuma rota atual produz ou expõe outro valor.",
+                description = "Disponibilidade operacional. DELETE preserva histórico segregado.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE"}
+                allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"}
         )
         private VehicleStatus status;
 

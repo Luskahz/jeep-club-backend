@@ -49,6 +49,7 @@ class MedicalProfileNormalizationConsistencyTest {
         );
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 7L))
                 .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
+        when(statusChecker.getStatusForUpdate(MedicalProfileOwnerType.USER, 7L)).thenReturn(MedicalProfileOwnerStatus.ACTIVE);
         when(repository.save(any(MedicalProfile.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }

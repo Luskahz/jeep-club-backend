@@ -116,4 +116,11 @@ public class VehicleHistoryEntity {
 
     @Column(name = "deleted_at", nullable = false, updatable = false)
     private Instant deletedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "legacy_deleted", nullable = false)
+    private boolean legacyDeleted;
 }

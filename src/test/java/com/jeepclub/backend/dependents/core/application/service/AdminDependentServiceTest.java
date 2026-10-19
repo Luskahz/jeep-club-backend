@@ -51,11 +51,11 @@ class AdminDependentServiceTest {
     @Test
     void administrativeReadIncludesDisabledDependentAndRejectsMissingId() {
         Dependent dependent = DependentsFixture.dependent(10L, 5L,
-                DependentStatus.DISABLED);
+                DependentStatus.INACTIVE);
         when(dependentRepository.findAllByUserId(5L)).thenReturn(List.of(dependent));
         when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
         assertThat(service.findAllByUserId(5L)).extracting(result -> result.status())
-                .containsExactly(DependentStatus.DISABLED);
+                .containsExactly(DependentStatus.INACTIVE);
         assertThat(service.findByUserIdAndId(5L, 10L).status()).isEqualTo(dependent.getStatus());
         assertThatThrownBy(() -> service.findByUserIdAndId(5L, 404L))
                 .isInstanceOf(DependentNotFoundException.class);

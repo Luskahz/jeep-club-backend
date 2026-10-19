@@ -64,7 +64,7 @@ public record DependentResponseDTO(
         @Schema(
                 description = "Status atual do dependente.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE", "DISABLED"},
+                allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"},
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         DependentStatus status,

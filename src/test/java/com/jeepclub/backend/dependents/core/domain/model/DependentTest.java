@@ -148,7 +148,7 @@ class DependentTest {
         Dependent dependent = create();
 
         dependent.disable(NOW.plusSeconds(30));
-        assertThat(dependent.getStatus()).isEqualTo(DependentStatus.DISABLED);
+        assertThat(dependent.getStatus()).isEqualTo(DependentStatus.INACTIVE);
 
         dependent.enable(NOW.plusSeconds(60));
         assertThat(dependent.getStatus()).isEqualTo(DependentStatus.ACTIVE);

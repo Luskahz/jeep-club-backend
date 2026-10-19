@@ -26,6 +26,11 @@ public interface PasswordRecoveryRequestJpaRepository
             """)
     List<PasswordRecoveryRequestEntity> findOpenEmailTokensByUserIdForUpdate(@Param("userId") Long userId);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select request from PasswordRecoveryRequestEntity request where request.userId = :userId "
+            + "and request.status = com.jeepclub.backend.iam.authentication.core.domain.enums.PasswordRecoveryRequestStatus.OPEN order by request.id")
+    List<PasswordRecoveryRequestEntity> findAllOpenByUserIdForUpdate(@Param("userId") Long userId);
+
     Optional<PasswordRecoveryRequestEntity> findByTokenHash(
             String tokenHash
     );

@@ -26,6 +26,8 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class DependentRepositoryAdapter implements DependentRepository {
+    private final jakarta.persistence.EntityManager entityManager;
+
     public List<Dependent> findByIds(Collection<Long> ids) {
         return ids.isEmpty()?List.of():jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
     }
@@ -141,6 +143,7 @@ public class DependentRepositoryAdapter implements DependentRepository {
             Long deletedByUserId,
             Instant deletedAt
     ) {
+        findByIdForUpdate(dependent.getId()).orElseThrow(() -> new DependentAlreadyDeletedException(dependent.getId()));
         DependentEntity entity = jpaRepository
                 .findByIdForUpdate(dependent.getId())
                 .orElseThrow(
@@ -175,5 +178,16 @@ public class DependentRepositoryAdapter implements DependentRepository {
         }
 
         return false;
+    }
+    @Override
+    public Optional<Dependent> findByIdForUpdate(Long id) {
+        var locked = jpaRepository.findByIdForUpdate(id);
+        // Retain the DB lock while discarding any pre-lock ORM snapshot (MySQL REPEATABLE READ).
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByIdForUpdate(id)).map(mapper::toDomain);
+    }
+
+    @Override public List<Dependent> findAllByUserIdAndStatus(Long userId,DependentStatus status) {
+        return jpaRepository.findAllByUserIdAndStatus(userId,status).stream().map(mapper::toDomain).toList();
     }
 }

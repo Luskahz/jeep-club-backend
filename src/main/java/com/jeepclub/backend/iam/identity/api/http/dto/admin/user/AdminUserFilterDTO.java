@@ -48,7 +48,7 @@ public record AdminUserFilterDTO(
         @Size(max = 20) String phoneNumber,
 
         @Schema(description = "Status administrativo do usuário.", example = "ACTIVE",
-                allowableValues = {"ACTIVE", "DISABLED"}, nullable = true)
+                allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"}, nullable = true)
         UserStatus status,
 
         @Schema(description = "Instante mínimo de criação do usuário.", example = "2026-01-01T00:00:00Z",

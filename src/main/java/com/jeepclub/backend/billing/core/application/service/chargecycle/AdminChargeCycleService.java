@@ -59,7 +59,8 @@ public class AdminChargeCycleService {
             LocalDate dueDate,
             Long generatedByUserId
     ) {
-        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(chargeDefinitionId);
+        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findByIdForUpdate(chargeDefinitionId)
+                .orElseThrow(() -> new ChargeDefinitionNotFoundException("Charge definition not found."));
 
         if (!chargeDefinition.isActive()) {
             throw new InactiveChargeDefinitionException(
@@ -75,7 +76,9 @@ public class AdminChargeCycleService {
             );
         }
 
-        Set<Long> targetUserIds = resolveTargetUserIds(chargeDefinitionId);
+        Set<Long> targetUserIds = resolveTargetUserIds(chargeDefinitionId).stream().sorted()
+                .filter(billingMembershipPort::existsActiveMemberByUserIdForUpdate)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
 
         if (targetUserIds.isEmpty()) {
             throw new ChargeCycleWithoutAssignmentsException(

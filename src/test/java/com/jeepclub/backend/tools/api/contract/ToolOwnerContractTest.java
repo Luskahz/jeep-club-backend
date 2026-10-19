@@ -15,16 +15,18 @@ import static org.mockito.Mockito.when;
 class ToolOwnerContractTest {
 
     @Test
-    void adapterUsesOnlyPublicIdentityQuery() {
+    void adapterUsesPublicIdentityExistenceQueryAndCurrentEligibilityLock() {
         UserQuery identity = mock(UserQuery.class);
         when(identity.existsById(7L)).thenReturn(true);
-        when(identity.isAdministrativelyActive(7L)).thenReturn(false);
-        IdentityToolOwnerAdapter adapter = new IdentityToolOwnerAdapter(identity);
+        var identityLock=mock(com.jeepclub.backend.iam.identity.api.module.UserIdentityLock.class);
+        when(identityLock.byId(7L)).thenReturn(java.util.Optional.of(new com.jeepclub.backend.iam.identity.api.module.UserDetails(
+                7L,"Synthetic inactive",null,null,null,null,null,null,false,java.time.Instant.EPOCH,java.time.Instant.EPOCH,null)));
+        IdentityToolOwnerAdapter adapter = new IdentityToolOwnerAdapter(identityLock, identity);
 
         assertThat(adapter.existsById(7L)).isTrue();
         assertThat(adapter.isAdministrativelyActive(7L)).isFalse();
         verify(identity).existsById(7L);
-        verify(identity).isAdministrativelyActive(7L);
+        verify(identityLock).byId(7L);
     }
 
     @Test

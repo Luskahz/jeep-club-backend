@@ -7,6 +7,8 @@ import java.time.Instant;
  */
 public interface UserAuthenticationAdministrationPort {
 
+    void deletePendingAuthentication(Long identityId, Instant now);
+
     void disableAuthentication(Long identityId, Instant now);
 
     void enableAuthentication(Long identityId, Instant now);

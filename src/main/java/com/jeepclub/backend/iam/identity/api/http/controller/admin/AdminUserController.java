@@ -372,9 +372,9 @@ public class AdminUserController {
             }
     )
     public ResponseEntity<AdminUserResponseDTO> disable(
-            @PathVariable @Positive Long userId
+            @PathVariable @Positive Long userId, @AuthenticationPrincipal UserPrincipal principal
     ) {
-        AdminUserResult result = adminUserService.disable(userId);
+        AdminUserResult result = adminUserService.disable(userId,principal.getUserId());
 
         return ResponseEntity.ok(AdminUserResponseDTO.from(result,membershipNumbers.currentNumber(result.id())));
     }
@@ -438,10 +438,46 @@ public class AdminUserController {
             }
     )
     public ResponseEntity<AdminUserResponseDTO> enable(
-            @PathVariable @Positive Long userId
+            @PathVariable @Positive Long userId, @AuthenticationPrincipal UserPrincipal principal
     ) {
-        AdminUserResult result = adminUserService.enable(userId);
+        AdminUserResult result = adminUserService.enable(userId,principal.getUserId());
 
         return ResponseEntity.ok(AdminUserResponseDTO.from(result,membershipNumbers.currentNumber(result.id())));
+    }
+
+    @PatchMapping("/{userId}/archive")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_ARCHIVE')")
+    @RequiredPermission("IDENTITY_USER_ARCHIVE")
+    @Operation(summary = "Arquivar usuário", description = "Bloqueia acesso e revoga credenciais/convites pendentes na mesma transação. ROOT protegido.")
+    @ApiResponse(responseCode = "409", description = "ROOT protegido ou lifecycle composto inconsistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<AdminUserResponseDTO> archive(@PathVariable @Positive Long userId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = adminUserService.archive(userId, principal.getUserId());
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(AdminUserResponseDTO.from(result, membershipNumbers.currentNumber(result.id())));
+    }
+
+    @PatchMapping("/{userId}/unarchive")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_UNARCHIVE')")
+    @RequiredPermission("IDENTITY_USER_UNARCHIVE")
+    @Operation(summary = "Desarquivar usuário", description = "Retorna a INACTIVE; Authentication permanece desabilitada até enable explícito.")
+    @ApiResponse(responseCode = "409", description = "Transição incompatível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<AdminUserResponseDTO> unarchive(@PathVariable @Positive Long userId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = adminUserService.unarchive(userId, principal.getUserId());
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(AdminUserResponseDTO.from(result, membershipNumbers.currentNumber(result.id())));
+    }
+    @org.springframework.web.bind.annotation.DeleteMapping("/{userId}")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_DELETE')")
+    @RequiredPermission("IDENTITY_USER_DELETE")
+    @Operation(summary="Excluir cadastro pendente sem vínculos", description="Preserva histórico próprio. ROOT, Member, primeiro acesso concluído e relações retidas impedem exclusão.")
+    @ApiResponse(responseCode="204",description="Cadastro pendente excluído.")
+    @ApiResponse(responseCode="409",description="Retenção ou integridade impede exclusão.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long userId, @AuthenticationPrincipal UserPrincipal principal) {
+        adminUserService.delete(userId,principal.getUserId());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 }

@@ -51,7 +51,7 @@ public record CurrentUserResponseDTO(
         return new CurrentUserResponseDTO(
                 user.id(), user.name(), user.birthDate(), user.email(), user.cpf(), user.rg(),
                 user.phoneNumber(), user.profilePhotoStorageKey(),
-                user.administrativelyActive() ? UserStatus.ACTIVE : UserStatus.DISABLED,
+                user.status(),
                 user.createdAt(), user.disabledAt(), user.updatedAt(), profileCompletionPending, membershipNumber
         );
     }

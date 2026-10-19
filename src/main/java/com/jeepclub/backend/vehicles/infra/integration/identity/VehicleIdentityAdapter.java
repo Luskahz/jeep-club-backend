@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class VehicleIdentityAdapter implements UserPort {
+    private final com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLock;
+
 
     private final UserQuery identityQuery;
 
@@ -26,6 +28,6 @@ public class VehicleIdentityAdapter implements UserPort {
 
     @Override
     public boolean existsActiveById(Long userId) {
-        return identityQuery.isAdministrativelyActive(userId);
+        return identityLock.byId(userId).map(user -> user.administrativelyActive()).orElse(false);
     }
 }

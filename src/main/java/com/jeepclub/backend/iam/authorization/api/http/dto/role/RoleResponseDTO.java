@@ -44,7 +44,7 @@ public record RoleResponseDTO(
         @Schema(
                 description = "Status atual da role.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE", "INACTIVE", "DELETED"},
+                allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"},
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         RoleStatus status,

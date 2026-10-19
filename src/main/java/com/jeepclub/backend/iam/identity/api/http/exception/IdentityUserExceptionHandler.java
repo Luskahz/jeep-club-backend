@@ -17,6 +17,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.identity")
 public class IdentityUserExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.iam.identity.api.module.exception.UserAuthenticationLifecycleConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleAuthenticationLifecycleConflict(RuntimeException exception) {
+        return buildErrorResponse("USER_AUTHENTICATION_LIFECYCLE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+    @ExceptionHandler(com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleDeletionConflict(com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException exception) {
+        return buildErrorResponse("USER_DELETION_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+    @ExceptionHandler(com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleLifecycleConflict(com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException exception) {
+        return buildErrorResponse("USER_LIFECYCLE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(com.jeepclub.backend.iam.identity.api.module.exception.UserIdentityChangeConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleIdentityChangeConflict(RuntimeException exception) {
         return buildErrorResponse("USER_IDENTITY_CHANGE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);

@@ -43,7 +43,7 @@ public class AdminRolePermissionService {
             Long roleId,
             Long permissionId
     ) {
-        Role role = roleRepository.findById(roleId)
+        Role role = roleRepository.findByIdForUpdate(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
 
         Permission permission = permissionRepository.findById(permissionId)
@@ -81,7 +81,7 @@ public class AdminRolePermissionService {
             Long roleId,
             Long permissionId
     ) {
-        Role role = roleRepository.findById(roleId)
+        Role role = roleRepository.findByIdForUpdate(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
 
         Permission permission = permissionRepository.findById(permissionId)

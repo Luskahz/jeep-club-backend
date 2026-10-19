@@ -46,7 +46,7 @@ class ToolServiceTest {
                 toolRepository,
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 images
-        );
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class));
     }
 
     @Test
@@ -86,7 +86,7 @@ class ToolServiceTest {
     void replacesPhotoOnlyWhenGlobalReferenceExists() {
         String key = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png";
         Tool tool = tool(7L);
-        when(toolRepository.findById(1L)).thenReturn(Optional.of(tool));
+        when(toolRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(tool));
         when(toolRepository.save(tool)).thenReturn(tool);
 
         service.updatePhoto(1L, 7L, key);
@@ -102,6 +102,7 @@ class ToolServiceTest {
     @Test
     void missingToolCannotBeReadOrUpdated() {
         when(toolRepository.findById(1L)).thenReturn(Optional.empty());
+        when(toolRepository.findByIdForUpdate(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getToolDetails(1L, 7L))
                 .isInstanceOf(ToolNotFoundException.class);
@@ -114,7 +115,7 @@ class ToolServiceTest {
     @Test
     void updatesStateAndArchivesOwnedToolBeforeDelete() {
         Tool tool = tool(7L);
-        when(toolRepository.findById(1L)).thenReturn(Optional.of(tool));
+        when(toolRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(tool));
         when(toolRepository.save(tool)).thenReturn(tool);
 
         assertThat(service.updateTool(1L, "Novo", "Descrição", 7L).getName())

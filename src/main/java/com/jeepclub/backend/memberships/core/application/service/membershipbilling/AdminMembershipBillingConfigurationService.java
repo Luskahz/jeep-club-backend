@@ -1,6 +1,6 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipbilling;
 
-import com.jeepclub.backend.billing.api.module.ChargeDefinitionQuery;
+import com.jeepclub.backend.billing.api.module.ChargeDefinitionLock;
 import com.jeepclub.backend.memberships.core.application.exception.InvalidMembershipChargeDefinitionException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipBillingConfigurationNotFoundException;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipBillingConfiguration;
@@ -18,7 +18,7 @@ import java.util.Optional;
 public class AdminMembershipBillingConfigurationService {
 
     private final MembershipBillingConfigurationRepository repository;
-    private final ChargeDefinitionQuery chargeDefinitionQuery;
+    private final ChargeDefinitionLock chargeDefinitionLock;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -61,7 +61,7 @@ public class AdminMembershipBillingConfigurationService {
     }
 
     private void validateChargeDefinition(Long chargeDefinitionId) {
-        if (!chargeDefinitionQuery.isActive(chargeDefinitionId)) {
+        if (!chargeDefinitionLock.isActive(chargeDefinitionId)) {
             throw new InvalidMembershipChargeDefinitionException();
         }
     }

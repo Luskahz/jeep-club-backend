@@ -5,4 +5,7 @@ import java.util.List;
 public interface EventChargeRuleJpaRepository extends JpaRepository<EventChargeRuleEntity, Long> {
     List<EventChargeRuleEntity> findByEventId(Long eventId);
 
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<EventChargeRuleEntity> findFirstByChargeDefinitionIdOrderById(Long id);
 }

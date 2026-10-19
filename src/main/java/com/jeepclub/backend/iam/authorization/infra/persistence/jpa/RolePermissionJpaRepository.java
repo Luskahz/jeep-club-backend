@@ -10,6 +10,9 @@ import java.util.List;
 
 public interface RolePermissionJpaRepository extends JpaRepository<RolePermissionEntity, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    List<RolePermissionEntity> findByRole_IdOrderById(Long roleId);
+
     boolean existsByRole_IdAndPermission_Id(Long roleId, Long permissionId);
 
     void deleteByRole_IdAndPermission_Id(Long roleId, Long permissionId);

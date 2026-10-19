@@ -8,4 +8,7 @@ public interface MedicalProfileOwnerStatusChecker {
             MedicalProfileOwnerType ownerType,
             Long ownerId
     );
+
+    /** Called inside writes, before taking the profile lock. */
+    MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id);
 }

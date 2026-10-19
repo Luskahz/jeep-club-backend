@@ -289,9 +289,9 @@ public class AdminRoleController {
             )
             @PathVariable
             @Positive(message = "ID da role deve ser positivo.")
-            Long roleId
+            Long roleId, @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal
     ) {
-        RoleResult result = adminRoleService.deactivateRole(roleId);
+        RoleResult result = adminRoleService.deactivateRole(roleId,principal.getUserId());
 
         return ResponseEntity.ok(
                 RoleResponseDTO.from(result.role())
@@ -347,9 +347,9 @@ public class AdminRoleController {
             )
             @PathVariable
             @Positive(message = "ID da role deve ser positivo.")
-            Long roleId
+            Long roleId, @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal
     ) {
-        RoleResult result = adminRoleService.activateRole(roleId);
+        RoleResult result = adminRoleService.activateRole(roleId,principal.getUserId());
 
         return ResponseEntity.ok(
                 RoleResponseDTO.from(result.role())
@@ -361,9 +361,9 @@ public class AdminRoleController {
     @RequiredPermission("AUTHORIZATION_ROLE_DELETE")
     @Operation(
             summary = "Excluir role",
-            description = "Realiza exclusão lógica de uma role CUSTOM.",
+            description = "Remove a role CUSTOM sem vínculos impeditivos e preserva histórico segregado.",
             responses = {
-                    @ApiResponse(responseCode = "204", description = "Role excluída logicamente."),
+                    @ApiResponse(responseCode = "204", description = "Role removida com histórico."),
                     @ApiResponse(
                             responseCode = "400",
                             description = "Identificador inválido.",
@@ -398,10 +398,32 @@ public class AdminRoleController {
             )
             @PathVariable
             @Positive(message = "ID da role deve ser positivo.")
-            Long roleId
+            Long roleId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.jeepclub.backend.platform.security.principal.UserPrincipal principal
     ) {
-        adminRoleService.deleteRole(roleId);
+        adminRoleService.deleteRole(roleId, principal.getUserId());
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{roleId}/archive")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_ARCHIVE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_ARCHIVE")
+    @Operation(summary = "Arquivar role CUSTOM", description = "Retira grants operacionais sem apagar vínculos. ROOT protegido.")
+    public ResponseEntity<RoleResponseDTO> archive(@PathVariable @Positive Long roleId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        return ResponseEntity.ok(RoleResponseDTO.from(adminRoleService.archiveRole(roleId, principal.getUserId()).role()));
+    }
+
+    @PatchMapping("/{roleId}/unarchive")
+    @PreAuthorize("hasAuthority('AUTHORIZATION_ROLE_UNARCHIVE')")
+    @RequiredPermission("AUTHORIZATION_ROLE_UNARCHIVE")
+    @Operation(summary = "Desarquivar role CUSTOM", description = "Retorna a INACTIVE; não concede grants até ativação explícita.")
+    public ResponseEntity<RoleResponseDTO> unarchive(@PathVariable @Positive Long roleId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        return ResponseEntity.ok(RoleResponseDTO.from(adminRoleService.unarchiveRole(roleId, principal.getUserId()).role()));
     }
 }

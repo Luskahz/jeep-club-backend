@@ -22,6 +22,8 @@ import java.util.Optional;
 @Repository
 @RequiredArgsConstructor
 public class ToolRepositoryAdapter implements ToolRepository {
+    private final jakarta.persistence.EntityManager entityManager;
+
 
     private final ToolJpaRepository jpaRepository;
     private final ToolHistoryJpaRepository historyJpaRepository;
@@ -59,6 +61,7 @@ public class ToolRepositoryAdapter implements ToolRepository {
             Long deletedByUserId,
             LocalDateTime deletedAt
     ) {
+        findByIdForUpdate(tool.getId()).orElseThrow(() -> new ToolAlreadyDeletedException(tool.getId()));
         ToolEntity entity = jpaRepository
                 .findByIdForUpdate(tool.getId())
                 .orElseThrow(
@@ -75,5 +78,12 @@ public class ToolRepositoryAdapter implements ToolRepository {
 
         historyJpaRepository.save(history);
         jpaRepository.delete(entity);
+    }
+    @Override
+    public Optional<Tool> findByIdForUpdate(Long id) {
+        var locked = jpaRepository.findByIdForUpdate(id);
+        // Retain the DB lock while discarding any pre-lock ORM snapshot (MySQL REPEATABLE READ).
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByIdForUpdate(id)).map(mapper::toDomain);
     }
 }

@@ -1,6 +1,6 @@
 package com.jeepclub.backend.iam.identity.infra.integration.authorization;
 
-import com.jeepclub.backend.iam.authorization.api.module.role.RoleQuery;
+import com.jeepclub.backend.iam.authorization.api.module.role.RoleLifecycleLock;
 import com.jeepclub.backend.iam.identity.core.port.UserAuthorizationProtectionPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -11,7 +11,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class IdentityAuthorizationProtectionAdapter implements UserAuthorizationProtectionPort {
 
-    private final RoleQuery roleQuery;
+    private final RoleLifecycleLock roleQuery;
 
     @Override
     public boolean hasRootRole(Long userId) {

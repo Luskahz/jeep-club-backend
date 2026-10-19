@@ -56,6 +56,7 @@ public class EventService {
         var event = events.locked(id); events.requireOpen(event);
         var registration = events.registration(id, user);
         var replacement = registration.allocate(allocations, unallocated);
+        events.lockReferences(user,allocations,unallocated);
         events.validateDependents(user, unallocated);
         events.validateAllocations(user, allocations);
         var approved = operations.guests(id).stream().filter(g -> g.status() == EventGuestRequest.Status.APPROVED).toList();

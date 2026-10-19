@@ -1,0 +1,183 @@
+{
+  "ticket": "BACK-512",
+  "date": "2026-10-18",
+  "branch": "feat/back-512-entity-lifecycle",
+  "baseBranch": "feat/back-510-media-orchestration",
+  "base": "86573ea6d0803c7407e739c1b271fc636047eb38",
+  "previousPullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/106",
+  "codeCommit": null,
+  "publication": {
+    "result": "not_published"
+  },
+  "environment": {
+    "java": "Microsoft OpenJDK17.0.18",
+    "os": "Windows",
+    "mysql": "8.0.46",
+    "database": "Local disposable Testcontainers only"
+  },
+  "gates": [
+    {
+      "name": "Full verify",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "log": "target/back-512-full-verify-final.log",
+      "result": "passed",
+      "tests": 2013,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "logSha256": "cc7c66df67fabf3bf88aa11051141d00ab9c37353f4d4c2229597dffb629308d"
+    },
+    {
+      "name": "Complete MySQL profile",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "log": "target/back-512-mysql-full-final.log",
+      "result": "passed",
+      "tests": 148,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "logSha256": "95979d27f3dfff88471d895d6aa5e4b3902f5d7f9228b6ce986a472ae90b1716"
+    },
+    {
+      "name": "Future migration",
+      "command": "bash deploy/test-future-migration.sh (Windows adapter; committed Git archive only)",
+      "result": "not_run"
+    }
+  ],
+  "windowsSkip": "Pre-existing symlink capability test; no new disabling or skip introduced.",
+  "developmentAttempts": [
+    {
+      "name": "First full verify",
+      "command": "same complete verify command",
+      "log": "target/back-512-full-verify-first.log",
+      "result": "failed",
+      "tests": 2007,
+      "failures": 6,
+      "errors": 4,
+      "skips": 1,
+      "logSha256": "06e7c8401fc820d52b07ecc490cb170da35be9e2bb93e91a05c7ec5ea585c6e5"
+    },
+    {
+      "name": "Regression correction focal",
+      "command": "focused affected regression suites",
+      "log": "target/back-512-regression-correction-focal.log",
+      "result": "failed",
+      "tests": 260,
+      "failures": 0,
+      "errors": 2,
+      "skips": 0,
+      "logSha256": "34064988a5e30619bba4c4948a960fcb5581d42a44f991a5c16a5a7e7e1ef7bc"
+    },
+    {
+      "name": "Second full verify",
+      "command": "same complete verify command",
+      "log": "target/back-512-full-verify-second.log",
+      "result": "failed",
+      "tests": 2011,
+      "failures": 0,
+      "errors": 1,
+      "skips": 1,
+      "logSha256": "18dd155c4f5770fd18922ffed7bcff96a69a1ce9082d380f62407e64df53fa9e"
+    },
+    {
+      "name": "Permission/history/OpenAPI focal",
+      "command": "PrincipalLifecycleIntegrationTest,ToolsOpenApiIntegrationTest",
+      "log": "target/back-512-permission-history-openapi-focal.log",
+      "result": "failed",
+      "tests": 24,
+      "failures": 1,
+      "errors": 0,
+      "skips": 0,
+      "logSha256": "a18f815b5d01b35b5692953f1bf11dac1286946c24d808435f89660361600d9d"
+    },
+    {
+      "name": "First full MySQL profile",
+      "command": "same complete MySQL profile command",
+      "log": "target/back-512-mysql-full-first.log",
+      "result": "failed",
+      "tests": 148,
+      "failures": 1,
+      "errors": 0,
+      "skips": 0,
+      "logSha256": "06edd338af9c9aca6e6b50f50e81e7116ae0a12febcaa1d0358f0c216c53249a"
+    }
+  ],
+  "developmentFindings": [
+    {
+      "finding": "V5 changes added columns, enum representations, independent history and indexes.",
+      "resolution": "Preserve every old non-status cell explicitly in upgrade assertions; validate new columns separately, native enum order/defaults/indexes and full SQL-vs-JPA metadata without modifying V1-V4/frozen fixtures."
+    },
+    {
+      "finding": "User deletion guard initially selected id from joined UserChargeAssignment subtype.",
+      "resolution": "Select its deployed charge_assignment_id primary key; real successful pending deletion exercises every guard."
+    },
+    {
+      "finding": "Historical Event exports were blocked by a guard over all retained registration references.",
+      "resolution": "Keep live/orphan references restrictive; allow resource deletion only after Event has an immutable deletion snapshot. Existing CSV/PDF post-event tests continue to preserve names and capacity."
+    },
+    {
+      "finding": "Bulk deletion of RolePermissions left managed child references to the removed Role.",
+      "resolution": "Remove managed associations and flush before deleting Role; verify independent permission snapshot and unchanged permission catalog."
+    },
+    {
+      "finding": "The three new history endpoints initially omitted explicit successful OpenAPI responses.",
+      "resolution": "Declare200 application/json with distinct immutable response-model names; validate generated OpenAPI for all three."
+    },
+    {
+      "finding": "Two-state fixture data and raw Registry SQL still used legacy statuses.",
+      "resolution": "Exercise all three states with distinct synthetic values and archived timestamps; update current-state contracts to INACTIVE. Raw legacy values remain covered by migration tests."
+    }
+  ],
+  "coverage": [
+    "Six independent ACTIVE/INACTIVE/ARCHIVED enums; process enums unchanged",
+    "Archived reads, explicit unarchive-to-INACTIVE and separate activation",
+    "All six aggregates under repeated concurrent archival on migrated MySQL",
+    "MySQL old repeatable-read ORM snapshot cannot overwrite archival time",
+    "Concurrent pending User deletion vs administrative Tool creation leaves no orphan",
+    "Real Authentication session revocation and subsequent access rejection",
+    "Archived/inactive Role no longer grants permissions to an existing session",
+    "Protected ROOT, owner isolation and unauthorized administrative commands",
+    "Pending physical User deletion, reusable business identity and independent UserRole removal history",
+    "Completed credentials, any Session fact, Member, financial, clinical and live Event references restrict deletion",
+    "Audit failure rolls back User, Authentication account, UserRole binding and all new histories",
+    "Unused Role deletion preserves permissions in history and in catalog",
+    "Unused ChargeDefinition deletion preserves full configuration without deleting financial facts",
+    "Dependent, Tool and Vehicle deletion snapshots preserve archived state",
+    "Legacy User/Dependent DISABLED, Role DELETED and Vehicle SOFT_DELETED with URLs preserved by V5",
+    "Controlled V5 replay, invalid legacy preflight, V4 FK/Registry preservation and Hibernate metadata validation",
+    "OpenAPI permissions and independent history schemas, no-store history response, no PII/credentials in User history",
+    "CSV/PDF exports, post-event historical presentation and pagination regressions"
+  ],
+  "migration": {
+    "introduced": "V5__principal_entity_lifecycle.sql",
+    "immutableVersions": [
+      "V1",
+      "V2",
+      "V3",
+      "V4"
+    ],
+    "newHistoryTables": 6,
+    "physicalPermissionCatalog": "20 appended codes; old V4 positions preserved; no implicit CUSTOM grants",
+    "requiresCoordinatedWriteStop": true,
+    "rollback": "MySQL DDL is non-transactional; reconcile/restore or forward fix. No repair/clean to hide inconsistencies."
+  },
+  "reviewDecisions": [
+    "Physical User deletion is conservatively limited to pending/unprovisioned credentials with no retained references or Session facts; complementary profiles also block it.",
+    "Runtime deletion of an assigned Role conflicts; archive revokes operational permission while retaining bindings.",
+    "ChargeDefinition ARCHIVED remains terminal under existing financial policy.",
+    "Old SOFT_DELETED Vehicles remain hidden and cannot be restored; preserved legacy flag does not authorize resurrection.",
+    "SystemLog keeps its existing technical retention; a broad PII-retention policy is outside this ticket.",
+    "Maintain Registry issuance/import flags off until homologation, initial range, historical import and future infrastructure review."
+  ],
+  "operational": {
+    "newRequiredEnvironment": false,
+    "newVolumes": false,
+    "storageProviderChanged": false,
+    "jiraStatusesChanged": false,
+    "mergedAnyPullRequest": false,
+    "pushedDevelopOrMaster": false,
+    "vpsAccessed": false,
+    "deploymentTriggered": false,
+    "productiveDatabaseModified": false
+  }
+}

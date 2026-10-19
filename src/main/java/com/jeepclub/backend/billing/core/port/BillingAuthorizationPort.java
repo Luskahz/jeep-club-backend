@@ -6,4 +6,5 @@ public interface BillingAuthorizationPort {
 
     List<Long> findUserIdsByRoleId(Long roleId);
     boolean existsActiveRoleById(Long roleId);
+    boolean existsActiveRoleByIdForUpdate(Long roleId);
 }

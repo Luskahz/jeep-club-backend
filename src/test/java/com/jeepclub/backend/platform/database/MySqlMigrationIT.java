@@ -30,7 +30,8 @@ class MySqlMigrationIT {
         var expected=Map.ofEntries(
             Map.entry("V1__initial_deploy_schema.sql","c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e"),
             Map.entry("V2__identity_user_profiles.sql","c82bc02dea548d93c127ddd565df1ca05fcd6eaf58f2b2b500becdcdd8196963"),
-            Map.entry("V3__account_activation_invitations.sql","b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"));
+            Map.entry("V3__account_activation_invitations.sql","b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"),
+            Map.entry("V4__membership_member_registry.sql","1f53bd3dfe2636613bc8c8907aada143a3cbcbbddda77c7eadbcb10951b3c6ce"));
         for(var entry:expected.entrySet()) {
             String text=java.nio.file.Files.readString(java.nio.file.Path.of("src/main/resources/db/migration",entry.getKey())).replace("\r\n","\n");
             var digest=java.security.MessageDigest.getInstance("SHA-256").digest(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -44,7 +45,8 @@ class MySqlMigrationIT {
         String expected = database();
         jpa(expected, Integer.MAX_VALUE, "create-only");
         registryPhysicalConstraints(expected);
-        assertThat(snapshot(fresh)).isEqualTo(snapshot(expected));
+        lifecyclePhysicalConstraints(expected);
+        assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
     }
@@ -60,7 +62,8 @@ class MySqlMigrationIT {
             statement.executeUpdate("insert into authorization_permissions(id,code,module,description,created_at) "
                     + "values(901,'IDENTITY_USER_READ','IDENTITY','Synthetic existing permission',UTC_TIMESTAMP(6))");
         }
-        var usersBefore=fixtureRows(existing,"identity_users");
+        var userColumnsBefore = fixtureColumns(existing, "identity_users");
+        var usersBefore=fixtureRows(existing,"identity_users",userColumnsBefore);
         var applicationsBefore=fixtureRows(existing,"membership_applications");
         var permissionsBefore=fixtureRows(existing,"authorization_permissions");
         var baseline = Flyway.configure().dataSource(url(existing), MYSQL.getUsername(), MYSQL.getPassword())
@@ -73,7 +76,12 @@ class MySqlMigrationIT {
         flyway(fresh).migrate();
         assertThat(snapshot(existing)).isEqualTo(snapshot(fresh));
         assertThat(count(existing, "identity_users")).isEqualTo(1);
-        assertThat(fixtureRows(existing,"identity_users")).isEqualTo(usersBefore);
+        assertThat(fixtureRows(existing,"identity_users",userColumnsBefore)).isEqualTo(usersBefore);
+        try (var c = connection(existing); var st = c.createStatement();
+             var row = st.executeQuery("select archived_at from identity_users where id=700")) {
+            assertThat(row.next()).isTrue();
+            assertThat(row.getObject(1)).isNull();
+        }
         assertThat(fixtureRows(existing,"membership_applications")).isEqualTo(applicationsBefore);
         assertThat(fixtureRows(existing,"authorization_permissions")).isEqualTo(permissionsBefore);
         assertThat(count(existing,"membership_members")).isZero();
@@ -303,6 +311,19 @@ class MySqlMigrationIT {
             statement.execute("alter table membership_member_audits modify previous_number varchar(64) character set utf8mb4 collate utf8mb4_bin null, modify new_number varchar(64) character set utf8mb4 collate utf8mb4_bin not null, add constraint fk_membership_audit_member foreign key (member_id) references membership_members(id)");
         }
     }
+    private static void lifecyclePhysicalConstraints(String name) throws Exception {
+        try (var c=connection(name); var st=c.createStatement()) {
+            String oldType;
+            try (var row=st.executeQuery("select column_type from information_schema.columns "
+                    + "where table_schema=database() and table_name='authorization_permissions' and column_name='code'")) {
+                assertThat(row.next()).isTrue(); oldType=row.getString(1);
+            }
+            st.execute("alter table authorization_permissions modify code " + oldType.substring(0,oldType.length()-1)
+                    + ",'IDENTITY_USER_ARCHIVE','IDENTITY_USER_UNARCHIVE','IDENTITY_USER_DELETE','IDENTITY_USER_HISTORY_READ','AUTHORIZATION_ROLE_ARCHIVE','AUTHORIZATION_ROLE_UNARCHIVE','AUTHORIZATION_ROLE_HISTORY_READ','DEPENDENTS_DEPENDENT_ACTIVATE','DEPENDENTS_DEPENDENT_DEACTIVATE','DEPENDENTS_DEPENDENT_ARCHIVE','DEPENDENTS_DEPENDENT_UNARCHIVE','DEPENDENTS_DEPENDENT_DELETE','TOOLS_TOOL_ARCHIVE','TOOLS_TOOL_UNARCHIVE','VEHICLES_VEHICLE_ACTIVATE','VEHICLES_VEHICLE_DEACTIVATE','VEHICLES_VEHICLE_ARCHIVE','VEHICLES_VEHICLE_UNARCHIVE','BILLING_CHARGE_DEFINITION_DELETE','BILLING_CHARGE_DEFINITION_HISTORY_READ') not null");
+            st.execute("alter table authorization_role_permission_deletion_history add constraint fk_role_permission_deletion_history foreign key (role_id) references authorization_role_deletion_history(original_id)");
+            st.execute("alter table authorization_user_role_deletion_history add constraint fk_user_role_deletion_history foreign key (role_id) references authorization_role_deletion_history(original_id)");
+        }
+    }
     private static void validateJpa(String name) throws Exception { jpa(name, Integer.MAX_VALUE, "validate"); }
     private static void jpa(String name, int version, String action) throws Exception {
         var registry = SchemaMappings.registry(Map.of(
@@ -318,6 +339,27 @@ class MySqlMigrationIT {
     }
     private static Connection connection(String name) throws Exception {
         return DriverManager.getConnection(url(name), MYSQL.getUsername(), MYSQL.getPassword());
+    }
+    private static List<String> fixtureColumns(String name, String table) throws Exception {
+        var columns = new ArrayList<String>();
+        try (var c = connection(name); var st = c.createStatement();
+             var rows = st.executeQuery("select * from " + table + " where 1=0")) {
+            for (int i=1; i<=rows.getMetaData().getColumnCount(); i++) columns.add(rows.getMetaData().getColumnName(i));
+        }
+        return columns;
+    }
+    private static List<String> fixtureRows(String name, String table, List<String> columns) throws Exception {
+        var result = new ArrayList<String>();
+        String selected = columns.stream().map(column -> String.valueOf((char)96) + column + (char)96).collect(java.util.stream.Collectors.joining(","));
+        try (var c=connection(name); var st=c.createStatement();
+             var rows=st.executeQuery("select " + selected + " from " + table + " order by id")) {
+            while (rows.next()) {
+                var cells=new ArrayList<String>();
+                for(int i=1; i<=columns.size(); i++) cells.add(rows.getString(i));
+                result.add(cells.toString());
+            }
+        }
+        return result;
     }
     private static List<String> fixtureRows(String name,String table) throws Exception {
         var result=new ArrayList<String>();
@@ -356,5 +398,106 @@ class MySqlMigrationIT {
             }
         }
         return rows;
+    }
+
+    @Test void lifecycleMigrationPreservesLegacyRowsAssociationsMediaAndRegistryAndCanBeReplayed() throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("4").cleanDisabled(true).load().migrate();
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("insert into identity_users(id,name,cpf,status,created_at,disabled_at) values(700,'Synthetic legacy user','00000000000','DISABLED',UTC_TIMESTAMP(6)-interval 1 day,UTC_TIMESTAMP(6))");
+            st.executeUpdate("insert into dependents_dependent(id,name,cpf,birth_date,relationship_type,user_id,status,created_at,updated_at) values(710,'Synthetic dependent','00000000001','2010-01-01','CHILD',700,'DISABLED',UTC_TIMESTAMP(6)-interval 1 day,UTC_TIMESTAMP(6))");
+            st.executeUpdate("insert into dependents_dependent_history(id,dependent_id,name,cpf,birth_date,relationship_type,user_id,status,created_at,deleted_by_user_id,deleted_at) values(711,712,'Historical dependent','00000000002','2010-01-01','CHILD',700,'DISABLED',UTC_TIMESTAMP(6)-interval 1 day,700,UTC_TIMESTAMP(6))");
+            st.executeUpdate("insert into tools(id,name,user_id,status,created_at) values(730,'Synthetic tool',700,'INACTIVE',UTC_TIMESTAMP(6)-interval 1 day)");
+            st.executeUpdate("insert into vehicles_vehicle(id,nickname,photo,plate,renavam,brand,model,manufacturing_year,model_year,color,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at) values(720,'Legacy photo','https://legacy.invalid/vehicle.png','LEG1A23','00000000003','Jeep','Test',2020,2020,'Blue',5,'DIESEL',2,'SOFT_DELETED',0,700,UTC_TIMESTAMP(6)-interval 1 day)");
+            st.executeUpdate("insert into vehicles_vehicle(id,nickname,plate,renavam,brand,model,manufacturing_year,model_year,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at) values(721,'Legacy null','NUL1A23','00000000004','Jeep','Test',2020,2020,5,'DIESEL',2,'SOFT_DELETED',0,700,UTC_TIMESTAMP(6)-interval 1 day)");
+            st.executeUpdate("insert into vehicles_vehicle_history(id,vehicle_id,photo,plate,renavam,brand,model,manufacturing_year,model_year,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at,deleted_by_user_id,deleted_at) values(724,725,'https://legacy.invalid/historical.png','HIS1A23','00000000005','Jeep','Test',2020,2020,5,'DIESEL',2,'SOFT_DELETED',0,700,UTC_TIMESTAMP(6)-interval 1 day,700,UTC_TIMESTAMP(6))");
+            st.executeUpdate("insert into authorization_roles(id,name,kind,status,created_at,updated_at,deleted_at) values(750,'Legacy deleted','CUSTOM','DELETED',UTC_TIMESTAMP(6)-interval 1 day,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6)),(751,'Legacy inferred time','CUSTOM','DELETED',UTC_TIMESTAMP(6)-interval 1 day,UTC_TIMESTAMP(6),null)");
+            st.executeUpdate("insert into authorization_permissions(id,code,module,description,created_at) values(760,'IDENTITY_USER_READ','IDENTITY','Synthetic permission',UTC_TIMESTAMP(6))");
+            st.executeUpdate("insert into authorization_user_roles(id,user_id,role_id,created_at) values(770,700,750,UTC_TIMESTAMP(6)-interval 1 day)");
+            st.executeUpdate("insert into authorization_role_permissions(id,role_id,permission_id,created_at) values(780,750,760,UTC_TIMESTAMP(6)-interval 1 day)");
+            st.executeUpdate("insert into membership_members(id,identity_user_id,membership_number,created_at,updated_at,version) values(790,700,'B512-700',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+            var claimKey=new com.jeepclub.backend.memberships.core.domain.model.MembershipNumber("B512-700").claimKey();
+            st.executeUpdate("insert into membership_number_claims(claim_key,membership_number,member_id,actor_user_id,claimed_at,reason) values('"+claimKey+"','B512-700',790,700,UTC_TIMESTAMP(6),'Synthetic migration fixture')");
+            st.executeUpdate("insert into membership_member_audits(member_id,new_number,actor_user_id,occurred_at,reason,operation,outcome) values(790,'B512-700',700,UTC_TIMESTAMP(6),'Synthetic migration fixture','ASSIGN','SUCCESS')");
+        }
+        var unchanged=new java.util.LinkedHashMap<String,List<String>>();
+        var columns=new java.util.LinkedHashMap<String,List<String>>();
+        for(var table:List.of("identity_users","dependents_dependent","dependents_dependent_history","vehicles_vehicle","vehicles_vehicle_history","tools")) {
+            var selected=fixtureColumns(db,table).stream().filter(column -> !column.equals("status")).toList();
+            columns.put(table,selected);unchanged.put(table,fixtureRows(db,table,selected));
+        }
+        var registryBefore=rows(db,"select * from membership_members order by id");
+        var claimsBefore=rows(db,"select * from membership_number_claims order by claim_key");
+        var auditBefore=rows(db,"select * from membership_member_audits order by id");
+        var permissionsBefore=rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions order by id");
+        var processStatesBefore=rows(db,"select table_name,column_name,column_type from information_schema.columns where table_schema=database() and data_type='enum' and table_name not in ('identity_users','dependents_dependent','dependents_dependent_history','vehicles_vehicle','vehicles_vehicle_history','tools','tools_tool_history','authorization_roles','authorization_permissions') order by table_name,column_name");
+        flyway(db).migrate();validateJpa(db);
+        columns.forEach((table,selected) -> {
+            try { assertThat(fixtureRows(db,table,selected)).isEqualTo(unchanged.get(table)); }
+            catch(Exception e) { throw new RuntimeException(e); }
+        });
+        assertThat(rows(db,"select status from identity_users where id=700")).containsExactly("[INACTIVE]");
+        assertThat(rows(db,"select status from dependents_dependent where id=710")).containsExactly("[INACTIVE]");
+        assertThat(rows(db,"select status from dependents_dependent_history where id=711")).containsExactly("[INACTIVE]");
+        assertThat(rows(db,"select status,legacy_deleted,archived_at is not null from vehicles_vehicle order by id")).containsExactly("[ARCHIVED, 1, 1]","[ARCHIVED, 1, 1]");
+        assertThat(rows(db,"select status,legacy_deleted,archived_at is not null from vehicles_vehicle_history")).containsExactly("[ARCHIVED, 1, 1]");
+        assertThat(count(db,"authorization_roles")).isZero();
+        assertThat(count(db,"authorization_role_permissions")).isZero();
+        assertThat(count(db,"authorization_user_roles")).isZero();
+        assertThat(rows(db,"select original_id,previous_status,deleted_by_user_id,inferred_time,schema_version from authorization_role_deletion_history order by original_id")).containsExactly("[750, DELETED, null, 0, 1]","[751, DELETED, null, 1, 1]");
+        assertThat(rows(db,"select original_id,role_id,permission_id,permission_code from authorization_role_permission_deletion_history")).containsExactly("[780, 750, 760, IDENTITY_USER_READ]");
+        assertThat(rows(db,"select original_id,role_id,user_id from authorization_user_role_deletion_history")).containsExactly("[770, 750, 700]");
+        assertThat(rows(db,"select * from membership_members order by id")).isEqualTo(registryBefore);
+        assertThat(rows(db,"select * from membership_number_claims order by claim_key")).isEqualTo(claimsBefore);
+        assertThat(rows(db,"select * from membership_member_audits order by id")).isEqualTo(auditBefore);
+        assertThat(rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions order by id")).isEqualTo(permissionsBefore);
+        assertThat(rows(db,"select table_name,column_name,column_type from information_schema.columns where table_schema=database() and data_type='enum' and table_name not in ('identity_users','dependents_dependent','dependents_dependent_history','vehicles_vehicle','vehicles_vehicle_history','tools','tools_tool_history','authorization_roles','authorization_permissions') order by table_name,column_name")).isEqualTo(processStatesBefore);
+        var historyBefore=rows(db,"select * from authorization_role_deletion_history order by original_id");
+        try(var c=connection(db)) {
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V5__principal_entity_lifecycle.sql"));
+        }
+        assertThat(rows(db,"select * from authorization_role_deletion_history order by original_id")).isEqualTo(historyBefore);
+        assertThat(count(db,"authorization_role_permission_deletion_history")).isEqualTo(1);
+        assertThat(count(db,"authorization_user_role_deletion_history")).isEqualTo(1);
+        try(var c=connection(db);var st=c.createStatement()) {
+            assertThatThrownBy(() -> st.executeUpdate("delete from identity_users where id=700")).isInstanceOf(java.sql.SQLException.class);
+        }
+        assertThat(count(db,"identity_users")).isEqualTo(1);
+        assertThat(rows(db,"select * from membership_members order by id")).isEqualTo(registryBefore);
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+    }
+
+    @ParameterizedTest @ValueSource(strings={"ROOT","USER_TIMESTAMP"})
+    void lifecyclePreflightRejectsContradictoryLegacyDataWithoutChangingOperationalRows(String invalid) throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("4").cleanDisabled(true).load().migrate();
+        try(var c=connection(db);var st=c.createStatement()) {
+            if(invalid.equals("ROOT")) st.executeUpdate("insert into authorization_roles(id,name,kind,status,created_at,deleted_at) values(750,'ROOT','ROOT','DELETED',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))");
+            else st.executeUpdate("insert into identity_users(id,name,cpf,status,created_at) values(700,'Invalid timestamp fixture','00000000000','DISABLED',UTC_TIMESTAMP(6))");
+        }
+        var before=rows(db,invalid.equals("ROOT")?"select * from authorization_roles order by id":"select * from identity_users order by id");
+        assertThatThrownBy(() -> flyway(db).migrate()).isInstanceOf(FlywayException.class)
+                .hasStackTraceContaining("ck_back512_preflight");
+        assertThat(rows(db,invalid.equals("ROOT")?"select * from authorization_roles order by id":"select * from identity_users order by id")).isEqualTo(before);
+        assertThat(rows(db,"select count(*) from information_schema.columns where table_schema=database() and table_name='identity_users' and column_name='archived_at'")).containsExactly("[0]");
+    }
+
+    private static List<String> rows(String database,String query) throws Exception {
+        var result=new ArrayList<String>();
+        try(var c=connection(database);var st=c.createStatement();var rows=st.executeQuery(query)) {
+            while(rows.next()) {
+                var values=new ArrayList<String>();
+                for(int i=1;i<=rows.getMetaData().getColumnCount();i++) {
+                    Object value=rows.getObject(i);
+                    if(value instanceof byte[] bytes && bytes.length==1) values.add(Integer.toString(bytes[0]&255));
+                    else if(value instanceof Boolean flag) values.add(flag?"1":"0");
+                    else values.add(rows.getString(i));
+                }
+                result.add(values.toString());
+            }
+        }
+        return result;
     }
 }

@@ -74,4 +74,8 @@ public class UserRoleRepositoryAdapter implements UserRoleRepository {
     public void deleteByUserId(Long userId) {
         jpa.deleteByUserId(userId);
     }
+
+    @Override public boolean existsByUserIdAndRoleIdForUpdate(Long userId, Long roleId) {
+        return jpa.findLockedByUserIdAndRole_Id(userId, roleId).isPresent();
+    }
 }

@@ -66,6 +66,8 @@ class EventOperationsIntegrationTest {
     @MockitoBean ImageMediaService media;
     @MockitoBean EventVehicleQuery vehicles;
     @MockitoBean DependentsQuery dependents;
+    @MockitoBean com.jeepclub.backend.vehicles.api.module.VehicleLifecycleLock vehicleLocks;
+    @MockitoBean com.jeepclub.backend.dependents.api.module.DependentLifecycleLock dependentLocks;
     @MockitoBean EmergencyMedicalProfileQuery health;
     @MockitoBean com.jeepclub.backend.shared.storage.FileStorage storage;
     @MockitoBean com.jeepclub.backend.billing.core.port.BillingMembershipPort memberTargets;
@@ -73,6 +75,10 @@ class EventOperationsIntegrationTest {
 
     @BeforeEach void setup() {
         clock.now = NOW;
+        when(vehicleLocks.activeById(anyLong())).thenAnswer(a -> vehicles.findActive(a.getArgument(0)));
+        when(dependentLocks.byId(anyLong())).thenAnswer(a -> Optional.of(
+                new com.jeepclub.backend.dependents.api.module.DependentLifecycleLock.Eligibility(a.getArgument(0),10L,
+                        dependents.isActiveDependentOfUser(a.getArgument(0),10L))));
         when(storage.store(any(),anyString())).thenAnswer(a -> new com.jeepclub.backend.shared.storage.StoredFile("billing/payment-receipts/" + UUID.randomUUID() + ".pdf"));
         when(vehicles.findActive(anyLong())).thenAnswer(a -> Optional.of(new EventVehicleQuery.VehicleCapacity(a.getArgument(0), 10L, 3)));
         when(vehicles.findActiveBatch(anyCollection())).thenAnswer(a -> ((Collection<Long>) a.getArgument(0)).stream().map(id -> new EventVehicleQuery.VehicleCapacity(id, 10L, 3)).toList());
@@ -519,6 +525,7 @@ class EventOperationsIntegrationTest {
         var e = event(false); Long definition = admin.rules(e.getId()).get(0).chargeDefinitionId();
         when(memberTargets.findActiveMemberUserIds()).thenReturn(List.of(30L));
         when(memberTargets.existsActiveMemberByUserId(anyLong())).thenReturn(true);
+        when(memberTargets.existsActiveMemberByUserIdForUpdate(anyLong())).thenReturn(true);
         when(roleTargets.findUserIdsByRoleId(5L)).thenReturn(List.of(40L,30L));
         tx(() -> {
             assignments.save(com.jeepclub.backend.billing.core.domain.model.assignment.AllMembersChargeAssignment.create(definition,NOW));

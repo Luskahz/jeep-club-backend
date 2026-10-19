@@ -92,4 +92,7 @@ public class DependentEntity {
             name = "updated_at"
     )
     private Instant updatedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
 }

@@ -26,6 +26,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Repository
 public class VehicleRepositoryAdapter implements VehicleRepository {
+    private final jakarta.persistence.EntityManager entityManager;
+
 
     private static final String PLATE_CONSTRAINT = "uk_vehicle_plate";
     private static final String RENAVAM_CONSTRAINT = "uk_vehicle_renavam";
@@ -82,6 +84,7 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
             Long deletedByUserId,
             Instant deletedAt
     ) {
+        findByIdForUpdate(vehicle.getId()).orElseThrow(() -> new VehicleAlreadyDeletedException(vehicle.getId()));
         VehicleEntity entity = jpaRepository
                 .findByIdForUpdate(vehicle.getId())
                 .orElseThrow(
@@ -129,13 +132,20 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
 
     @Override
     public Page<Vehicle> findAllByOwnerIdAndStatus(Long ownerId, VehicleStatus status, Pageable pageable) {
-        return jpaRepository.findAllByOwnerIdAndStatus(ownerId, status, pageable)
+        return jpaRepository.findAllByOwnerIdAndStatusAndLegacyDeletedFalse(ownerId, status, pageable)
                 .map(VehicleMapper::toDomain);
     }
 
     @Override
     public Page<Vehicle> findAllByStatus(VehicleStatus status, Pageable pageable) {
-        return jpaRepository.findAllByStatus(status, pageable)
+        return jpaRepository.findAllByStatusAndLegacyDeletedFalse(status, pageable)
                 .map(VehicleMapper::toDomain);
+    }
+    @Override
+    public Optional<Vehicle> findByIdForUpdate(Long id) {
+        var locked = jpaRepository.findByIdForUpdate(id);
+        // Retain the DB lock while discarding any pre-lock ORM snapshot (MySQL REPEATABLE READ).
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByIdForUpdate(id)).map(VehicleMapper::toDomain);
     }
 }

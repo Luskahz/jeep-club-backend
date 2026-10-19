@@ -95,7 +95,7 @@ class MedicalProfileOwnerValidationServiceTest {
 
     @Test
     void nonexistentOwnerCannotBeCreatedByAdministrator() {
-        when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 404L))
+        when(statusChecker.getStatusForUpdate(MedicalProfileOwnerType.USER, 404L))
                 .thenReturn(MedicalProfileOwnerStatus.NOT_FOUND);
 
         assertThatThrownBy(() -> adminService.upsertByOwner(

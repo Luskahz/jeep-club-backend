@@ -77,6 +77,7 @@ class MedicalProfileAccessBoundaryTest {
     void dependentCreationAndUpdateUseDependentIdentityAndLockWhilePreservingCreationDate() {
         when(owners.getStatus(MedicalProfileOwnerType.USER, 1L)).thenReturn(MedicalProfileOwnerStatus.ACTIVE);
         when(owners.getStatus(MedicalProfileOwnerType.DEPENDENT, 2L)).thenReturn(MedicalProfileOwnerStatus.ACTIVE);
+        when(owners.getStatusForUpdate(MedicalProfileOwnerType.DEPENDENT, 2L)).thenReturn(MedicalProfileOwnerStatus.ACTIVE);
         when(ownership.belongsToUser(2L, 1L)).thenReturn(true);
         when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
         var created = member.upsertDependentMedicalProfile(1L, 2L, command());
