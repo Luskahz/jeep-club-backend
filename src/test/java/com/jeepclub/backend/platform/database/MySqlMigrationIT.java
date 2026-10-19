@@ -50,6 +50,45 @@ class MySqlMigrationIT {
         assertThat(flyway(db).migrate().migrationsExecuted).isZero();
     }
 
+    @Test void vehicleGalleryMigrationPreservesLegacyLiveAndHistoricalPhotosAndControlledReplay() throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration")
+                .target("7").cleanDisabled(true).load().migrate();
+        var photos=java.util.Arrays.asList("images/2026/10/19/00000000-0000-0000-0000-000000000001.png","https://legacy.invalid/Photo.PNG?old=1",null,"");
+        try(var c=connection(db);var st=c.createStatement()) {
+            for(int i=0;i<4;i++) {
+                String value=photos.get(i)==null?"NULL":"'"+photos.get(i)+"'";
+                st.executeUpdate("INSERT INTO vehicles_vehicle(id,photo,plate,renavam,brand,model,manufacturing_year,model_year,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at) VALUES("+(900+i)+","+value+",'MIG000"+i+"','0000000090"+i+"','Jeep','Legacy',2020,2021,5,'DIESEL',2,'ACTIVE',0,800,UTC_TIMESTAMP(6))");
+                st.executeUpdate("INSERT INTO vehicles_vehicle_history(id,vehicle_id,photo,plate,renavam,brand,model,manufacturing_year,model_year,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at,deleted_by_user_id,deleted_at) VALUES("+(950+i)+","+(900+i)+","+value+",'MIG000"+i+"','0000000090"+i+"','Jeep','Legacy',2020,2021,5,'DIESEL',2,'ACTIVE',0,800,UTC_TIMESTAMP(6),800,UTC_TIMESTAMP(6))");
+            }
+        }
+        var liveColumns=fixtureColumns(db,"vehicles_vehicle");var historyColumns=fixtureColumns(db,"vehicles_vehicle_history");
+        var liveBefore=fixtureRows(db,"vehicles_vehicle",liveColumns);var historyBefore=fixtureRows(db,"vehicles_vehicle_history",historyColumns);
+        flyway(db).migrate();validateJpa(db);
+        assertThat(fixtureRows(db,"vehicles_vehicle",liveColumns)).isEqualTo(liveBefore);
+        assertThat(fixtureRows(db,"vehicles_vehicle_history",historyColumns)).isEqualTo(historyBefore);
+        var liveImages=rows(db,"SELECT vehicle_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_images ORDER BY vehicle_id");
+        var historyImages=rows(db,"SELECT history_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_image_history ORDER BY history_id");
+        assertThat(liveImages).containsExactly("[900, "+photos.get(0)+", 0, 1]","[901, "+photos.get(1)+", 0, 1]","[903, , 0, 1]");
+        assertThat(historyImages).containsExactly("[950, "+photos.get(0)+", 0, 1]","[951, "+photos.get(1)+", 0, 1]","[953, , 0, 1]");
+        try(var c=connection(db);var st=c.createStatement()) {
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V8__vehicle_gallery.sql"));
+            assertThat(rows(db,"SELECT vehicle_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_images ORDER BY vehicle_id")).isEqualTo(liveImages);
+            st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'images/2026/10/19/00000000-0000-0000-0000-000000000002.png',1,b'0')");
+            assertThatThrownBy(()->st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'new-reference',5,b'0')")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(()->st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'new-reference',0,b'0')")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(()->st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'https://legacy.invalid/Photo.PNG?old=1',2,b'0')")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(()->st.executeUpdate("DELETE FROM vehicles_vehicle WHERE id=901")).isInstanceOf(java.sql.SQLException.class);
+            st.executeUpdate("DELETE FROM vehicle_images WHERE vehicle_id=900");st.executeUpdate("UPDATE vehicles_vehicle SET photo=NULL,gallery_revision=1 WHERE id=900");
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V8__vehicle_gallery.sql"));
+            assertThat(rows(db,"SELECT COUNT(*) FROM vehicle_images WHERE vehicle_id=900")).containsExactly("[0]");
+            assertThat(rows(db,"SELECT COUNT(*) FROM vehicle_images WHERE vehicle_id=901")).containsExactly("[2]");
+            st.executeUpdate("DELETE FROM vehicles_vehicle WHERE id=900");
+        }
+        assertThat(rows(db,"SELECT history_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_image_history ORDER BY history_id")).isEqualTo(historyImages);
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+    }
+
     @Test void historicalMigrationSourcesAreImmutable() throws Exception {
         var expected=Map.ofEntries(
             Map.entry("V1__initial_deploy_schema.sql","c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e"),
@@ -71,6 +110,7 @@ class MySqlMigrationIT {
         registryPhysicalConstraints(expected);
         lifecyclePhysicalConstraints(expected);
         dependentPhotoPhysicalConstraints(expected);
+        vehicleGalleryPhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -349,6 +389,16 @@ class MySqlMigrationIT {
             st.execute("alter table authorization_user_role_deletion_history add constraint fk_user_role_deletion_history foreign key (role_id) references authorization_role_deletion_history(original_id)");
         }
     }
+    // Flyway-only binary collation and bounded position checks supplement the JPA fixture.
+    private static void vehicleGalleryPhysicalConstraints(String name) throws Exception {
+        try(var c=connection(name);var st=c.createStatement()) {
+            for(var table:List.of("vehicle_images","vehicle_image_history"))
+                st.execute("ALTER TABLE "+table+" MODIFY storage_key VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL");
+            st.execute("ALTER TABLE vehicle_images ADD CONSTRAINT ck_vehicle_image_position CHECK(position BETWEEN 0 AND 4)");
+            st.execute("ALTER TABLE vehicle_image_history ADD CONSTRAINT ck_vehicle_history_image_position CHECK(position BETWEEN 0 AND 4)");
+        }
+    }
+
     private static void validateJpa(String name) throws Exception { jpa(name, Integer.MAX_VALUE, "validate"); }
     private static void dependentPhotoPhysicalConstraints(String name) throws Exception {
         try (var c=connection(name);var st=c.createStatement();var row=st.executeQuery("select column_type from information_schema.columns where table_schema=database() and table_name='authorization_permissions' and column_name='code'")) {

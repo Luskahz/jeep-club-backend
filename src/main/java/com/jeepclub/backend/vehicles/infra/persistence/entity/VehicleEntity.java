@@ -90,4 +90,16 @@ public class VehicleEntity {
     @org.hibernate.annotations.ColumnDefault("0")
     @Column(name = "legacy_deleted", nullable = false)
     private boolean legacyDeleted;
+
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name="gallery_revision",nullable=false)
+    private long galleryRevision;
+
+    @ElementCollection
+    @CollectionTable(name="vehicle_images",joinColumns=@JoinColumn(name="vehicle_id",foreignKey=@ForeignKey(name="fk_vehicle_images_vehicle")),
+        uniqueConstraints={@UniqueConstraint(name="uk_vehicle_image_position",columnNames={"vehicle_id","position"}),
+            @UniqueConstraint(name="uk_vehicle_image_key",columnNames={"vehicle_id","storage_key"})})
+    @OrderBy("position ASC")
+    @org.hibernate.annotations.BatchSize(size=100)
+    private java.util.List<VehicleImageEntity> images=new java.util.ArrayList<>();
 }

@@ -21,7 +21,7 @@ public class Vehicle {
 
     private Long id;
     private String nickname;            // Nome que o membro da para o proprio veiculo
-    private String photo;               // Foto unica
+    private VehicleGallery gallery;     // Canonical media; photo is derived for legacy readers.
     private String plate;               // Placa do veículo
     private String renavam;             // Código RENAVAM (específico para o Brasil)
     private String brand;               // Marca (ex: Toyota, Ford)
@@ -41,6 +41,7 @@ public class Vehicle {
     private Instant updatedAt;
     private Instant archivedAt;
     private boolean legacyDeleted;
+    private long galleryRevision;
 
 
     public static Vehicle create(
@@ -75,7 +76,7 @@ public class Vehicle {
         return new Vehicle(
                 null,
                 nickname,
-                photo,
+                VehicleGallery.legacy(photo),
                 requireCanonicalPlate(plate),
                 requireCanonicalRenavam(renavam),
                 brand,
@@ -92,7 +93,8 @@ public class Vehicle {
                 createdAt,
                 null,
                 null,
-                false
+                false,
+                0L
         );
 
     }
@@ -169,7 +171,7 @@ public class Vehicle {
         Vehicle vehicle = new Vehicle();
         vehicle.id = id;
         vehicle.nickname = nickname;
-        vehicle.photo = photo;
+        vehicle.gallery = VehicleGallery.legacy(photo);
         vehicle.plate = requireCanonicalPlate(plate);
         vehicle.renavam = requireCanonicalRenavam(renavam);
         vehicle.brand = brand;
@@ -220,8 +222,12 @@ public class Vehicle {
         Objects.requireNonNull(now, "now is required.");
         validateUpdatedAtNotBeforeCreatedAt(this.createdAt, now);
 
+        if (!Objects.equals(getPhoto(),photo)) {
+            assertLegacyPhotoChangeAllowed(photo);
+            this.gallery=VehicleGallery.legacy(photo);
+            this.galleryRevision++;
+        }
         this.nickname = nickname;
-        this.photo = photo;
         this.plate = requireCanonicalPlate(plate);
         this.renavam = requireCanonicalRenavam(renavam);
         this.brand = brand;
@@ -234,6 +240,42 @@ public class Vehicle {
         this.engineDisplacement = engineDisplacement;
         this.towing = towing;
         this.updatedAt = now;
+    }
+
+
+    public String getPhoto() { return gallery.primaryReference(); }
+    public java.util.List<VehicleImage> getImages() { return gallery.images(); }
+
+    /** Persistence-only reconstruction, after the ordinary aggregate invariants were checked. */
+    public static Vehicle restoreGallery(Vehicle vehicle,VehicleGallery gallery,long revision) {
+        validateId(vehicle.id);
+        if(revision<0) throw new IllegalArgumentException("Gallery revision cannot be negative.");
+        vehicle.gallery=Objects.requireNonNull(gallery);vehicle.galleryRevision=revision;
+        return vehicle;
+    }
+
+    public void initializeGallery(VehicleGallery gallery) {
+        if(id!=null) throw new IllegalStateException("Only a new vehicle can initialize its gallery.");
+        this.gallery=Objects.requireNonNull(gallery);
+    }
+
+    public boolean replaceGallery(VehicleGallery gallery,long expectedRevision,Instant now) {
+        if(status!=VehicleStatus.ACTIVE || legacyDeleted) throw new VehicleLifecycleConflictException("Only active vehicles can change their gallery.");
+        Objects.requireNonNull(gallery);Objects.requireNonNull(now);
+        validateUpdatedAtNotBeforeCreatedAt(createdAt,now);
+        if(this.gallery.equals(gallery)) return false;
+        requireGalleryRevision(expectedRevision);
+        this.gallery=gallery;this.galleryRevision++;this.updatedAt=now;return true;
+    }
+
+    public void requireGalleryRevision(long expectedRevision) {
+        if(expectedRevision!=galleryRevision) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException("Vehicle gallery changed; reload it before retrying.");
+    }
+
+    /** A version-unaware writer cannot overwrite an aggregate that has already changed its gallery. */
+    public void assertLegacyPhotoChangeAllowed(String reference) {
+        if(!Objects.equals(getPhoto(),reference) && (gallery.images().size()>1 || galleryRevision!=0))
+            throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException("Use the versioned gallery contract to change a multiple or previously edited gallery.");
     }
 
     /**

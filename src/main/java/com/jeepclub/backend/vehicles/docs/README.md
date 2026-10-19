@@ -1,5 +1,37 @@
 # Vehicles
 
+## Galeria vigente — BACK-525
+
+Vehicle possui galeria própria imutável de zero a cinco imagens, com ordem,
+principal única quando não vazia e revisão esperada para substituição integral.
+photo é alias de compatibilidade da capa; images/galleryRevision são canônicos
+nos detalhes e no formulário de edição. V8 preserva foto única e URLs legadas,
+inclusive no histórico, sem remover a coluna antiga. Flyway governa o schema;
+Hibernate valida. Não há storage paralelo.
+
+Criação multipart member/admin usa vehicle JSON, photos (até cinco arquivos de
+5 MiB) e gallery JSON opcional; sem metadados, a primeira é principal. A part
+photo única continua temporariamente aceita, sem combinação com as novas parts.
+JSON sem foto permanece válido. Os services existentes usam ImageMediaCommand
+e o colaborador interno VehicleGalleryAssembler.
+
+PUT /vehicles/gallery/member/{vehicleId} e /admin/{vehicleId} aceita JSON ou
+multipart gallery + photos. expectedRevision e images são obrigatórios; [] limpa.
+Omissão de photo na edição cadastral preserva toda a galeria; o alias legado não
+pode apagar silenciosamente uma galeria múltipla nem sobrescrever galeria já alterada (revisão maior que zero). Admin exige
+VEHICLES_VEHICLE_UPDATE e os guards de titular/lifecycle. GET histórico
+/vehicles/gallery/history/admin/{historyId} exige VEHICLES_VEHICLE_EXPORT.
+
+Paginação consulta parents e busca imagens em lote; exports usam a coleção para
+o indicador sem expor chaves. Arquivos antigos/compartilhados são retidos, somente
+novos são compensados em rollback. Fotos privadas de Dependents continuam fora
+do resolvedor público. Request total: 30 MiB; imagem: 5 MiB; recibo Billing: 10 MiB.
+
+Contratos, exemplos 0/1/5, V8/backfill, concorrência, limites, frontend e rollout:
+docs/back-525-vehicle-gallery.md na raiz. Escritores de versões anteriores não
+podem coexistir com manutenção da galeria. Esta documentação não autoriza deploy.
+
+
 ## Lifecycle vigente — BACK-512
 
 Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
@@ -16,7 +48,7 @@ opcional (JPEG/PNG/WebP até 5 MiB), em uma única chamada. Criação JSON perma
 disponível sem foto; `photo`/`storageKey` deixaram o DTO de criação e são rejeitados
 como campos desconhecidos. Services usam `ImageMediaCommand` do Platform; rollback
 compensa somente arquivo novo. Referências antigas/compartilhadas e histórico são
-preservados. Edição mantém o contrato vigente até a galeria. Guia de frontend,
+preservados. A BACK-525 amplia esse transporte para galeria. A edição cadastral permanece parcial e a manutenção integral tem contrato próprio. Guia de frontend,
 evidências, riscos e rollout: `docs/back-510-media-orchestration.md` na raiz.
 
 Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
@@ -43,7 +75,7 @@ ativo e usam as authorities `VEHICLES_VEHICLE_CREATE`,
 
 ## Modelo e identificadores
 
-`Vehicle` contém apelido, referência de foto, placa, RENAVAM, marca, modelo,
+`Vehicle` contém apelido, galeria/capa derivada, placa, RENAVAM, marca, modelo,
 anos de fabricação e modelo, cor, capacidade, combustível, cilindrada,
 capacidade de reboque, `ownerId`, status e timestamps. `FuelType` possui
 `GASOLINE`, `ETHANOL`, `FLEX`, `DIESEL`, `ELECTRIC` e `HYBRID`.
@@ -77,10 +109,9 @@ em vez de vazar `DataIntegrityViolationException`/SQL para o cliente.
 
 ## Criação e edição atuais
 
-Todo veículo criado começa `ACTIVE`. A rota de membro usa diretamente o
-`userId` já autenticado e não consulta `UserPort`; a validação do token vigente
-já exige User administrativamente ativo, mas Vehicles não repete essa consulta
-no caso de uso. A criação administrativa usa `UserPort.existsById` para
+Todo veículo criado começa `ACTIVE`. A rota de membro usa o userId autenticado e a criação agora também valida
+UserPort, adquirindo o lock público de Identity para confirmar elegibilidade
+atual até o commit, fechando a corrida entre autenticação e escrita. A criação administrativa usa `UserPort.existsById` para
 rejeitar proprietário inexistente e `UserPort.existsActiveById` para rejeitar
 proprietário existente porém administrativamente `INACTIVE`.
 
@@ -158,10 +189,9 @@ para não inventar, silenciosamente, uma regra de negócio mais restritiva para
 `create` do que o contrato atual permite. Unificar esses limites é uma
 evolução de contrato HTTP fora do escopo desta consolidação.
 
-Campos sem regra observável no contrato atual (`nickname`, `photo`, e
-comprimento máximo de string) permanecem sem validação de domínio, também
-para não inventar regra nova; essas garantias continuam vindo do Bean
-Validation dos DTOs.
+Referências legadas são reconstruídas sem regras de upload novo; alterações
+novas usam o contrato global e a galeria protege suas invariantes. Os demais
+comprimentos seguem os DTOs e o mapeamento existente.
 
 `VehicleEditResolver` continua resolvendo presença/ausência/null explícito
 antes de chamar `Vehicle.update`; as invariantes acima são a segunda camada
@@ -171,14 +201,13 @@ de proteção do agregado, não uma duplicata da semântica de edição parcial.
 
 `UserPort` é uma porta consumer-owned de Vehicles. O `VehicleIdentityAdapter`
 a implementa por meio de `identity.api.module.UserQuery.existsById` e
-`UserQuery.isAdministrativelyActive`; hoje ela é consumida somente na criação
-administrativa. `vehicles.api.module.EventVehicleQuery` expõe somente ID, ownerId
+`UserQuery.isAdministrativelyActive`; é consumida na criação member/admin e manutenção integral da galeria, com lock público de Identity. `vehicles.api.module.EventVehicleQuery` expõe somente ID, ownerId
 e `seatingCapacity` de veículos ativos, incluindo consulta em lote. A capacidade
 canônica existente representa todas as pessoas, incluindo motorista; não foi
 criado campo paralelo. Publications valida alocação usando esse contrato.
-Os fluxos atuais de edição e hard delete de Vehicle não consultam inscrições de
-Event. Uma redução posterior de `seatingCapacity` ou exclusão do veículo não
-revalida nem remove alocações já persistidas em Publications.
+Hard delete usa VehicleDeletionGuards da BACK-512 e recusa vínculos impeditivos.
+Galeria não altera capacidade ou alocações; nenhum repository privado de outro
+módulo nem domínio privado de Publications é acessado.
 Não há acesso direto a repository, entity ou service interno de Identity.
 
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter

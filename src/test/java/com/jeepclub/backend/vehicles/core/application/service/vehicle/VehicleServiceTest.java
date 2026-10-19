@@ -42,13 +42,16 @@ class VehicleServiceTest {
     @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaService images;
 
     @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
+    @Mock private com.jeepclub.backend.vehicles.core.port.UserPort userPort;
     private VehicleService service;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(userPort.existsById(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(userPort.existsActiveById(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
         service = new VehicleService(
                 vehicleRepository,
-                Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand
+                Clock.fixed(NOW, ZoneOffset.UTC), userPort, images, mediaCommand, new com.jeepclub.backend.vehicles.core.application.service.internal.VehicleGalleryAssembler(images,mediaCommand)
         , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 

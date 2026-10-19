@@ -52,7 +52,7 @@ class AdminVehicleServiceTest {
         service = new AdminVehicleService(
                 vehicleRepository,
                 userPort,
-                Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand
+                Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand, new com.jeepclub.backend.vehicles.core.application.service.internal.VehicleGalleryAssembler(images,mediaCommand)
         , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 

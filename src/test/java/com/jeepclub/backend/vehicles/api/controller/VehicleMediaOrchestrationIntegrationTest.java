@@ -59,6 +59,8 @@ class VehicleMediaOrchestrationIntegrationTest {
     @MockitoBean UserPort owners;
     @BeforeEach void setup() {
         jpa.deleteAll();
+        when(owners.existsById(10L)).thenReturn(true);
+        when(owners.existsActiveById(10L)).thenReturn(true);
         when(storage.store(any(), eq("images"))).thenAnswer(a -> new StoredFile(key()));
         auth("owner", 10L, List.of());
     }

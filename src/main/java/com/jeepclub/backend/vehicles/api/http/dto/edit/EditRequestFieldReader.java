@@ -35,6 +35,8 @@ public class EditRequestFieldReader {
             );
         }
 
+        if(raw.has("images") || raw.has("gallery") || raw.has("galleryRevision") || raw.has("storageKey"))
+            throw new MalformedEditPayloadException("Use the complete gallery endpoint for image metadata.",null);
         EditRequestDTO dto = toDto(raw);
         validate(dto);
 

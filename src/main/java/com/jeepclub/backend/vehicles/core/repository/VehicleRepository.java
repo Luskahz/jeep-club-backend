@@ -19,6 +19,8 @@ public interface VehicleRepository {
 
     Vehicle save(Vehicle vehicle);
 
+    Optional<com.jeepclub.backend.vehicles.core.domain.model.VehicleGallerySnapshot> findGalleryHistory(Long historyId);
+
     void delete(
             Vehicle vehicle,
             Long deletedByUserId,
