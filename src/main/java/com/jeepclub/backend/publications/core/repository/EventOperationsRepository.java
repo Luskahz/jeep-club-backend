@@ -6,7 +6,7 @@ import java.util.*;
 /** Rows survive publication hard delete; scalar IDs deliberately have no destructive cascade. */
 public interface EventOperationsRepository {
     record References(List<Long> vehicleIds,List<Long> dependentIds) {}
-    References committedReferences(Long eventId);
+    References currentReferences(Long eventId);
     List<EventChargeRule> rules(Long eventId);
     void replaceRules(Long eventId, List<EventChargeRule> rules);
     List<EventRegistration> registrations(Long eventId);

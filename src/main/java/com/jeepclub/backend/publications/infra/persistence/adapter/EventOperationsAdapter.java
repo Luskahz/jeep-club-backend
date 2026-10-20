@@ -18,11 +18,12 @@ public class EventOperationsAdapter implements EventOperationsRepository {
     private final jakarta.persistence.EntityManager entityManager;
     private final EventCurrentIds currentIds;
 
-    /** Event root is already held by the caller. A short separate read avoids an
-     * old RR snapshot without locking child rows before Vehicles/Dependents. */
-    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.REQUIRES_NEW,
-        isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED,readOnly=true)
-    public References committedReferences(Long eventId) {
+    /** Normal Event commands are READ_COMMITTED and use one connection. Only a
+     * caller's pre-existing RR transaction needs an auxiliary committed snapshot. */
+    public References currentReferences(Long eventId) {
+        return readCommitted()?referenceProjection(eventId):currentIds.inCommittedSnapshot(() -> referenceProjection(eventId));
+    }
+    private References referenceProjection(Long eventId) {
         var vehicleIds = ids("""
             select v.vehicle_id from event_registration_vehicles v join event_registrations r on r.id=v.registration_id where r.event_id=:event
             union select g.vehicle_id from event_guest_requests g where g.event_id=:event and g.vehicle_id is not null
@@ -44,11 +45,16 @@ public class EventOperationsAdapter implements EventOperationsRepository {
     private boolean readOnly() {
         return org.springframework.transaction.support.TransactionSynchronizationManager.isCurrentTransactionReadOnly();
     }
+    private boolean readCommitted() {
+        return Objects.equals(org.springframework.transaction.support.TransactionSynchronizationManager.getCurrentTransactionIsolationLevel(),
+            java.sql.Connection.TRANSACTION_READ_COMMITTED);
+    }
     private <T> List<T> current(Long event,Class<T> type,java.util.function.Supplier<List<T>> cachedQuery,
             java.util.function.Function<Collection<Long>,List<T>> lockingQuery,java.util.function.Function<T,Long> id) {
         entityManager.flush();
         var cached=cachedQuery.get();
-        var ids=new TreeSet<>(currentIds.read(type,event));
+        var ids=new TreeSet<Long>();
+        if(!readCommitted())ids.addAll(currentIds.read(type,event));
         cached.forEach(row -> {ids.add(id.apply(row));entityManager.detach(row);});
         return ids.isEmpty()?List.of():lockingQuery.apply(ids).stream().distinct().toList();
     }

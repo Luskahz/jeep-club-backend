@@ -12,6 +12,8 @@ import java.util.List;
 public class EventCurrentIds {
     private final EntityManager entityManager;
     @Transactional(propagation=Propagation.REQUIRES_NEW,isolation=Isolation.READ_COMMITTED,readOnly=true)
+    public <T> T inCommittedSnapshot(java.util.function.Supplier<T> read) { return read.get(); }
+    @Transactional(propagation=Propagation.REQUIRES_NEW,isolation=Isolation.READ_COMMITTED,readOnly=true)
     public <T> List<Long> read(Class<T> entityType,Long eventId) {
         var builder=entityManager.getCriteriaBuilder();var query=builder.createQuery(Long.class);
         var root=query.from(entityType);

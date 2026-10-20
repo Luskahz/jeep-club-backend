@@ -13,6 +13,39 @@ class EventOperationsMySqlIT extends EventOperationsIntegrationTest {
     @org.springframework.beans.factory.annotation.Autowired com.jeepclub.backend.publications.core.repository.PublicationRepository publications;
     @org.springframework.beans.factory.annotation.Autowired com.jeepclub.backend.publications.infra.persistence.jpa.EventGuestRequestJpaRepository guestRows;
     @org.springframework.beans.factory.annotation.Autowired com.jeepclub.backend.publications.infra.persistence.jpa.EventRegistrationJpaRepository registrationRows;
+    @org.springframework.beans.factory.annotation.Autowired javax.sql.DataSource dataSource;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean
+    com.jeepclub.backend.publications.infra.persistence.adapter.EventCurrentIds auxiliarySnapshots;
+
+    @org.junit.jupiter.api.Test void standardGuestCommandsSerializeWithOnlyTwoPoolConnections() throws Exception {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());
+        var guests=new java.util.ArrayList<com.jeepclub.backend.publications.core.domain.model.EventGuestRequest>();
+        for(int i=0;i<4;i++)guests.add(admin.createGuest(e.getId(),99L,guestCpf(e)));
+        var pool=dataSource.unwrap(com.zaxxer.hikari.HikariDataSource.class);
+        int maximum=pool.getMaximumPoolSize(),minimum=pool.getMinimumIdle();
+        var executor=java.util.concurrent.Executors.newFixedThreadPool(4);
+        var start=new java.util.concurrent.CountDownLatch(1);
+        try {
+            pool.setMinimumIdle(0);pool.setMaximumPoolSize(2);pool.getHikariPoolMXBean().softEvictConnections();
+            org.mockito.Mockito.clearInvocations(auxiliarySnapshots);
+            var futures=guests.stream().map(g -> executor.submit(() -> {
+                start.await();
+                try {return (Object)admin.allocateGuest(e.getId(),g.id(),101L,null,99L,"Bounded pool allocation");}
+                catch(RuntimeException ex) {return (Object)ex;}
+            })).toList();
+            start.countDown();var results=new java.util.ArrayList<Object>();
+            for(var future:futures)results.add(future.get(20,java.util.concurrent.TimeUnit.SECONDS));
+            org.assertj.core.api.Assertions.assertThat(results.stream().filter(com.jeepclub.backend.publications.core.domain.model.EventGuestRequest.class::isInstance)).hasSize(2);
+            org.assertj.core.api.Assertions.assertThat(results.stream().filter(RuntimeException.class::isInstance)).hasSize(2)
+                .allSatisfy(result -> org.assertj.core.api.Assertions.assertThat(result).isInstanceOf(com.jeepclub.backend.publications.core.application.exception.EventOperationException.class));
+            org.assertj.core.api.Assertions.assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(2);
+            org.assertj.core.api.Assertions.assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+            org.mockito.Mockito.verifyNoInteractions(auxiliarySnapshots);
+        } finally {
+            start.countDown();pool.setMaximumPoolSize(maximum);pool.setMinimumIdle(minimum);
+            pool.getHikariPoolMXBean().softEvictConnections();executor.shutdownNow();
+        }
+    }
 
     /** Preload stale ORM/collection snapshots, then prove an actual Event lock
      * wait before committing the competing change. No timing sleeps. */

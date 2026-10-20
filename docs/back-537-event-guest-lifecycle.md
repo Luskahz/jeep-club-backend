@@ -109,14 +109,16 @@ contém cópia de CPF/nome. Guards de Identity consideram ator/revisor/responsá
 
 ## Locks e MySQL
 
-Event é sempre o primeiro lock. Uma leitura curta, não bloqueante, em transação
-READ_COMMITTED separada descobre referências já commitadas, mesmo se a transação
-chamadora tiver snapshot RR antigo. União com destinos recebidos é bloqueada em
+Event é sempre o primeiro lock. Comandos member/admin usam READ_COMMITTED e uma
+única conexão: uma leitura não bloqueante descobre referências atuais sob o lock
+do Event. Se o comando participa de uma transação externa RR já existente, uma
+leitura curta READ_COMMITTED separada descobre referências commitadas apesar do
+snapshot antigo, preservando a transação externa. União com destinos recebidos é bloqueada em
 ordem crescente: Vehicles, depois Dependents. Esse passo não escreve nem promete
 atomicidade entre transações: o lock do Event impede outra mutação de seu agregado.
 
 Filhos têm IDs estáveis e não são excluídos operacionalmente. Leituras curtas de
-IDs commitados são unidas aos IDs visíveis da própria transação, incluindo inserts
+IDs commitados no fallback RR são unidas aos IDs visíveis da própria transação, incluindo inserts
 ainda não commitados. Instâncias JPA antigas são descartadas antes das leituras
 bloqueantes por chave; consultar um intervalo vazio FOR UPDATE poderia bloquear
 inscrições de outro Event e produzir deadlock. Coleções são lidas em projeções
@@ -128,8 +130,12 @@ Corridas MySQL preenchem previamente o cache e as coleções com snapshot antigo
 mantêm o lock do Event em outra conexão, comprovam contenção no performance_schema
 e então liberam o commit concorrente. Não usam sleeps como sincronização.
 Reservas disputadas recebem conflito controlado; não há retry invisível de comando.
-Leituras auxiliares exigem pool com conexões disponíveis; homologar volume e
-contenção. Não foi realizado teste de carga produtivo.
+O teste MySQL com quatro alocações concorrentes e pool de duas conexões verifica
+capacidade, conclusão e ausência de chamadas às leituras auxiliares no caminho
+normal. Chamadores externos RR (inclusive exports existentes) ainda exigem pool
+com headroom para a leitura auxiliar; homologar limites/contenção desses fluxos.
+Não foi realizado teste de carga produtivo. Nenhum isolamento da transação externa
+é alterado em andamento e nenhuma alteração interna é commitada separadamente.
 
 ## HTTP, permissions e frontend
 

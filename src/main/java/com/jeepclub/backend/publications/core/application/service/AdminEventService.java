@@ -19,7 +19,7 @@ import java.time.*;
 import java.util.*;
 import static com.jeepclub.backend.publications.core.application.service.internal.EventOperations.error;
 
-@Service @RequiredArgsConstructor @Transactional
+@Service @RequiredArgsConstructor @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
 public class AdminEventService {
     private final EventOperations events;
     private final PublicationRepository publications;

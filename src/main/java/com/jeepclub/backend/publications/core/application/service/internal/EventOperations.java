@@ -30,7 +30,7 @@ public class EventOperations {
     }
     public Event locked(Long id,Collection<Long> addedVehicles,Collection<Long> addedDependents) {
         var event = publications.findEventByIdForUpdate(id).orElseThrow(() -> error("EVENT_NOT_FOUND"));
-        var references = operations.committedReferences(id);
+        var references = operations.currentReferences(id);
         java.util.stream.Stream.concat(references.vehicleIds().stream(),addedVehicles.stream()).distinct().sorted()
             .forEach(vehicleLocks::activeById);
         java.util.stream.Stream.concat(references.dependentIds().stream(),addedDependents.stream()).distinct().sorted()
