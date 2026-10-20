@@ -49,7 +49,6 @@ class VehicleLifecycleIntegrationTest {
     private static final String INCLUDE_REQUEST = """
             {
               "nickname": "Trovão",
-              "photo": "%s",
               "plate": "LIF1D23",
               "renavam": "38249206428",
               "brand": "Jeep",
@@ -79,20 +78,13 @@ class VehicleLifecycleIntegrationTest {
     @Transactional
     void createListDetailEditAndDeleteVehicleThroughTheRealStack() throws Exception {
         String bearer = authenticateNewMember();
-        MockMultipartFile photo = new MockMultipartFile("file", "vehicle.png", "image/png",
+        MockMultipartFile photo = new MockMultipartFile("photo", "vehicle.png", "image/png",
                 new byte[]{(byte) 137, 80, 78, 71, 13, 10, 26, 10, 1});
-        MvcResult uploaded = mockMvc.perform(multipart("/media/images")
-                        .file(photo).header(AUTHORIZATION, bearer))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.storageKey").exists())
-                .andReturn();
-        String photoKey = objectMapper.readTree(uploaded.getResponse().getContentAsString())
-                .get("storageKey").asText();
-
-        mockMvc.perform(post("/vehicles/include/member")
+        mockMvc.perform(multipart("/vehicles/include/member")
+                        .file(photo)
+                        .file(new MockMultipartFile("vehicle", "vehicle.json", "application/json", INCLUDE_REQUEST.getBytes(java.nio.charset.StandardCharsets.UTF_8)))
                         .header(AUTHORIZATION, bearer)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(INCLUDE_REQUEST.formatted(photoKey)))
+                        )
                 .andExpect(status().isCreated());
 
         MvcResult listResult = mockMvc.perform(get("/vehicles/list/member")
@@ -101,6 +93,8 @@ class VehicleLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.content[0].plate").value("LIF1D23"))
                 .andReturn();
         Long vehicleId = extractFirstVehicleId(listResult);
+        String photoKey = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .get("content").get(0).get("photo").asText();
 
         mockMvc.perform(get("/vehicles/detail/member/" + vehicleId)
                         .header(AUTHORIZATION, bearer))

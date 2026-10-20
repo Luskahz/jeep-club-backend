@@ -37,6 +37,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
+import com.jeepclub.backend.platform.storage.image.ImageUpload;
+import com.jeepclub.backend.platform.storage.image.ImageMultipartAdapter;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -51,7 +56,7 @@ public class VehicleController {
     private final VehicleService vehicleService;
     private final EditRequestFieldReader editRequestFieldReader;
 
-    @PostMapping("/include/member")
+    @PostMapping(value = "/include/member", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Cadastrar veículo do membro autenticado",
             description = "Cria um veículo ACTIVE usando o userId do principal autenticado como proprietário.",
@@ -66,9 +71,32 @@ public class VehicleController {
             @RequestBody @Valid IncludeRequestDTO request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
+        return createVehicle(request, null, principal.getUserId());
+    }
+
+    @PostMapping(value = "/include/member", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Cadastrar veículo com foto opcional",
+        description = "Part vehicle: JSON validado sem photo/storageKey. Part photo: arquivo opcional JPEG/PNG/WebP de até 5 MB. Upload e cadastro são orquestrados; rollback compensa exclusivamente o novo arquivo.",
+        responses = {@ApiResponse(responseCode = "201", description = "Veículo cadastrado."),
+            @ApiResponse(responseCode = "400", description = "DTO ou imagem inválida.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Identificadores já cadastrados.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "413", description = "Limite multipart do servidor excedido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "415", description = "Part vehicle exige application/json.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "503", description = "Storage indisponível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))})
+    public ResponseEntity<Void> includeVehicleWithPhoto(
+            @RequestPart("vehicle") @Valid IncludeRequestDTO request,
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @Parameter(hidden = true) org.springframework.web.multipart.MultipartHttpServletRequest multipart,
+            @AuthenticationPrincipal UserPrincipal principal) throws IOException {
+        ImageMultipartAdapter.validateParts(multipart, "vehicle", "photo", 1);
+        return createVehicle(request, ImageMultipartAdapter.read(photo), principal.getUserId());
+    }
+
+    private ResponseEntity<Void> createVehicle(IncludeRequestDTO request, ImageUpload photo, Long ownerId) {
         vehicleService.create(
                 request.nickname(),
-                request.photo(),
+                photo,
                 request.plate(),
                 request.renavam(),
                 request.brand(),
@@ -80,7 +108,7 @@ public class VehicleController {
                 request.fuelType(),
                 request.engineDisplacement(),
                 request.towing(),
-                principal.getUserId()
+                ownerId
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

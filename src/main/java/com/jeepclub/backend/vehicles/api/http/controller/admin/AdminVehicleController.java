@@ -39,6 +39,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
+import com.jeepclub.backend.platform.storage.image.ImageUpload;
+import com.jeepclub.backend.platform.storage.image.ImageMultipartAdapter;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -53,7 +58,7 @@ public class AdminVehicleController {
     private final AdminVehicleService adminVehicleService;
     private final EditRequestFieldReader editRequestFieldReader;
 
-    @PostMapping("/include/admin/{memberId}")
+    @PostMapping(value = "/include/admin/{memberId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_CREATE')")
     @RequiredPermission("VEHICLES_VEHICLE_CREATE")
     @Operation(
@@ -75,9 +80,35 @@ public class AdminVehicleController {
             @PathVariable Long memberId,
             @RequestBody @Valid IncludeRequestDTO request
     ) {
+        return createVehicle(request, null, memberId);
+    }
+
+    @PostMapping(value = "/include/admin/{memberId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_CREATE')")
+    @RequiredPermission("VEHICLES_VEHICLE_CREATE")
+    @Operation(summary = "Cadastrar veículo para membro com foto opcional",
+        description = "Part vehicle: JSON validado sem photo/storageKey. Part photo: JPEG/PNG/WebP opcional de até 5 MB. Exige proprietário ativo. Rollback compensa somente a imagem recém-criada.",
+        responses = {@ApiResponse(responseCode = "201", description = "Veículo cadastrado."),
+            @ApiResponse(responseCode = "400", description = "DTO ou imagem inválida.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Sem VEHICLES_VEHICLE_CREATE.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Proprietário não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Identificadores duplicados ou proprietário inativo.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "413", description = "Limite multipart do servidor excedido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "415", description = "Part vehicle exige application/json.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "503", description = "Storage indisponível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))})
+    public ResponseEntity<Void> includeVehicleWithPhoto(@PathVariable Long memberId,
+            @RequestPart("vehicle") @Valid IncludeRequestDTO request,
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @Parameter(hidden = true) org.springframework.web.multipart.MultipartHttpServletRequest multipart) throws IOException {
+        ImageMultipartAdapter.validateParts(multipart, "vehicle", "photo", 1);
+        return createVehicle(request, ImageMultipartAdapter.read(photo), memberId);
+    }
+
+    private ResponseEntity<Void> createVehicle(IncludeRequestDTO request, ImageUpload photo, Long ownerId) {
         adminVehicleService.createForOwner(
                 request.nickname(),
-                request.photo(),
+                photo,
                 request.plate(),
                 request.renavam(),
                 request.brand(),
@@ -89,7 +120,7 @@ public class AdminVehicleController {
                 request.fuelType(),
                 request.engineDisplacement(),
                 request.towing(),
-                memberId
+                ownerId
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).build();

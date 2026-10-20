@@ -1,5 +1,15 @@
 # Vehicles
 
+## Upload na criação — BACK-510
+
+Criação member/admin aceita multipart com `vehicle` JSON validado e `photo`
+opcional (JPEG/PNG/WebP até 5 MiB), em uma única chamada. Criação JSON permanece
+disponível sem foto; `photo`/`storageKey` deixaram o DTO de criação e são rejeitados
+como campos desconhecidos. Services usam `ImageMediaCommand` do Platform; rollback
+compensa somente arquivo novo. Referências antigas/compartilhadas e histórico são
+preservados. Edição mantém o contrato vigente até a galeria. Guia de frontend,
+evidências, riscos e rollout: `docs/back-510-media-orchestration.md` na raiz.
+
 Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../docs/architecture/feature-development-rules.md).
@@ -120,10 +130,9 @@ Como hoje nenhuma constraint impede a leitura de uma linha assim por ID,
 registro nunca fica visível, editável ou reativável pelas rotas atuais.
 `VehicleRepositoryAdapterTest.legacySoftDeletedRowIsReadWithoutMappingFailure`
 e `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
-caracterizam essa compatibilidade explicitamente. Como o projeto não usa
-migrations versionadas, não há cleanup automático de linhas legadas; o banco
-de desenvolvimento pode ser recriado quando necessário, e a estratégia acima
-cobre o caso de uma instância que não seja recriada.
+caracterizam essa compatibilidade explicitamente. A compatibilidade continua necessária até o saneamento incremental previsto
+na BACK-512. O projeto agora usa Flyway e Hibernate validate; bancos existentes
+não devem ser recriados nem ter migrations históricas reescritas para eliminar o legado.
 
 ## Invariantes do agregado
 
@@ -181,12 +190,8 @@ Não há acesso direto a repository, entity ou service interno de Identity.
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter
 de persistência ficam em `infra.persistence`. A entidade operacional mantém
 placa e RENAVAM únicos com constraints nomeadas (`uk_vehicle_plate`,
-`uk_vehicle_renavam`, preservadas sem alteração desde a BACK-328). O schema
-atual continua representado pelas entities/Hibernate, sem migration
-versionada introduzida por este módulo; não há backfill de dados legados
-eventualmente não canônicos, consistente com a política atual do projeto de
-recriar o banco de desenvolvimento quando necessário em vez de introduzir
-migrations.
+`uk_vehicle_renavam`, preservadas sem alteração desde a BACK-328). Flyway é proprietário do DDL e Hibernate valida o schema. A BACK-510
+não introduz migration nem backfill de identificadores; V1–V4 ficam intactas.
 
 ### Mapeamento JPA endurecido pela BACK-331
 

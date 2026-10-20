@@ -5,7 +5,7 @@ import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 
-@Schema(description = "Dados do cadastro de um novo veículo.")
+@Schema(description = "Dados do cadastro de um novo veículo. Foto é enviada somente na part multipart photo.", additionalProperties = Schema.AdditionalPropertiesValue.FALSE)
 public record IncludeRequestDTO(
 
         @Schema(
@@ -16,15 +16,6 @@ public record IncludeRequestDTO(
         )
         @Size(max = 100, message = "O apelido deve ter no máximo 100 caracteres.")
         String nickname,
-
-        @Schema(
-                description = "Chave estável retornada por POST /media/images; GET /media/images?key=... resolve a imagem.",
-                example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png",
-                maxLength = 255,
-                requiredMode = Schema.RequiredMode.NOT_REQUIRED
-        )
-        @Size(max = 255, message = "O caminho da foto deve ter no máximo 255 caracteres.")
-        String photo,
 
         @Schema(
                 description = "Placa do veículo, no padrão Mercosul (ABC1D23) ou antigo (ABC1234). "
@@ -135,4 +126,8 @@ public record IncludeRequestDTO(
 
 
 ) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknownField(String name, Object value) {
+        throw new IllegalArgumentException("Unknown vehicle creation field. Send images as multipart files.");
+    }
 }

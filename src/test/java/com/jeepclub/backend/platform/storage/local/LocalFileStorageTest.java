@@ -30,6 +30,22 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LocalFileStorageTest {
 
+    @Test void partialWriteFailureRemovesOnlyTheFreshObject() throws Exception {
+        Path root = tempDirectory.resolve("partial-write");
+        Files.createDirectories(root);
+        Path previous = root.resolve("retained.txt"); Files.writeString(previous, "existing");
+        var failure = new java.io.IOException("Synthetic interrupted write");
+        LocalFileStorage storage = new LocalFileStorage(root, FIXED_CLOCK, () -> FIXED_UUID) {
+            @Override void writeContent(java.io.OutputStream out, byte[] content) throws java.io.IOException {
+                out.write(1); throw failure;
+            }
+        };
+        assertThatThrownBy(() -> storage.store(new StorageFile("photo.png", "image/png", "png", new byte[]{1, 2}), "images"))
+            .isInstanceOf(StorageOperationException.class).hasCause(failure);
+        assertThat(root.resolve("images/2026/09/13/" + FIXED_UUID + ".png")).doesNotExist();
+        assertThat(Files.readString(previous)).isEqualTo("existing");
+    }
+
     private static final UUID FIXED_UUID = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
     private static final Clock FIXED_CLOCK = Clock.fixed(
             Instant.parse("2026-09-13T15:30:00Z"),

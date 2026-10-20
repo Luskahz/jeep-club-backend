@@ -26,7 +26,7 @@ public class ImageMediaController {
     private final ImageMediaService images;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Enviar imagem", description = "Aceita JPEG, PNG ou WebP até 5 MB; confere extensão, MIME e assinatura. Retorna uma chave estável para associar ao recurso de negócio. Imagens não associadas ou substituídas são retidas para limpeza controlada; a API não apaga objetos que possam ser compartilhados.")
+    @Operation(summary = "Enviar imagem", description = "Upload avulso mantido temporariamente para consumidores existentes de Identity, Tools, Publications e edição de Vehicle. A criação de Vehicle recebe a foto diretamente como multipart no endpoint de negócio. Aceita JPEG, PNG ou WebP até 5 MB, conferindo extensão/MIME/assinatura. Objetos compartilhados não são apagados por substituição ou desassociação.")
     public ResponseEntity<ImageUploadResponse> upload(@RequestPart("file") MultipartFile file) throws IOException {
         String key = images.store(file.getOriginalFilename(), file.getContentType(), file.getBytes());
         return ResponseEntity.status(201).body(new ImageUploadResponse(key, "/media/images?key=" + key));
