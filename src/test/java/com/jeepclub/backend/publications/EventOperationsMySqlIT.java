@@ -114,6 +114,18 @@ class EventOperationsMySqlIT extends EventOperationsIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(result).isInstanceOf(com.jeepclub.backend.publications.core.application.exception.EventOperationException.class);
         org.assertj.core.api.Assertions.assertThat(guestState(e.getId(),g.id()).vehicleId()).isNull();
     }
+    @Override long currentDatabaseSession() {
+        return jdbc.queryForObject("SELECT CONNECTION_ID()", Long.class);
+    }
+
+    @Override boolean isDatabaseSessionWaitingForLock(long session) {
+        return jdbc.queryForObject("""
+            SELECT COUNT(*) FROM performance_schema.data_lock_waits w
+            JOIN performance_schema.threads t ON t.THREAD_ID = w.REQUESTING_THREAD_ID
+            WHERE t.PROCESSLIST_ID = ?
+            """, Long.class, session) > 0;
+    }
+
     @Container static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
         .withUsername("root").withPassword("synthetic-event-test-only");
 

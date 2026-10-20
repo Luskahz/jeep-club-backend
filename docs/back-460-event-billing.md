@@ -21,6 +21,33 @@ Refund eligibility is half-open: `[eligibleAt, eligibleUntil)`. Requests and dir
 
 ## Architecture and concurrency
 
+### PR #105 temporal review correction
+
+Payment confirmation reads the injected Clock immediately before its domain transition,
+after acquiring cycle, payment and charge locks and validating invariants. A request
+waiting on a cancellation must not persist its request-start time as confirmedAt:
+that would consume part of the full 30-day late-refund window. The rejection path
+already reads its time after its payment lock and needs no change. The existing
+Clock configuration on this branch is retained; no descendant Clock implementation
+is duplicated here. Database round trips in the new regression use microsecond-exact
+instants, matching MySQL DATETIME(6).
+
+The deterministic regression holds the real cycle lock in the cancellation transaction,
+starts confirmation on a second connection, and waits for the database lock-wait view
+(H2 sessions / MySQL performance_schema) to prove contention. It advances the Clock,
+cancels the Event, advances again before commit, and asserts confirmedAt and both
+eligibility boundaries after release. Repeated confirmation/cancellation still leave
+one refund. No sleeps establish correctness. Synthetic local MySQL only.
+
+BACK-537 supersedes the guest restrictions described elsewhere in this historical
+delivery, but is implemented separately on top of BACK-525. This correction does not
+change guest semantics. Branches BACK-510 through BACK-525, and then BACK-537, need
+this commit propagated during ordered integration and their accumulated regression
+repeated; they are not automatically rewritten or rebased by this review fix.
+
+No migration, permission, API, environment or deployment change is introduced.
+New review validation results are recorded separately from the original evidence.
+
 Publications owns Event/Registration/guest/offer decisions; `EventBillingCommand` remains the cross-module boundary. Billing visits only `EventChargeContext` rows of the requested Event, in definition ID order; ALL_MEMBERS/USER/ROLE and other Event cycles remain untouched. No public contract signature or permission changes.
 
 Cancellation and confirmation coordinate on the cycle row, then payment rows, then charge rows. Finish/archive also lock the cycle. Confirmation obtains the immutable cycle ID through a scalar query before locking, avoiding a stale mutable entity in the JPA persistence context. Locked aggregate adapters detach the previously managed instance and reload under the same database lock: an ordinary Hibernate refresh was proven insufficient by the MySQL snapshot regression. Event context and member-charge lookup also use current locking reads after the parent lock, so a pre-lock consistent snapshot cannot hide a concurrently committed context/charge. Eligibility checks and payment enumeration use locking current reads so MySQL REPEATABLE READ cannot hide a refund or confirmed payment committed while cancellation waited. The payment lock remains the common serialization point with direct member refund requests.

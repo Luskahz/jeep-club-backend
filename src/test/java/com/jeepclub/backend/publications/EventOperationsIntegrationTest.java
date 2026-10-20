@@ -63,6 +63,8 @@ class EventOperationsIntegrationTest {
     @Autowired SystemLogJpaRepository logs;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired MutableClock clock;
+    @Autowired ChargeCycleRepository cycles;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockitoBean ImageMediaService media;
     @MockitoBean EventVehicleQuery vehicles;
     @MockitoBean DependentsQuery dependents;
@@ -498,6 +500,61 @@ class EventOperationsIntegrationTest {
         assertThat(admin.findById(e.getId()).getEventStatus()).isEqualTo(EventStatus.OPEN);
         assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("PAID");
         assertThat(tx(() -> refunds.findActiveByMemberPaymentId(payment))).isEmpty();
+    }
+
+    @Test void confirmationTimestampStartsAfterActualCycleLockWait() throws Exception {
+        var event = event(false);
+        member.register(event.getId(), 10L, List.of());
+        var paymentId = receipt(event.getId(), 10L);
+        var cycleId = tx(() -> contexts.findByEvent(event.getId()).get(0).cycleId());
+        var started = new CompletableFuture<Long>();
+        var executor = Executors.newSingleThreadExecutor();
+        var canceledAt = NOW.plusSeconds(60).plusNanos(123456000);
+        var confirmedAt = canceledAt.plusSeconds(120).plusNanos(1000);
+        try {
+            var confirmation = tx(() -> {
+                cycles.findByIdForUpdate(cycleId).orElseThrow();
+                var future = executor.submit(() -> tx(() -> {
+                    started.complete(currentDatabaseSession());
+                    return paymentAdmin.confirm(paymentId, 99L);
+                }));
+                try {
+                    var session = started.get(20, TimeUnit.SECONDS);
+                    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+                    while (!isDatabaseSessionWaitingForLock(session) && System.nanoTime() < deadline) {
+                        Thread.onSpinWait();
+                    }
+                    assertThat(isDatabaseSessionWaitingForLock(session))
+                        .as("database reports confirmation blocked on the held cycle lock").isTrue();
+                    assertThat(future.isDone()).isFalse();
+                    clock.now = canceledAt;
+                    admin.cancel(event.getId(), 99L);
+                    clock.now = confirmedAt;
+                    return future; // Commit cancellation and release its real database locks.
+                } catch (Exception ex) {
+                    throw new IllegalStateException("Lock contention fixture failed", ex);
+                }
+            });
+            confirmation.get(20, TimeUnit.SECONDS);
+            assertThat(tx(() -> payments.findById(paymentId).orElseThrow()).getConfirmedAt()).isEqualTo(confirmedAt);
+            var refund = tx(() -> refunds.findActiveByMemberPaymentId(paymentId).orElseThrow());
+            assertThat(refund.getEligibleAt()).isEqualTo(confirmedAt);
+            assertThat(refund.getEligibleUntil()).isEqualTo(confirmedAt.plus(Duration.ofDays(30)));
+            assertThatThrownBy(() -> paymentAdmin.confirm(paymentId, 99L)).isInstanceOf(RuntimeException.class);
+            admin.cancel(event.getId(), 99L);
+            assertThat(tx(() -> refunds.findByChargeCycleId(cycleId, Pageable.unpaged()).getTotalElements())).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    long currentDatabaseSession() {
+        return jdbc.queryForObject("SELECT SESSION_ID()", Long.class);
+    }
+
+    boolean isDatabaseSessionWaitingForLock(long session) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SESSIONS WHERE SESSION_ID = ? AND BLOCKER_ID IS NOT NULL",
+            Long.class, session) > 0;
     }
 
     @Test void confirmationRacingCancellationAlwaysKeepsOneRefundAndOriginalPayment() throws Exception {
