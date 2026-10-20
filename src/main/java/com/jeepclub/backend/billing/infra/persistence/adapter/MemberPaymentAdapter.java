@@ -21,6 +21,19 @@ public class MemberPaymentAdapter implements MemberPaymentRepository {
 
     private final MemberPaymentJpaRepository jpa;
     private final MemberPaymentMapper mapper;
+    private final jakarta.persistence.EntityManager entityManager;
+    @Override
+    public Optional<Long> findChargeCycleIdById(Long id) {
+        return jpa.findChargeCycleIdById(id);
+    }
+
+    @Override
+    public List<MemberPayment> findByMemberChargeIdForUpdate(Long id) {
+        return jpa.findByMemberChargeIdForUpdate(id).stream().map(entity -> {
+            entityManager.detach(entity);
+            return mapper.toDomain(jpa.findWithLockingById(entity.getId()).orElseThrow());
+        }).toList();
+    }
     @Override
     public java.util.List<MemberPayment> findByMemberChargeIdIn(java.util.Collection<Long> ids) {
         return ids.isEmpty() ? java.util.List.of() : jpa.findByMemberChargeIdIn(ids).stream().map(mapper::toDomain).toList();
@@ -43,7 +56,10 @@ public class MemberPaymentAdapter implements MemberPaymentRepository {
     @Override
     public Optional<MemberPayment> findByIdForUpdate(Long id) {
         return jpa.findWithLockingById(id)
-                .map(mapper::toDomain);
+                .map(entity -> {
+                    entityManager.detach(entity);
+                    return mapper.toDomain(jpa.findWithLockingById(id).orElseThrow());
+                });
     }
 
     @Override

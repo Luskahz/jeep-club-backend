@@ -32,11 +32,25 @@ public class EventService {
         return events.refresh(events.registration(id, user), financial.findByEvent(id));
     }
     public EventRegistration cancel(Long id, Long user) {
-        var event = events.locked(id); events.requireOpen(event);
+        var event = events.locked(id);
         var registration = events.registration(id, user);
+        if (registration.status() == EventRegistration.Status.CANCELLED) return registration;
+        events.requireOpen(event);
         if (operations.guests(id).stream().anyMatch(g -> g.status() == EventGuestRequest.Status.APPROVED
             && registration.allocations().stream().anyMatch(a -> a.vehicleId().equals(g.vehicleId())))) throw error("EVENT_INVALID_STATE");
-        return operations.save(registration.cancel(events.now()));
+        var now = events.now();
+        for (var guest : operations.guests(id)) {
+            if (!guest.administrative() && guest.requesterUserId().equals(user)
+                    && guest.status() == EventGuestRequest.Status.PENDING) {
+                operations.save(guest.review(false, guest.vehicleId(), user, "REGISTRATION_CANCELLED", now));
+            }
+        }
+        for (var offer : operations.offers(id)) {
+            if (offer.registrationId().equals(registration.id()) && offer.status() == EventRideOffer.Status.ACCEPTED) {
+                operations.save(offer.decline());
+            }
+        }
+        return operations.save(registration.cancel(now));
     }
     public EventRegistration allocate(Long id, Long user, List<EventRegistration.Allocation> allocations, List<Long> unallocated) {
         var event = events.locked(id); events.requireOpen(event);

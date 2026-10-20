@@ -69,7 +69,7 @@ public class EventController {
     @PostMapping("/{id}/registrations/me/cancel")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_REGISTRATION_CANCEL')")
     @RequiredPermission("PUBLICATIONS_EVENT_REGISTRATION_CANCEL")
-    @Operation(summary="Cancel own registration before start; preserve history")
+    @Operation(summary="Cancel own registration before start; preserve history", description="Idempotent. Preserves debt and payments; refunds use Billing requests. Rejects pending personal guests and withdraws accepted offers. Approved guests must be resolved administratively before cancellation.")
     @ApiResponse(responseCode="200", description="Cancel own registration before start; preserve history")
     public EventRegistration cancel(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return service.cancel(id, principal.getUserId());

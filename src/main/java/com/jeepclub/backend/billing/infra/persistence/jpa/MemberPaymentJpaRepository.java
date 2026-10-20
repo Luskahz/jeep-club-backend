@@ -13,6 +13,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface MemberPaymentJpaRepository extends JpaRepository<MemberPaymentEntity, Long> {
+    @org.springframework.data.jpa.repository.Query("select c.chargeCycleId from MemberPaymentEntity p, MemberChargeEntity c where p.id = :id and c.id = p.memberChargeId")
+    Optional<Long> findChargeCycleIdById(Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select p from MemberPaymentEntity p where p.memberChargeId = :id order by p.id")
+    List<MemberPaymentEntity> findByMemberChargeIdForUpdate(Long id);
     java.util.List<MemberPaymentEntity> findByMemberChargeIdIn(java.util.Collection<Long> ids);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

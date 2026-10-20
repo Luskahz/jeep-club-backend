@@ -23,6 +23,15 @@ public class ChargeCycleAdapter implements ChargeCycleRepository {
     private final ChargeCycleJpaRepository jpa;
     private final ChargeCycleMapper mapper;
     @Override
+    public Optional<ChargeCycle> findByIdForUpdate(Long id) {
+        return jpa.findWithLockingById(id).map(entity -> {
+            // Hibernate refresh can reuse an older consistent read even after a locking query.
+            entityManager.detach(entity);
+            return mapper.toDomain(jpa.findWithLockingById(id).orElseThrow());
+        });
+    }
+    private final jakarta.persistence.EntityManager entityManager;
+    @Override
     public java.util.List<ChargeCycle> findMembershipCycles(Long id) {
         return jpa.findMembershipCycles(id).stream().map(mapper::toDomain).toList();
     }

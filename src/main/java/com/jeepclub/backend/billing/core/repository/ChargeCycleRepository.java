@@ -15,6 +15,8 @@ public interface ChargeCycleRepository {
 
     Optional<ChargeCycle> findById(Long id);
 
+    Optional<ChargeCycle> findByIdForUpdate(Long id);
+
     Optional<ChargeCycle> findByChargeDefinitionIdAndCode(
             Long chargeDefinitionId,
             String code

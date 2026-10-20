@@ -63,6 +63,8 @@ class EventOperationsIntegrationTest {
     @Autowired SystemLogJpaRepository logs;
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired MutableClock clock;
+    @Autowired ChargeCycleRepository cycles;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockitoBean ImageMediaService media;
     @MockitoBean EventVehicleQuery vehicles;
     @MockitoBean DependentsQuery dependents;
@@ -311,6 +313,187 @@ class EventOperationsIntegrationTest {
         var e = event(true); member.register(e.getId(), 10L, List.of()); var p = receipt(e.getId(), 10L);
         admin.cancel(e.getId(), 99L); paymentAdmin.reject(p, 99L, "Invalid");
         assertThat(tx(() -> refunds.existsActiveByMemberPaymentId(p))).isFalse();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void cancellationOfFinishedOrArchivedCyclePreservesClosingAuditAndPaidAmounts(boolean archived) {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        var payment = receipt(e.getId(), 10L); paymentAdmin.confirm(payment, 99L);
+        var cycleId = tx(() -> contexts.findByEvent(e.getId()).get(0).cycleId());
+        cycleAdmin.finish(cycleId, 98L);
+        if (archived) cycleAdmin.archive(cycleId, 97L);
+        var before = cycleAdmin.findById(cycleId);
+        admin.cancel(e.getId(), 99L); admin.cancel(e.getId(), 99L);
+        var after = cycleAdmin.findById(cycleId);
+        assertThat(after.finishedAt()).isEqualTo(before.finishedAt());
+        assertThat(after.finishedByUserId()).isEqualTo(98L);
+        assertThat(after.canceledAt()).isEqualTo(NOW);
+        assertThat(after.archivedAt()).isEqualTo(before.archivedAt());
+        assertThat(after.status()).isEqualTo(archived ? ChargeCycleStatus.ARCHIVED : ChargeCycleStatus.CANCELED);
+        assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("PAID");
+        assertThat(tx(() -> refunds.findByChargeCycleId(cycleId, Pageable.unpaged()).getContent()))
+            .singleElement().satisfies(r -> assertThat(r.getAmount()).isEqualByComparingTo(AMOUNT));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {29, 30, 31})
+    void lateConfirmationHasFullWindowAndDeterministicRequestApprovalBoundaries(int days) {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        var payment = receipt(e.getId(), 10L); admin.cancel(e.getId(), 99L);
+        clock.now = NOW.plus(Duration.ofDays(days));
+        paymentAdmin.confirm(payment, 99L);
+        var refund = tx(() -> refunds.findActiveByMemberPaymentId(payment).orElseThrow());
+        assertThat(refund.getEligibleAt()).isEqualTo(clock.now);
+        assertThat(refund.getEligibleUntil()).isEqualTo(clock.now.plus(Duration.ofDays(30)));
+        clock.now = refund.getEligibleUntil().minusNanos(1000);
+        assertThat(refundAdmin.approve(refund.getId(), 99L).status()).isEqualTo(
+            com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus.APPROVED);
+    }
+
+    @Test void unrequestedEligibilityExpiresExactlyAtThirtyDaysButTimelyRequestCanBeApprovedLater() {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        var payment = receipt(e.getId(), 10L); paymentAdmin.confirm(payment, 99L); admin.cancel(e.getId(), 99L);
+        var refund = tx(() -> refunds.findActiveByMemberPaymentId(payment).orElseThrow());
+        clock.now = refund.getEligibleUntil();
+        assertThatThrownBy(() -> refundMember.request(refund.getId(), 10L)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> refundAdmin.approve(refund.getId(), 99L)).isInstanceOf(RuntimeException.class);
+        clock.now = refund.getEligibleUntil().minusSeconds(1); refundMember.request(refund.getId(), 10L);
+        clock.now = refund.getEligibleUntil().plus(Duration.ofDays(1));
+        assertThat(refundAdmin.approve(refund.getId(), 99L).status()).isEqualTo(
+            com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus.APPROVED);
+    }
+
+    @Test void individualCancellationPreservesDebtPendingValidationAndMemberRefundWorkflow() {
+        var e = event(false); member.register(e.getId(), 10L, allocation());
+        var pending = member.requestGuest(e.getId(), 10L, 101L, "11223344556");
+        var administrative = admin.createGuest(e.getId(), 99L, "22334455667");
+        var offer = member.respond(e.getId(), administrative.id(), 10L, 101L, true);
+        var payment = receipt(e.getId(), 10L);
+        var canceled = member.cancel(e.getId(), 10L);
+        assertThat(member.cancel(e.getId(), 10L)).isEqualTo(canceled);
+        assertThat(member.guests(e.getId(), 10L)).filteredOn(g -> g.id().equals(pending.id()))
+            .singleElement().satisfies(g -> assertThat(g.status()).isEqualTo(EventGuestRequest.Status.REJECTED));
+        assertThat(admin.offers(e.getId())).filteredOn(o -> o.id().equals(offer.id()))
+            .singleElement().satisfies(o -> assertThat(o.status()).isEqualTo(EventRideOffer.Status.DECLINED));
+        assertThatThrownBy(() -> admin.select(e.getId(), offer.id(), 99L)).hasMessageContaining("invalid");
+        assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("PENDING");
+        paymentAdmin.confirm(payment, 99L);
+        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CANCELLED);
+        assertThat(refundMember.requestByMemberPaymentId(10L, payment).status()).isEqualTo(
+            com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus.REQUESTED);
+    }
+
+    @Test void approvedGuestPreventsPartialIndividualCancellation() {
+        var e = freeEvent(); member.register(e.getId(), 10L, allocation());
+        var guest = member.requestGuest(e.getId(), 10L, 101L, "11223344556");
+        admin.reviewGuest(e.getId(), guest.id(), 99L, true, null);
+        assertThatThrownBy(() -> member.cancel(e.getId(), 10L)).isInstanceOf(EventOperationException.class);
+        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        assertThat(admin.guests(e.getId())).singleElement().satisfies(g -> assertThat(g.status()).isEqualTo(EventGuestRequest.Status.APPROVED));
+    }
+
+    @Test void enclosingFailureRollsBackEventChargeAndRefundTogether() {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        var payment = receipt(e.getId(), 10L); paymentAdmin.confirm(payment, 99L);
+        assertThatThrownBy(() -> tx(() -> {
+            admin.cancel(e.getId(), 99L);
+            throw new IllegalStateException("Synthetic failure after financial changes");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(admin.findById(e.getId()).getEventStatus()).isEqualTo(EventStatus.OPEN);
+        assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("PAID");
+        assertThat(tx(() -> refunds.findActiveByMemberPaymentId(payment))).isEmpty();
+    }
+
+    @Test void confirmationTimestampStartsAfterActualCycleLockWait() throws Exception {
+        var event = event(false);
+        member.register(event.getId(), 10L, List.of());
+        var paymentId = receipt(event.getId(), 10L);
+        var cycleId = tx(() -> contexts.findByEvent(event.getId()).get(0).cycleId());
+        var started = new CompletableFuture<Long>();
+        var executor = Executors.newSingleThreadExecutor();
+        var canceledAt = NOW.plusSeconds(60).plusNanos(123456000);
+        var confirmedAt = canceledAt.plusSeconds(120).plusNanos(1000);
+        try {
+            var confirmation = tx(() -> {
+                cycles.findByIdForUpdate(cycleId).orElseThrow();
+                var future = executor.submit(() -> tx(() -> {
+                    started.complete(currentDatabaseSession());
+                    return paymentAdmin.confirm(paymentId, 99L);
+                }));
+                try {
+                    var session = started.get(20, TimeUnit.SECONDS);
+                    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+                    while (!isDatabaseSessionWaitingForLock(session) && System.nanoTime() < deadline) {
+                        Thread.onSpinWait();
+                    }
+                    assertThat(isDatabaseSessionWaitingForLock(session))
+                        .as("database reports confirmation blocked on the held cycle lock").isTrue();
+                    assertThat(future.isDone()).isFalse();
+                    clock.now = canceledAt;
+                    admin.cancel(event.getId(), 99L);
+                    clock.now = confirmedAt;
+                    return future; // Commit cancellation and release its real database locks.
+                } catch (Exception ex) {
+                    throw new IllegalStateException("Lock contention fixture failed", ex);
+                }
+            });
+            confirmation.get(20, TimeUnit.SECONDS);
+            assertThat(tx(() -> payments.findById(paymentId).orElseThrow()).getConfirmedAt()).isEqualTo(confirmedAt);
+            var refund = tx(() -> refunds.findActiveByMemberPaymentId(paymentId).orElseThrow());
+            assertThat(refund.getEligibleAt()).isEqualTo(confirmedAt);
+            assertThat(refund.getEligibleUntil()).isEqualTo(confirmedAt.plus(Duration.ofDays(30)));
+            assertThatThrownBy(() -> paymentAdmin.confirm(paymentId, 99L)).isInstanceOf(RuntimeException.class);
+            admin.cancel(event.getId(), 99L);
+            assertThat(tx(() -> refunds.findByChargeCycleId(cycleId, Pageable.unpaged()).getTotalElements())).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    long currentDatabaseSession() {
+        return jdbc.queryForObject("SELECT SESSION_ID()", Long.class);
+    }
+
+    boolean isDatabaseSessionWaitingForLock(long session) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SESSIONS WHERE SESSION_ID = ? AND BLOCKER_ID IS NOT NULL",
+            Long.class, session) > 0;
+    }
+
+    @Test void confirmationRacingCancellationAlwaysKeepsOneRefundAndOriginalPayment() throws Exception {
+        var e = event(false); member.register(e.getId(), 10L, List.of()); var payment = receipt(e.getId(), 10L);
+        assertThat(race(List.of(() -> paymentAdmin.confirm(payment, 99L), () -> admin.cancel(e.getId(), 99L))))
+            .noneMatch(RuntimeException.class::isInstance);
+        var cycleId = tx(() -> contexts.findByEvent(e.getId()).get(0).cycleId());
+        assertThat(tx(() -> refunds.findByChargeCycleId(cycleId, Pageable.unpaged()).getTotalElements())).isEqualTo(1);
+        assertThat(paymentAdmin.findById(payment).status()).isEqualTo(MemberPaymentStatus.CONFIRMED);
+    }
+
+    @Test void twoConcurrentEventCancellationsAreIdempotent() throws Exception {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        assertThat(race(() -> admin.cancel(e.getId(), 99L))).allMatch(Event.class::isInstance);
+        assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("CANCELED");
+    }
+
+    @Test void memberRequestRacingEventCancellationReusesOneFinancialRecord() throws Exception {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        var payment = receipt(e.getId(), 10L); paymentAdmin.confirm(payment, 99L);
+        assertThat(race(List.of(() -> refundMember.requestByMemberPaymentId(10L, payment), () -> admin.cancel(e.getId(), 99L))))
+            .noneMatch(RuntimeException.class::isInstance);
+        var cycleId = tx(() -> contexts.findByEvent(e.getId()).get(0).cycleId());
+        assertThat(tx(() -> refunds.findByChargeCycleId(cycleId, Pageable.unpaged()).getContent()))
+            .singleElement().satisfies(r -> assertThat(r.isRequested()).isTrue());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void individualCancellationRetainsOpenOrConfirmedFinancialFacts(boolean confirmed) {
+        var e = event(false); member.register(e.getId(), 10L, List.of());
+        if (confirmed) paymentAdmin.confirm(receipt(e.getId(), 10L), 99L);
+        member.cancel(e.getId(), 10L);
+        assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo(confirmed ? "PAID" : "PENDING");
+        var cycleId = tx(() -> contexts.findByEvent(e.getId()).get(0).cycleId());
+        assertThat(tx(() -> refunds.findByChargeCycleId(cycleId, Pageable.unpaged()).getTotalElements())).isZero();
     }
     @Test void sameDefinitionAcrossEventsHasSeparateCyclesAndIncrementalDebt() {
         var a = event(false); var definition = admin.rules(a.getId()).get(0).chargeDefinitionId();

@@ -44,7 +44,7 @@ class BillingReconstitutionTest {
         assertThatThrownBy(() -> ChargeCycle.reconstitute(4L, 3L, "fee", null, AMOUNT, ChargeRecurrenceType.ONE_TIME, true,
                 PaymentAcceptancePolicy.UNTIL_DUE_DATE, null, "code", DUE, status, 99L, NOW,
                 corruption == 0 || corruption == 7 ? NOW : null, corruption == 0 || corruption == 7 ? 99L : null,
-                corruption == 1 || corruption == 7 ? NOW : null, corruption == 1 || corruption == 7 ? 99L : null,
+                corruption == 7 ? NOW.plusSeconds(1) : corruption == 1 ? NOW : null, corruption == 1 || corruption == 7 ? 99L : null,
                 corruption == 2 || corruption >= 6 ? NOW : null, corruption == 2 || corruption >= 6 ? 99L : null, NOW, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
