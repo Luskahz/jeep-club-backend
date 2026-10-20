@@ -229,7 +229,9 @@ herda o timestamp anterior aos locks; a lacuna é conhecida e não foi mascarada
 com duplicação do fix neste diff. As restrições funcionais antigas de convidados
 estão substituídas aqui. V4 Registry e políticas de matrícula permanecem intactas.
 
-Validação final e CI serão registrados após execução. Tentativas de desenvolvimento
-com falha não são aprovação. Os dados de teste são exclusivamente sintéticos locais;
+Resultados finais, evidências e CI são registrados na descrição do
+[PR #111](https://github.com/Luskahz/jeep-club-backend/pull/111), vinculados aos HEADs
+efetivamente validados. Tentativas de desenvolvimento com falha não são aprovação.
+Os dados de teste são exclusivamente sintéticos locais;
 não foi disponibilizada cópia real autorizada para ensaio. Nenhum merge, deploy,
 push protegido, VPS ou banco compartilhado/produtivo é permitido por esta entrega.

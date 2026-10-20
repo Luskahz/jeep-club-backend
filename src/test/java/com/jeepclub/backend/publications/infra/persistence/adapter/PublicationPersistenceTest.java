@@ -46,7 +46,7 @@ import static org.mockito.Mockito.doThrow;
 @ActiveProfiles("test")
 @ContextConfiguration(classes = PublicationPersistenceTest.JpaTestConfiguration.class)
 @Import({PublicationRepositoryAdapter.class, PublicationLikeRepositoryAdapter.class,
-        PublicationCommentRepositoryAdapter.class, PublicationMapper.class, PublicationHistoryMapper.class,
+        PublicationCommentRepositoryAdapter.class, PublicationMapper.class, PublicationHistoryMapper.class, CurrentEventMapper.class,
         ServicePublicationRequestRepositoryAdapter.class, ServicePublicationRequestMapper.class,
         AdminServicePublicationRequestService.class, PublicationLikeService.class})
 class PublicationPersistenceTest {
