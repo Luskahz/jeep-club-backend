@@ -46,4 +46,7 @@ public class ToolEntity {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
 }

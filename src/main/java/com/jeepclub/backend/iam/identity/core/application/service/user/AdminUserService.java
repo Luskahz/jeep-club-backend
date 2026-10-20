@@ -154,4 +154,35 @@ public class AdminUserService {
         userAdministration.enable(userId, Instant.now(clock));
         return findById(userId);
     }
+
+    @Transactional
+    public AdminUserResult archive(Long userId, Long actorId) {
+        userAdministration.archive(userId, actorId, Instant.now(clock));
+        return findById(userId);
+    }
+
+    @Transactional
+    public AdminUserResult unarchive(Long userId, Long actorId) {
+        userAdministration.unarchive(userId, actorId, Instant.now(clock));
+        return findById(userId);
+    }
+    @Transactional
+    public void delete(Long userId, Long actorId) {
+        userAdministration.delete(userId, actorId, Instant.now(clock));
+    }
+    @Transactional
+    public AdminUserResult disable(Long id,Long actorId) {
+        var result=disable(id);
+        audit.recordInTransaction(new SystemLogEvent(actorId,"IDENTITY_USER_DISABLE","PATCH","/identity/admin/users/"+id+"/disable",200,
+                SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+    @Transactional
+    public AdminUserResult enable(Long id,Long actorId) {
+        var result=enable(id);
+        audit.recordInTransaction(new SystemLogEvent(actorId,"IDENTITY_USER_ENABLE","PATCH","/identity/admin/users/"+id+"/enable",200,
+                SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+
 }

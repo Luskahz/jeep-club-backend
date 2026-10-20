@@ -17,7 +17,8 @@ public class ToolMapper {
                 entity.getStatus(),
                 entity.getUserId(),
                 entity.getCreatedAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getArchivedAt()
         );
         tool.restorePhoto(entity.getPhotoStorageKey());
         return tool;
@@ -35,6 +36,7 @@ public class ToolMapper {
         entity.setPhotoStorageKey(domain.getPhotoStorageKey());
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
+        entity.setArchivedAt(domain.getArchivedAt());
 
         return entity;
     }

@@ -33,6 +33,8 @@ public class AdminVehicleService {
     private final Clock clock;
     private final ImageMediaService images;
     private final ImageMediaCommand mediaCommand;
+    private final com.jeepclub.backend.platform.logging.SystemLogService audit;
+    private final java.util.List<com.jeepclub.backend.vehicles.api.module.spi.VehicleDeletionGuard> deletionGuards;
 
     @Transactional
     public Vehicle createForOwner(
@@ -101,12 +103,15 @@ public class AdminVehicleService {
 
     @Transactional(readOnly = true)
     public Vehicle findById(Long vehicleId) {
-        return findActiveVehicle(vehicleId);
+        var vehicle=vehicleRepository.findById(vehicleId).orElseThrow(() -> new VehicleIdNotFoundException("Vehicle not found."));
+        if(vehicle.isLegacyDeleted()) throw new VehicleIdNotFoundException("Vehicle not found.");
+        return vehicle;
     }
 
     @Transactional
     public void update(Long vehicleId, VehicleEditFields updates) {
-        Vehicle vehicle = findActiveVehicle(vehicleId);
+        Vehicle vehicle = getForUpdate(vehicleId);
+        if(vehicle.getStatus()!=VehicleStatus.ACTIVE) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Only active vehicles can be edited.");
         if (updates.photo().isPresentValue()) {
             images.requireExisting(updates.photo().value());
         }
@@ -140,7 +145,9 @@ public class AdminVehicleService {
             Long vehicleId,
             Long deletedByUserId
     ) {
-        Vehicle vehicle = findActiveVehicle(vehicleId);
+        Vehicle vehicle = getForUpdate(vehicleId);
+        if(deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(vehicleId)))
+            throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Vehicle has retained Event references.");
         vehicleRepository.delete(
                 vehicle,
                 deletedByUserId,
@@ -193,5 +200,73 @@ public class AdminVehicleService {
         if (vehicle.getStatus() != VehicleStatus.ACTIVE) {
             throw new VehicleIdNotFoundException("Vehicle not found.");
         }
+    }
+
+    @Transactional
+    public Vehicle activate(Long id, Long actorId) {
+        var vehicle=getForUpdate(id);
+        if(vehicle.isLegacyDeleted()) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Historically deleted vehicle cannot be changed.");
+        var before=vehicle.getStatus(); var now=Instant.now(clock);
+        if(vehicle.activate(now)) {
+            vehicle=vehicleRepository.save(vehicle);
+            audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                    "VEHICLE_ACTIVATE:"+before+":"+vehicle.getStatus(),"PATCH","/vehicles/activate/"+id,200,
+                    com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,now));
+        }
+        return vehicle;
+    }
+
+    @Transactional
+    public Vehicle deactivate(Long id, Long actorId) {
+        var vehicle=getForUpdate(id);
+        if(vehicle.isLegacyDeleted()) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Historically deleted vehicle cannot be changed.");
+        var before=vehicle.getStatus(); var now=Instant.now(clock);
+        if(vehicle.deactivate(now)) {
+            vehicle=vehicleRepository.save(vehicle);
+            audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                    "VEHICLE_DEACTIVATE:"+before+":"+vehicle.getStatus(),"PATCH","/vehicles/deactivate/"+id,200,
+                    com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,now));
+        }
+        return vehicle;
+    }
+
+    @Transactional
+    public Vehicle archive(Long id, Long actorId) {
+        var vehicle=getForUpdate(id);
+        if(vehicle.isLegacyDeleted()) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Historically deleted vehicle cannot be changed.");
+        var before=vehicle.getStatus(); var now=Instant.now(clock);
+        if(vehicle.archive(now)) {
+            vehicle=vehicleRepository.save(vehicle);
+            audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                    "VEHICLE_ARCHIVE:"+before+":"+vehicle.getStatus(),"PATCH","/vehicles/archive/"+id,200,
+                    com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,now));
+        }
+        return vehicle;
+    }
+
+    @Transactional
+    public Vehicle unarchive(Long id, Long actorId) {
+        var vehicle=getForUpdate(id);
+        if(vehicle.isLegacyDeleted()) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Historically deleted vehicle cannot be changed.");
+        var before=vehicle.getStatus(); var now=Instant.now(clock);
+        if(vehicle.unarchive(now)) {
+            vehicle=vehicleRepository.save(vehicle);
+            audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                    "VEHICLE_UNARCHIVE:"+before+":"+vehicle.getStatus(),"PATCH","/vehicles/unarchive/"+id,200,
+                    com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,now));
+        }
+        return vehicle;
+    }
+
+    private Vehicle getForUpdate(Long id) {
+        var vehicle=vehicleRepository.findByIdForUpdate(id).orElseThrow(() -> new VehicleIdNotFoundException("Vehicle not found."));
+        return vehicle;
+    }
+
+    @Transactional(readOnly=true)
+    public Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSummary> findAllWithOwners(VehicleStatus status,Pageable pageable) {
+        var vehicles=vehicleRepository.findAllByStatus(status,pageable);
+        var names=userPort.findNamesByIds(vehicles.stream().map(Vehicle::getOwnerId).distinct().toList());
+        return vehicles.map(vehicle -> new com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSummary(vehicle,names.get(vehicle.getOwnerId())));
     }
 }

@@ -20,6 +20,8 @@ public class AdminRoleService {
 
     private final RoleRepository roleRepository;
     private final Clock clock;
+    private final java.util.List<com.jeepclub.backend.iam.authorization.api.module.spi.RoleDeletionGuard> deletionGuards;
+    private final com.jeepclub.backend.platform.logging.SystemLogService audit;
 
     @Transactional
     public RoleResult createRole(
@@ -66,7 +68,7 @@ public class AdminRoleService {
             String name,
             String description
     ) {
-        Role role = roleRepository.findById(roleId)
+        Role role = roleRepository.findByIdForUpdate(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
 
         String normalizedName = Role.normalizeName(name);
@@ -92,7 +94,7 @@ public class AdminRoleService {
 
     @Transactional
     public RoleResult deactivateRole(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new RoleNotFoundException(id));
 
         Instant now = Instant.now(clock);
@@ -110,7 +112,7 @@ public class AdminRoleService {
 
     @Transactional
     public RoleResult activateRole(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new RoleNotFoundException(id));
 
         Instant now = Instant.now(clock);
@@ -127,16 +129,59 @@ public class AdminRoleService {
     }
 
     @Transactional
-    public RoleResult deleteRole(Long id) {
-        Role role = roleRepository.findById(id)
-                .orElseThrow(() -> new RoleNotFoundException(id));
-
+    public RoleResult deleteRole(Long id, Long actorId) {
+        java.util.Objects.requireNonNull(actorId, "Deletion actor is required");
+        Role role = roleRepository.findByIdForUpdate(id).orElseThrow(() -> new RoleNotFoundException(id));
+        // ROOT and edit restrictions are checked before dependency guards.
+        if (role.isRoot()) throw new com.jeepclub.backend.iam.authorization.core.domain.exception.role.RootRoleCannotBeChangedException(id);
+        if (deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(id))) {
+            throw new com.jeepclub.backend.iam.authorization.core.domain.exception.role.RoleLifecycleConflictException(
+                    "Role has retained dependencies.");
+        }
         Instant now = Instant.now(clock);
-
-        role.delete(now);
-
-        Role deletedRole = roleRepository.save(role);
-
-        return new RoleResult(deletedRole);
+        roleRepository.deleteWithHistory(id, actorId, now);
+        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                "AUTHORIZATION_ROLE_DELETE", "DELETE", "/authorization/roles/" + id, 204,
+                com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS, 0, null, now));
+        return new RoleResult(role);
     }
+
+    @Transactional
+    public RoleResult archiveRole(Long id, Long actorId) { return archiveTransition(id, actorId, true); }
+
+    @Transactional
+    public RoleResult unarchiveRole(Long id, Long actorId) { return archiveTransition(id, actorId, false); }
+
+    private RoleResult archiveTransition(Long id, Long actorId, boolean archive) {
+        java.util.Objects.requireNonNull(actorId, "Lifecycle actor is required");
+        Role role = roleRepository.findByIdForUpdate(id).orElseThrow(() -> new RoleNotFoundException(id));
+        Instant now = Instant.now(clock);
+        if (archive ? role.archive(now) : role.unarchive(now)) {
+            role = roleRepository.save(role);
+            audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                    archive ? "AUTHORIZATION_ROLE_ARCHIVE" : "AUTHORIZATION_ROLE_UNARCHIVE", "PATCH",
+                    "/authorization/roles/" + id + (archive ? "/archive" : "/unarchive"), 200,
+                    com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS, 0, null, now));
+        }
+        return new RoleResult(role);
+    }
+    @Transactional
+    public RoleResult activateRole(Long id,Long actorId) {
+        var previous=roleRepository.findByIdForUpdate(id).orElseThrow(() -> new RoleNotFoundException(id)).getStatus();
+        var result=activateRole(id);
+        if(previous!=result.role().getStatus()) audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(
+                actorId,"AUTHORIZATION_ROLE_ACTIVATE:{"+previous+"}","PATCH","/authorization/roles/"+id+"/activate",200,
+                com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+    @Transactional
+    public RoleResult deactivateRole(Long id,Long actorId) {
+        var previous=roleRepository.findByIdForUpdate(id).orElseThrow(() -> new RoleNotFoundException(id)).getStatus();
+        var result=deactivateRole(id);
+        if(previous!=result.role().getStatus()) audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(
+                actorId,"AUTHORIZATION_ROLE_DEACTIVATE:{"+previous+"}","PATCH","/authorization/roles/"+id+"/deactivate",200,
+                com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+
 }

@@ -164,7 +164,7 @@ public class AdminChargeAssignmentService {
     private ChargeDefinition findActiveChargeDefinitionOrThrow(Long chargeDefinitionId) {
         Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
 
-        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findById(chargeDefinitionId)
+        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findByIdForUpdate(chargeDefinitionId)
                 .orElseThrow(() -> new ChargeDefinitionNotFoundException(
                         "Charge definition not found."
                 ));
@@ -256,7 +256,7 @@ public class AdminChargeAssignmentService {
     private void ensureActiveMemberExists(Long userId) {
         Objects.requireNonNull(userId, "userId cannot be null");
 
-        if (!billingMembershipPort.existsActiveMemberByUserId(userId)) {
+        if (!billingMembershipPort.existsActiveMemberByUserIdForUpdate(userId)) {
             throw new BillingAssignmentTargetNotFoundException(
                     "Active member not found for user."
             );
@@ -266,7 +266,7 @@ public class AdminChargeAssignmentService {
     private void ensureActiveRoleExists(Long roleId) {
         Objects.requireNonNull(roleId, "roleId cannot be null");
 
-        if (!billingAuthorizationPort.existsActiveRoleById(roleId)) {
+        if (!billingAuthorizationPort.existsActiveRoleByIdForUpdate(roleId)) {
             throw new BillingAssignmentTargetNotFoundException(
                     "Active role not found."
             );
@@ -285,7 +285,7 @@ public class AdminChargeAssignmentService {
     private void ensureChargeDefinitionIsNotArchived(Long chargeDefinitionId) {
         Objects.requireNonNull(chargeDefinitionId, "chargeDefinitionId cannot be null");
 
-        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findById(chargeDefinitionId)
+        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findByIdForUpdate(chargeDefinitionId)
                 .orElseThrow(() -> new ChargeDefinitionNotFoundException(
                         "Charge definition not found."
                 ));

@@ -103,7 +103,7 @@ public abstract class MemberRegistryScenarios {
     @Test void nonexistentInactiveAndInvalidInputsDoNotWrite() {
         long before=members.count();
         assertThatThrownBy(() -> admin.assign(Long.MAX_VALUE,number(),first,"Verified")).isInstanceOf(MemberRegistryException.class);
-        jdbc.update("update identity_users set status='DISABLED',disabled_at=created_at,updated_at=created_at where id=?",second);
+        jdbc.update("update identity_users set status='INACTIVE',disabled_at=created_at,updated_at=created_at where id=?",second);
         assertThatThrownBy(() -> admin.assign(second,number(),first,"Inactive")).isInstanceOf(MemberRegistryException.class);
         assertThatThrownBy(() -> admin.assign(first," 027",first,"Whitespace")).isInstanceOf(MemberRegistryException.class);
         assertThatThrownBy(() -> admin.assign(first,number(),first," ")).isInstanceOf(MemberRegistryException.class);

@@ -53,7 +53,7 @@ class DependentServiceTest {
                 dependentRepository,
                 dependentUserPort,
                 Clock.fixed(NOW, ZoneOffset.UTC)
-        );
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 
     @Test
@@ -105,7 +105,7 @@ class DependentServiceTest {
 
     @Test
     void anotherUserCannotReadDependent() {
-        when(dependentRepository.findActiveById(10L))
+        when(dependentRepository.findById(10L))
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
         assertThatThrownBy(() -> service.findById(10L, 2L))
@@ -114,7 +114,7 @@ class DependentServiceTest {
 
     @Test
     void anotherUserCannotUpdateDependent() {
-        when(dependentRepository.findActiveById(10L))
+        when(dependentRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
         assertThatThrownBy(() -> service.update(
@@ -126,7 +126,7 @@ class DependentServiceTest {
 
     @Test
     void anotherUserCannotDisableDependent() {
-        when(dependentRepository.findById(10L))
+        when(dependentRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
         assertThatThrownBy(() -> service.disable(10L, 2L))
@@ -135,8 +135,8 @@ class DependentServiceTest {
 
     @Test
     void anotherUserCannotEnableDependent() {
-        when(dependentRepository.findById(10L)).thenReturn(Optional.of(
-                DependentsFixture.dependent(10L, 1L, DependentStatus.DISABLED)
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(
+                DependentsFixture.dependent(10L, 1L, DependentStatus.INACTIVE)
         ));
 
         assertThatThrownBy(() -> service.enable(10L, 2L))
@@ -145,7 +145,7 @@ class DependentServiceTest {
 
     @Test
     void anotherUserCannotDeleteDependent() {
-        when(dependentRepository.findById(10L))
+        when(dependentRepository.findByIdForUpdate(10L))
                 .thenReturn(Optional.of(DependentsFixture.dependent(10L, 1L)));
 
         assertThatThrownBy(() -> service.delete(10L, 2L))
@@ -155,7 +155,7 @@ class DependentServiceTest {
     @Test
     void updateOfActiveDependentWorks() {
         Dependent dependent = DependentsFixture.dependent(10L, 1L);
-        when(dependentRepository.findActiveById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
         when(dependentRepository.save(dependent)).thenReturn(dependent);
 
         DependentResult result = service.update(
@@ -171,7 +171,7 @@ class DependentServiceTest {
 
     @Test
     void updateOfDisabledDependentIsBlocked() {
-        when(dependentRepository.findActiveById(10L)).thenReturn(Optional.empty());
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.update(
                 10L, "Pedro Ramos", "98765432100",
@@ -183,19 +183,19 @@ class DependentServiceTest {
     @Test
     void disableChangesActiveToDisabled() {
         Dependent dependent = DependentsFixture.dependent(10L, 1L);
-        when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
         when(dependentRepository.save(dependent)).thenReturn(dependent);
 
         assertThat(service.disable(10L, 1L).status())
-                .isEqualTo(DependentStatus.DISABLED);
+                .isEqualTo(DependentStatus.INACTIVE);
     }
 
     @Test
     void enableChangesDisabledToActive() {
         Dependent dependent = DependentsFixture.dependent(
-                10L, 1L, DependentStatus.DISABLED
+                10L, 1L, DependentStatus.INACTIVE
         );
-        when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
         when(dependentRepository.save(dependent)).thenReturn(dependent);
 
         assertThat(service.enable(10L, 1L).status())
@@ -209,7 +209,7 @@ class DependentServiceTest {
 
     @Test
     void deleteOfDisabledDependentDelegatesSnapshotData() {
-        assertDeleteDelegates(DependentStatus.DISABLED);
+        assertDeleteDelegates(DependentStatus.INACTIVE);
     }
 
     private void assertCreateBlocksReservedCpf() {
@@ -222,7 +222,7 @@ class DependentServiceTest {
 
     private void assertDeleteDelegates(DependentStatus status) {
         Dependent dependent = DependentsFixture.dependent(10L, 1L, status);
-        when(dependentRepository.findById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
 
         service.delete(10L, 1L);
 
@@ -240,7 +240,7 @@ class DependentServiceTest {
     @ValueSource(booleans = {true, false})
     void updateRejectsCpfReservedByIdentityOrAnotherDependent(boolean identityConflict) {
         Dependent dependent = DependentsFixture.dependent(10L, 1L);
-        when(dependentRepository.findActiveById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
         when(dependentUserPort.existsByCpf("98765432100")).thenReturn(identityConflict);
         if (!identityConflict) {
             when(dependentRepository.existsByCpfAndIdNot("98765432100", 10L)).thenReturn(true);
@@ -255,7 +255,7 @@ class DependentServiceTest {
     @Test
     void updateWithSameFormattedCpfSkipsAvailabilityCheck() {
         Dependent dependent = DependentsFixture.dependent(10L, 1L);
-        when(dependentRepository.findActiveById(10L)).thenReturn(Optional.of(dependent));
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
         when(dependentRepository.save(dependent)).thenReturn(dependent);
         assertThat(service.update(10L, "Pedro", "123.456.789-00", LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD, null, 1L).cpf()).isEqualTo("12345678900");

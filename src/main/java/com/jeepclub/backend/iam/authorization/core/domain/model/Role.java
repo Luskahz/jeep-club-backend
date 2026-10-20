@@ -25,6 +25,7 @@ public class Role {
     private Instant createdAt;
     private Instant updatedAt;
     private Instant deletedAt;
+    private Instant archivedAt;
 
     private Role(
             Long id,
@@ -35,6 +36,20 @@ public class Role {
             Instant createdAt,
             Instant updatedAt,
             Instant deletedAt
+    ) {
+        this(id, name, description, kind, status, createdAt, updatedAt, deletedAt, null);
+    }
+
+    private Role(
+            Long id,
+            String name,
+            String description,
+            RoleKind kind,
+            RoleStatus status,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant deletedAt,
+            Instant archivedAt
     ) {
         this.id = id;
         this.name = validateName(name);
@@ -47,8 +62,15 @@ public class Role {
         );
         this.updatedAt = updatedAt;
         this.deletedAt = deletedAt;
+        this.archivedAt = archivedAt;
 
         validateDeletionConsistency();
+        if ((status == RoleStatus.ARCHIVED) != (archivedAt != null)) {
+            throw new IllegalArgumentException("Archived role requires its archival timestamp only.");
+        }
+        if (archivedAt != null && archivedAt.isBefore(createdAt)) {
+            throw new IllegalArgumentException("archivedAt cannot be before createdAt.");
+        }
         validateRootConsistency();
     }
 
@@ -100,6 +122,20 @@ public class Role {
             Instant updatedAt,
             Instant deletedAt
     ) {
+        return reconstitute(id, name, description, kind, status, createdAt, updatedAt, deletedAt, null);
+    }
+
+    public static Role reconstitute(
+            Long id,
+            String name,
+            String description,
+            RoleKind kind,
+            RoleStatus status,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant deletedAt,
+            Instant archivedAt
+    ) {
         Objects.requireNonNull(
                 id,
                 "Role id cannot be null when reconstituting"
@@ -113,7 +149,8 @@ public class Role {
                 status,
                 createdAt,
                 updatedAt,
-                deletedAt
+                deletedAt,
+                archivedAt
         );
     }
 
@@ -174,18 +211,19 @@ public class Role {
         return true;
     }
 
-    public void delete(Instant deletedAt) {
-        ensureCanBeChanged();
-        Objects.requireNonNull(deletedAt, "deletedAt cannot be null");
-
-        this.status = RoleStatus.DELETED;
-        this.deletedAt = deletedAt;
-        this.updatedAt = deletedAt;
+    public void ensureCanBeChanged() {
+        ensureCustom();
+        if (status == RoleStatus.ARCHIVED) {
+            throw new RoleLifecycleConflictException("Archived role requires explicit unarchive.");
+        }
     }
 
-    public void ensureCanBeChanged() {
-        ensureNotDeleted();
+    public void ensureCanBeDeleted() {
+        ensureCustom();
+    }
 
+    private void ensureCustom() {
+        ensureNotDeleted();
         if (isRoot()) {
             throw new RootRoleCannotBeChangedException(this.id);
         }
@@ -213,8 +251,7 @@ public class Role {
     }
 
     public boolean isDeleted() {
-        return this.status == RoleStatus.DELETED
-                || this.deletedAt != null;
+        return this.deletedAt != null;
     }
 
     public static String normalizeName(String name) {
@@ -258,16 +295,8 @@ public class Role {
     }
 
     private void validateDeletionConsistency() {
-        if (this.status == RoleStatus.DELETED && this.deletedAt == null) {
-            throw new IllegalStateException(
-                    "Deleted role must have deletedAt."
-            );
-        }
-
-        if (this.deletedAt != null && this.status != RoleStatus.DELETED) {
-            throw new IllegalStateException(
-                    "Role with deletedAt must have DELETED status."
-            );
+        if (deletedAt != null) {
+            throw new IllegalStateException("Deleted roles belong to segregated deletion history.");
         }
     }
 
@@ -287,5 +316,33 @@ public class Role {
                     "ROOT role cannot be deleted."
             );
         }
+    }
+
+    public boolean archive(Instant now) {
+        ensureCustom();
+        validateLifecycleInstant(now);
+        if (status == RoleStatus.ARCHIVED) return false;
+        status = RoleStatus.ARCHIVED;
+        archivedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean unarchive(Instant now) {
+        ensureCustom();
+        validateLifecycleInstant(now);
+        if (status == RoleStatus.INACTIVE) return false;
+        if (status != RoleStatus.ARCHIVED) {
+            throw new RoleLifecycleConflictException("Only an archived role can be unarchived.");
+        }
+        status = RoleStatus.INACTIVE;
+        archivedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void validateLifecycleInstant(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        if (now.isBefore(createdAt)) throw new IllegalArgumentException("now cannot be before createdAt.");
     }
 }

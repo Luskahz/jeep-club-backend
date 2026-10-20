@@ -1,5 +1,14 @@
 # Dependents
 
+## Lifecycle vigente — BACK-512
+
+Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
+com histórico independente, e não um status. As regras por agregado, novas rotas,
+permissions, migration V5, limites de retenção e checklist de rollout estão em
+`docs/back-512-entity-lifecycle.md` na raiz do repositório. V1–V4 não foram alteradas.
+Flyway governa o schema; Hibernate usa validate. Não usar ddl-auto=update.
+
+
 Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../docs/architecture/feature-development-rules.md).
@@ -32,7 +41,7 @@ telefone, quando presente, com dez ou onze. As validações observáveis de body
 formatos e exemplos pertencem aos schemas OpenAPI.
 
 O CPF é único no cadastro operacional de Dependents e não pode coincidir com
-um CPF existente em Identity. Um dependente `DISABLED` continua reservando seu
+um CPF existente em Identity. Um dependente `INACTIVE` continua reservando seu
 CPF. A exclusão remove o registro operacional; o histórico de exclusão não
 participa da consulta de disponibilidade de CPF.
 
@@ -41,13 +50,15 @@ participa da consulta de disponibilidade de CPF.
 Todo dependente é criado em `ACTIVE`.
 
 ```text
-create -> ACTIVE --disable()--> DISABLED --enable()--> ACTIVE
+create -> ACTIVE --disable()--> INACTIVE --enable()--> ACTIVE
                | update (somente ACTIVE)
                +--delete()--> histórico de exclusão + remoção operacional
-DISABLED -------+--delete()--> histórico de exclusão + remoção operacional
+INACTIVE -------+--delete()--> histórico de exclusão + remoção operacional
+ACTIVE/INACTIVE --archive()--> ARCHIVED --unarchive()--> INACTIVE
+ARCHIVED --delete()--> histórico + remoção, se Health/Event não impedirem
 ```
 
-`DISABLED` não significa exclusão. O dependente continua no cadastro
+`INACTIVE` não significa exclusão. O dependente continua no cadastro
 operacional, pode ser lido pela superfície administrativa e permanece com CPF
 reservado, mas o agregado bloqueia `update`; a atualização da superfície do
 titular procura somente dependentes `ACTIVE`. `enable()` volta o status para

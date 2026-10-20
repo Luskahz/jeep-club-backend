@@ -49,7 +49,7 @@ class VehicleServiceTest {
         service = new VehicleService(
                 vehicleRepository,
                 Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand
-        );
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 
     @Test
@@ -117,7 +117,7 @@ class VehicleServiceTest {
     @Test
     void hidesSoftDeletedVehicle() {
         when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
-                .thenReturn(Optional.of(vehicle(1L, 7L, VehicleStatus.SOFT_DELETED)));
+                .thenReturn(Optional.of(vehicle(1L, 7L, VehicleStatus.ARCHIVED)));
 
         assertThatThrownBy(() -> service.findById(1L, 7L))
                 .isInstanceOf(VehicleIdNotFoundException.class)
@@ -127,7 +127,7 @@ class VehicleServiceTest {
     @Test
     void updatesAndDeletesOwnedVehicleWithAuditData() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         service.update(1L, 7L, fullEdit(
@@ -147,7 +147,7 @@ class VehicleServiceTest {
     @Test
     void omittedFieldsPreserveCurrentValuesOnMemberUpdate() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields onlyColor = new VehicleEditFields(
@@ -168,7 +168,7 @@ class VehicleServiceTest {
     @Test
     void clearsNullableFieldOnExplicitNull() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields clearNickname = new VehicleEditFields(
@@ -187,7 +187,7 @@ class VehicleServiceTest {
     @Test
     void canonicalizesPlateAndRenavamOnUpdateBeforeDuplicateCheck() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields updates = new VehicleEditFields(
@@ -210,7 +210,7 @@ class VehicleServiceTest {
     @Test
     void rejectsExplicitNullOnRequiredFieldWithoutTouchingPersistence() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields nullBrand = new VehicleEditFields(
@@ -239,7 +239,8 @@ class VehicleServiceTest {
         return Vehicle.reconstitute(
                 id, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, status, true, ownerId, NOW.minusSeconds(60), null
+                2.0, status, true, ownerId, NOW.minusSeconds(60), null,
+                status == VehicleStatus.ARCHIVED ? NOW : null, status == VehicleStatus.ARCHIVED
         );
     }
 

@@ -3,6 +3,28 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    // BACK-512
+    IDENTITY_USER_ARCHIVE(PermissionCode.IDENTITY_USER_ARCHIVE, ModuleCode.IDENTITY, "Arquivar cadastro"),
+    IDENTITY_USER_UNARCHIVE(PermissionCode.IDENTITY_USER_UNARCHIVE, ModuleCode.IDENTITY, "Desarquivar para INACTIVE"),
+    IDENTITY_USER_DELETE(PermissionCode.IDENTITY_USER_DELETE, ModuleCode.IDENTITY, "Excluir cadastro sem dependências impeditivas"),
+    IDENTITY_USER_HISTORY_READ(PermissionCode.IDENTITY_USER_HISTORY_READ, ModuleCode.IDENTITY, "Consultar histórico segregado"),
+    AUTHORIZATION_ROLE_ARCHIVE(PermissionCode.AUTHORIZATION_ROLE_ARCHIVE, ModuleCode.AUTHORIZATION, "Arquivar cadastro"),
+    AUTHORIZATION_ROLE_UNARCHIVE(PermissionCode.AUTHORIZATION_ROLE_UNARCHIVE, ModuleCode.AUTHORIZATION, "Desarquivar para INACTIVE"),
+    AUTHORIZATION_ROLE_HISTORY_READ(PermissionCode.AUTHORIZATION_ROLE_HISTORY_READ, ModuleCode.AUTHORIZATION, "Consultar histórico segregado"),
+    DEPENDENTS_DEPENDENT_ACTIVATE(PermissionCode.DEPENDENTS_DEPENDENT_ACTIVATE, ModuleCode.DEPENDENTS, "Ativar cadastro"),
+    DEPENDENTS_DEPENDENT_DEACTIVATE(PermissionCode.DEPENDENTS_DEPENDENT_DEACTIVATE, ModuleCode.DEPENDENTS, "Inativar cadastro"),
+    DEPENDENTS_DEPENDENT_ARCHIVE(PermissionCode.DEPENDENTS_DEPENDENT_ARCHIVE, ModuleCode.DEPENDENTS, "Arquivar cadastro"),
+    DEPENDENTS_DEPENDENT_UNARCHIVE(PermissionCode.DEPENDENTS_DEPENDENT_UNARCHIVE, ModuleCode.DEPENDENTS, "Desarquivar para INACTIVE"),
+    DEPENDENTS_DEPENDENT_DELETE(PermissionCode.DEPENDENTS_DEPENDENT_DELETE, ModuleCode.DEPENDENTS, "Excluir cadastro sem dependências impeditivas"),
+    TOOLS_TOOL_ARCHIVE(PermissionCode.TOOLS_TOOL_ARCHIVE, ModuleCode.TOOLS, "Arquivar cadastro"),
+    TOOLS_TOOL_UNARCHIVE(PermissionCode.TOOLS_TOOL_UNARCHIVE, ModuleCode.TOOLS, "Desarquivar para INACTIVE"),
+    VEHICLES_VEHICLE_ACTIVATE(PermissionCode.VEHICLES_VEHICLE_ACTIVATE, ModuleCode.VEHICLES, "Ativar cadastro"),
+    VEHICLES_VEHICLE_DEACTIVATE(PermissionCode.VEHICLES_VEHICLE_DEACTIVATE, ModuleCode.VEHICLES, "Inativar cadastro"),
+    VEHICLES_VEHICLE_ARCHIVE(PermissionCode.VEHICLES_VEHICLE_ARCHIVE, ModuleCode.VEHICLES, "Arquivar cadastro"),
+    VEHICLES_VEHICLE_UNARCHIVE(PermissionCode.VEHICLES_VEHICLE_UNARCHIVE, ModuleCode.VEHICLES, "Desarquivar para INACTIVE"),
+    BILLING_CHARGE_DEFINITION_DELETE(PermissionCode.BILLING_CHARGE_DEFINITION_DELETE, ModuleCode.BILLING, "Excluir cadastro sem dependências impeditivas"),
+    BILLING_CHARGE_DEFINITION_HISTORY_READ(PermissionCode.BILLING_CHARGE_DEFINITION_HISTORY_READ, ModuleCode.BILLING, "Consultar histórico segregado"),
+
     MEMBERSHIP_MEMBER_READ(PermissionCode.MEMBERSHIP_MEMBER_READ, ModuleCode.MEMBERSHIP, "Consultar e pesquisar registros de associados"),
     MEMBERSHIP_MEMBER_AUDIT_READ(PermissionCode.MEMBERSHIP_MEMBER_AUDIT_READ, ModuleCode.MEMBERSHIP, "Consultar auditoria de matrículas"),
     MEMBERSHIP_MEMBER_NUMBER_RESERVE(PermissionCode.MEMBERSHIP_MEMBER_NUMBER_RESERVE, ModuleCode.MEMBERSHIP, "Reservar números de matrícula permanentemente"),

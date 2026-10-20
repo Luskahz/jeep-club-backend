@@ -14,5 +14,9 @@ public interface AuthenticationAccountRepository {
 
     Optional<AuthenticationAccount> findByIdentityIdForUpdate(Long identityId);
 
+    boolean hasSessionHistoryForUpdate(Long identityId);
+
+    void deletePending(Long identityId);
+
     boolean existsByIdentityId(Long identityId);
 }

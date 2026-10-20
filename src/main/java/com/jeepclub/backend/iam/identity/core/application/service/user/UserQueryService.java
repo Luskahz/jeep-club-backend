@@ -90,7 +90,7 @@ class UserQueryService implements UserQuery {
                 user.getEmail(), user.getCpf(), user.getRg(),
                 user.getPhoneNumber(), user.getProfilePhotoStorageKey(),
                 user.isActive(), user.getCreatedAt(), user.getDisabledAt(),
-                user.getUpdatedAt()
+                user.getUpdatedAt(), user.getStatus(), user.getArchivedAt()
         );
     }
 }

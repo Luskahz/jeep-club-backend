@@ -1,5 +1,6 @@
 package com.jeepclub.backend.dependents.core.domain.model;
 
+import com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException;
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import lombok.AccessLevel;
@@ -26,6 +27,7 @@ public class Dependent {
 
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant archivedAt;
 
     public static Dependent create(
             String name,
@@ -81,6 +83,29 @@ public class Dependent {
             Instant createdAt,
             Instant updatedAt
     ) {
+        return reconstitute(id, name, cpf, birthDate, relationshipType, phoneNumber, userId, status, createdAt, updatedAt, null);
+    }
+
+    public static Dependent reconstitute(
+            Long id,
+            String name,
+            String cpf,
+            LocalDate birthDate,
+            RelationshipType relationshipType,
+            String phoneNumber,
+            Long userId,
+            DependentStatus status,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant archivedAt
+    ) {
+        if ((status == DependentStatus.ARCHIVED) != (archivedAt != null)) {
+            throw new IllegalArgumentException("Archived state requires its archival timestamp only.");
+        }
+        if (archivedAt != null && (createdAt == null || archivedAt.isBefore(createdAt))) {
+            throw new IllegalArgumentException("archivedAt cannot be before createdAt.");
+        }
+
         validateId(id);
         requireText(name, "name");
 
@@ -128,6 +153,7 @@ public class Dependent {
         dependent.createdAt = createdAt;
         dependent.updatedAt = updatedAt;
 
+        dependent.archivedAt = archivedAt;
         return dependent;
     }
 
@@ -163,17 +189,19 @@ public class Dependent {
     }
 
     public void disable(Instant now) {
+        assertNotArchived();
         validateMutationTime(now);
 
         if (isDisabled()) {
             return;
         }
 
-        this.status = DependentStatus.DISABLED;
+        this.status = DependentStatus.INACTIVE;
         this.updatedAt = now;
     }
 
     public void enable(Instant now) {
+        assertNotArchived();
         validateMutationTime(now);
 
         if (isActive()) {
@@ -189,7 +217,7 @@ public class Dependent {
     }
 
     public boolean isDisabled() {
-        return status == DependentStatus.DISABLED;
+        return status == DependentStatus.INACTIVE;
     }
 
     private void assertActive() {
@@ -284,6 +312,33 @@ public class Dependent {
         validateNow(now);
         if (now.isBefore(createdAt)) {
             throw new IllegalArgumentException("updatedAt cannot be before createdAt.");
+        }
+    }
+
+    public boolean archive(Instant now) {
+        validateMutationTime(now);
+        if (status == DependentStatus.ARCHIVED) return false;
+        status = DependentStatus.ARCHIVED;
+        archivedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean unarchive(Instant now) {
+        validateMutationTime(now);
+        if (status == DependentStatus.INACTIVE) return false;
+        if (status != DependentStatus.ARCHIVED) {
+            throw new DependentLifecycleConflictException("Only an archived record can be unarchived.");
+        }
+        status = DependentStatus.INACTIVE;
+        archivedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void assertNotArchived() {
+        if (status == DependentStatus.ARCHIVED) {
+            throw new DependentLifecycleConflictException("Archived record requires explicit unarchive before this operation.");
         }
     }
 }

@@ -27,4 +27,7 @@ public interface ChargeCycleJpaRepository extends JpaRepository<ChargeCycleEntit
             Long chargeDefinitionId,
             String code
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<ChargeCycleEntity> findFirstByChargeDefinitionIdOrderById(Long definitionId);
 }

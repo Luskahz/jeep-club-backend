@@ -28,6 +28,8 @@ public interface UserRepository {
 
     Optional<User> findByIdForUpdate(Long id);
 
+    void deleteWithHistory(Long id, Long actorId, java.time.Instant now);
+
     boolean existsById(Long id);
 
     boolean existsByCpf(String cpf);

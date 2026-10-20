@@ -149,7 +149,7 @@ class MemberRegistryApiIntegrationTest {
                     .andExpect(jsonPath("$.content[0].membershipNumber").value(number)).andExpect(jsonPath("$.content[0].id").doesNotExist());
             mvc.perform(get("/identity/admin/users").param(key,number).param("name","no-match-synthetic")
                     .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
-            mvc.perform(get("/identity/admin/users").param(key,number).param("status","DISABLED")
+            mvc.perform(get("/identity/admin/users").param(key,number).param("status","INACTIVE")
                     .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
         }
         mvc.perform(get("/identity/admin/users").param("membershipNumber",number).param("page","1").param("size","1")

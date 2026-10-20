@@ -12,6 +12,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.iam.authorization.api")
 public class RoleExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
+        return buildErrorResponse("ROLE_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(RoleLifecycleConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleLifecycleConflict(RoleLifecycleConflictException exception) {
+        return buildErrorResponse("ROLE_LIFECYCLE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
 
     @ExceptionHandler(RoleNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleRoleNotFound(

@@ -1,5 +1,14 @@
 # Vehicles
 
+## Lifecycle vigente — BACK-512
+
+Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
+com histórico independente, e não um status. As regras por agregado, novas rotas,
+permissions, migration V5, limites de retenção e checklist de rollout estão em
+`docs/back-512-entity-lifecycle.md` na raiz do repositório. V1–V4 não foram alteradas.
+Flyway governa o schema; Hibernate usa validate. Não usar ddl-auto=update.
+
+
 ## Upload na criação — BACK-510
 
 Criação member/admin aceita multipart com `vehicle` JSON validado e `photo`
@@ -73,7 +82,7 @@ Todo veículo criado começa `ACTIVE`. A rota de membro usa diretamente o
 já exige User administrativamente ativo, mas Vehicles não repete essa consulta
 no caso de uso. A criação administrativa usa `UserPort.existsById` para
 rejeitar proprietário inexistente e `UserPort.existsActiveById` para rejeitar
-proprietário existente porém administrativamente `DISABLED`.
+proprietário existente porém administrativamente `INACTIVE`.
 
 A edição HTTP continua um `PUT`, agora com semântica de atualização parcial:
 campo omitido do JSON preserva o valor atual do veículo; campo presente com
@@ -108,31 +117,16 @@ a remoção. O histórico não tem API de consulta e não reserva placa ou
 RENAVAM; após a remoção operacional, os identificadores podem ser usados por
 um novo veículo. Uma segunda exclusão que perde a corrida pelo lock recebe
 conflito de veículo já removido (`VehicleAlreadyDeletedException`, 409). Os
-services e listagens só expõem `ACTIVE`; `DetailResponseDTO.status` documenta
-`ACTIVE` como único valor no contrato público.
+listagens padrão expõem ACTIVE; consultas autorizadas por ID e filtros explícitos incluem INACTIVE/ARCHIVED, exceto exclusões legadas.
 
-`VehicleStatus` ainda declara `SOFT_DELETED`, mas exclusivamente como legado
-de compatibilidade de leitura: nenhum caso de uso grava esse valor (o método
-de domínio que o produzia, `Vehicle.softDelete(Instant)`, foi removido por
-não ter mais nenhum caller), e não existe campo `deletedAt`/`disabledAt` na
-operação atual — esses campos foram removidos do domínio (`Vehicle`), da
-entidade operacional (`VehicleEntity`) e da entidade de histórico
-(`VehicleHistoryEntity`, que já tinha seu próprio `deletedAt` do hard delete,
-correto e preservado; o `disabledAt` copiado da entidade operacional era
-puro peso morto). A única razão para manter o valor no enum é não quebrar a
-leitura de uma linha pré-existente que porventura ainda tenha
-`status = 'SOFT_DELETED'` no banco: `@Enumerated(EnumType.STRING)` falharia
-ao desserializar essa linha se o valor fosse removido do enum, e uma consulta
-por ID que a alcançasse quebraria com erro não controlado em vez do 404 atual.
-Como hoje nenhuma constraint impede a leitura de uma linha assim por ID,
-`findActiveVehicle` (member e admin) já trata qualquer status diferente de
-`ACTIVE` — incluindo esse legado — como veículo não encontrado, então o
-registro nunca fica visível, editável ou reativável pelas rotas atuais.
-`VehicleRepositoryAdapterTest.legacySoftDeletedRowIsReadWithoutMappingFailure`
-e `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
-caracterizam essa compatibilidade explicitamente. A compatibilidade continua necessária até o saneamento incremental previsto
-na BACK-512. O projeto agora usa Flyway e Hibernate validate; bancos existentes
-não devem ser recriados nem ter migrations históricas reescritas para eliminar o legado.
+VehicleStatus contém ACTIVE, INACTIVE e ARCHIVED. A V5 transforma o valor legado
+SOFT_DELETED em ARCHIVED com legacy_deleted=true e archived_at derivado dos
+timestamps existentes. Essas linhas continuam ocultas e não podem ser reativadas.
+Fotos, URLs e identificadores legados são preservados. Cadastros arquivados por
+comando atual permanecem legíveis ao proprietário/administrador, podem voltar a
+INACTIVE por unarchive e só depois a ACTIVE por activate. Filtros paginados são
+aplicados no banco; o padrão das listagens continua ACTIVE. O histórico de
+exclusão preserva status, archived_at e legacy_deleted.
 
 ## Invariantes do agregado
 
@@ -240,9 +234,9 @@ edição parcial. `VehicleTest` cobre a canonicalização de placa/RENAVAM em
 duplicidade concorrente chamando `save` duas vezes com o mesmo valor canônico
 sem pré-checagem entre as chamadas, caracterizando a tradução de
 `DataIntegrityViolationException` para os erros de negócio de placa/RENAVAM, e
-`legacySoftDeletedRowIsReadWithoutMappingFailure` prova que uma linha
-pré-existente com `status = SOFT_DELETED` inserida diretamente via JPA (sem
-passar por `Vehicle.create`) ainda é lida sem falha de mapeamento;
+`legacySoftDeletedRowIsReadWithoutMappingFailure` caracteriza o registro após
+a V5, com ARCHIVED e legacy_deleted=true. A transformação do valor antigo
+SOFT_DELETED é validada no MySQL real por MySqlMigrationIT;
 `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
 e `VehicleServiceTest.hidesSoftDeletedVehicle` provam que esse registro é
 tratado como 404 pelos dois services. Testes de contrato caracterizam o

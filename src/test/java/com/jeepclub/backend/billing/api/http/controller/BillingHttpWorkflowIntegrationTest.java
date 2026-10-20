@@ -76,6 +76,7 @@ class BillingHttpWorkflowIntegrationTest {
                 "BILLING_CHARGE_CYCLE_GENERATE", "BILLING_CHARGE_CYCLE_READ", "BILLING_CHARGE_CYCLE_FINISH", "BILLING_CHARGE_CYCLE_ARCHIVE");
         long definition = id(mvc.perform(body(post("/billing/charge-definitions"), DEFINITION)).andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("ACTIVE")).andReturn());
         when(members.existsActiveMemberByUserId(10L)).thenReturn(true);
+        when(members.existsActiveMemberByUserIdForUpdate(10L)).thenReturn(true);
         long assignment = id(mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/users/10", definition))).andExpect(status().isCreated()).andExpect(jsonPath("$.userId").value(10)).andReturn());
         mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/users/10", definition))).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CHARGE_ASSIGNMENT_ALREADY_EXISTS"));
         mvc.perform(token(get("/billing/charge-definitions/{id}/assignments", definition))).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(assignment));
@@ -166,7 +167,7 @@ class BillingHttpWorkflowIntegrationTest {
         long definition = id(mvc.perform(body(post("/billing/charge-definitions"), DEFINITION)).andExpect(status().isCreated()).andReturn());
         mvc.perform(token(get("/billing/charge-definitions/{id}", definition))).andExpect(status().isOk());
         mvc.perform(token(get("/billing/charge-definitions"))).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].name").value("fee"));
-        when(roles.existsActiveRoleById(20L)).thenReturn(true); when(events.existsEventById(30L)).thenReturn(true);
+        when(roles.existsActiveRoleByIdForUpdate(20L)).thenReturn(true); when(events.existsEventById(30L)).thenReturn(true);
         for (String suffix : List.of("all-members", "roles/20", "events/30/participants")) {
             long assignment = id(mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/" + suffix, definition))).andExpect(status().isCreated()).andReturn());
             mvc.perform(token(get("/billing/charge-assignments/{id}", assignment))).andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));

@@ -16,6 +16,8 @@ public interface ToolRepository {
 
     Optional<Tool> findById(Long id);
 
+    Optional<Tool> findByIdForUpdate(Long id);
+
     Tool save(Tool tool);
 
     void delete(

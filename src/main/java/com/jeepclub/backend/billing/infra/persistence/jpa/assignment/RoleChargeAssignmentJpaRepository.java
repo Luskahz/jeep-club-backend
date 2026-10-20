@@ -10,4 +10,7 @@ public interface RoleChargeAssignmentJpaRepository
             Long chargeDefinitionId,
             Long roleId
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<RoleChargeAssignmentEntity> findFirstByRoleIdOrderById(Long id);
 }

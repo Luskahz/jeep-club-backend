@@ -132,6 +132,11 @@ public class AdminMedicalProfileService {
             UpsertMedicalProfileCommand data
     ) {
         validateOwner(ownerType, ownerId);
+        var lockedStatus=ownerStatusChecker.getStatusForUpdate(ownerType,ownerId);
+        if(lockedStatus==MedicalProfileOwnerStatus.NOT_FOUND) throw new MedicalProfileOwnerNotFoundException(ownerType, ownerId);
+        if(lockedStatus!=MedicalProfileOwnerStatus.ACTIVE) throw new MedicalProfileOwnerInactiveException(ownerType, ownerId);
+
+        validateOwner(ownerType, ownerId);
         validateAccessibleOwner(ownerType, ownerId);
 
         var existing = medicalProfileRepository.findByOwnerForUpdate(

@@ -45,7 +45,7 @@ public class AdminUserRoleService {
             Long userId,
             Long roleId
     ) {
-        ensureUserExists(userId);
+        ensureUserExistsForUpdate(userId);
 
         Role role = findRole(roleId);
 
@@ -81,7 +81,7 @@ public class AdminUserRoleService {
             Long userId,
             Long roleId
     ) {
-        ensureUserExists(userId);
+        ensureUserExistsForUpdate(userId);
 
         Role role = findRole(roleId);
 
@@ -111,7 +111,7 @@ public class AdminUserRoleService {
             Long userId,
             List<Long> roleIds
     ) {
-        ensureUserExists(userId);
+        ensureUserExistsForUpdate(userId);
         Objects.requireNonNull(roleIds, "roleIds cannot be null");
 
         Set<Long> uniqueRoleIds = new HashSet<>(roleIds);
@@ -153,7 +153,7 @@ public class AdminUserRoleService {
     }
 
     private Role findRole(Long roleId) {
-        return roleRepository.findById(roleId)
+        return roleRepository.findByIdForUpdate(roleId)
                 .orElseThrow(() -> new RoleNotFoundException(roleId));
     }
 
@@ -169,5 +169,9 @@ public class AdminUserRoleService {
         if (!userIdentityPort.existsById(userId)) {
             throw new AuthorizationUserNotFoundException(userId);
         }
+    }
+
+    private void ensureUserExistsForUpdate(Long userId) {
+        if (!userIdentityPort.existsByIdForUpdate(userId)) throw new AuthorizationUserNotFoundException(userId);
     }
 }

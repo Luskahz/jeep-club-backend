@@ -94,7 +94,7 @@ class DependentSystemFlowTest {
 
         clock.now = NOW.plusSeconds(10);
         assertThat(dependentService.disable(created.id(), user.getId()).status())
-                .isEqualTo(DependentStatus.DISABLED);
+                .isEqualTo(DependentStatus.INACTIVE);
         assertOwnerBoundary(created.id(), MedicalProfileOwnerStatus.INACTIVE);
         assertThat(dependentService.findAllByUserId(user.getId())).isEmpty();
         assertThat(ownership.belongsToUser(created.id(), user.getId())).isFalse();
@@ -155,7 +155,8 @@ class DependentSystemFlowTest {
         assertThatThrownBy(() -> dependentService.create("Pedro", user.getCpf(), LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD, null, user.getId()))
                 .isInstanceOf(DependentCpfAlreadyInUseException.class);
-        user.setStatus(UserStatus.DISABLED);
+        user.setStatus(UserStatus.INACTIVE);
+        user.setDisabledAt(NOW);
         identityJpaRepository.saveAndFlush(user);
         assertThatThrownBy(() -> dependentService.create("Pedro", "52998224725", LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD, null, user.getId()))

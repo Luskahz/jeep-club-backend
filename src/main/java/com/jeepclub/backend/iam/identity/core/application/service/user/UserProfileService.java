@@ -32,7 +32,11 @@ public class UserProfileService implements UserProfileQuery {
     @Transactional
     public UserProfile replace(Long userId, WorkProfile workProfile, ResidentialAddress address) {
         // Lock the parent even before the first insert, serializing concurrent upserts.
-        users.findByIdForUpdate(userId).orElseThrow(() -> new UserNotFoundException(userId));
+        var user = users.findByIdForUpdate(userId).orElseThrow(() -> new UserNotFoundException(userId));
+        if (user.getStatus() == com.jeepclub.backend.iam.identity.api.module.UserStatus.ARCHIVED) {
+            throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException(
+                    "Archived user requires explicit unarchive before editing its profile.");
+        }
         return profiles.save(new UserProfile(userId, workProfile, address));
     }
 }

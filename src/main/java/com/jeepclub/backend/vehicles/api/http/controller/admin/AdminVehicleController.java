@@ -139,11 +139,14 @@ public class AdminVehicleController {
             }
     )
     public ResponseEntity<PageResponse<AdminListResponseDTO>> listAllVehicles(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="ACTIVE") com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus status,
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-                adminVehicleService.findAllWithOwners(pageable).map(AdminListResponseDTO::from)
+                (status == com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE
+                    ? adminVehicleService.findAllWithOwners(pageable)
+                    : adminVehicleService.findAllWithOwners(status,pageable)).map(AdminListResponseDTO::from)
         ));
     }
 
@@ -251,5 +254,45 @@ public class AdminVehicleController {
                 principal.getUserId()
         );
         return ResponseEntity.noContent().build();
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/activate/admin/{vehicleId}")
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_ACTIVATE')")
+    @RequiredPermission("VEHICLES_VEHICLE_ACTIVATE")
+    @Operation(summary="Ativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> activate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(adminVehicleService.activate(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/deactivate/admin/{vehicleId}")
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_DEACTIVATE')")
+    @RequiredPermission("VEHICLES_VEHICLE_DEACTIVATE")
+    @Operation(summary="Desativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> deactivate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(adminVehicleService.deactivate(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/archive/admin/{vehicleId}")
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_ARCHIVE')")
+    @RequiredPermission("VEHICLES_VEHICLE_ARCHIVE")
+    @Operation(summary="Arquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(adminVehicleService.archive(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/unarchive/admin/{vehicleId}")
+    @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_UNARCHIVE')")
+    @RequiredPermission("VEHICLES_VEHICLE_UNARCHIVE")
+    @Operation(summary="Desarquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(adminVehicleService.unarchive(vehicleId,principal.getUserId())));
     }
 }

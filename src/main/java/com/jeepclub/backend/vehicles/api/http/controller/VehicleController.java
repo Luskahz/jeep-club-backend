@@ -125,11 +125,14 @@ public class VehicleController {
     )
     public ResponseEntity<PageResponse<ListResponseDTO>> listMemberVehicles(
             @AuthenticationPrincipal UserPrincipal principal,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="ACTIVE") com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus status,
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-                vehicleService.findAll(principal.getUserId(), pageable)
+                (status == com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE
+                        ? vehicleService.findAll(principal.getUserId(),pageable)
+                        : vehicleService.findAll(principal.getUserId(),status,pageable))
                         .map(ListResponseDTO::from)
         ));
     }
@@ -211,7 +214,7 @@ public class VehicleController {
     @DeleteMapping("/delete/member/{vehicleId}")
     @Operation(
             summary = "Deletar veículo do membro logado",
-            description = "Sob lock, arquiva o snapshot e remove fisicamente o veículo ACTIVE pertencente ao membro.",
+            description = "Sob lock, arquiva o snapshot e remove fisicamente o veículo pertencente ao membro quando não há vínculos impeditivos.",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Veículo removido e histórico arquivado."),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -226,5 +229,41 @@ public class VehicleController {
     ) {
         vehicleService.delete(vehicleId, principal.getUserId());
         return ResponseEntity.noContent().build();
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/activate/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Ativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> activate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.activate(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/deactivate/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Desativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> deactivate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.deactivate(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/archive/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Arquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.archive(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/unarchive/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Desarquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.unarchive(vehicleId,principal.getUserId())));
     }
 }

@@ -28,6 +28,7 @@ public class ToolHistoryMapper {
         history.setDeletedByUserId(deletedByUserId);
         history.setCreatedAt(source.getCreatedAt());
         history.setUpdatedAt(source.getUpdatedAt());
+        history.setArchivedAt(source.getArchivedAt());
         history.setDeletedAt(deletedAt);
 
         return history;

@@ -78,4 +78,12 @@ public class RoleEntity {
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
+    public RoleEntity(Long id, String name, String description, RoleKind kind, RoleStatus status,
+                      Instant createdAt, Instant updatedAt, Instant deletedAt) {
+        this(id, name, description, kind, status, createdAt, updatedAt, deletedAt, null);
+    }
 }

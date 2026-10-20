@@ -83,4 +83,11 @@ public class VehicleEntity {
 
     @Column(name = "updated_at")
     private Instant updatedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name = "legacy_deleted", nullable = false)
+    private boolean legacyDeleted;
 }

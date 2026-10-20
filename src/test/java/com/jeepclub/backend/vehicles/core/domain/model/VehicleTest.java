@@ -73,12 +73,12 @@ class VehicleTest {
     }
 
     @Test
-    void reconstituteAcceptsLegacySoftDeletedStatus() {
+    void reconstituteAcceptsArchivedStatusWithTimestamp() {
         Vehicle vehicle = new CreateArgs().reconstituteArgs()
-                .status(VehicleStatus.SOFT_DELETED)
+                .status(VehicleStatus.ARCHIVED)
                 .build();
 
-        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.SOFT_DELETED);
+        assertThat(vehicle.getStatus()).isEqualTo(VehicleStatus.ARCHIVED);
     }
 
     @Test
@@ -480,7 +480,8 @@ class VehicleTest {
             return Vehicle.reconstitute(
                     id, nickname, photo, plate, renavam, brand, model, manufacturingYear,
                     modelYear, color, seatingCapacity, fuelType, engineDisplacement,
-                    status, towing, ownerId, createdAt, updatedAt
+                    status, towing, ownerId, createdAt, updatedAt,
+                    status == VehicleStatus.ARCHIVED ? createdAt : null, false
             );
         }
     }

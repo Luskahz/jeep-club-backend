@@ -9,4 +9,7 @@ public interface EventChargeContextJpaRepository extends JpaRepository<EventChar
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     Optional<EventChargeContextEntity> findWithLockingByEventIdAndChargeDefinitionId(Long eventId, Long chargeDefinitionId);
     List<EventChargeContextEntity> findByEventIdOrderByChargeDefinitionId(Long eventId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<EventChargeContextEntity> findFirstByChargeDefinitionIdOrderById(Long definitionId);
 }

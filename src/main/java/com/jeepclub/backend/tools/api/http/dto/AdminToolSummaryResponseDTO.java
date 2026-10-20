@@ -10,7 +10,7 @@ public record AdminToolSummaryResponseDTO(
         Long id,
         @Schema(description = "Nome persistido da ferramenta.", example = "Macaco hidráulico")
         String name,
-        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE"})
+        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"})
         ToolStatus status,
         @Schema(description = "Identificador do usuário dono da ferramenta.", example = "42")
         Long userId

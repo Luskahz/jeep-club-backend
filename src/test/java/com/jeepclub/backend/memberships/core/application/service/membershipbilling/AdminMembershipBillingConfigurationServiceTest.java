@@ -1,6 +1,6 @@
 package com.jeepclub.backend.memberships.core.application.service.membershipbilling;
 
-import com.jeepclub.backend.billing.api.module.ChargeDefinitionQuery;
+import com.jeepclub.backend.billing.api.module.ChargeDefinitionLock;
 import com.jeepclub.backend.memberships.core.application.exception.InvalidMembershipChargeDefinitionException;
 import com.jeepclub.backend.memberships.core.application.exception.MembershipBillingConfigurationNotFoundException;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipBillingConfiguration;
@@ -28,7 +28,7 @@ class AdminMembershipBillingConfigurationServiceTest {
     @Mock
     private MembershipBillingConfigurationRepository repository;
     @Mock
-    private ChargeDefinitionQuery definitionQuery;
+    private ChargeDefinitionLock definitionQuery;
 
     private AdminMembershipBillingConfigurationService service;
 

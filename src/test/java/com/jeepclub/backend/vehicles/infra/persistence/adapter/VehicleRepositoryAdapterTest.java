@@ -264,12 +264,8 @@ class VehicleRepositoryAdapterTest {
     }
 
     @Test
-    void legacySoftDeletedRowIsReadWithoutMappingFailure() {
-        // Nenhum caso de uso atual grava SOFT_DELETED; esta linha simula um
-        // registro legado pré-existente inserido diretamente via JPA, sem
-        // passar por Vehicle.create/save. O risco real é o Hibernate falhar
-        // ao desserializar VehicleEntity.status; este teste prova que a
-        // leitura continua segura mesmo assim.
+    void migratedLegacyDeletedRowIsReadWithoutMappingFailure() {
+        // Post-migration representation; the raw legacy value is exercised by MySQL upgrade tests.
         VehicleEntity legacy = new VehicleEntity();
         legacy.setNickname("Legado");
         legacy.setPhoto("photo");
@@ -283,15 +279,20 @@ class VehicleRepositoryAdapterTest {
         legacy.setSeatingCapacity(5);
         legacy.setFuelType(FuelType.DIESEL);
         legacy.setEngineDisplacement(2.0);
-        legacy.setStatus(VehicleStatus.SOFT_DELETED);
+        legacy.setStatus(VehicleStatus.ACTIVE);
         legacy.setTowing(true);
         legacy.setOwnerId(7L);
         VehicleEntity savedLegacy = vehicleJpaRepository.saveAndFlush(legacy);
+        savedLegacy.setStatus(VehicleStatus.ARCHIVED);
+        savedLegacy.setArchivedAt(savedLegacy.getCreatedAt());
+        savedLegacy.setLegacyDeleted(true);
+        vehicleJpaRepository.saveAndFlush(savedLegacy);
         entityManager.clear();
 
         Vehicle loaded = repository.findById(savedLegacy.getId()).orElseThrow();
 
-        assertThat(loaded.getStatus()).isEqualTo(VehicleStatus.SOFT_DELETED);
+        assertThat(loaded.getStatus()).isEqualTo(VehicleStatus.ARCHIVED);
+        assertThat(loaded.isLegacyDeleted()).isTrue();
         assertThat(loaded.getPlate()).isEqualTo("LEG1D23");
     }
 

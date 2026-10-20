@@ -29,6 +29,8 @@ public interface VehicleRepository {
 
     Optional<Vehicle> findById(Long id);
 
+    Optional<Vehicle> findByIdForUpdate(Long id);
+
     Page<Vehicle> findAllByOwnerIdAndStatus(Long ownerId, VehicleStatus status, Pageable pageable);
 
     Page<Vehicle> findAllByStatus(VehicleStatus status, Pageable pageable);

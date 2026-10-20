@@ -119,4 +119,7 @@ public class DependentHistoryEntity {
             updatable = false
     )
     private Instant deletedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
 }

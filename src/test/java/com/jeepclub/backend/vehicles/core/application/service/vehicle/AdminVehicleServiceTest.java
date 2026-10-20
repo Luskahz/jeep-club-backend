@@ -53,7 +53,7 @@ class AdminVehicleServiceTest {
                 vehicleRepository,
                 userPort,
                 Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand
-        );
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 
     @Test
@@ -129,6 +129,9 @@ class AdminVehicleServiceTest {
         when(vehicleRepository.findAllByStatus(VehicleStatus.ACTIVE, pageable))
                 .thenReturn(new PageImpl<>(List.of(vehicle)));
         when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+        when(vehicleRepository.findAllByStatus(VehicleStatus.ACTIVE, pageable))
+                .thenReturn(new PageImpl<>(List.of(vehicle)));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle));
 
         assertThat(service.findAll(pageable).getContent()).containsExactly(vehicle);
         assertThat(service.findById(1L)).isSameAs(vehicle);
@@ -145,7 +148,7 @@ class AdminVehicleServiceTest {
 
     @Test
     void omittedFieldsPreserveCurrentValuesOnUpdate() {
-        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle()));
 
         VehicleEditFields onlyNickname = new VehicleEditFields(
                 FieldUpdate.of("Atualizado"),
@@ -174,7 +177,7 @@ class AdminVehicleServiceTest {
 
     @Test
     void canonicalizesPlateAndRenavamOnUpdateBeforeDuplicateCheck() {
-        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle()));
 
         VehicleEditFields updates = fullEditFields(
                 FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.of("  xyz9z99  "),
@@ -195,7 +198,7 @@ class AdminVehicleServiceTest {
 
     @Test
     void rejectsExplicitNullOnRequiredFieldWithoutTouchingPersistence() {
-        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle()));
 
         VehicleEditFields nullPlate = fullEditFields(
                 FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.explicitNull(),
@@ -216,7 +219,7 @@ class AdminVehicleServiceTest {
         Vehicle legacy = Vehicle.reconstitute(
                 1L, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, VehicleStatus.SOFT_DELETED, true, 7L, NOW.minusSeconds(60), null
+                2.0, VehicleStatus.ARCHIVED, true, 7L, NOW.minusSeconds(60), null, NOW, true
         );
         when(vehicleRepository.findById(1L)).thenReturn(Optional.of(legacy));
 

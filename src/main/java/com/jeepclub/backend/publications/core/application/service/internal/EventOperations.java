@@ -22,6 +22,8 @@ public class EventOperations {
     private final DependentsQuery dependents;
     private final EventVehicleQuery vehicles;
     private final Clock clock;
+    private final com.jeepclub.backend.dependents.api.module.DependentLifecycleLock dependentLocks;
+    private final com.jeepclub.backend.vehicles.api.module.VehicleLifecycleLock vehicleLocks;
 
     public Event locked(Long id) {
         var publication = publications.findByIdForUpdate(id).orElse(null);
@@ -44,6 +46,7 @@ public class EventOperations {
         if (rules.stream().anyMatch(r -> r.requiredForParticipation() && !now().isBefore(r.participationCutoff())))
             throw error("EVENT_REGISTRATION_CLOSED");
         var registration = new EventRegistration(null, event.getId(), user, EventRegistration.Status.PENDING_PAYMENT, allocations, now(), null, null, unallocatedDependentIds);
+        lockReferences(user,allocations,unallocatedDependentIds);
         validateDependents(user, unallocatedDependentIds);
         validateAllocations(user, allocations);
         registration = operations.save(registration);
@@ -57,14 +60,14 @@ public class EventOperations {
     }
     public void validateAllocations(Long user, List<EventRegistration.Allocation> allocations) {
         for (var allocation : allocations) {
-            var vehicle = vehicles.findActive(allocation.vehicleId()).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
+            var vehicle = vehicleLocks.activeById(allocation.vehicleId()).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
             if (!vehicle.ownerId().equals(user)) throw error("EVENT_VEHICLE_NOT_OWNED");
-            if (allocation.dependentIds().stream().anyMatch(d -> !dependents.isActiveDependentOfUser(d, user))) throw error("EVENT_PARTICIPANT_NOT_FOUND");
+            if (allocation.dependentIds().stream().anyMatch(d -> !activeDependent(d,user))) throw error("EVENT_PARTICIPANT_NOT_FOUND");
             if (allocation.dependentIds().size() + (allocation.member() ? 1 : 0) > vehicle.seatingCapacity()) throw error("EVENT_VEHICLE_CAPACITY_EXCEEDED");
         }
     }
     public void validateDependents(Long user, List<Long> ids) {
-        if (ids.stream().anyMatch(d -> !dependents.isActiveDependentOfUser(d,user))) throw error("EVENT_PARTICIPANT_NOT_FOUND");
+        if (ids.stream().anyMatch(d -> !activeDependent(d,user))) throw error("EVENT_PARTICIPANT_NOT_FOUND");
     }
     public EventRegistration refresh(EventRegistration registration, List<EventFinancialQuery.State> states) {
         return refresh(registration, states, operations.rules(registration.eventId()));
@@ -91,6 +94,7 @@ public class EventOperations {
         return vehicle.seatingCapacity() - occupants - (int) guests;
     }
     public void guestSpace(Long eventId, Long vehicleId) {
+        vehicleLocks.activeById(vehicleId).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
         if (operations.guests(eventId).stream().anyMatch(g -> g.status() == EventGuestRequest.Status.APPROVED && vehicleId.equals(g.vehicleId()))) throw error("EVENT_GUEST_LIMIT_REACHED");
         if (spare(eventId, vehicleId) < 1) throw error("EVENT_VEHICLE_CAPACITY_EXCEEDED");
     }
@@ -108,6 +112,7 @@ public class EventOperations {
                 throw error("EVENT_VEHICLE_NOT_OWNED");
             guestSpace(event.getId(), vehicle);
         }
+        if(vehicle!=null) vehicleLocks.activeById(vehicle).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
         var guest = new EventGuestRequest(null, event.getId(), actor, vehicle, cpf, EventGuestRequest.Status.PENDING, administrative, null, now(), null, null, guestName);
         if (operations.guests(event.getId()).stream().anyMatch(g -> g.cpf().equals(guest.cpf()))) throw error("EVENT_GUEST_ALREADY_EXISTS");
         return operations.save(guest);
@@ -128,4 +133,18 @@ public class EventOperations {
         return operations.save(guest.review(approve, chosen, actor, reason, now()));
     }
     public static EventOperationException error(String code) { return new EventOperationException(code); }
+
+    /** Fixed parent order for registration writes: sorted Vehicles, then all sorted Dependents. */
+    public void lockReferences(Long user,List<EventRegistration.Allocation> allocations,List<Long> unallocated) {
+        allocations.stream().map(EventRegistration.Allocation::vehicleId).distinct().sorted()
+                .forEach(id -> {
+                    var vehicle = vehicleLocks.activeById(id).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
+                    if(!vehicle.ownerId().equals(user)) throw error("EVENT_VEHICLE_NOT_OWNED");
+                });
+        java.util.stream.Stream.concat(unallocated.stream(),allocations.stream().flatMap(a -> a.dependentIds().stream()))
+                .distinct().sorted().forEach(id -> { if(!activeDependent(id,user)) throw error("EVENT_PARTICIPANT_NOT_FOUND"); });
+    }
+    private boolean activeDependent(Long id,Long user) {
+        return dependentLocks.byId(id).filter(d -> d.active() && d.userId().equals(user)).isPresent();
+    }
 }

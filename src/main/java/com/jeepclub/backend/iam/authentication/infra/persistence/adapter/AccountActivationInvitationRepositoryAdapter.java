@@ -13,6 +13,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AccountActivationInvitationRepositoryAdapter implements AccountActivationInvitationRepository {
     private final AccountActivationInvitationJpaRepository jpa;
+    private final jakarta.persistence.EntityManager entityManager;
 
     @Override
     public Optional<AccountActivationInvitation> findById(Long identityId) {
@@ -54,5 +55,12 @@ public class AccountActivationInvitationRepositoryAdapter implements AccountActi
     private AccountActivationInvitation toDomain(AccountActivationInvitationEntity entity) {
         return AccountActivationInvitation.reconstitute(entity.getIdentityId(), entity.getTokenHash(),
                 entity.getExpiresAt(), entity.getUsedAt(), entity.getDeliveryStatus(), entity.getVersion());
+    }
+
+    @Override
+    public Optional<AccountActivationInvitation> findByIdForUpdate(Long identityId) {
+        var current = jpa.findByIdForUpdate(identityId);
+        current.ifPresent(entityManager::detach);
+        return current.flatMap(ignored -> jpa.findByIdForUpdate(identityId)).map(this::toDomain);
     }
 }

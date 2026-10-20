@@ -10,6 +10,10 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.Optional;
 
 public interface AccountActivationInvitationJpaRepository extends JpaRepository<AccountActivationInvitationEntity, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select invitation from AccountActivationInvitationEntity invitation where invitation.identityId = :identityId")
+    Optional<AccountActivationInvitationEntity> findByIdForUpdate(Long identityId);
+
     @Query("select invitation.deliveryStatus from AccountActivationInvitationEntity invitation where invitation.identityId = :identityId")
     Optional<String> findDeliveryStatusById(Long identityId);
 

@@ -17,7 +17,7 @@ class EventVehicleQueryServiceTest {
     }
     @Test void missingAndInactiveVehiclesAreNotEligible() {
         var repository = mock(VehicleRepository.class); var vehicle = mock(Vehicle.class);
-        when(vehicle.getStatus()).thenReturn(VehicleStatus.SOFT_DELETED);
+        when(vehicle.getStatus()).thenReturn(VehicleStatus.INACTIVE);
         when(repository.findById(1L)).thenReturn(Optional.of(vehicle));
         var query = new EventVehicleQueryService(mock(com.jeepclub.backend.vehicles.core.repository.VehicleHistoricalPresentationRepository.class), repository);
         assertThat(query.findActive(1L)).isEmpty(); assertThat(query.findActive(2L)).isEmpty();

@@ -17,6 +17,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.billing")
 public class BillingChargeDefinitionExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
+        return buildErrorResponse("BILLING_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionDeletionConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleDeletionConflict(RuntimeException exception) {
+        return buildErrorResponse("CHARGE_DEFINITION_DELETE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
 
     @ExceptionHandler(ChargeDefinitionAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleChargeDefinitionAlreadyExists(

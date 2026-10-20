@@ -2,5 +2,6 @@ package com.jeepclub.backend.dependents.core.domain.enums;
 
 public enum DependentStatus {
     ACTIVE,
-    DISABLED
+    INACTIVE,
+    ARCHIVED
 }

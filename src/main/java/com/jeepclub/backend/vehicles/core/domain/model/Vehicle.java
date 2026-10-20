@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.core.domain.model;
 
+import com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import lombok.AccessLevel;
@@ -38,6 +39,8 @@ public class Vehicle {
 
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant archivedAt;
+    private boolean legacyDeleted;
 
 
     public static Vehicle create(
@@ -87,7 +90,9 @@ public class Vehicle {
                 towing,
                 ownerId,
                 createdAt,
-                null
+                null,
+                null,
+                false
         );
 
     }
@@ -112,6 +117,41 @@ public class Vehicle {
             Instant createdAt,
             Instant updatedAt
     ) {
+        return reconstitute(id, nickname, photo, plate, renavam, brand, model, manufacturingYear, modelYear, color, seatingCapacity, fuelType, engineDisplacement, status, towing, ownerId, createdAt, updatedAt, null, false);
+    }
+
+    public static Vehicle reconstitute(
+            Long id,
+            String nickname,
+            String photo,
+            String plate,
+            String renavam,
+            String brand,
+            String model,
+            int manufacturingYear,
+            int modelYear,
+            String color,
+            int seatingCapacity,
+            FuelType fuelType,
+            double engineDisplacement,
+            VehicleStatus status,
+            Boolean towing,
+            Long ownerId,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant archivedAt,
+            boolean legacyDeleted
+    ) {
+        if ((status == VehicleStatus.ARCHIVED) != (archivedAt != null)) {
+            throw new IllegalArgumentException("Archived state requires its archival timestamp only.");
+        }
+        if (archivedAt != null && (createdAt == null || archivedAt.isBefore(createdAt))) {
+            throw new IllegalArgumentException("archivedAt cannot be before createdAt.");
+        }
+        if (legacyDeleted && status != VehicleStatus.ARCHIVED) {
+            throw new IllegalArgumentException("Historically deleted vehicle must remain archived.");
+        }
+
         validateId(id);
         validateOwnerId(ownerId);
         requireText(brand, "brand");
@@ -145,6 +185,8 @@ public class Vehicle {
         vehicle.ownerId = ownerId;
         vehicle.createdAt = createdAt;
         vehicle.updatedAt = updatedAt;
+        vehicle.archivedAt = archivedAt;
+        vehicle.legacyDeleted = legacyDeleted;
         return vehicle;
     }
 
@@ -164,6 +206,9 @@ public class Vehicle {
             Boolean towing,
             Instant now
     ) {
+        if (status != VehicleStatus.ACTIVE) {
+            throw new VehicleLifecycleConflictException("Only active vehicles can be edited.");
+        }
         requireText(brand, "brand");
         requireText(model, "model");
         validateYear(manufacturingYear, "manufacturingYear");
@@ -266,5 +311,55 @@ public class Vehicle {
         if (updatedAt != null && updatedAt.isBefore(createdAt)) {
             throw new IllegalStateException("updatedAt cannot be before createdAt.");
         }
+    }
+
+    public boolean archive(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (status == VehicleStatus.ARCHIVED) return false;
+        status = VehicleStatus.ARCHIVED;
+        archivedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean unarchive(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (legacyDeleted) throw new VehicleLifecycleConflictException("Historically deleted vehicle cannot be restored.");
+        if (status == VehicleStatus.INACTIVE) return false;
+        if (status != VehicleStatus.ARCHIVED) {
+            throw new VehicleLifecycleConflictException("Only an archived record can be unarchived.");
+        }
+        status = VehicleStatus.INACTIVE;
+        archivedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void assertNotArchived() {
+        if (status == VehicleStatus.ARCHIVED) {
+            throw new VehicleLifecycleConflictException("Archived record requires explicit unarchive before this operation.");
+        }
+    }
+
+    public boolean activate(Instant now) {
+        assertNotArchived();
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (status == VehicleStatus.ACTIVE) return false;
+        status = VehicleStatus.ACTIVE;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean deactivate(Instant now) {
+        assertNotArchived();
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (status == VehicleStatus.INACTIVE) return false;
+        status = VehicleStatus.INACTIVE;
+        updatedAt = now;
+        return true;
     }
 }

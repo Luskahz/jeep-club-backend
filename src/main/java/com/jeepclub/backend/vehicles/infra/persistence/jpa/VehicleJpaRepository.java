@@ -30,11 +30,11 @@ public interface VehicleJpaRepository extends JpaRepository<VehicleEntity, Long>
 
     Optional<VehicleEntity> findByIdAndOwnerId(Long id, Long ownerId);
 
-    Page<VehicleEntity> findAllByOwnerIdAndStatus(
+    Page<VehicleEntity> findAllByOwnerIdAndStatusAndLegacyDeletedFalse(
             Long ownerId,
             VehicleStatus status,
             Pageable pageable
     );
 
-    Page<VehicleEntity> findAllByStatus(VehicleStatus status, Pageable pageable);
+    Page<VehicleEntity> findAllByStatusAndLegacyDeletedFalse(VehicleStatus status, Pageable pageable);
 }

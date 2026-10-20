@@ -51,13 +51,13 @@ class DependentRepositoryAdapterTest {
 
     @Test
     void savesFindsAndKeepsCpfReservedForDisabledDependent() {
-        Dependent saved = repository.save(dependent(DependentStatus.DISABLED));
+        Dependent saved = repository.save(dependent(DependentStatus.INACTIVE));
         entityManager.flush();
         entityManager.clear();
 
         assertThat(repository.findById(saved.getId())).get()
                 .extracting(Dependent::getStatus)
-                .isEqualTo(DependentStatus.DISABLED);
+                .isEqualTo(DependentStatus.INACTIVE);
         assertThat(repository.existsByCpf("12345678900")).isTrue();
     }
 
@@ -96,7 +96,7 @@ class DependentRepositoryAdapterTest {
     void translatesOperationalCpfUniqueConstraintViolation() {
         repository.save(dependent(DependentStatus.ACTIVE));
 
-        assertThatThrownBy(() -> repository.save(dependent(DependentStatus.DISABLED)))
+        assertThatThrownBy(() -> repository.save(dependent(DependentStatus.INACTIVE)))
                 .isInstanceOf(DependentCpfAlreadyInUseException.class)
                 .hasCauseInstanceOf(DataIntegrityViolationException.class);
     }
@@ -106,7 +106,7 @@ class DependentRepositoryAdapterTest {
                 "Pedro Silva", "12345678900", LocalDate.of(2010, 5, 20),
                 RelationshipType.CHILD, "11988887777", 1L, NOW
         );
-        if (status == DependentStatus.DISABLED) {
+        if (status == DependentStatus.INACTIVE) {
             dependent.disable(NOW.plusSeconds(30));
         }
         return dependent;
@@ -114,7 +114,7 @@ class DependentRepositoryAdapterTest {
 
     @Test
     void deletingDisabledDependentReleasesCpfButPreservesCompleteSnapshot() {
-        Dependent saved = repository.save(dependent(DependentStatus.DISABLED));
+        Dependent saved = repository.save(dependent(DependentStatus.INACTIVE));
         repository.delete(saved, 99L, NOW.plusSeconds(60));
         entityManager.flush();
         entityManager.clear();
@@ -130,7 +130,7 @@ class DependentRepositoryAdapterTest {
             assertThat(history.getUserId()).isEqualTo(saved.getUserId());
             assertThat(history.getCreatedAt()).isEqualTo(saved.getCreatedAt());
             assertThat(history.getUpdatedAt()).isEqualTo(saved.getUpdatedAt());
-            assertThat(history.getStatus()).isEqualTo(DependentStatus.DISABLED);
+            assertThat(history.getStatus()).isEqualTo(DependentStatus.INACTIVE);
         });
         repository.delete(replacement, 99L, NOW.plusSeconds(90));
         entityManager.flush();

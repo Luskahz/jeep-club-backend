@@ -138,6 +138,10 @@ public class MedicalProfileService {
             Long ownerId,
             UpsertMedicalProfileCommand data
     ) {
+        var lockedStatus=ownerStatusChecker.getStatusForUpdate(ownerType,ownerId);
+        if(lockedStatus==MedicalProfileOwnerStatus.NOT_FOUND) throw new MedicalProfileOwnerNotFoundException(ownerType, ownerId);
+        if(lockedStatus!=MedicalProfileOwnerStatus.ACTIVE) throw new MedicalProfileOwnerInactiveException(ownerType, ownerId);
+
         var existing = medicalProfileRepository.findByOwnerForUpdate(
                 ownerType,
                 ownerId

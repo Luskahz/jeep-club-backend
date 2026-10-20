@@ -1,5 +1,14 @@
 # Identity
 
+## Lifecycle vigente — BACK-512
+
+Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
+com histórico independente, e não um status. As regras por agregado, novas rotas,
+permissions, migration V5, limites de retenção e checklist de rollout estão em
+`docs/back-512-entity-lifecycle.md` na raiz do repositório. V1–V4 não foram alteradas.
+Flyway governa o schema; Hibernate usa validate. Não usar ddl-auto=update.
+
+
 ## Projeção da matrícula — BACK-531
 
 User.id continua a chave técnica e não é matrícula. A SPI pública
@@ -44,7 +53,7 @@ ROOT, retornando 409 CONFLICT com código `USER_ROOT_CANNOT_BE_DISABLED` sem pro
 efeitos em Identity ou Authentication. O `enable` administrativo continua permitido
 para recuperação de estado.
 
-`User` é criado com `UserStatus.ACTIVE`. O único outro estado é `DISABLED`:
+`User` é criado com `UserStatus.ACTIVE`. Os demais estados são INACTIVE e ARCHIVED. Nas transições ACTIVE/INACTIVE:
 `disable` define `disabledAt` e `updatedAt`; `enable` remove `disabledAt` e
 atualiza `updatedAt`. Desabilitar um usuário já desabilitado e habilitar um
 usuário ativo são conflitos. O agregado não conhece lock de autenticação nem
@@ -133,7 +142,7 @@ A política ROOT permite CPF/e-mail somente quando o ator é o próprio alvo, j�
 portador de `IDENTITY_USER_UPDATE`; outro administrador recebe 409. Os demais
 campos podem ser corrigidos por um administrador autorizado. O bootstrap dev
 preserva o titular ROOT pelo vínculo com ID estável, sem promover quem ocupe seu
-CPF anterior. Usuários DISABLED
+CPF anterior. Usuários INACTIVE
 podem ser editados sem reativação. BACK-512/BACK-514 estão pendentes: não se antecipa
 ACTIVE/INACTIVE/ARCHIVED nesta feature; quando integradas, devem continuar isoladas
 da edição cadastral.
@@ -235,7 +244,7 @@ não há catálogo Markdown concorrente.
 O perfil complementar pertence exclusivamente a Identity e possui associação
 opcional 1:1 com User. `UserProfile` reúne `WorkProfile` e `ResidentialAddress`,
 sem dependências HTTP/JPA. Sua ausência não altera onboarding, autenticação,
-Membership ou o lifecycle ACTIVE/DISABLED.
+Membership ou o lifecycle ACTIVE/INACTIVE.
 
 A pendência é derivada: ocupação e local de trabalho devem estar preenchidos,
 assim como CEP, logradouro, número (ou S/N), bairro, cidade e UF; complemento
@@ -277,7 +286,7 @@ pessimista em User e participam da mesma transação do efeito em Authentication
 Há uma associação física legada de chave compartilhada entre User e
 `AuthenticationAccount`, necessária à PK/FK existente. Ela não permite acesso
 cross-module a modelos internos. A política de schema é a global atual: entities
-e Hibernate representam mudanças e não há migrations versionadas obrigatórias.
+e Hibernate representam o ORM, com validate, e migrations Flyway versionadas governam a evolução do schema.
 
 ## Testes
 

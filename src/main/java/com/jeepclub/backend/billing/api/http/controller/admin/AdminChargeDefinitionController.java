@@ -143,9 +143,9 @@ public class AdminChargeDefinitionController {
             description = "Ativa uma definição de cobrança para permitir novas utilizações."
     )
     public ResponseEntity<ChargeDefinitionResponse> activate(
-            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id
+            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id, @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal
     ) {
-        ChargeDefinitionResult result = adminChargeDefinitionService.activate(id);
+        ChargeDefinitionResult result = adminChargeDefinitionService.activate(id,principal.getUserId());
 
         return ResponseEntity.ok(ChargeDefinitionResponse.from(result));
     }
@@ -160,9 +160,9 @@ public class AdminChargeDefinitionController {
             description = "Desativa uma definição de cobrança sem removê-la do histórico."
     )
     public ResponseEntity<ChargeDefinitionResponse> deactivate(
-            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id
+            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id, @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal
     ) {
-        ChargeDefinitionResult result = adminChargeDefinitionService.deactivate(id);
+        ChargeDefinitionResult result = adminChargeDefinitionService.deactivate(id,principal.getUserId());
 
         return ResponseEntity.ok(ChargeDefinitionResponse.from(result));
     }
@@ -177,10 +177,23 @@ public class AdminChargeDefinitionController {
             description = "Arquiva uma definição de cobrança, impedindo sua reativação no fluxo normal."
     )
     public ResponseEntity<ChargeDefinitionResponse> archive(
-            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id
+            @PathVariable @Positive(message = "ID deve ser maior que zero.") Long id, @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal
     ) {
-        ChargeDefinitionResult result = adminChargeDefinitionService.archive(id);
+        ChargeDefinitionResult result = adminChargeDefinitionService.archive(id,principal.getUserId());
 
         return ResponseEntity.ok(ChargeDefinitionResponse.from(result));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_DEFINITION_DELETE')")
+    @RequiredPermission("BILLING_CHARGE_DEFINITION_DELETE")
+    @Operation(summary = "Excluir definição sem uso", description = "Preserva snapshot. Qualquer vínculo financeiro/configuração retida impede a exclusão.")
+    @ApiResponse(responseCode = "204", description = "Configuração excluída com histórico.")
+    @ApiResponse(responseCode = "409", description = "Existem referências impeditivas.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal
+            com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        adminChargeDefinitionService.delete(id, principal.getUserId());
+        return ResponseEntity.noContent().build();
     }
 }

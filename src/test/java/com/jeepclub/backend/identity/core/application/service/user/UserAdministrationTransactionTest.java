@@ -1,7 +1,7 @@
 package com.jeepclub.backend.identity.core.application.service.user;
 
 import com.jeepclub.backend.iam.authentication.core.application.service.internal.CredentialRevocationService;
-import com.jeepclub.backend.iam.authentication.core.application.exceptions.account.AuthenticationAccountNotFoundException;
+import com.jeepclub.backend.iam.identity.api.module.exception.UserAuthenticationLifecycleConflictException;
 import com.jeepclub.backend.iam.authentication.core.domain.enums.AuthenticationAccessStatus;
 import com.jeepclub.backend.iam.authentication.core.domain.enums.AuthenticationStatus;
 import com.jeepclub.backend.iam.authentication.core.domain.enums.CredentialStatus;
@@ -156,8 +156,8 @@ class UserAdministrationTransactionTest {
         accountJpaRepository.flush();
 
         assertThatThrownBy(() -> identityAdministration.disable(userId, CHANGED_AT))
-                .isInstanceOf(AuthenticationAccountNotFoundException.class)
-                .hasMessageContaining("Authentication account not found");
+                .isInstanceOf(UserAuthenticationLifecycleConflictException.class)
+                .hasMessage("Authentication account required by the User lifecycle does not exist.");
 
         assertThat(identityQuery.isAdministrativelyActive(userId)).isTrue();
         assertThat(accountRepository.findByIdentityId(userId)).isEmpty();

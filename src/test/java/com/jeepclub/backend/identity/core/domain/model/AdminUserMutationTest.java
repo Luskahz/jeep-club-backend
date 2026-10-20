@@ -12,7 +12,7 @@ class AdminUserMutationTest {
     private static final Instant NOW = Instant.parse("2026-10-14T12:00:00Z");
     private User user() {
         return User.reconstitute(42L, "Original", null, "old@example.com", "52998224725", "123", "11999999999", null,
-                UserStatus.DISABLED, NOW.minusSeconds(60), NOW.minusSeconds(30), NOW.minusSeconds(30));
+                UserStatus.INACTIVE, NOW.minusSeconds(60), NOW.minusSeconds(30), NOW.minusSeconds(30));
     }
     @Test void changesAllDataAtomicallyWithoutChangingLifecycleOrIdentity() {
         User user = user();
@@ -22,7 +22,7 @@ class AdminUserMutationTest {
         assertThat(user.getName()).isEqualTo("New");
         assertThat(user.getRg()).isEqualTo("223");
         assertThat(user.getId()).isEqualTo(42L);
-        assertThat(user.getStatus()).isEqualTo(UserStatus.DISABLED);
+        assertThat(user.getStatus()).isEqualTo(UserStatus.INACTIVE);
         assertThat(user.getDisabledAt()).isEqualTo(NOW.minusSeconds(30));
         assertThat(user.getCreatedAt()).isEqualTo(NOW.minusSeconds(60));
         assertThat(user.getUpdatedAt()).isEqualTo(NOW);
