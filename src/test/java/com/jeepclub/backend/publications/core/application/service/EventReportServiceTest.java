@@ -42,7 +42,8 @@ class EventReportServiceTest {
         when(users.findByIds(any())).thenReturn(List.of(new UserDetails(10L,"Titular A",null,null,"52998224725",null,null,null,true,now,null,null)));
         when(dependents.findDetailsByIds(any())).thenReturn(List.of(new DependentsQuery.Details(201L,10L,"Dependente A","1","CHILD","ACTIVE"),new DependentsQuery.Details(202L,10L,"Dependente B","2","CHILD","ACTIVE"),new DependentsQuery.Details(203L,10L,"Dependente C","3","CHILD","ACTIVE")));
         when(vehicles.findDetailsBatch(any())).thenReturn(List.of(new EventVehicleQuery.Details(101L,10L,"Jeep A","ABC1D23","Jeep","A",3),new EventVehicleQuery.Details(102L,10L,"Jeep B","DEF4G56","Jeep","B",4)));
-        when(operations.guests(1L)).thenReturn(List.of(new EventGuestRequest(90L,1L,10L,102L,"12345678901",EventGuestRequest.Status.APPROVED,false,99L,now,now,null,"Convidado aprovado"),new EventGuestRequest(91L,1L,10L,null,"12345678902",EventGuestRequest.Status.PENDING,true,null,now,null,null,"Convidado pendente")));
+        when(operations.guests(1L)).thenReturn(List.of(new EventGuestRequest(90L,1L,10L,102L,"12345678901",EventGuestRequest.Status.APPROVED,false,99L,now,now,null,"Convidado aprovado",1L,102L,1L,10L,null),
+            new EventGuestRequest(91L,1L,10L,null,"12345678902",EventGuestRequest.Status.PENDING,false,null,now,null,null,"Convidado pendente",1L,101L,null,null,null)));
         when(operations.rules(1L)).thenReturn(List.of(new EventChargeRule(1L,50L,true,now.minusSeconds(1),LocalDate.of(2026,10,1))));
         when(finance.definitions(any())).thenReturn(List.of(new EventFinanceReportQuery.Definition(50L,"Taxa do evento",new BigDecimal("100.00"))));
         when(finance.paymentCounts(1L)).thenReturn(Map.of("CONFIRMED",2L,"REJECTED",1L));
@@ -64,6 +65,16 @@ class EventReportServiceTest {
     }
     @Test void transportCountsOccupantsCapacityAndFreeSeats(){String csv=report(EventReportService.Product.TRANSPORT,EventReportService.TransportView.ALL);assertThat(csv.lines().count()).isEqualTo(3);assertThat(csv).contains("Convidado aprovado","Dependente B","Lugares livres").doesNotContain("Convidado pendente");}
     @Test void transportPendingViewsExposePendingGuestWithoutAllocating(){String csv=report(EventReportService.Product.TRANSPORT,EventReportService.TransportView.PENDING_GUESTS);assertThat(csv).contains("Convidado pendente","Não alocado").doesNotContain("Convidado aprovado");}
+    @Test void standbyReportKeepsDuplicateCpfParticipationsSeparateAndExcludesPendingPersonalGuest() {
+        var pending=EventGuestRequest.requested(1L,10L,1L,101L,"12345678902","Pending personal",now).identified(91L);
+        var first=EventGuestRequest.standby(1L,99L,"12345678902","Standby first",now).identified(92L);
+        var second=EventGuestRequest.standby(1L,99L,"12345678902","Standby second",now).identified(93L);
+        when(operations.guests(1L)).thenReturn(List.of(pending,first,second));
+        String csv=report(EventReportService.Product.TRANSPORT,EventReportService.TransportView.UNALLOCATED_GUESTS);
+        assertThat(csv).contains("Standby first","Standby second").doesNotContain("Pending personal");
+        assertThat(csv.lines().filter(line -> line.contains("Standby first")||line.contains("Standby second")).count()).isEqualTo(2);
+        assertThat(report(EventReportService.Product.TRANSPORT,EventReportService.TransportView.UNALLOCATED_PEOPLE)).doesNotContain("Pending personal");
+    }
     @Test void acceptedRideNotSelectedIsReported(){when(operations.offers(1L)).thenReturn(List.of(new EventRideOffer(5L,1L,91L,1L,10L,101L,EventRideOffer.Status.ACCEPTED,now,null)));assertThat(report(EventReportService.Product.TRANSPORT,EventReportService.TransportView.ACCEPTED_RIDES)).contains("Carona aceita, ainda não selecionada");}
     @Test void accessIsMinimizedAndOmitsFinancialAndClinicalData(){String csv=report(EventReportService.Product.ACCESS,EventReportService.TransportView.ALL);assertThat(csv).contains("Convidado aprovado","Confirmação").doesNotContain("PENDING_VALIDATION","1000","Alergias","Situação financeira");verifyNoInteractions(coverage);}
     @Test void confirmedRegistrationCanHavePendingValidationAndPostCutoffDebt(){String csv=report(EventReportService.Product.FINANCIAL,EventReportService.TransportView.ALL);assertThat(csv).contains("CONFIRMED","PENDING_VALIDATION","Confirmado com pendência financeira","Taxa do evento","100,00");}

@@ -4,6 +4,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 public interface EventRegistrationJpaRepository extends JpaRepository<EventRegistrationEntity, Long> {
     List<EventRegistrationEntity> findByEventId(Long eventId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.QueryHints(@jakarta.persistence.QueryHint(name="hibernate.query.followOnStrategy",value="DISALLOW"))
+    @org.springframework.data.jpa.repository.Query("select r from EventRegistrationEntity r where r.id in :ids order by r.id")
+    List<EventRegistrationEntity> findCurrentByIds(java.util.Collection<Long> ids);
+    // Current collection projections avoid old lazy snapshots. All writes remain JPA.
+    @org.springframework.data.jpa.repository.Query(value="select v.registration_id,v.vehicle_id from event_registration_vehicles v where v.registration_id in :ids order by v.registration_id,v.vehicle_id for update",nativeQuery=true)
+    List<Object[]> currentVehicleRows(java.util.Collection<Long> ids);
+    @org.springframework.data.jpa.repository.Query(value="select o.registration_id,o.vehicle_id,o.dependent_id from event_registration_occupants o where o.registration_id in :ids order by o.registration_id,o.vehicle_id,o.dependent_id for update",nativeQuery=true)
+    List<Object[]> currentOccupantRows(java.util.Collection<Long> ids);
+    @org.springframework.data.jpa.repository.Query(value="select d.registration_id,d.dependent_id from event_registration_unallocated_dependents d where d.registration_id in :ids order by d.registration_id,d.dependent_id for update",nativeQuery=true)
+    List<Object[]> currentUnallocatedRows(java.util.Collection<Long> ids);
 
 
     @org.springframework.data.jpa.repository.Query(value="select x.registration_id from event_registration_occupants x join event_registrations r on r.id=x.registration_id where x.dependent_id=:id and (exists (select 1 from publications p where p.id=r.event_id) or not exists (select 1 from publication_history h where h.publication_id=r.event_id)) limit 1 for update", nativeQuery=true)
@@ -18,7 +29,7 @@ public interface EventRegistrationJpaRepository extends JpaRepository<EventRegis
     @org.springframework.data.jpa.repository.Query(value="select x.registration_id from event_registration_occupants x join event_registrations r on r.id=x.registration_id where x.vehicle_id=:id and (exists (select 1 from publications p where p.id=r.event_id) or not exists (select 1 from publication_history h where h.publication_id=r.event_id)) limit 1 for update", nativeQuery=true)
     java.util.Optional<Long> lockVehicleOccupant(@org.springframework.data.repository.query.Param("id") Long id);
 
-    @org.springframework.data.jpa.repository.Query(value="select r.id from event_guest_requests r where (vehicle_id=:id or approved_vehicle_id=:id) and (exists (select 1 from publications p where p.id=r.event_id) or not exists (select 1 from publication_history h where h.publication_id=r.event_id)) limit 1 for update", nativeQuery=true)
+    @org.springframework.data.jpa.repository.Query(value="select r.id from event_guest_requests r where (vehicle_id=:id or approved_vehicle_id=:id or requested_vehicle_id=:id) and (exists (select 1 from publications p where p.id=r.event_id) or not exists (select 1 from publication_history h where h.publication_id=r.event_id)) limit 1 for update", nativeQuery=true)
     java.util.Optional<Long> lockVehicleGuest(@org.springframework.data.repository.query.Param("id") Long id);
 
     @org.springframework.data.jpa.repository.Query(value="select r.id from event_ride_offers r where (vehicle_id=:id) and (exists (select 1 from publications p where p.id=r.event_id) or not exists (select 1 from publication_history h where h.publication_id=r.event_id)) limit 1 for update", nativeQuery=true)

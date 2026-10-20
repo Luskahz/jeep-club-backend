@@ -12,6 +12,10 @@ public final class EventOperationRequests {
     @Schema(description="Own vehicle. Member occupies exactly one vehicle; dependent IDs must be own active dependents and unique across allocations. Capacity includes driver.")
     public record Allocation(@NotNull @Positive Long vehicleId, boolean member, @NotNull List<@Positive Long> dependentIds) {}
     public record Guest(@NotBlank @Pattern(regexp="[0-9.\\- ]+") String cpf, @Positive Long vehicleId, @NotBlank @Size(max=150) @Schema(description="Nome informado do convidado, obrigatório em novas solicitações; nunca inferido pelo CPF.") String guestName) {}
-    public record Rejection(@NotBlank String reason) {}
+    public record Rejection(@NotBlank @Size(max=1000) String reason) {}
+    public record GuestDecision(@NotBlank @Size(max=1000) String reason) {}
+    public record GuestAllocation(@NotNull @Positive Long vehicleId,
+        @Positive @Schema(description="Optional expected destination registration; must match the eligible vehicle owner in this Event") Long registrationId,
+        @NotBlank @Size(max=1000) String reason) {}
     public record Ride(@NotNull @Positive Long vehicleId, boolean accept) {}
 }

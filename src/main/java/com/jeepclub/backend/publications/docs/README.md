@@ -5,10 +5,12 @@
 O cancelamento de Event trata todos os seus contextos financeiros, inclusive ciclos
 finalizados/arquivados, preserva pagamentos e garante elegibilidade de refund com
 janela completa na confirmação tardia. Desistência individual mantém a obrigação
-financeira; rejeita guests pessoais pendentes e encerra offers aceitas. Guest já
-aprovado impede a desistência até resolução administrativa. Operações repetidas
+financeira. A BACK-537 encerra convidados pessoais pendentes/aprovados e devolve
+passageiros ADMIN ao standby na desistência do motorista, atomicamente. Operações repetidas
 de cancelamento são idempotentes. Consulte a
 [decisão e validação BACK-460](../../../../../../../../docs/back-460-event-billing.md).
+As regras de convidados da BACK-460/BACK-443/BACK-444 foram substituídas pela
+[BACK-537](../../../../../../../../docs/back-537-event-guest-lifecycle.md).
 
 Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
@@ -261,8 +263,9 @@ pela situação financeira posterior. Cancelamento de inscrição preserva a lin
 não permite reinscrição duplicada e é limitado ao período OPEN. Cancelar o Event
 preserva as inscrições como fatos e solicita ao Billing o cancelamento dos ciclos
 financeiros próprios, inclusive `FINISHED` e `ARCHIVED`, mantendo os metadados de
-fechamento. Desistência individual mantém cobranças/pagamentos, encerra requests
-pessoais pendentes e ofertas aceitas; guests aprovados exigem resolução administrativa.
+fechamento. Desistência individual mantém cobranças/pagamentos, encerra todos os
+convidados pessoais originados pela inscrição e retira o transporte de convidados
+ADMIN. Ofertas ativas são WITHDRAWN, preservando decisões e datas anteriores.
 
 Dependents ativos próprios são validados pelo contrato público de Dependents.
 Podem estar alocados a um veículo ou presentes em `unallocatedDependentIds`.
@@ -311,25 +314,39 @@ editável conforme lifecycle de Publication. Nenhum snapshot financeiro é reesc
 
 ### Convidados e transporte
 
-GuestRequest registra CPF normalizado, requester do principal, veículo opcional,
-PENDING/APPROVED/REJECTED, reviewer, timestamps e motivo de rejeição. CPF é único
-por Event, inclusive requests rejeitados. PENDING não ocupa vaga definitiva;
-aprovação exige inscrição confirmada, capacidade atual e no máximo um guest por
-veículo. Histórico de aprovações por CPF permanece consultável como aviso sem bloqueio.
+GuestRequest possui origem imutável MEMBER/ADMIN e participação
+PENDING/APPROVED/REJECTED/CANCELLED, separada de NONE/STANDBY/ALLOCATED.
+CPF é atributo normalizado e pode repetir no Event, sem mesclar IDs nem históricos.
+Não existe limite de um convidado por veículo. Apenas ALLOCATED ocupa assento,
+somado ao membro e dependentes efetivamente alocados, com capacidade física revalidada.
 
-Admin cria request sem transporte. Membros confirmados com vagas consultam os IDs
-e respondem por veículo próprio vinculado à inscrição. RideOffer registra Event,
-guest, registration, user, vehicle, ACCEPTED/DECLINED/SELECTED e timestamps.
-Visualização e aceite não reservam vaga. Admin seleciona oferta aceita e a aprovação
-revalida capacidade sob lock; perda da vaga produz EVENT_RIDE_CAPACITY_CHANGED.
-Cada veículo responde uma vez àquela request. Não há push ou escolha automática.
+MEMBER nasce PENDING com inscrição originadora e veículo pretendido imutáveis.
+Admin aprova/recusa individualmente; somente a aprovação associa transporte.
+Membro titular/admin pode cancelar apenas aquele convidado. CANCELLED pessoal é
+terminal: novo ingresso exige novo pedido. Cancelar a inscrição encerra todos seus
+convidados pessoais, inclusive aprovados, sem alterar Billing nem transferi-los a standby.
+
+ADMIN nasce com participação APPROVED em STANDBY, sem responsável/inscrição/veículo.
+Admin aloca/realoca diretamente ou seleciona uma oferta válida; desassociar ou
+cancelar o motorista retorna a STANDBY. Cancelamento de participação gera CANCELLED;
+reativar retorna exclusivamente a STANDBY, sem restaurar vínculo/oferta antiga.
+REJECTED legado continua distinto de cancelamento e não pode ser reativado.
+
+Ofertas usam ACCEPTED/DECLINED/SELECTED/WITHDRAWN. Aceite não reserva vaga.
+Alocação/cancelamento retira ofertas anteriores coerentemente, preservando
+respondedAt e selectedAt; withdrawnAt registra encerramento. Nova oferta pode
+ser criada após encerramento sem sobrescrever a anterior. Não há push ou seleção automática.
+Cada transição possui histórico imutável próprio com ator, motivo, instante e
+estado/veículo/inscrição anterior e posterior; sem copiar CPF/nome para auditoria.
 
 ### Operação, Health e persistência
 
 Dashboard deriva inscrições, dependents, guests, pessoas confirmadas, veículos,
 capacidade, lugares reservados, não pagos, pagamentos em análise e pendências
 pós-cutoff. Inscrições PENDING_PAYMENT reservam sua alocação operacional, mas não
-contam como pessoas confirmadas. Guests só ocupam após aprovação. A próxima leitura
+contam como pessoas confirmadas. ADMIN em standby conta como participação vigente,
+mas não ocupa assento. guestsStandby/guestsAllocated/guestsCancelled distinguem
+transporte e participação; guestsApproved inclui standby. A próxima leitura
 reflete mutações; dados clínicos não entram no dashboard. Billing e Vehicles são
 consultados em lote para essa projeção; as coleções JPA de alocação usam batch fetch.
 
@@ -342,8 +359,11 @@ independente. Falha de auditoria impede retorno dos dados; não grava conteúdo 
 
 Mutações bloqueiam a raiz da Publication antes de decidir inscrição ou capacidade.
 Registration, GuestRequest, RideOffer e ChargeRule possuem versões JPA. Constraints
-protegem Event/member, Event/CPF, Event/veículo aprovado, oferta guest/vehicle,
-guest selecionado e ocupante por inscrição. Corridas são exercitadas com transações
+protegem Event/member, origem/inscrição/membro, associação atual, guest selecionado
+e ocupante por inscrição. CPF e veículo não têm unicidade por convidado. A V9
+reconcilia o legado sem alterar V1–V8. Locks seguem Event, Vehicles ordenados,
+Dependents ordenados e filhos operacionais, com leituras atuais por IDs estáveis
+para evitar snapshots RR antigos e locks de intervalos vazios. Corridas são exercitadas com transações
 independentes. Handlers Event são limitados aos seus controllers e retornam RFC 9457.
 
 Hard delete exige estado terminal quando há inscrições. O snapshot preserva agenda,

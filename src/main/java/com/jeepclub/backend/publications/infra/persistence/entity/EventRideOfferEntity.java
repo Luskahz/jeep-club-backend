@@ -3,7 +3,7 @@ package com.jeepclub.backend.publications.infra.persistence.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity @Table(name="event_ride_offers", uniqueConstraints={@UniqueConstraint(name="uk_event_ride_response", columnNames={"guest_request_id","vehicle_id"}), @UniqueConstraint(name="uk_event_ride_selected", columnNames={"selected_guest_id"})})
+@Entity @Table(name="event_ride_offers", uniqueConstraints={@UniqueConstraint(name="uk_event_ride_selected", columnNames={"selected_guest_id"})})
 @Getter @Setter @NoArgsConstructor
 public class EventRideOfferEntity {
     @Id @GeneratedValue(strategy=GenerationType.IDENTITY) private Long id;
@@ -17,5 +17,6 @@ public class EventRideOfferEntity {
     @Column(name="status", nullable=false) private String status;
     @Column(name="responded_at", nullable=false) private java.time.Instant respondedAt;
     @Column(name="selected_at", nullable=true) private java.time.Instant selectedAt;
+    @Column(name="withdrawn_at") private java.time.Instant withdrawnAt;
 
 }
