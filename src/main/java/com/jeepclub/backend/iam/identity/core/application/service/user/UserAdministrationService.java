@@ -31,21 +31,25 @@ class UserAdministrationService implements UserAdministration {
     @Override
     @Transactional
     public void delete(Long userId, Long actorId, Instant now) {
-        java.util.Objects.requireNonNull(actorId, "Lifecycle actor is required");
-        findForUpdate(userId);
-        if (userAuthorizationProtectionPort.hasRootRole(userId)) {
-            throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException("ROOT user is protected from deletion.");
+        try {
+            java.util.Objects.requireNonNull(actorId, "Lifecycle actor is required");
+            findForUpdate(userId);
+            if (userAuthorizationProtectionPort.hasRootRole(userId)) {
+                throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException("ROOT user is protected from deletion.");
+            }
+            if (deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(userId))) {
+                throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException("User has retained membership, financial or operational relationships.");
+            }
+            authenticationAdministrationPort.deletePendingAuthentication(userId, now);
+            activationLinks.forEach(port -> port.invalidatePendingLinks(userId, now));
+            deletionCleanups.forEach(cleanup -> cleanup.removePendingAssociations(userId, actorId, now));
+            userRepository.deleteWithHistory(userId, actorId, now);
+            audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                    "IDENTITY_USER_DELETE", "DELETE", "/identity/admin/users/" + userId, 204,
+                    com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS, 0, null, now));
+        } catch (com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException conflict) {
+            throw new com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException(conflict.getMessage());
         }
-        if (deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(userId))) {
-            throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException("User has retained membership, financial or operational relationships.");
-        }
-        authenticationAdministrationPort.deletePendingAuthentication(userId, now);
-        activationLinks.forEach(port -> port.invalidatePendingLinks(userId, now));
-        deletionCleanups.forEach(cleanup -> cleanup.removePendingAssociations(userId, actorId, now));
-        userRepository.deleteWithHistory(userId, actorId, now);
-        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
-                "IDENTITY_USER_DELETE", "DELETE", "/identity/admin/users/" + userId, 204,
-                com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS, 0, null, now));
     }
 
 

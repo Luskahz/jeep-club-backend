@@ -26,6 +26,30 @@ class MySqlMigrationIT {
             .withUsername("root").withPassword("migration-test-only")
             .withCommand("--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci");
 
+    @Test void onboardingReviewMigrationPreservesLegacyApprovalAndIndependentEvidenceOnReplay() throws Exception {
+        String db = database();
+        Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
+                .locations("classpath:db/migration").target("5").cleanDisabled(true).load().migrate();
+        try (var c = connection(db); var statement = c.createStatement()) {
+            statement.executeUpdate("INSERT INTO membership_applications(id,name,cpf,status,created_user_id,reviewed_by_user_id,requested_at,reviewed_at,version) "
+                    + "VALUES(700,'Synthetic legacy approval','00000000000','APPROVED',701,702,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+        }
+        var before = fixtureRows(db, "membership_applications");
+        flyway(db).migrate(); validateJpa(db);
+        assertThat(fixtureRows(db, "membership_applications")).isEqualTo(before);
+        assertThat(count(db, "membership_application_review_history")).isZero();
+        try (var c = connection(db); var statement = c.createStatement()) {
+            statement.executeUpdate("INSERT INTO membership_application_review_history(application_id,operation,previous_status,resulting_status,"
+                    + "previous_reviewer_id,previous_reviewed_at,original_user_id,actor_id,occurred_at) "
+                    + "VALUES(700,'REVERSE_APPROVAL','APPROVED','REJECTED',702,UTC_TIMESTAMP(6),701,703,UTC_TIMESTAMP(6))");
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,
+                    new org.springframework.core.io.ClassPathResource("db/migration/V6__membership_onboarding_review_history.sql"));
+            statement.executeUpdate("DELETE FROM membership_applications WHERE id=700");
+        }
+        assertThat(count(db, "membership_application_review_history")).isEqualTo(1);
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+    }
+
     @Test void historicalMigrationSourcesAreImmutable() throws Exception {
         var expected=Map.ofEntries(
             Map.entry("V1__initial_deploy_schema.sql","c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e"),

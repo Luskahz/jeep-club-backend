@@ -22,7 +22,7 @@ public class MembershipOnboardingCompletionService implements MembershipOnboardi
     public void completeApprovedApplicationForIdentity(Long identityId, Instant now) {
         Objects.requireNonNull(identityId, "identityId cannot be null");
         Objects.requireNonNull(now, "now cannot be null");
-        repository.findByCreatedUserIdAndStatus(identityId, MembershipApplicationStatus.APPROVED)
+        repository.findByCreatedUserIdAndStatusForUpdate(identityId, MembershipApplicationStatus.APPROVED)
                 .ifPresent(application -> {
                     application.complete(now);
                     repository.save(application);

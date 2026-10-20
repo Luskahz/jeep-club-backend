@@ -129,6 +129,20 @@ public class MembershipApplication {
         this.updatedAt = now;
     }
 
+    /** Caller must atomically reverse pending provisioning through Identity's safe deletion contract. */
+    public void rejectApproved(Long actorId, String reason, Instant now) {
+        ensureStatus(MembershipApplicationStatus.APPROVED);
+        Objects.requireNonNull(createdUserId, "Approved application must retain its provisioned User id");
+        Objects.requireNonNull(actorId, "Reviewer is required");
+        Objects.requireNonNull(now, "Time is required");
+        this.status = MembershipApplicationStatus.REJECTED;
+        this.reviewedByUserId = actorId;
+        this.rejectionReason = normalizeNullable(reason);
+        this.reviewedAt = now;
+        this.finishedAt = now;
+        this.updatedAt = now;
+    }
+
     public void complete(Instant now) {
         ensureStatus(MembershipApplicationStatus.APPROVED);
         Objects.requireNonNull(now, "now must not be null");

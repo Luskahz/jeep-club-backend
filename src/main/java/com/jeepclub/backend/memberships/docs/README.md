@@ -49,13 +49,15 @@ rejeitada não impede um novo pedido por si só.
 O agregado possui os seguintes estados e transições:
 
 ```text
-PENDING --aprovar--> APPROVED --complete() do agregado--> COMPLETED
+PENDING --aprovar--> APPROVED --primeiro acesso--> COMPLETED
+                       |
+                       +--reversão segura antes do primeiro acesso--> REJECTED
    |
    +--rejeitar ou rejeitar-e-bloquear--> REJECTED
 ```
 
-As operações de aplicação/HTTP executam as transições a partir de `PENDING`
-para `APPROVED` ou `REJECTED`. A conclusão bem-sucedida do primeiro acesso,
+A aprovação aceita `PENDING`. A rejeição aceita `PENDING` ou reverte `APPROVED`
+somente com provisionamento ainda pendente e exclusão segura na mesma transação. A conclusão bem-sucedida do primeiro acesso,
 por senha provisória ou token de ativação, leva a solicitação a `COMPLETED`.
 Rejeitar preenche `reviewedAt`, `finishedAt` e `updatedAt`; aprovar preenche
 `reviewedAt`, `updatedAt`, o administrador revisor e o `User` criado. Os
@@ -68,11 +70,21 @@ As duas formas de aprovação criam um `User` em `PENDING_FIRST_ACCESS` por
 identificador retornado. Falha nessa integração impede a aprovação da
 solicitação na transação atual. A opção de senha temporária funciona com ou sem
 e-mail e devolve a senha uma única vez. A opção por e-mail exige endereço,
-persiste somente o hash do token e envia o segredo sem devolvê-lo ao admin.
+persiste somente o hash do token e devolve ao administrador o mesmo link enviado
+ao e-mail atual do User. O link é construído uma única vez com a configuração
+existente; a resposta usa `Cache-Control: no-store` e não pode ser registrada
+em logs, analytics, traces, storage persistente do navegador ou listagens.
 
 A rejeição simples não cria bloqueio. O motivo é opcional e, quando presente,
-é enviado ao mail sender configurado. Rejeição e aprovação só aceitam
-solicitações `PENDING`; tentativas em outro estado são recusadas pelo serviço.
+é enviado ao mail sender configurado somente após commit. Para `APPROVED`,
+Identity é bloqueada antes da solicitação; Authentication confirma credencial
+`PENDING_FIRST_ACCESS` existente. Tokens Membership são inutilizados e Identity
+executa sua exclusão segura com histórico, revogação e limpeza de Authorization.
+Member, finanças, sessões históricas ou outras retenções resultam em 409 com
+rollback integral. `COMPLETED` e `REJECTED` continuam finais para rejeição.
+O identificador original do User permanece na solicitação e no histórico mínimo
+independente; não há cascade destrutivo. Detalhes em
+[BACK-523](../../../../../../../../docs/back-523-onboarding-reversal.md).
 
 ## Bloqueio de applicant
 
@@ -82,7 +94,7 @@ preserva histórico ao ser desbloqueada (`unblockedAt` e `unblockedByUserId`). H
 no máximo um bloqueio ativo por CPF; o histórico de bloqueios inativos permanece.
 
 Hoje o bloqueio é criado apenas pelo fluxo **rejeitar e bloquear**. Esse fluxo
-cria o bloqueio e rejeita a solicitação pendente usando o mesmo instante dentro
+cria o bloqueio e rejeita a solicitação elegível usando o mesmo instante dentro
 da mesma transação Spring. Se o bloqueio não puder ser criado, a rejeição não é
 confirmada. O bloqueio não altera solicitações antigas além da solicitação alvo
 rejeitada; ele impede novos pedidos enquanto ativo. Desbloquear encerra somente

@@ -8,7 +8,7 @@ import com.jeepclub.backend.memberships.core.application.service.membershipappli
 import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationStatus;
 import com.jeepclub.backend.memberships.core.domain.model.MembershipApplication;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
-import com.jeepclub.backend.memberships.core.port.MemberActivationMailSender;
+import com.jeepclub.backend.memberships.core.port.*;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessIdentity;
 import com.jeepclub.backend.memberships.core.port.PendingFirstAccessUser;
 import com.jeepclub.backend.memberships.core.repository.MembershipApplicationRepository;
@@ -41,9 +41,10 @@ class AdminMembershipApplicationServiceTest {
     void rejectionNotificationUsesPersistedRecipientAndTrimmedReason() {
         MembershipApplication application = pendingApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
         service.reject(1L, 10L, "  Not eligible  ");
         assertThat(application.getRejectionReason()).isEqualTo("Not eligible");
-        verify(mailSender).sendRejectionNotice("candidate@example.com", "Candidate", "Not eligible");
+        verify(mailSender).afterCommit("candidate@example.com", "Candidate", "Not eligible");
     }
 
     @org.junit.jupiter.params.ParameterizedTest
@@ -52,6 +53,7 @@ class AdminMembershipApplicationServiceTest {
     void rejectionWithAbsentReasonDoesNotSendMail(String reason) {
         MembershipApplication application = pendingApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
         service.reject(1L, 10L, reason);
         verifyNoInteractions(mailSender);
     }
@@ -78,7 +80,11 @@ class AdminMembershipApplicationServiceTest {
     @Mock
     private CreateUserWithPendingFirstAccessPort createUserPort;
     @Mock
-    private MemberActivationMailSender mailSender;
+    private MembershipRejectionNotifier mailSender;
+    @Mock private PendingMembershipIdentityReversal identityReversal;
+    @Mock private com.jeepclub.backend.memberships.core.repository.MemberActivationTokenRepository activationTokens;
+    @Mock private MembershipReviewHistory history;
+    @Mock private PendingMembershipAuthentication pendingAuthentication;
     @Mock
     private MemberActivationTokenService activationTokenService;
 
@@ -92,7 +98,7 @@ class AdminMembershipApplicationServiceTest {
                 createUserPort,
                 mailSender,
                 activationTokenService,
-                Clock.fixed(NOW, ZoneOffset.UTC)
+                Clock.fixed(NOW, ZoneOffset.UTC), identityReversal, activationTokens, history, pendingAuthentication
         );
     }
 
@@ -100,11 +106,12 @@ class AdminMembershipApplicationServiceTest {
     void normalRejectDoesNotBlockCpf() {
         MembershipApplication application = pendingApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
 
         service.reject(1L, 10L, null);
 
         assertThat(application.getStatus()).isEqualTo(MembershipApplicationStatus.REJECTED);
-        verify(applicationRepository).save(application);
+        verify(applicationRepository).saveAndFlush(application);
         verifyNoInteractions(adminMembershipApplicantBlockService);
     }
 
@@ -112,6 +119,7 @@ class AdminMembershipApplicationServiceTest {
     void rejectionWithoutEmailStillSucceedsAndSkipsNotification() {
         MembershipApplication application = pendingApplication(null);
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
 
         service.reject(1L, 10L, "Not eligible");
 
@@ -123,12 +131,13 @@ class AdminMembershipApplicationServiceTest {
     void rejectAndBlockUsesSameTimestampAndApplicationCpf() {
         MembershipApplication application = pendingApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
 
         service.rejectAndBlock(1L, 10L, "Dados inconsistentes");
 
         assertThat(application.getStatus()).isEqualTo(MembershipApplicationStatus.REJECTED);
         assertThat(application.getReviewedAt()).isEqualTo(NOW);
-        verify(applicationRepository).save(application);
+        verify(applicationRepository).saveAndFlush(application);
         verify(adminMembershipApplicantBlockService).block(
                 CPF,
                 "Dados inconsistentes",
@@ -140,8 +149,9 @@ class AdminMembershipApplicationServiceTest {
     @Test
     void approveWithAccessLinkBelongsToMembershipApplicationService() {
         MembershipApplication application = pendingApplication();
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.saveAndFlush(application)).thenReturn(application);
         PendingFirstAccessIdentity identity = new PendingFirstAccessIdentity(20L);
-        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(createUserPort.createPendingUserForActivationLink(
                 application.getName(),
                 application.getEmail(),
@@ -149,19 +159,21 @@ class AdminMembershipApplicationServiceTest {
                 application.getPhoneNumber()
         )).thenReturn(identity);
 
-        PendingFirstAccessIdentity result = service.approveWithAccessLink(1L, 10L);
+        when(activationTokenService.issueAndSend(application)).thenReturn("https://app.example/activate?token=test-bearer");
+        AccessLinkApproval result = service.approveWithAccessLink(1L, 10L);
 
-        assertThat(result).isSameAs(identity);
+        assertThat(result.userId()).isEqualTo(identity.userId());
+        assertThat(result.activationLink()).isEqualTo("https://app.example/activate?token=test-bearer");
         assertThat(application.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         assertThat(application.getCreatedUserId()).isEqualTo(20L);
-        verify(applicationRepository).save(application);
+        verify(applicationRepository).saveAndFlush(application);
         verify(activationTokenService).issueAndSend(application);
     }
 
     @Test
     void accessLinkApprovalWithoutEmailFailsBeforeCreatingUser() {
         MembershipApplication application = pendingApplication(null);
-        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
 
         assertThatThrownBy(() -> service.approveWithAccessLink(1L, 10L))
                 .isInstanceOf(MembershipEmailRequiredException.class);
@@ -173,8 +185,9 @@ class AdminMembershipApplicationServiceTest {
     @Test
     void temporaryPasswordApprovalWorksWithoutEmail() {
         MembershipApplication application = pendingApplication(null);
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.saveAndFlush(application)).thenReturn(application);
         PendingFirstAccessUser pendingUser = new PendingFirstAccessUser(20L, "temporary-password");
-        when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(createUserPort.createPendingUserWithTemporaryPassword(
                 application.getName(), null, application.getCpf(), application.getPhoneNumber()
         )).thenReturn(pendingUser);
@@ -187,8 +200,9 @@ class AdminMembershipApplicationServiceTest {
     @Test
     void resendUsesExistingUserAndDoesNotProvisionAnotherAccount() {
         MembershipApplication application = pendingApplication();
-        application.approve(10L, 20L, NOW.minusSeconds(10));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        application.approve(10L, 20L, NOW.minusSeconds(10));
 
         service.resendActivationLink(1L);
 
@@ -234,6 +248,8 @@ class AdminMembershipApplicationServiceTest {
     void operationsOnNonPendingApplicationThrowAlreadyProcessedException() {
         MembershipApplication approvedApp = pendingApplication();
         approvedApp.approve(10L, 20L, NOW);
+        approvedApp.complete(NOW);
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(approvedApp));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(approvedApp));
 
         assertThatThrownBy(() -> service.approveWithTemporaryPassword(1L, 10L))

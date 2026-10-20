@@ -1,0 +1,848 @@
+{
+  "ticket": "BACK-523",
+  "date": "2026-10-19",
+  "branch": "feat/back-523-onboarding-reversal",
+  "baseBranch": "feat/back-512-entity-lifecycle",
+  "base": "b5c3c3b8e81944e8b2aded51ad5c7f8bb3eaea84",
+  "previousPullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/107",
+  "codeCommit": "a1b1cd190ee342f3c4ac8b957fb2fa17bdfdd90d",
+  "publication": {
+    "tracking": "Exact published-head CI is recorded in the PR description and consolidated sprint audit; this file records local gates for the code commit."
+  },
+  "environment": {
+    "java": "Microsoft OpenJDK17.0.18",
+    "os": "Windows",
+    "mysql": "8.0.46",
+    "database": "Local disposable Testcontainers only"
+  },
+  "gates": [
+    {
+      "name": "Full verify",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "log": "target/back-523-full-verify-final.log",
+      "result": "passed",
+      "logSha256": "0c55db3ac147e5aa904423e5f026ab1bd55102f570c35873c7887ee71713db84",
+      "tests": 2036,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.contract.MembershipOpenApiIntegrationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipApplicantBlockControllerTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipApplicationControllerTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipBillingConfigurationControllerTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.MemberActivationTokenControllerTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.MembershipApplicationControllerTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.exception.MembershipExceptionHandlerTest",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.security.MembershipAdminSecurityIntegrationTest",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.ConfiguredMemberActivationLinkFactoryTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.query.MembershipAccessQueryServiceTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenServiceTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.AdminMembershipApplicantBlockServiceTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.MembershipApplicantBlockServiceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationServiceTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipApplicationServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipOnboardingCompletionServiceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipbilling.AdminMembershipBillingConfigurationServiceTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.domain.model.MemberActivationTokenTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.domain.model.MembershipApplicantBlockTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.domain.model.MembershipApplicationTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.infra.persistence.adapter.MembershipBillingConfigurationRepositoryAdapterTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.infra.persistence.jpa.MembershipApplicantBlockJpaRepositoryTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.PaidMembershipFlowIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryImportDisabledIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.security.MailSecretLoggingTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.security.SmtpMailAdaptersTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Complete MySQL profile",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "log": "target/back-523-mysql-full-final.log",
+      "result": "passed",
+      "logSha256": "168d49335cd7ba56372fce283f2851e33f250890af5c8cd22ea8a7360cd95c1e",
+      "tests": 169,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Future migration",
+      "command": "bash deploy/test-future-migration.sh (unchanged script via Windows adapter, committed Git archive)",
+      "log": "target/back-523-forward-final.log",
+      "result": "passed",
+      "logSha256": "c4b9ba6586d22635e1cce9c8d2a482459031589b7b2273fb98ad1197a169bfcf",
+      "tests": 169,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ],
+      "temporaryMigration": "V7 only in isolated committed Git archive; no V7 release migration in BACK-523"
+    }
+  ],
+  "developmentAttempts": [
+    {
+      "name": "Initial API test compilation adaptation",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-unit-first.log",
+      "result": "failed",
+      "logSha256": "12916bd783c1e6dd03a60e159c560bd5c81246e6c9d80ed05c7c32e2c55e07e5"
+    },
+    {
+      "name": "Second API fixture compilation adaptation",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-unit-second.log",
+      "result": "failed",
+      "logSha256": "325c6dfda3390c88ef241568f3569257a405a4171bf367c864d4edf4080e2098"
+    },
+    {
+      "name": "Initial focal with two incorrect test SQL column names",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-focal-first.log",
+      "result": "failed",
+      "logSha256": "a92e4d6eba750b57745f3fadf6dcbd8c04b3dbfed6a92b3bafd7fc83fb9ab95a",
+      "tests": 61,
+      "failures": 0,
+      "errors": 2,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipApplicationControllerTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationServiceTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipOnboardingCompletionServiceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 19,
+          "failures": 0,
+          "errors": 2,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.security.SmtpMailAdaptersTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Integration security and races; incomplete Session fixture",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-integration-second.log",
+      "result": "failed",
+      "logSha256": "030cdc5202c8a15c832fd4db911a2be6c2c313170006cc6185c8a180c3286dcd",
+      "tests": 52,
+      "failures": 0,
+      "errors": 1,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.memberships.api.contract.MembershipOpenApiIntegrationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.security.MembershipAdminSecurityIntegrationTest",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 1,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.security.MailSecretLoggingTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Stricter race assertion exposed stale managed @Version",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-focal-third.log",
+      "result": "failed",
+      "logSha256": "ceca256eada2bed342fe6e28deea38a5617bd8664ba7e1f611c06150270d0396",
+      "tests": 72,
+      "failures": 2,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.contract.MembershipOpenApiIntegrationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.ConfiguredMemberActivationLinkFactoryTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationServiceTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 2,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Focused after current-state locking correction",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-focal-fourth.log",
+      "result": "passed",
+      "logSha256": "3cd277d851b815611608739a4a1461dec33dae282e21e223fb7a569425ee01b9",
+      "tests": 57,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.memberships.ConfiguredMemberActivationLinkFactoryTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationServiceTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "MySQL focal tests; verify interrupted after tests",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-mysql-focal-first.log",
+      "result": "interrupted_or_incomplete",
+      "logSha256": "8241c594333bc6ce2813b6b5d0d20c11170a19f3ee29ab4c8402586c4fb1f0db",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Complete verify before final SMTP exception sanitization",
+      "command": "Development focal/verify; not a replacement for final gates",
+      "log": "target/back-523-full-verify-pre-smtp-sanitization.log",
+      "result": "passed",
+      "logSha256": "57ed3944a25a52a5fc3c619d9949ee1e027491de45ebad133a2dfd04ac45bf56",
+      "tests": 2035,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.contract.MembershipOpenApiIntegrationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipApplicantBlockControllerTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipApplicationControllerTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.admin.AdminMembershipBillingConfigurationControllerTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.MemberActivationTokenControllerTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.controller.MembershipApplicationControllerTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.http.exception.MembershipExceptionHandlerTest",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.api.security.MembershipAdminSecurityIntegrationTest",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.ConfiguredMemberActivationLinkFactoryTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.query.MembershipAccessQueryServiceTest",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.memberactivationtoken.MemberActivationTokenServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.AdminMembershipApplicantBlockServiceTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplicantblock.MembershipApplicantBlockServiceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.AdminMembershipApplicationServiceTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipApplicationServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipapplication.MembershipOnboardingCompletionServiceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.application.service.membershipbilling.AdminMembershipBillingConfigurationServiceTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.domain.model.MemberActivationTokenTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.domain.model.MembershipApplicantBlockTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.core.domain.model.MembershipApplicationTest",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.infra.persistence.adapter.MembershipBillingConfigurationRepositoryAdapterTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.infra.persistence.jpa.MembershipApplicantBlockJpaRepositoryTest",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.PaidMembershipFlowIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryImportDisabledIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 26,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.security.MailSecretLoggingTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.security.SmtpMailAdaptersTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    }
+  ],
+  "windowsSkip": "Pre-existing symlink capability test; no new disabled tests or skips.",
+  "expectedNegativeLogs": "Migration tests deliberately reject unavailable databases, unsafe Hibernate settings and failing future DDL. Final JUnit/BUILD summaries classify the gate; isolated intentional ERROR log lines are not test failures.",
+  "coverage": {
+    "onboardingIntegration": "28 committed HTTP/application/persistence scenarios, also inherited by MembershipRegistryOnboardingMySqlIT",
+    "concurrency": "Duplicate approval; both winners of activation/rejection for link and temporary password; both winners of resend/rejection; Identity lock held until commit, fresh @Version/current read, no partial reversal",
+    "http": "Same delivered bearer URL, no-store, unchanged permissions, no link in general reads/exports, OpenAPI schema/header, RFC9457 conflicts",
+    "security": "Hash only; single generation; strict URL encoding; response toString redacted; SMTP exception message/cause/suppressed not propagated; rollback; pending challenge invalidated; completed access/refresh preserved on refused reversal",
+    "retention": "Member FK, financial assignment and Session history prevent reversal with no partial tokens/block/deletion; role bindings and administrative invitations safely handled; independent review/User history",
+    "migration": "Legacy V5 approval unchanged; additive V6; independent review history survives operational row removal and controlled replay; all previous migrations/baselines verified in complete MySQL profile"
+  },
+  "reviewLimits": [
+    "No real SMTP mailbox delivery tested. SMTP and DB are not distributed ACID; SMTP acceptance followed by failed commit can require approval/resend retry.",
+    "Rejection notification runs after commit with sanitized failure logging; no durable automatic retry queue.",
+    "Any unexpected Session historical fact blocks reversal rather than deleting authentication evidence.",
+    "Identity DELETE retained-reference errors are normalized to public USER_DELETION_CONFLICT (409); frontend should accept the controlled code.",
+    "Proxy/UI observability must redact the sensitive bearer response.",
+    "No production startup, deployment, VPS, real import, operational Registry activation or shared/prod DB changes performed."
+  ],
+  "migrations": [
+    "V6__membership_onboarding_review_history.sql"
+  ],
+  "protectedChanges": "V1-V5, baseline, workflows, production flags, protected branches and VPS unchanged."
+}

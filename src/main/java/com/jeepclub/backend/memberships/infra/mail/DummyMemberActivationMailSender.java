@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class DummyMemberActivationMailSender implements MemberActivationMailSender {
 
     @Override
-    public void sendActivationLink(String recipientEmail, String recipientName, String activationToken) {
+    public void sendActivationLink(String recipientEmail, String recipientName, String activationLink) {
         log.info("Mock membership activation notification requested");
     }
 
