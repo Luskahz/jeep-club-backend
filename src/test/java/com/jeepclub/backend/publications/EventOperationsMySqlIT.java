@@ -9,6 +9,18 @@ import org.testcontainers.mysql.MySQLContainer;
 /** Repeats all Event financial, transport, rollback and race scenarios on migrated MySQL. */
 @Testcontainers
 class EventOperationsMySqlIT extends EventOperationsIntegrationTest {
+    @Override long currentDatabaseSession() {
+        return jdbc.queryForObject("SELECT CONNECTION_ID()", Long.class);
+    }
+
+    @Override boolean isDatabaseSessionWaitingForLock(long session) {
+        return jdbc.queryForObject("""
+            SELECT COUNT(*) FROM performance_schema.data_lock_waits w
+            JOIN performance_schema.threads t ON t.THREAD_ID = w.REQUESTING_THREAD_ID
+            WHERE t.PROCESSLIST_ID = ?
+            """, Long.class, session) > 0;
+    }
+
     @Container static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
         .withUsername("root").withPassword("synthetic-event-test-only");
 
