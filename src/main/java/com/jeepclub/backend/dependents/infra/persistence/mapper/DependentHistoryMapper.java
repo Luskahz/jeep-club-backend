@@ -26,6 +26,7 @@ public class DependentHistoryMapper {
         history.setBirthDate(source.getBirthDate());
         history.setRelationshipType(source.getRelationshipType());
         history.setPhoneNumber(source.getPhoneNumber());
+        history.setPhotoStorageKey(source.getPhotoStorageKey());
         history.setUserId(source.getUserId());
         history.setStatus(source.getStatus());
         history.setDeletedByUserId(deletedByUserId);

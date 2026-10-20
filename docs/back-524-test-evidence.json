@@ -1,0 +1,437 @@
+{
+  "ticket": "BACK-524",
+  "date": "2026-10-19",
+  "branch": "feat/back-524-dependent-photo",
+  "baseBranch": "feat/back-523-onboarding-reversal",
+  "base": "cc81f6ede941f013d55f881545f99f69102861cb",
+  "previousPullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/108",
+  "codeCommit": "fc814b6cdc4fdd06f73988f27a879ff13bac9273",
+  "publication": {
+    "tracking": "Exact published-head CI recorded in PR and consolidated sprint audit; this file records local source gates."
+  },
+  "environment": {
+    "java": "Microsoft OpenJDK17.0.18",
+    "os": "Windows",
+    "mysql": "8.0.46",
+    "database": "Local disposable Testcontainers only"
+  },
+  "gates": [
+    {
+      "name": "Full verify",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "log": "target/back-524-full-verify-final.log",
+      "result": "passed",
+      "logSha256": "cfadc06b4023675438640923096711d402e7470a2abe18332ea4f34e76fb48e8",
+      "tests": 2060,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.contract.DependentsOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.AdminDependentControllerTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentControllerTest",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoIntegrationTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentSecurityIntegrationTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.core.application.query.DependentsQueryServiceTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.core.application.service.AdminDependentServiceTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.core.application.service.DependentServiceTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.core.domain.model.DependentTest",
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.infra.persistence.adapter.DependentRepositoryAdapterTest",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.infra.persistence.adapter.DependentRepositoryExceptionTranslationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.system.DependentSystemFlowTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.storage.image.PrivateImageMediaContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Complete MySQL profile",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "log": "target/back-524-mysql-full-final.log",
+      "result": "passed",
+      "logSha256": "ab7a2eec6b9ee5f82812d598b3a11a10a833cde04441d218089829adc90e5414",
+      "tests": 190,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Future migration",
+      "command": "bash deploy/test-future-migration.sh (unchanged script via Windows adapter, committed Git archive)",
+      "log": "target/back-524-forward-final.log",
+      "result": "passed",
+      "logSha256": "44576ef58fa25f2fcab8ed33914a8a429f9ce0356fe7eb3ed198c92bfae67bbf",
+      "tests": 190,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ],
+      "temporaryMigration": "V8 only in isolated committed Git archive; BACK-524 release migration is V7"
+    }
+  ],
+  "developmentAttempts": [
+    {
+      "name": "Existing Dependent and public-media regression",
+      "command": "Development focal; not a substitute for complete final gates",
+      "log": "target/back-524-baseline-focal-first.log",
+      "result": "passed",
+      "logSha256": "f4a41194a2be00bbdd9610f4c299dc48aac03801ef3bb8b878dcc404dda1b2c7",
+      "tests": 59,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.AdminDependentControllerTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentControllerTest",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentSecurityIntegrationTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.core.application.service.DependentServiceTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Initial photo integration; mandatory audit spy fixture corrected",
+      "command": "Development focal; not a substitute for complete final gates",
+      "log": "target/back-524-photo-focal-first.log",
+      "result": "failed",
+      "logSha256": "7149c8b1e29cc361d708d07c8e10eab796b83a4a5b10380fc985401cf5a6c1d4",
+      "tests": 20,
+      "failures": 0,
+      "errors": 2,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoIntegrationTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 2,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.storage.image.PrivateImageMediaContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Photo focal; technical outage fixture used domain IllegalStateException and was corrected",
+      "command": "Development focal; not a substitute for complete final gates",
+      "log": "target/back-524-photo-focal-second.log",
+      "result": "failed",
+      "logSha256": "3282f39bcfbcd7ef676a58e21d176b1cf99b4cfd5d2a6eddbc05b8d83c0e0329",
+      "tests": 25,
+      "failures": 2,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.contract.DependentsOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoIntegrationTest",
+          "tests": 20,
+          "failures": 2,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.storage.image.PrivateImageMediaContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Corrected private photo, namespace and OpenAPI focal",
+      "command": "Development focal; not a substitute for complete final gates",
+      "log": "target/back-524-photo-focal-third.log",
+      "result": "passed",
+      "logSha256": "aadd9388a0762bd1ed8d3ca0162d0bf6aa86043fdb45c5cb391c3f2eb192ac92",
+      "tests": 25,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.contract.DependentsOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoIntegrationTest",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.storage.image.PrivateImageMediaContractTest",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Real MySQL photo scenarios and migration schema/legacy focal",
+      "command": "Development focal; not a substitute for complete final gates",
+      "log": "target/back-524-mysql-focal-first.log",
+      "result": "passed",
+      "logSha256": "583307ada457ac04c51f28a35845c76b87c7911e8ada4a7755fb34bc59ac0416",
+      "tests": 22,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    }
+  ],
+  "windowsSkip": "Pre-existing symlink capability test. No new disabled tests or skips.",
+  "expectedNegativeLogs": "Migration tests intentionally reject invalid database/startup/Flyway configurations; fault tests simulate audit/storage/compensation failures. Final JUnit and BUILD summaries determine outcome.",
+  "coverage": {
+    "integration": "20 photo HTTP/application/persistence/security scenarios, inherited unchanged by DependentPhotoMySqlIT",
+    "concurrency": "Two deterministic current-state races: stale preload after update winner; deletion winner prevents photo replacement/resurrection/upload.",
+    "media": "Same provider/root, private namespace; public parser rejects private key before storage. Known rollback deletes only new file; failed cleanup preserves original error and private orphan remains globally unreadable.",
+    "http": "Optional create photo; JSON/multipart update omission preserves; explicit DELETE disassociates idempotently; PATCH replaces; authorized binary GET and photoUrl only; no-store; OpenAPI; no key/path/filename in API.",
+    "security": "Owner active and actual relationship; independent administrative READ/PHOTO_UPDATE; wrong pair 404; inactive owner/session/lifecycle guards; read audit must commit before returning bytes; sanitized failure logging.",
+    "history": "Deletion snapshot preserves reference; replacing/removing/deleting never removes old/shared file; exports and cross-context query omit photo references.",
+    "migration": "Nullable live/history columns; physical permission appended without custom grants; legacy V6 rows preserved; controlled V7 replay preserves references; complete frozen schema/FK equality."
+  },
+  "reviewLimits": [
+    "No private VPS/proxy/CDN configuration inspected. Future release must ensure uploads volume is never directly publicly served.",
+    "No new historical-photo binary endpoint; deleted operational route returns 404 while independent history retains reference.",
+    "Old/shared/replaced files are retained. Cleanup failure and unknown commit require controlled reconciliation; no periodic job used as primary consistency.",
+    "Downgrade to old code can omit photo from future deletion snapshots; prefer forward fix or coordinated restore.",
+    "Broad historical PII protection in BACK-482 remains separate; no claim of general LGPD approval.",
+    "No production startup, VPS/deploy, shared/production DB, real import or Registry operational activation performed."
+  ],
+  "migrations": [
+    "V7__dependent_private_photo.sql"
+  ],
+  "protectedChanges": "V1-V6, baseline, workflows, protected branches, production flags and VPS unchanged."
+}

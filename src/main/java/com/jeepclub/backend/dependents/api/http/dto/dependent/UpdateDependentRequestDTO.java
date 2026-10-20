@@ -10,7 +10,7 @@ import org.hibernate.validator.constraints.br.CPF;
 
 import java.time.LocalDate;
 
-@Schema(description = "Solicitação de atualização dos dados de um dependente.")
+@Schema(additionalProperties = Schema.AdditionalPropertiesValue.FALSE, description = "Solicitação de atualização dos dados de um dependente.")
 public record UpdateDependentRequestDTO(
 
         @Schema(
@@ -59,4 +59,8 @@ public record UpdateDependentRequestDTO(
         String phoneNumber
 
 ) {
+    @com.fasterxml.jackson.annotation.JsonAnySetter
+    public void rejectUnknownField(String name, Object value) {
+        throw new IllegalArgumentException("Unknown dependent field. Send photos as multipart files and use explicit photo removal.");
+    }
 }

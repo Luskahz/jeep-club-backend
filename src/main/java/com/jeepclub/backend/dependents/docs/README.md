@@ -62,9 +62,9 @@ ARCHIVED --delete()--> histórico + remoção, se Health/Event não impedirem
 operacional, pode ser lido pela superfície administrativa e permanece com CPF
 reservado, mas o agregado bloqueia `update`; a atualização da superfície do
 titular procura somente dependentes `ACTIVE`. `enable()` volta o status para
-`ACTIVE`. As transições `disable()` e `enable()` existem no domínio e no
-`DependentService`, preservam o registro e atualizam `updatedAt`, mas não há
-endpoint HTTP que as exponha no estado atual.
+`ACTIVE`. As transições `disable()` e `enable()` preservam o registro e
+atualizam `updatedAt`; PATCH disable/enable/archive/unarchive estão expostos
+para titular e administração com as respectivas regras e permissions.
 
 `delete()` aceita registro ativo ou desabilitado. A infraestrutura obtém lock
 pessimista, grava um snapshot em `dependents_dependent_history` com
@@ -112,3 +112,33 @@ sistema. Ao alterar o módulo, escolha cobertura proporcional conforme as
 DEPENDENTS_DEPENDENT_EXPORT permite todos, id, userId e histórico separado. CSV plano e PDF por titular agrupado. DependentsQuery.findDetailsByIds/findDetailsByUser oferecem identificação, vínculo/status e paginação para composição pública de relatórios; não expõem entities.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+## Foto privada — BACK-524
+
+`photoStorageKey` opcional pertence ao agregado e é copiada para entidade, resultado
+interno e snapshot de exclusão. V7 cria photo_storage_key nullable no cadastro e
+histórico e acrescenta DEPENDENTS_DEPENDENT_PHOTO_UPDATE ao catálogo físico.
+Criação sem foto mantém updatedAt nulo; com foto, a associação inicial atualiza
+esse instante. Reconstituição e alterações cadastrais/lifecycle preservam a foto.
+
+POST e PUT /dependents aceitam também multipart com part dependent JSON validada
+e photo opcional. Omitir foto preserva; nova imagem substitui; DELETE /{id}/photo
+é a desassociação explícita idempotente. PATCH /{id}/photo recebe arquivo. Apenas
+ACTIVE pode mudar foto, com titular elegível. Não aceitar storageKey/URL/Base64
+de clientes. O command privado do Platform reutiliza a compensação da BACK-510;
+somente o arquivo novo é removido no rollback. Não apagar arquivo antigo/compartilhado.
+
+HTTP expõe photoUrl por ID, sem referência interna: titular usa
+/dependents/{id}/photo; administração usa /users/{userId}/dependents/{id}/photo.
+Leitura exige ownership ou READ e é auditada, no-store, inclusive em INACTIVE e
+ARCHIVED. Manutenção administrativa exige PHOTO_UPDATE; READ não concede escrita.
+Identidade titular inativa impede manutenção; o administrador autorizado ainda
+pode inspecionar a foto do cadastro operacional. Após exclusão, a rota retorna 404
+e o snapshot conserva a referência internamente, sem nova rota de conteúdo histórico.
+
+PrivateImageReference usa namespace disjunto no mesmo storage. O resolvedor global
+e ImageReference pública recusam essas chaves; nenhuma proteção depende de UUID
+secreto. Query pública para Health/Publications e exports CSV/PDF não expõem mídia
+privada. A proteção ampla de dados/históricos da BACK-482 permanece fora deste escopo.
+Exemplos de frontend, segurança, testes e checklist em
+[BACK-524](../../../../../../../../docs/back-524-dependent-photo.md).

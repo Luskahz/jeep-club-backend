@@ -18,8 +18,16 @@ public record DependentResult(
         Long userId,
         DependentStatus status,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String photoStorageKey
 ) {
+
+    public DependentResult(Long id,String name,String cpf,LocalDate birthDate,RelationshipType relationshipType,
+            String phoneNumber,Long userId,DependentStatus status,Instant createdAt,Instant updatedAt) {
+        this(id,name,cpf,birthDate,relationshipType,phoneNumber,userId,status,createdAt,updatedAt,null);
+    }
+
+    @Override public String toString() { return "DependentResult[id=" + id + ", privateData=[REDACTED]]"; }
 
     public static DependentResult from(Dependent dependent) {
         Objects.requireNonNull(
@@ -37,7 +45,8 @@ public record DependentResult(
                 dependent.getUserId(),
                 dependent.getStatus(),
                 dependent.getCreatedAt(),
-                dependent.getUpdatedAt()
+                dependent.getUpdatedAt(),
+                dependent.getPhotoStorageKey()
         );
     }
 }

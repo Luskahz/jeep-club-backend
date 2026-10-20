@@ -35,7 +35,7 @@ public class DependentController {
 
     private final DependentService dependentService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Adicionar dependente",
             description = "Cadastra um novo dependente associado ao usuário autenticado.",
@@ -139,7 +139,7 @@ public class DependentController {
         );
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Atualizar dependente",
             description = "Atualiza um dependente ativo pertencente ao usuário autenticado.",

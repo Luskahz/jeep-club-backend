@@ -13,10 +13,18 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
-public class ImageMediaService {
+public class ImageMediaService implements PrivateImageMediaQuery {
     private final FileStorage storage;
 
     public String store(String filename, String contentType, byte[] bytes) {
+        return store(filename, contentType, bytes, "images");
+    }
+
+    public String storePrivate(String filename, String contentType, byte[] bytes) {
+        return store(filename, contentType, bytes, "private-images");
+    }
+
+    private String store(String filename, String contentType, byte[] bytes, String namespace) {
         if (filename == null || contentType == null || bytes == null || bytes.length == 0 || bytes.length > ImageUpload.MAX_BYTES) {
             throw new InvalidStorageFileException("Image filename, content type and non-empty content up to 5 MB are required.");
         }
@@ -32,7 +40,12 @@ public class ImageMediaService {
         if (!expected.equalsIgnoreCase(contentType) || !matchesSignature(extension, bytes)) {
             throw new InvalidStorageFileException("Image extension, content type and file signature must match.");
         }
-        return storage.store(new StorageFile(filename, expected, extension, bytes), "images").storageKey();
+        return storage.store(new StorageFile(filename, expected, extension, bytes), namespace).storageKey();
+    }
+
+    @Override public ImageMediaContent loadPrivate(String key) {
+        var resource = storage.load(com.jeepclub.backend.shared.storage.PrivateImageReference.require(key));
+        return new ImageMediaContent(typeFromSuffix(key), resource.content());
     }
 
     public StorageResource load(String key) {
@@ -46,6 +59,10 @@ public class ImageMediaService {
 
     public static String contentType(String key) {
         ImageReference.require(key);
+        return typeFromSuffix(key);
+    }
+
+    private static String typeFromSuffix(String key) {
         if (key.endsWith(".png")) return "image/png";
         if (key.endsWith(".webp")) return "image/webp";
         return "image/jpeg";

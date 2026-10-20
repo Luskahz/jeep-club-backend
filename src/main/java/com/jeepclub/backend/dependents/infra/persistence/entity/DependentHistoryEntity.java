@@ -81,6 +81,9 @@ public class DependentHistoryEntity {
     )
     private String phoneNumber;
 
+    @Column(name = "photo_storage_key", length = 512)
+    private String photoStorageKey;
+
     @Column(
             name = "user_id",
             nullable = false

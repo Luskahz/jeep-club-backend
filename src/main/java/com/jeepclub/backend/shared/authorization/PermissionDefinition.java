@@ -3,6 +3,7 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    DEPENDENTS_DEPENDENT_PHOTO_UPDATE(PermissionCode.DEPENDENTS_DEPENDENT_PHOTO_UPDATE, ModuleCode.DEPENDENTS, "Associar, substituir e desassociar foto privada de dependente"),
     // BACK-512
     IDENTITY_USER_ARCHIVE(PermissionCode.IDENTITY_USER_ARCHIVE, ModuleCode.IDENTITY, "Arquivar cadastro"),
     IDENTITY_USER_UNARCHIVE(PermissionCode.IDENTITY_USER_UNARCHIVE, ModuleCode.IDENTITY, "Desarquivar para INACTIVE"),
