@@ -133,12 +133,12 @@ public class AdminEventController {
     @GetMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_ADMIN_READ')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_ADMIN_READ")
-    @Operation(summary="Read guests and historical approved visit count")
-    @ApiResponse(responseCode="200", description="Read guests and historical approved visit count")
+    @Operation(summary="Read guests and current approved record count", description="Counts guest IDs currently APPROVED for each CPF across all Events, including this record and ADMIN standby. CANCELLED, REJECTED and PENDING do not count. Not physical attendance, distinct Events or historical approval decisions. approvedHistoricalVisits is a deprecated compatibility alias with identical current-state semantics; use currentApprovedGuestCount. Decision history is available separately through the authorized history endpoint.")
+    @ApiResponse(responseCode="200", description="Guest page with current-state counts; no attendance inference")
     public PageResponse<GuestReview> guests(@PathVariable Long id, @org.springdoc.core.annotations.ParameterObject Pageable pageable) {
         var guests = service.guests(id).stream().sorted(java.util.Comparator.comparing(EventGuestRequest::id)).toList();
-        var counts = service.visits(guests.stream().map(EventGuestRequest::cpf).toList());
-        return EventPages.of(guests.stream().map(g -> new GuestReview(g, counts.getOrDefault(g.cpf(),0L))).toList(), pageable);
+        var counts = service.currentApprovedGuestCounts(guests.stream().map(EventGuestRequest::cpf).toList());
+        return EventPages.of(guests.stream().map(g -> new GuestReview(EventGuestResponseDTO.from(g), counts.getOrDefault(g.cpf(),0L))).toList(), pageable);
     }
     @PostMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE')")
@@ -146,24 +146,64 @@ public class AdminEventController {
     @Operation(summary="Create administrative guest without transport")
     @ApiResponse(responseCode="201", description="Create administrative guest without transport")
     @ResponseStatus(HttpStatus.CREATED)
-    public EventGuestRequest guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
-        if (r.vehicleId() != null) throw new IllegalArgumentException("Administrative guest uses ride selection."); return service.createGuest(id, principal.getUserId(), r.cpf(), r.guestName());
+    public EventGuestResponseDTO guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
+        if (r.vehicleId() != null) throw new IllegalArgumentException("Administrative guest starts in standby."); return EventGuestResponseDTO.from(service.createGuest(id, principal.getUserId(), r.cpf(), r.guestName()));
     }
     @PostMapping("/{id}/guest-requests/{guestId}/approve")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_APPROVE')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_APPROVE")
     @Operation(summary="Approve guest with atomic capacity check")
     @ApiResponse(responseCode="200", description="Approve guest with atomic capacity check")
-    public EventGuestRequest approve(@PathVariable Long id, @PathVariable Long guestId, @AuthenticationPrincipal UserPrincipal principal) {
-        return service.reviewGuest(id, guestId, principal.getUserId(), true, null);
+    public EventGuestResponseDTO approve(@PathVariable Long id, @PathVariable Long guestId, @AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.reviewGuest(id, guestId, principal.getUserId(), true, null));
     }
     @PostMapping("/{id}/guest-requests/{guestId}/reject")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REJECT')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_REJECT")
     @Operation(summary="Reject guest without consuming a seat")
     @ApiResponse(responseCode="200", description="Reject guest without consuming a seat")
-    public EventGuestRequest reject(@PathVariable Long id, @PathVariable Long guestId, @Valid @RequestBody EventOperationRequests.Rejection r, @AuthenticationPrincipal UserPrincipal principal) {
-        return service.reviewGuest(id, guestId, principal.getUserId(), false, r.reason());
+    public EventGuestResponseDTO reject(@PathVariable Long id, @PathVariable Long guestId, @Valid @RequestBody EventOperationRequests.Rejection r, @AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.reviewGuest(id, guestId, principal.getUserId(), false, r.reason()));
+    }
+    @PutMapping("/{id}/guest-requests/{guestId}/allocation")
+    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_ALLOCATE')")
+    @RequiredPermission("PUBLICATIONS_EVENT_GUEST_ALLOCATE")
+    @Operation(summary="Allocate or relocate administrative guest directly",description="No ride offer required. OPEN Event, active vehicle and confirmed owner registration with sufficient capacity; origin remains ADMIN. Atomic audited replacement.")
+    @ApiResponse(responseCode="200",description="Current allocation; identical destination is idempotent")
+    public EventGuestResponseDTO allocateGuest(@PathVariable Long id,@PathVariable Long guestId,@Valid @RequestBody EventOperationRequests.GuestAllocation r,@AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.allocateGuest(id,guestId,r.vehicleId(),r.registrationId(),principal.getUserId(),r.reason()));
+    }
+    @PostMapping("/{id}/guest-requests/{guestId}/unassign")
+    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_UNASSIGN')")
+    @RequiredPermission("PUBLICATIONS_EVENT_GUEST_UNASSIGN")
+    @Operation(summary="Return active administrative guest to standby",description="Withdraws previous offers, frees seat, preserves active participation. Personal participation ends through cancel instead.")
+    @ApiResponse(responseCode="200",description="Administrative guest without transport")
+    public EventGuestResponseDTO unassignGuest(@PathVariable Long id,@PathVariable Long guestId,@Valid @RequestBody EventOperationRequests.GuestDecision r,@AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.unassignGuest(id,guestId,principal.getUserId(),r.reason()));
+    }
+    @PostMapping("/{id}/guest-requests/{guestId}/cancel")
+    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_CANCEL')")
+    @RequiredPermission("PUBLICATIONS_EVENT_GUEST_CANCEL")
+    @Operation(summary="Cancel guest participation and detach transport",description="Personal cancellation is terminal. Administrative cancellation can be reversed through reactivate. No physical delete or financial side effect.")
+    @ApiResponse(responseCode="200",description="CANCELLED guest; repeated cancellation is idempotent")
+    public EventGuestResponseDTO cancelGuest(@PathVariable Long id,@PathVariable Long guestId,@Valid @RequestBody EventOperationRequests.GuestDecision r,@AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.cancelGuest(id,guestId,principal.getUserId(),r.reason()));
+    }
+    @PostMapping("/{id}/guest-requests/{guestId}/reactivate")
+    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REACTIVATE')")
+    @RequiredPermission("PUBLICATIONS_EVENT_GUEST_REACTIVATE")
+    @Operation(summary="Reactivate cancelled administrative guest to standby",description="Never restores vehicle, driver, selected offer or prior seat. Personal and rejected guests cannot use this command.")
+    @ApiResponse(responseCode="200",description="Active administrative guest in STANDBY")
+    public EventGuestResponseDTO reactivateGuest(@PathVariable Long id,@PathVariable Long guestId,@Valid @RequestBody EventOperationRequests.GuestDecision r,@AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.reactivateGuest(id,guestId,principal.getUserId(),r.reason()));
+    }
+    @GetMapping("/{id}/guest-requests/{guestId}/history")
+    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_HISTORY_READ')")
+    @RequiredPermission("PUBLICATIONS_EVENT_GUEST_HISTORY_READ")
+    @Operation(summary="Read immutable guest transitions, including after Event deletion",description="Actor, reason, instant, previous/next participation and vehicle/registration; no CPF or guest name copied into audit.")
+    @ApiResponse(responseCode="200",description="Ordered retained transition page")
+    public PageResponse<EventGuestTransition> guestHistory(@PathVariable Long id,@PathVariable Long guestId,@org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+        return EventPages.of(service.guestHistory(id,guestId),pageable);
     }
     @GetMapping("/{id}/ride-offers")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_READ_ADMIN')")
@@ -189,7 +229,13 @@ public class AdminEventController {
     public EmergencyMedicalProfileQuery.Profile health(@PathVariable Long id, @PathVariable MedicalProfileOwner type, @PathVariable Long participantId, @AuthenticationPrincipal UserPrincipal principal) {
         return service.health(id, type, participantId, principal.getUserId());
     }
-    public record GuestReview(EventGuestRequest request, long approvedHistoricalVisits) {}
+    public record GuestReview(EventGuestResponseDTO request,
+            @Deprecated @Schema(deprecated=true, description="Deprecated alias of currentApprovedGuestCount. Counts current APPROVED guest records, including ADMIN standby, not historical approvals or physical visits.") long approvedHistoricalVisits,
+            @Schema(description="Number of distinct guest IDs currently APPROVED for this CPF across all Events, including this record and ADMIN standby. Multiple records for the same CPF count separately; CANCELLED/PENDING/REJECTED do not count. Not attendance, check-in or historical decisions.") long currentApprovedGuestCount) {
+        public GuestReview(EventGuestResponseDTO request,long currentApprovedGuestCount) {
+            this(request,currentApprovedGuestCount,currentApprovedGuestCount);
+        }
+    }
     private EventResponseDTO response(Event e) { return EventResponseDTO.from(e, Instant.now(clock)); }
     private List<PublicationImage> images(List<PublicationImageRequestDTO> list) {
         return list == null ? null : list.stream().map(i -> new PublicationImage(i.storageKey(), i.position(), i.primary())).toList();

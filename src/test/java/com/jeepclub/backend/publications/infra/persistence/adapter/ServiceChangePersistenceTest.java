@@ -46,7 +46,7 @@ import static org.mockito.Mockito.doThrow;
 @ContextConfiguration(classes = ServiceChangePersistenceTest.JpaTestConfiguration.class)
 @Import({PublicationRepositoryAdapter.class, PublicationLikeRepositoryAdapter.class,
         PublicationCommentRepositoryAdapter.class, ServicePublicationRequestRepositoryAdapter.class,
-        ServicePublicationChangeRequestRepositoryAdapter.class, PublicationMapper.class, PublicationHistoryMapper.class,
+        ServicePublicationChangeRequestRepositoryAdapter.class, PublicationMapper.class, PublicationHistoryMapper.class, CurrentEventMapper.class,
         ServicePublicationRequestMapper.class, ServicePublicationChangeRequestMapper.class,
         AdminServicePublicationRequestService.class, ServicePublicationChangeRequestService.class,
         AdminServicePublicationChangeRequestService.class})

@@ -332,8 +332,9 @@ Arguments.of("/billing/admin/refunds/export","BILLING_EXPORT"));}
         ((com.jeepclub.backend.publications.infra.persistence.entity.EventEntity)event).getImages().add(image);em.flush();
         Long eventId=id(event);
         var v=vehicle(id(u),"ABC1D23","12345678901",com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE);
-        eventOperations.save(new com.jeepclub.backend.publications.core.domain.model.EventRegistration(null,eventId,id(u),com.jeepclub.backend.publications.core.domain.model.EventRegistration.Status.CONFIRMED,List.of(new com.jeepclub.backend.publications.core.domain.model.EventRegistration.Allocation(id(v),true,List.of())),FIXTURE_TIME,FIXTURE_TIME,null));
-        seed("publications.infra.persistence.entity.EventGuestRequestEntity","eventId",eventId,"requesterUserId",id(u),"vehicleId",id(v),"approvedVehicleId",id(v),"cpf","12345678909","guestName","Convidado histórico","status","APPROVED","createdAt",FIXTURE_TIME,"reviewedAt",FIXTURE_TIME);
+        var historicalRegistration=eventOperations.save(new com.jeepclub.backend.publications.core.domain.model.EventRegistration(null,eventId,id(u),com.jeepclub.backend.publications.core.domain.model.EventRegistration.Status.CONFIRMED,List.of(new com.jeepclub.backend.publications.core.domain.model.EventRegistration.Allocation(id(v),true,List.of())),FIXTURE_TIME,FIXTURE_TIME,null));
+        seed("publications.infra.persistence.entity.EventGuestRequestEntity","eventId",eventId,"requesterUserId",id(u),"vehicleId",id(v),"approvedVehicleId",id(v),"cpf","12345678909","guestName","Convidado histórico","status","APPROVED","createdAt",FIXTURE_TIME,"reviewedAt",FIXTURE_TIME,
+            "originRegistrationId",historicalRegistration.id(),"requestedVehicleId",id(v),"allocatedRegistrationId",historicalRegistration.id(),"responsibleUserId",id(u));
         var cycle=cycle(id(d),java.time.LocalDate.of(2026,2,15),"ciclo-historico");
         var charge=charge(id(u),id(d),id(cycle),java.time.LocalDate.of(2026,2,15));
         var payment=seed("billing.infra.persistence.entity.MemberPaymentEntity","memberChargeId",id(charge),"amount",new java.math.BigDecimal("100.00"),"paymentMethod",com.jeepclub.backend.billing.core.domain.enums.payment.PaymentMethod.PIX,"status",com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus.CONFIRMED,"receiptStorageKey","HISTORICAL_RECEIPT_SECRET","createdAt",FIXTURE_TIME,"paidAt",FIXTURE_TIME,"submittedAt",FIXTURE_TIME,"confirmedAt",FIXTURE_TIME,"confirmedByUserId",999L);
@@ -480,7 +481,7 @@ Arguments.of("/billing/admin/refunds/export","BILLING_EXPORT"));}
         for(int i=0;i<2001;i++) {
             var guest=new com.jeepclub.backend.publications.infra.persistence.entity.EventGuestRequestEntity();
             guest.setEventId(id(event));guest.setRequesterUserId(id(u));guest.setCpf(String.format("%011d",i));
-            guest.setGuestName("Convidado "+i);guest.setStatus("PENDING");guest.setCreatedAt(FIXTURE_TIME);em.persist(guest);
+            guest.setGuestName("Convidado "+i);guest.setAdministrative(true);guest.setStatus("APPROVED");guest.setCreatedAt(FIXTURE_TIME);em.persist(guest);
         }
         em.flush();auth("PUBLICATIONS_EXPORT");
         for(String format:List.of("CSV","PDF"))mvc.perform(get("/admin/events/"+id(event)+"/reports/manifest/export").param("format",format).header("Authorization","Bearer export-test"))

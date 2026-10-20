@@ -19,7 +19,7 @@ public class EventExceptionHandler extends ApiExceptionHandler {
     }
     @ExceptionHandler(EventOperationException.class)
     public ResponseEntity<ApiErrorResponse> operation(EventOperationException e) {
-        var status = e.getCode().endsWith("NOT_FOUND") ? HttpStatus.NOT_FOUND : e.getCode().equals("EVENT_HEALTH_ACCESS_NOT_ALLOWED") ? HttpStatus.FORBIDDEN : HttpStatus.CONFLICT;
+        var status = e.getCode().endsWith("NOT_FOUND") ? HttpStatus.NOT_FOUND : e.getCode().equals("EVENT_HEALTH_ACCESS_NOT_ALLOWED") || e.getCode().equals("EVENT_GUEST_ACCESS_DENIED") ? HttpStatus.FORBIDDEN : HttpStatus.CONFLICT;
         return buildErrorResponse(e.getCode(), e.getMessage(), status);
     }
     @ExceptionHandler(EventBillingException.class)
