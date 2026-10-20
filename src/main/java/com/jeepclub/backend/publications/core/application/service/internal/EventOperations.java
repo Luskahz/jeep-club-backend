@@ -117,7 +117,10 @@ public class EventOperations {
             var registration = registration(event.getId(), actor);
             if (registration.status() == EventRegistration.Status.CANCELLED || vehicle == null || registration.allocations().stream().noneMatch(a -> a.vehicleId().equals(vehicle)))
                 throw error("EVENT_VEHICLE_NOT_OWNED");
-            guestSpace(event.getId(), vehicle);
+            // A request is a preference, never a seat reservation. Capacity is
+            // checked only when approval actually allocates the guest.
+            var requestedVehicle = vehicleLocks.activeById(vehicle).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
+            if (!requestedVehicle.ownerId().equals(actor)) throw error("EVENT_VEHICLE_NOT_OWNED");
             guest = EventGuestRequest.requested(event.getId(),actor,registration.id(),vehicle,cpf,guestName,now());
         } else {
             if (vehicle != null) throw error("EVENT_RIDE_OFFER_INVALID");

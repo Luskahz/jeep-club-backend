@@ -133,11 +133,11 @@ public class AdminEventController {
     @GetMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_ADMIN_READ')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_ADMIN_READ")
-    @Operation(summary="Read guests and historical approved visit count")
-    @ApiResponse(responseCode="200", description="Read guests and historical approved visit count")
+    @Operation(summary="Read guests and current approved record count", description="Counts guest IDs currently APPROVED for each CPF across all Events, including this record and ADMIN standby. CANCELLED, REJECTED and PENDING do not count. Not physical attendance, distinct Events or historical approval decisions. approvedHistoricalVisits is a deprecated compatibility alias with identical current-state semantics; use currentApprovedGuestCount. Decision history is available separately through the authorized history endpoint.")
+    @ApiResponse(responseCode="200", description="Guest page with current-state counts; no attendance inference")
     public PageResponse<GuestReview> guests(@PathVariable Long id, @org.springdoc.core.annotations.ParameterObject Pageable pageable) {
         var guests = service.guests(id).stream().sorted(java.util.Comparator.comparing(EventGuestRequest::id)).toList();
-        var counts = service.visits(guests.stream().map(EventGuestRequest::cpf).toList());
+        var counts = service.currentApprovedGuestCounts(guests.stream().map(EventGuestRequest::cpf).toList());
         return EventPages.of(guests.stream().map(g -> new GuestReview(EventGuestResponseDTO.from(g), counts.getOrDefault(g.cpf(),0L))).toList(), pageable);
     }
     @PostMapping("/{id}/guest-requests")
@@ -229,7 +229,13 @@ public class AdminEventController {
     public EmergencyMedicalProfileQuery.Profile health(@PathVariable Long id, @PathVariable MedicalProfileOwner type, @PathVariable Long participantId, @AuthenticationPrincipal UserPrincipal principal) {
         return service.health(id, type, participantId, principal.getUserId());
     }
-    public record GuestReview(EventGuestResponseDTO request, long approvedHistoricalVisits) {}
+    public record GuestReview(EventGuestResponseDTO request,
+            @Deprecated @Schema(deprecated=true, description="Deprecated alias of currentApprovedGuestCount. Counts current APPROVED guest records, including ADMIN standby, not historical approvals or physical visits.") long approvedHistoricalVisits,
+            @Schema(description="Number of distinct guest IDs currently APPROVED for this CPF across all Events, including this record and ADMIN standby. Multiple records for the same CPF count separately; CANCELLED/PENDING/REJECTED do not count. Not attendance, check-in or historical decisions.") long currentApprovedGuestCount) {
+        public GuestReview(EventGuestResponseDTO request,long currentApprovedGuestCount) {
+            this(request,currentApprovedGuestCount,currentApprovedGuestCount);
+        }
+    }
     private EventResponseDTO response(Event e) { return EventResponseDTO.from(e, Instant.now(clock)); }
     private List<PublicationImage> images(List<PublicationImageRequestDTO> list) {
         return list == null ? null : list.stream().map(i -> new PublicationImage(i.storageKey(), i.position(), i.primary())).toList();

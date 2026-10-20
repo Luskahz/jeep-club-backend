@@ -13,8 +13,10 @@ public interface EventOperationsRepository {
     EventRegistration save(EventRegistration registration);
     List<EventGuestRequest> guests(Long eventId);
     EventGuestRequest save(EventGuestRequest request);
-    long approvedVisits(String cpf);
-    java.util.Map<String, Long> approvedVisits(java.util.Collection<String> cpfs);
+    /** Current APPROVED records across all Events, including ADMIN standby and
+     * the current record itself. Counts records, not attendance or past decisions. */
+    long currentApprovedGuestCount(String cpf);
+    java.util.Map<String, Long> currentApprovedGuestCounts(java.util.Collection<String> cpfs);
     List<EventRideOffer> offers(Long eventId);
     EventRideOffer save(EventRideOffer offer);
     void record(EventGuestTransition transition);

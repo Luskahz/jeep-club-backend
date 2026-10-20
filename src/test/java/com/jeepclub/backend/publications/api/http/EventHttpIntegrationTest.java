@@ -105,6 +105,51 @@ class EventHttpIntegrationTest {
         mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/reactivate",event,ids.get(0)).contentType("application/json").content("{\"reason\":\"Invalid personal reactivation\"}")))
             .andExpect(status().isConflict()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
     }
+    @Test @Transactional void pendingRequestsDoNotReserveAndApprovalReturnsCapacityConflict() throws Exception {
+        long event=guestEvent();
+        when(vehicles.findActive(anyLong())).thenAnswer(a -> Optional.of(new com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.VehicleCapacity(a.getArgument(0),10L,2)));
+        when(vehicles.findActiveBatch(anyCollection())).thenAnswer(a -> ((Collection<Long>)a.getArgument(0)).stream()
+            .map(id -> new com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.VehicleCapacity(id,10L,2)).toList());
+        var ids=new ArrayList<Long>();
+        for(int i=0;i<3;i++) {
+            auth(10L,"PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE");
+            var result=mvc.perform(token(post("/events/{id}/guest-requests",event).contentType("application/json")
+                .content("{\"cpf\":\"12345678901\",\"vehicleId\":101,\"guestName\":\"Pending guest\"}")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.vehicleId").isEmpty()).andReturn();
+            ids.add(json.readTree(result.getResponse().getContentAsString()).get("id").asLong());
+        }
+        auth(99L,"PUBLICATIONS_EVENT_ADMIN_DASHBOARD_READ","PUBLICATIONS_EVENT_GUEST_APPROVE","PUBLICATIONS_EVENT_GUEST_REJECT","PUBLICATIONS_EVENT_GUEST_CANCEL");
+        mvc.perform(token(get("/admin/events/{id}/dashboard",event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.guestsPending").value(3)).andExpect(jsonPath("$.guestsAllocated").value(0)).andExpect(jsonPath("$.availableSeats").value(1));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,ids.get(0)))).andExpect(status().isOk());
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,ids.get(1)))).andExpect(status().isConflict())
+            .andExpect(content().contentTypeCompatibleWith("application/problem+json")).andExpect(jsonPath("$.code").value("EVENT_VEHICLE_CAPACITY_EXCEEDED"));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/reject",event,ids.get(2)).contentType("application/json").content("{\"reason\":\"Manual decision\"}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REJECTED"));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/cancel",event,ids.get(0)).contentType("application/json").content("{\"reason\":\"Guest withdrew\"}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,ids.get(1)))).andExpect(status().isOk());
+        auth(10L,"PUBLICATIONS_EVENT_GUEST_REQUEST_READ");
+        mvc.perform(token(post("/events/{id}/guest-requests",event).contentType("application/json").content("{\"cpf\":\"12345678901\",\"vehicleId\":101,\"guestName\":\"Forbidden\"}")))
+            .andExpect(status().isForbidden());
+    }
+    @Test @Transactional void guestCountHasExplicitCurrentStateMeaningAndDeprecatedAlias() throws Exception {
+        long event=guestEvent();
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE","PUBLICATIONS_EVENT_GUEST_ADMIN_READ","PUBLICATIONS_EVENT_GUEST_CANCEL","PUBLICATIONS_EVENT_GUEST_REACTIVATE");
+        var result=mvc.perform(token(post("/admin/events/{id}/guest-requests",event).contentType("application/json")
+            .content("{\"cpf\":\"12345678901\",\"guestName\":\"Standby guest\"}")))
+            .andExpect(status().isCreated()).andReturn();
+        long guest=json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+        for(String action:List.of("initial","cancel","reactivate","cancel","reactivate")) {
+            if(!action.equals("initial"))mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/{action}",event,guest,action)
+                .contentType("application/json").content("{\"reason\":\"Administrative decision\"}"))).andExpect(status().isOk());
+            int expected=action.equals("cancel")?0:1;
+            mvc.perform(token(get("/admin/events/{id}/guest-requests",event))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].currentApprovedGuestCount").value(expected))
+                .andExpect(jsonPath("$.content[0].approvedHistoricalVisits").value(expected));
+        }
+    }
     @Test void guestLifecyclePermissionsAreIndependentAndAllNewRoutesAreAuthenticated() throws Exception {
         var routes=List.of(
             put("/admin/events/1/guest-requests/1/allocation").contentType("application/json").content("{\"vehicleId\":101,\"reason\":\"Decision\"}"),
@@ -122,6 +167,10 @@ class EventHttpIntegrationTest {
         var doc=json.readTree(result.getResponse().getContentAsString());
         var schema=doc.get("components").get("schemas").get("EventGuestResponseDTO").get("properties");
         for(String field:List.of("origin","transportStatus","originRegistrationId","requestedVehicleId","allocatedRegistrationId","responsibleUserId","selectedOfferId"))assertThat(schema.has(field)).isTrue();
+        var counts=doc.get("components").get("schemas").get("GuestReview").get("properties");
+        assertThat(counts.get("approvedHistoricalVisits").get("deprecated").asBoolean()).isTrue();
+        assertThat(counts.get("currentApprovedGuestCount").get("description").asString()).contains("currently APPROVED","ADMIN standby","Not attendance");
+        assertThat(doc.get("paths").get("/events/{id}/guest-requests").get("post").get("description").asString()).contains("without reserving a seat");
         assertThat(doc.get("paths").get("/events/{id}/guest-requests/{guestId}/cancel").get("post").get("x-required-permissions").get(0).asString()).isEqualTo("PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL");
         assertThat(doc.get("paths").get("/admin/events/{id}/guest-requests/{guestId}/allocation").get("put").get("x-required-permissions").get(0).asString()).isEqualTo("PUBLICATIONS_EVENT_GUEST_ALLOCATE");
     }

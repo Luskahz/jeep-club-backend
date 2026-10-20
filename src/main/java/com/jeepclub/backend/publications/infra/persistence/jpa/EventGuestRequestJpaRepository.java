@@ -9,5 +9,5 @@ public interface EventGuestRequestJpaRepository extends JpaRepository<EventGuest
     List<EventGuestRequestEntity> findCurrentByIds(java.util.Collection<Long> ids);
     long countByCpfAndStatus(String cpf, String status);
     @org.springframework.data.jpa.repository.Query("select g.cpf, count(g) from EventGuestRequestEntity g where g.cpf in :cpfs and g.status = 'APPROVED' group by g.cpf")
-    java.util.List<Object[]> approvedVisits(java.util.Collection<String> cpfs);
+    java.util.List<Object[]> currentApprovedGuestCounts(java.util.Collection<String> cpfs);
 }

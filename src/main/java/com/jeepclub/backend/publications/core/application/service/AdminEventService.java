@@ -108,8 +108,8 @@ public class AdminEventService {
         publications.delete(id, actor, events.now());
     }
     public List<EventGuestRequest> guests(Long id) { events.locked(id); return operations.guests(id); }
-    public long visits(String cpf) { return operations.approvedVisits(cpf); }
-    public Map<String,Long> visits(Collection<String> cpfs) { return operations.approvedVisits(cpfs); }
+    public long currentApprovedGuestCount(String cpf) { return operations.currentApprovedGuestCount(cpf); }
+    public Map<String,Long> currentApprovedGuestCounts(Collection<String> cpfs) { return operations.currentApprovedGuestCounts(cpfs); }
     public EventGuestRequest createGuest(Long id, Long actor, String cpf, String guestName) {
         if(guestName==null || guestName.isBlank() || guestName.trim().length()>150)throw new IllegalArgumentException("Guest name required.");
         return events.requestGuest(events.locked(id),actor,null,cpf,true,guestName);

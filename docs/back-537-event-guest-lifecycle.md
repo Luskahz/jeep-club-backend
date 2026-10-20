@@ -20,6 +20,11 @@ transporte separado NONE/STANDBY/ALLOCATED, derivado de participação/origem e 
 associação atual. ADMIN ativo sem transporte significa STANDBY. Aprovação não
 significa que todo participante possui veículo. CPF é atributo, nunca chave.
 
+Solicitar MEMBER não reserva assento nem exige vaga disponível. Vários pedidos
+PENDING são permitidos mesmo com lotação completa; veículo ativo, propriedade e
+inscrição elegível continuam obrigatórios. Aprovação/alocação, inclusive seleção
+de oferta, continuam verificando capacidade sob lock. Rejeitar não consome vaga.
+
 | Origem/estado | Ação/ator | Participação resultante | Transporte resultante |
 | --- | --- | --- | --- |
 | MEMBER novo | Solicitação pelo titular com inscrição/veículo elegíveis | PENDING | NONE; veículo pretendido separado |
@@ -187,8 +192,17 @@ permite reativar, seguido de nova escolha de transporte. Ofertas WITHDRAWN são
 histórico e não podem ser selecionadas. Conflitos exigem reler estado/capacidade.
 
 guestsApproved inclui standby; guestsAllocated determina ocupação e guestsStandby
-expõe espera por transporte. Recorrência conta registros aprovados por CPF, sem
-deduplicar participações/Events nem afirmar presença física. Exports mantêm linhas
+expõe espera por transporte. currentApprovedGuestCount conta IDs de convidados com
+status atual APPROVED por CPF em todos os Events, inclusive o próprio registro e
+registros retidos após exclusão do Event. Inclui ADMIN standby; PENDING, REJECTED e
+CANCELLED não contam. Cancelar reduz o indicador; reativar ADMIN volta a contar
+aquele mesmo ID uma única vez. Não conta decisões históricas, Events distintos,
+visitas físicas ou check-ins. CPF repetido em IDs diferentes conta separadamente.
+approvedHistoricalVisits permanece no HTTP como alias depreciado com exatamente
+o mesmo valor atual, por compatibilidade; migrar o frontend para o nome explícito.
+Decisões anteriores continuam no histórico autorizado por guest ID, sem apagar
+avaliações para ajustar o indicador ou inventar agregado histórico não confiável.
+Exports mantêm linhas
 distintas por convidado e não confundem standby com vaga ocupada.
 Criação não é deduplicada por CPF: repetir um POST pode criar outro ID. A interface
 deve evitar retry cego/double submit e consultar os registros após resposta incerta.
@@ -241,3 +255,5 @@ efetivamente validados. Tentativas de desenvolvimento com falha não são aprova
 Os dados de teste são exclusivamente sintéticos locais;
 não foi disponibilizada cópia real autorizada para ensaio. Nenhum merge, deploy,
 push protegido, VPS ou banco compartilhado/produtivo é permitido por esta entrega.
+
+Auditoria final de aderência e refinamentos: [back-537-final-review.md](back-537-final-review.md).

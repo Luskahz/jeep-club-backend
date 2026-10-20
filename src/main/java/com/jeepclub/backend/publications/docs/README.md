@@ -322,6 +322,8 @@ somado ao membro e dependentes efetivamente alocados, com capacidade física rev
 
 MEMBER nasce PENDING com inscrição originadora e veículo pretendido imutáveis.
 Admin aprova/recusa individualmente; somente a aprovação associa transporte.
+Solicitação PENDING não reserva vaga e pode ser criada mesmo sem assentos livres;
+capacidade continua obrigatória na aprovação/alocação, não na solicitação.
 Membro titular/admin pode cancelar apenas aquele convidado. CANCELLED pessoal é
 terminal: novo ingresso exige novo pedido. Cancelar a inscrição encerra todos seus
 convidados pessoais, inclusive aprovados, sem alterar Billing nem transferi-los a standby.

@@ -239,16 +239,102 @@ class EventOperationsIntegrationTest {
         assertThatThrownBy(() -> member.register(e.getId(), 10L, List.of(new EventRegistration.Allocation(101L, true, List.of(1L,2L,3L)))))
             .hasMessageContaining("capacity exceeded");
     }
-    @Test void guestApprovalUsesLastSeatAndHistoryWarnsWithoutBlocking() {
+    @Test void guestApprovalUsesLastSeatAndCurrentApprovalCountDoesNotBlockRequests() {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
         var guest = member.requestGuest(e.getId(), 10L, 101L, "123.456.789-01");
         assertThat(admin.dashboard(e.getId()).totalPeople()).isEqualTo(2);
         admin.reviewGuest(e.getId(), guest.id(), 99L, true, null);
         var d = admin.dashboard(e.getId());
         assertThat(d.totalPeople()).isEqualTo(3); assertThat(d.availableSeats()).isZero();
-        assertThat(admin.visits(guest.cpf())).isGreaterThanOrEqualTo(1);
+        assertThat(admin.currentApprovedGuestCount(guest.cpf())).isGreaterThanOrEqualTo(1);
         assertThatThrownBy(() -> admin.reviewGuest(e.getId(), guest.id(), 99L, true, null)).hasMessageContaining("processed");
-        assertThatThrownBy(() -> member.requestGuest(e.getId(), 10L, 101L, "23456789012")).hasMessageContaining("capacity exceeded");
+        var pending = member.requestGuest(e.getId(), 10L, 101L, "23456789012");
+        assertThat(pending.status()).isEqualTo(EventGuestRequest.Status.PENDING);
+        assertThatThrownBy(() -> admin.reviewGuest(e.getId(), pending.id(), 99L, true, null)).hasMessageContaining("capacity exceeded");
+    }
+    @Test void fullVehicleAcceptsMultiplePendingRequestsWithoutReservingSeats() {
+        var e = freeEvent();
+        member.register(e.getId(),10L,List.of(new EventRegistration.Allocation(101L,true,List.of(201L,202L))));
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        for (int i=0;i<3;i++) {
+            var g=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+            assertThat(g.status()).isEqualTo(EventGuestRequest.Status.PENDING);
+            assertThat(g.vehicleId()).isNull();
+            assertThat(g.requestedVehicleId()).isEqualTo(101L);
+        }
+        var d=admin.dashboard(e.getId());
+        assertThat(d.guestsPending()).isEqualTo(3);
+        assertThat(d.guestsAllocated()).isZero();
+        assertThat(d.availableSeats()).isZero();
+        assertThat(d.totalPeople()).isEqualTo(3);
+        assertThat(admin.currentApprovedGuestCount(guestCpf(e))).isZero();
+    }
+    @Test void pendingRequestsExceedAvailableSeatsButApprovalAndCancellationControlCapacity() {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());
+        var a=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var b=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var c=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        assertThat(admin.dashboard(e.getId()).guestsPending()).isEqualTo(3);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isZero();
+        admin.reviewGuest(e.getId(),a.id(),99L,true,null);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        assertThatThrownBy(() -> admin.reviewGuest(e.getId(),b.id(),99L,true,null))
+            .isInstanceOf(EventOperationException.class).hasMessageContaining("capacity exceeded");
+        assertThat(guestState(e.getId(),b.id()).status()).isEqualTo(EventGuestRequest.Status.PENDING);
+        assertThat(admin.guestHistory(e.getId(),b.id())).extracting(EventGuestTransition::action).containsExactly("CREATED");
+        admin.reviewGuest(e.getId(),c.id(),99L,false,"Administrative rejection remains possible");
+        member.cancelGuest(e.getId(),a.id(),10L,"Personal guest withdrew");
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
+        admin.reviewGuest(e.getId(),b.id(),99L,true,null);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        assertThat(guestState(e.getId(),c.id()).status()).isEqualTo(EventGuestRequest.Status.REJECTED);
+    }
+    @Test void pendingRequestStillRequiresEligibleOwnedActiveVehicleAndValidGuest() {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),20L,101L,guestCpf(e))).hasMessageContaining("registration not found");
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,102L,guestCpf(e))).hasMessageContaining("not owned");
+        when(vehicles.findActive(101L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e))).hasMessageContaining("vehicle not found");
+        when(vehicles.findActive(101L)).thenReturn(Optional.of(new EventVehicleQuery.VehicleCapacity(101L,20L,3)));
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e))).hasMessageContaining("not owned");
+        when(vehicles.findActive(101L)).thenReturn(Optional.of(new EventVehicleQuery.VehicleCapacity(101L,10L,3)));
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,"invalid")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e)," ")).isInstanceOf(IllegalArgumentException.class);
+        member.cancel(e.getId(),10L);
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e))).hasMessageContaining("not owned");
+        assertThat(admin.guests(e.getId())).isEmpty();
+    }
+    @Test void currentApprovedCountsAreRecordsNotAttendanceOrHistoricalDecisions() {
+        var e=freeEvent();var another=freeEvent();String cpf=guestCpf(e);
+        member.register(e.getId(),10L,memberOnly());
+        var personal=member.requestGuest(e.getId(),10L,101L,cpf);
+        var administrative=admin.createGuest(e.getId(),99L,cpf);
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        admin.allocateGuest(e.getId(),administrative.id(),101L,null,99L,"Direct allocation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        admin.cancelGuest(e.getId(),administrative.id(),99L,"Cancelled");
+        admin.cancelGuest(e.getId(),administrative.id(),99L,"Repeated cancellation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isZero();
+        admin.reactivateGuest(e.getId(),administrative.id(),99L,"Return to standby");
+        admin.reactivateGuest(e.getId(),administrative.id(),99L,"Repeated reactivation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        admin.reviewGuest(e.getId(),personal.id(),99L,true,null);
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(2);
+        member.cancelGuest(e.getId(),personal.id(),10L,"Personal cancellation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        var sameEvent=admin.createGuest(e.getId(),99L,cpf);
+        var otherEvent=admin.createGuest(another.getId(),99L,cpf);
+        assertThat(sameEvent.id()).isNotEqualTo(otherEvent.id()).isNotEqualTo(administrative.id());
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(3);
+        assertThat(admin.currentApprovedGuestCounts(List.of(cpf,cpf))).containsEntry(cpf,3L).hasSize(1);
+        assertThat(admin.currentApprovedGuestCounts(List.of())).isEmpty();
+        assertThat(admin.guestHistory(e.getId(),personal.id())).extracting(EventGuestTransition::action)
+            .containsExactly("CREATED","APPROVED","CANCELLED");
+        assertThat(admin.guestHistory(e.getId(),administrative.id())).extracting(EventGuestTransition::action)
+            .containsExactly("CREATED","ALLOCATED","CANCELLED","REACTIVATED");
+        assertThat(guestState(e.getId(),personal.id()).reviewerId()).isEqualTo(99L);
     }
     @Test void guestCpfMayRepeatAndRejectedGuestDoesNotOccupySeat() {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
@@ -575,7 +661,11 @@ class EventOperationsIntegrationTest {
         var b = member.requestGuest(e.getId(), 10L, 101L, "89012345678");
         var outcomes = race(List.of(() -> admin.reviewGuest(e.getId(), a.id(), 99L, true, null), () -> admin.reviewGuest(e.getId(), b.id(), 99L, true, null)));
         assertThat(outcomes.stream().filter(EventGuestRequest.class::isInstance)).hasSize(1);
+        assertThat(outcomes.stream().filter(EventOperationException.class::isInstance).map(EventOperationException.class::cast))
+            .extracting(EventOperationException::getCode).containsExactly("EVENT_VEHICLE_CAPACITY_EXCEEDED");
         assertThat(admin.dashboard(e.getId()).guestsApproved()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).guestsPending()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
     }
     @Test void concurrentRideSelectionAndRepeatedApprovalAreSerialized() throws Exception {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
@@ -601,7 +691,7 @@ class EventOperationsIntegrationTest {
         admin.reviewGuest(e.getId(),a.id(),99L,true,null);admin.reviewGuest(e.getId(),b.id(),99L,true,null);
         assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(2);
         assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
-        assertThat(admin.visits(guestCpf(e))).isEqualTo(2);
+        assertThat(admin.currentApprovedGuestCount(guestCpf(e))).isEqualTo(2);
         assertThat(admin.guests(e.getId())).extracting(EventGuestRequest::id).containsExactly(a.id(),b.id());
     }
     @Test void personalDecisionsRemainIndependentAndRejectedHistoryIsNotCancellation() {

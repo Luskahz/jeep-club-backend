@@ -132,10 +132,10 @@ public class EventOperationsAdapter implements EventOperationsRepository {
         e.setReviewerId(r.reviewerId()); e.setCreatedAt(r.createdAt()); e.setReviewedAt(r.reviewedAt()); e.setRejectionReason(r.rejectionReason());
         return r.identified(guests.saveAndFlush(e).getId());
     }
-    public long approvedVisits(String cpf) { return guests.countByCpfAndStatus(cpf, "APPROVED"); }
-    public Map<String,Long> approvedVisits(Collection<String> cpfs) {
+    public long currentApprovedGuestCount(String cpf) { return guests.countByCpfAndStatus(cpf, "APPROVED"); }
+    public Map<String,Long> currentApprovedGuestCounts(Collection<String> cpfs) {
         var result = new HashMap<String,Long>();
-        if (!cpfs.isEmpty()) guests.approvedVisits(cpfs).forEach(row -> result.put((String) row[0], (Long) row[1]));
+        if (!cpfs.isEmpty()) guests.currentApprovedGuestCounts(cpfs).forEach(row -> result.put((String) row[0], (Long) row[1]));
         return Map.copyOf(result);
     }
     public List<EventRideOffer> offers(Long id) {

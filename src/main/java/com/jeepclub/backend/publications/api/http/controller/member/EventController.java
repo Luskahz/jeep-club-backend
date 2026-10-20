@@ -77,7 +77,7 @@ public class EventController {
     @PostMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE")
-    @Operation(summary="Request guest for own allocated vehicle")
+    @Operation(summary="Request guest for own allocated vehicle", description="Creates PENDING without reserving a seat. Multiple requests are allowed even when the vehicle has no available seats. Ownership, active vehicle and eligible registration remain required. Capacity is checked atomically on administrative approval.")
     @ApiResponse(responseCode="201", description="Request guest for own allocated vehicle")
     @ResponseStatus(HttpStatus.CREATED)
     public EventGuestResponseDTO guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
