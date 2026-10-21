@@ -1,5 +1,56 @@
 # Vehicles
 
+## Galeria vigente — BACK-525
+
+Vehicle possui galeria própria imutável de zero a cinco imagens, com ordem,
+principal única quando não vazia e revisão esperada para substituição integral.
+photo é alias de compatibilidade da capa; images/galleryRevision são canônicos
+nos detalhes e no formulário de edição. V8 preserva foto única e URLs legadas,
+inclusive no histórico, sem remover a coluna antiga. Flyway governa o schema;
+Hibernate valida. Não há storage paralelo.
+
+Criação multipart member/admin usa vehicle JSON, photos (até cinco arquivos de
+5 MiB) e gallery JSON opcional; sem metadados, a primeira é principal. A part
+photo única continua temporariamente aceita, sem combinação com as novas parts.
+JSON sem foto permanece válido. Os services existentes usam ImageMediaCommand
+e o colaborador interno VehicleGalleryAssembler.
+
+PUT /vehicles/gallery/member/{vehicleId} e /admin/{vehicleId} aceita JSON ou
+multipart gallery + photos. expectedRevision e images são obrigatórios; [] limpa.
+Omissão de photo na edição cadastral preserva toda a galeria; o alias legado não
+pode apagar silenciosamente uma galeria múltipla nem sobrescrever galeria já alterada (revisão maior que zero). Admin exige
+VEHICLES_VEHICLE_UPDATE e os guards de titular/lifecycle. GET histórico
+/vehicles/gallery/history/admin/{historyId} exige VEHICLES_VEHICLE_EXPORT.
+
+Paginação consulta parents e busca imagens em lote; exports usam a coleção para
+o indicador sem expor chaves. Arquivos antigos/compartilhados são retidos, somente
+novos são compensados em rollback. Fotos privadas de Dependents continuam fora
+do resolvedor público. Request total: 30 MiB; imagem: 5 MiB; recibo Billing: 10 MiB.
+
+Contratos, exemplos 0/1/5, V8/backfill, concorrência, limites, frontend e rollout:
+docs/back-525-vehicle-gallery.md na raiz. Escritores de versões anteriores não
+podem coexistir com manutenção da galeria. Esta documentação não autoriza deploy.
+
+
+## Lifecycle vigente — BACK-512
+
+Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
+com histórico independente, e não um status. As regras por agregado, novas rotas,
+permissions, migration V5, limites de retenção e checklist de rollout estão em
+`docs/back-512-entity-lifecycle.md` na raiz do repositório. V1–V4 não foram alteradas.
+Flyway governa o schema; Hibernate usa validate. Não usar ddl-auto=update.
+
+
+## Upload na criação — BACK-510
+
+Criação member/admin aceita multipart com `vehicle` JSON validado e `photo`
+opcional (JPEG/PNG/WebP até 5 MiB), em uma única chamada. Criação JSON permanece
+disponível sem foto; `photo`/`storageKey` deixaram o DTO de criação e são rejeitados
+como campos desconhecidos. Services usam `ImageMediaCommand` do Platform; rollback
+compensa somente arquivo novo. Referências antigas/compartilhadas e histórico são
+preservados. A BACK-525 amplia esse transporte para galeria. A edição cadastral permanece parcial e a manutenção integral tem contrato próprio. Guia de frontend,
+evidências, riscos e rollout: `docs/back-510-media-orchestration.md` na raiz.
+
 Leia primeiro a [governança global](../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../docs/architecture/feature-development-rules.md).
@@ -24,7 +75,7 @@ ativo e usam as authorities `VEHICLES_VEHICLE_CREATE`,
 
 ## Modelo e identificadores
 
-`Vehicle` contém apelido, referência de foto, placa, RENAVAM, marca, modelo,
+`Vehicle` contém apelido, galeria/capa derivada, placa, RENAVAM, marca, modelo,
 anos de fabricação e modelo, cor, capacidade, combustível, cilindrada,
 capacidade de reboque, `ownerId`, status e timestamps. `FuelType` possui
 `GASOLINE`, `ETHANOL`, `FLEX`, `DIESEL`, `ELECTRIC` e `HYBRID`.
@@ -58,12 +109,11 @@ em vez de vazar `DataIntegrityViolationException`/SQL para o cliente.
 
 ## Criação e edição atuais
 
-Todo veículo criado começa `ACTIVE`. A rota de membro usa diretamente o
-`userId` já autenticado e não consulta `UserPort`; a validação do token vigente
-já exige User administrativamente ativo, mas Vehicles não repete essa consulta
-no caso de uso. A criação administrativa usa `UserPort.existsById` para
+Todo veículo criado começa `ACTIVE`. A rota de membro usa o userId autenticado e a criação agora também valida
+UserPort, adquirindo o lock público de Identity para confirmar elegibilidade
+atual até o commit, fechando a corrida entre autenticação e escrita. A criação administrativa usa `UserPort.existsById` para
 rejeitar proprietário inexistente e `UserPort.existsActiveById` para rejeitar
-proprietário existente porém administrativamente `DISABLED`.
+proprietário existente porém administrativamente `INACTIVE`.
 
 A edição HTTP continua um `PUT`, agora com semântica de atualização parcial:
 campo omitido do JSON preserva o valor atual do veículo; campo presente com
@@ -98,32 +148,16 @@ a remoção. O histórico não tem API de consulta e não reserva placa ou
 RENAVAM; após a remoção operacional, os identificadores podem ser usados por
 um novo veículo. Uma segunda exclusão que perde a corrida pelo lock recebe
 conflito de veículo já removido (`VehicleAlreadyDeletedException`, 409). Os
-services e listagens só expõem `ACTIVE`; `DetailResponseDTO.status` documenta
-`ACTIVE` como único valor no contrato público.
+listagens padrão expõem ACTIVE; consultas autorizadas por ID e filtros explícitos incluem INACTIVE/ARCHIVED, exceto exclusões legadas.
 
-`VehicleStatus` ainda declara `SOFT_DELETED`, mas exclusivamente como legado
-de compatibilidade de leitura: nenhum caso de uso grava esse valor (o método
-de domínio que o produzia, `Vehicle.softDelete(Instant)`, foi removido por
-não ter mais nenhum caller), e não existe campo `deletedAt`/`disabledAt` na
-operação atual — esses campos foram removidos do domínio (`Vehicle`), da
-entidade operacional (`VehicleEntity`) e da entidade de histórico
-(`VehicleHistoryEntity`, que já tinha seu próprio `deletedAt` do hard delete,
-correto e preservado; o `disabledAt` copiado da entidade operacional era
-puro peso morto). A única razão para manter o valor no enum é não quebrar a
-leitura de uma linha pré-existente que porventura ainda tenha
-`status = 'SOFT_DELETED'` no banco: `@Enumerated(EnumType.STRING)` falharia
-ao desserializar essa linha se o valor fosse removido do enum, e uma consulta
-por ID que a alcançasse quebraria com erro não controlado em vez do 404 atual.
-Como hoje nenhuma constraint impede a leitura de uma linha assim por ID,
-`findActiveVehicle` (member e admin) já trata qualquer status diferente de
-`ACTIVE` — incluindo esse legado — como veículo não encontrado, então o
-registro nunca fica visível, editável ou reativável pelas rotas atuais.
-`VehicleRepositoryAdapterTest.legacySoftDeletedRowIsReadWithoutMappingFailure`
-e `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
-caracterizam essa compatibilidade explicitamente. Como o projeto não usa
-migrations versionadas, não há cleanup automático de linhas legadas; o banco
-de desenvolvimento pode ser recriado quando necessário, e a estratégia acima
-cobre o caso de uma instância que não seja recriada.
+VehicleStatus contém ACTIVE, INACTIVE e ARCHIVED. A V5 transforma o valor legado
+SOFT_DELETED em ARCHIVED com legacy_deleted=true e archived_at derivado dos
+timestamps existentes. Essas linhas continuam ocultas e não podem ser reativadas.
+Fotos, URLs e identificadores legados são preservados. Cadastros arquivados por
+comando atual permanecem legíveis ao proprietário/administrador, podem voltar a
+INACTIVE por unarchive e só depois a ACTIVE por activate. Filtros paginados são
+aplicados no banco; o padrão das listagens continua ACTIVE. O histórico de
+exclusão preserva status, archived_at e legacy_deleted.
 
 ## Invariantes do agregado
 
@@ -155,10 +189,9 @@ para não inventar, silenciosamente, uma regra de negócio mais restritiva para
 `create` do que o contrato atual permite. Unificar esses limites é uma
 evolução de contrato HTTP fora do escopo desta consolidação.
 
-Campos sem regra observável no contrato atual (`nickname`, `photo`, e
-comprimento máximo de string) permanecem sem validação de domínio, também
-para não inventar regra nova; essas garantias continuam vindo do Bean
-Validation dos DTOs.
+Referências legadas são reconstruídas sem regras de upload novo; alterações
+novas usam o contrato global e a galeria protege suas invariantes. Os demais
+comprimentos seguem os DTOs e o mapeamento existente.
 
 `VehicleEditResolver` continua resolvendo presença/ausência/null explícito
 antes de chamar `Vehicle.update`; as invariantes acima são a segunda camada
@@ -168,25 +201,20 @@ de proteção do agregado, não uma duplicata da semântica de edição parcial.
 
 `UserPort` é uma porta consumer-owned de Vehicles. O `VehicleIdentityAdapter`
 a implementa por meio de `identity.api.module.UserQuery.existsById` e
-`UserQuery.isAdministrativelyActive`; hoje ela é consumida somente na criação
-administrativa. `vehicles.api.module.EventVehicleQuery` expõe somente ID, ownerId
+`UserQuery.isAdministrativelyActive`; é consumida na criação member/admin e manutenção integral da galeria, com lock público de Identity. `vehicles.api.module.EventVehicleQuery` expõe somente ID, ownerId
 e `seatingCapacity` de veículos ativos, incluindo consulta em lote. A capacidade
 canônica existente representa todas as pessoas, incluindo motorista; não foi
 criado campo paralelo. Publications valida alocação usando esse contrato.
-Os fluxos atuais de edição e hard delete de Vehicle não consultam inscrições de
-Event. Uma redução posterior de `seatingCapacity` ou exclusão do veículo não
-revalida nem remove alocações já persistidas em Publications.
+Hard delete usa VehicleDeletionGuards da BACK-512 e recusa vínculos impeditivos.
+Galeria não altera capacidade ou alocações; nenhum repository privado de outro
+módulo nem domínio privado de Publications é acessado.
 Não há acesso direto a repository, entity ou service interno de Identity.
 
 `VehicleEntity`, `VehicleHistoryEntity`, repositories JPA, mappers e o adapter
 de persistência ficam em `infra.persistence`. A entidade operacional mantém
 placa e RENAVAM únicos com constraints nomeadas (`uk_vehicle_plate`,
-`uk_vehicle_renavam`, preservadas sem alteração desde a BACK-328). O schema
-atual continua representado pelas entities/Hibernate, sem migration
-versionada introduzida por este módulo; não há backfill de dados legados
-eventualmente não canônicos, consistente com a política atual do projeto de
-recriar o banco de desenvolvimento quando necessário em vez de introduzir
-migrations.
+`uk_vehicle_renavam`, preservadas sem alteração desde a BACK-328). Flyway é proprietário do DDL e Hibernate valida o schema. A BACK-510
+não introduz migration nem backfill de identificadores; V1–V4 ficam intactas.
 
 ### Mapeamento JPA endurecido pela BACK-331
 
@@ -235,9 +263,9 @@ edição parcial. `VehicleTest` cobre a canonicalização de placa/RENAVAM em
 duplicidade concorrente chamando `save` duas vezes com o mesmo valor canônico
 sem pré-checagem entre as chamadas, caracterizando a tradução de
 `DataIntegrityViolationException` para os erros de negócio de placa/RENAVAM, e
-`legacySoftDeletedRowIsReadWithoutMappingFailure` prova que uma linha
-pré-existente com `status = SOFT_DELETED` inserida diretamente via JPA (sem
-passar por `Vehicle.create`) ainda é lida sem falha de mapeamento;
+`legacySoftDeletedRowIsReadWithoutMappingFailure` caracteriza o registro após
+a V5, com ARCHIVED e legacy_deleted=true. A transformação do valor antigo
+SOFT_DELETED é validada no MySQL real por MySqlMigrationIT;
 `AdminVehicleServiceTest.hidesLegacySoftDeletedVehicleAsNotFoundWithoutFailingOnRead`
 e `VehicleServiceTest.hidesSoftDeletedVehicle` provam que esse registro é
 tratado como 404 pelos dois services. Testes de contrato caracterizam o

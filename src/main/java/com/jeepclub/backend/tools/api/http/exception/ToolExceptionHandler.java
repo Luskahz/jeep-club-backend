@@ -15,6 +15,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.tools")
 public class ToolExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
+        return buildErrorResponse("TOOL_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(com.jeepclub.backend.tools.core.domain.exception.ToolLifecycleConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleLifecycleConflict(com.jeepclub.backend.tools.core.domain.exception.ToolLifecycleConflictException exception) {
+        return buildErrorResponse("TOOL_LIFECYCLE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
 
     @ExceptionHandler(ToolOwnerNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleOwnerNotFound(ToolOwnerNotFoundException exception) {

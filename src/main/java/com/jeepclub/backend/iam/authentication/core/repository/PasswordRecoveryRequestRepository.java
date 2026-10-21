@@ -23,6 +23,7 @@ public interface PasswordRecoveryRequestRepository {
 
     /** Every open e-mail link must be revoked when Identity changes the recipient. */
     List<PasswordRecoveryRequest> findOpenEmailTokensByUserIdForUpdate(Long userId);
+    List<PasswordRecoveryRequest> findAllOpenByUserIdForUpdate(Long userId);
 
     Optional<PasswordRecoveryRequest> findByTokenHash(
             String tokenHash

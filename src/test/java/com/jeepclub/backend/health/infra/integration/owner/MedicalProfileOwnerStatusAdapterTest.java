@@ -26,7 +26,7 @@ class MedicalProfileOwnerStatusAdapterTest {
 
     @BeforeEach
     void setUp() {
-        adapter = new MedicalProfileOwnerStatusAdapter(userQuery, dependentsQuery);
+        adapter = new MedicalProfileOwnerStatusAdapter(userQuery, dependentsQuery, org.mockito.Mockito.mock(com.jeepclub.backend.iam.identity.api.module.UserIdentityLock.class), org.mockito.Mockito.mock(com.jeepclub.backend.dependents.api.module.DependentLifecycleLock.class));
     }
 
     @Test

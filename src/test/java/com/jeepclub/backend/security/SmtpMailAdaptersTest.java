@@ -30,15 +30,14 @@ class SmtpMailAdaptersTest {
     }
 
     @Test
-    void membershipActivationBuildsFrontendLinkAndUsesJavaMailSender() {
+    void membershipActivationDeliversExactlyThePreparedFrontendLink() {
         JavaMailSender javaMailSender = mock(JavaMailSender.class);
         SmtpMemberActivationMailSender adapter = new SmtpMemberActivationMailSender(
-                javaMailSender,
-                () -> "https://app.example.com/membership/activate"
+                javaMailSender
         );
         ReflectionTestUtils.setField(adapter, "from", "no-reply@example.com");
 
-        adapter.sendActivationLink("member@example.com", "Member", "raw-token");
+        adapter.sendActivationLink("member@example.com", "Member", "https://app.example.com/membership/activate?token=raw-token");
 
         SimpleMailMessage message = capturedMessage(javaMailSender);
         assertThat(message.getFrom()).isEqualTo("no-reply@example.com");

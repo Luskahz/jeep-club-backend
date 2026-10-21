@@ -208,7 +208,7 @@ class AdminUserUpdateIntegrationTest {
     @Test void disabledTargetCanBeCorrectedWithoutEnablingAccount() throws Exception {
         admin.disable(before.id());
         patchUser("{\"name\":\"Disabled corrected\",\"cpf\":\"11144477735\"}").andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("DISABLED"));
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
         assertThat(users.findById(before.id()).orElseThrow().disabledAt()).isNotNull();
     }
 

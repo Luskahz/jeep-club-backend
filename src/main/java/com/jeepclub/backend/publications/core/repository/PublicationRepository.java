@@ -12,5 +12,6 @@ public interface PublicationRepository {
     Publication save(Publication publication);
     Optional<Publication> findById(Long id);
     Optional<Publication> findByIdForUpdate(Long id);
+    Optional<com.jeepclub.backend.publications.core.domain.model.Event> findEventByIdForUpdate(Long id);
     void delete(Long id, Long deletedByUserId, Instant deletedAt);
 }

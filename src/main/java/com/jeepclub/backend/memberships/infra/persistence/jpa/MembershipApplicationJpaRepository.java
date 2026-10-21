@@ -12,6 +12,13 @@ import java.util.Optional;
 public interface MembershipApplicationJpaRepository
         extends JpaRepository<MembershipApplicationEntity, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select a from MembershipApplicationEntity a where a.id = :id")
+    Optional<MembershipApplicationEntity> findByIdForUpdate(Long id);
+
+    @org.springframework.data.jpa.repository.Query("select a.id from MembershipApplicationEntity a where a.createdUserId = :userId and a.status = :status")
+    Optional<Long> findIdByCreatedUserIdAndStatus(Long userId, MembershipApplicationStatus status);
+
     boolean existsByCreatedUserId(Long createdUserId);
 
     Optional<MembershipApplicationEntity> findByCpf(String cpf);

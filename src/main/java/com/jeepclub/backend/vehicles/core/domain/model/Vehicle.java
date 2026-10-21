@@ -1,5 +1,6 @@
 package com.jeepclub.backend.vehicles.core.domain.model;
 
+import com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException;
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
 import lombok.AccessLevel;
@@ -20,7 +21,7 @@ public class Vehicle {
 
     private Long id;
     private String nickname;            // Nome que o membro da para o proprio veiculo
-    private String photo;               // Foto unica
+    private VehicleGallery gallery;     // Canonical media; photo is derived for legacy readers.
     private String plate;               // Placa do veículo
     private String renavam;             // Código RENAVAM (específico para o Brasil)
     private String brand;               // Marca (ex: Toyota, Ford)
@@ -38,6 +39,9 @@ public class Vehicle {
 
     private Instant createdAt;
     private Instant updatedAt;
+    private Instant archivedAt;
+    private boolean legacyDeleted;
+    private long galleryRevision;
 
 
     public static Vehicle create(
@@ -72,7 +76,7 @@ public class Vehicle {
         return new Vehicle(
                 null,
                 nickname,
-                photo,
+                VehicleGallery.legacy(photo),
                 requireCanonicalPlate(plate),
                 requireCanonicalRenavam(renavam),
                 brand,
@@ -87,7 +91,10 @@ public class Vehicle {
                 towing,
                 ownerId,
                 createdAt,
-                null
+                null,
+                null,
+                false,
+                0L
         );
 
     }
@@ -112,6 +119,41 @@ public class Vehicle {
             Instant createdAt,
             Instant updatedAt
     ) {
+        return reconstitute(id, nickname, photo, plate, renavam, brand, model, manufacturingYear, modelYear, color, seatingCapacity, fuelType, engineDisplacement, status, towing, ownerId, createdAt, updatedAt, null, false);
+    }
+
+    public static Vehicle reconstitute(
+            Long id,
+            String nickname,
+            String photo,
+            String plate,
+            String renavam,
+            String brand,
+            String model,
+            int manufacturingYear,
+            int modelYear,
+            String color,
+            int seatingCapacity,
+            FuelType fuelType,
+            double engineDisplacement,
+            VehicleStatus status,
+            Boolean towing,
+            Long ownerId,
+            Instant createdAt,
+            Instant updatedAt,
+            Instant archivedAt,
+            boolean legacyDeleted
+    ) {
+        if ((status == VehicleStatus.ARCHIVED) != (archivedAt != null)) {
+            throw new IllegalArgumentException("Archived state requires its archival timestamp only.");
+        }
+        if (archivedAt != null && (createdAt == null || archivedAt.isBefore(createdAt))) {
+            throw new IllegalArgumentException("archivedAt cannot be before createdAt.");
+        }
+        if (legacyDeleted && status != VehicleStatus.ARCHIVED) {
+            throw new IllegalArgumentException("Historically deleted vehicle must remain archived.");
+        }
+
         validateId(id);
         validateOwnerId(ownerId);
         requireText(brand, "brand");
@@ -129,7 +171,7 @@ public class Vehicle {
         Vehicle vehicle = new Vehicle();
         vehicle.id = id;
         vehicle.nickname = nickname;
-        vehicle.photo = photo;
+        vehicle.gallery = VehicleGallery.legacy(photo);
         vehicle.plate = requireCanonicalPlate(plate);
         vehicle.renavam = requireCanonicalRenavam(renavam);
         vehicle.brand = brand;
@@ -145,6 +187,8 @@ public class Vehicle {
         vehicle.ownerId = ownerId;
         vehicle.createdAt = createdAt;
         vehicle.updatedAt = updatedAt;
+        vehicle.archivedAt = archivedAt;
+        vehicle.legacyDeleted = legacyDeleted;
         return vehicle;
     }
 
@@ -164,6 +208,9 @@ public class Vehicle {
             Boolean towing,
             Instant now
     ) {
+        if (status != VehicleStatus.ACTIVE) {
+            throw new VehicleLifecycleConflictException("Only active vehicles can be edited.");
+        }
         requireText(brand, "brand");
         requireText(model, "model");
         validateYear(manufacturingYear, "manufacturingYear");
@@ -175,8 +222,12 @@ public class Vehicle {
         Objects.requireNonNull(now, "now is required.");
         validateUpdatedAtNotBeforeCreatedAt(this.createdAt, now);
 
+        if (!Objects.equals(getPhoto(),photo)) {
+            assertLegacyPhotoChangeAllowed(photo);
+            this.gallery=VehicleGallery.legacy(photo);
+            this.galleryRevision++;
+        }
         this.nickname = nickname;
-        this.photo = photo;
         this.plate = requireCanonicalPlate(plate);
         this.renavam = requireCanonicalRenavam(renavam);
         this.brand = brand;
@@ -189,6 +240,42 @@ public class Vehicle {
         this.engineDisplacement = engineDisplacement;
         this.towing = towing;
         this.updatedAt = now;
+    }
+
+
+    public String getPhoto() { return gallery.primaryReference(); }
+    public java.util.List<VehicleImage> getImages() { return gallery.images(); }
+
+    /** Persistence-only reconstruction, after the ordinary aggregate invariants were checked. */
+    public static Vehicle restoreGallery(Vehicle vehicle,VehicleGallery gallery,long revision) {
+        validateId(vehicle.id);
+        if(revision<0) throw new IllegalArgumentException("Gallery revision cannot be negative.");
+        vehicle.gallery=Objects.requireNonNull(gallery);vehicle.galleryRevision=revision;
+        return vehicle;
+    }
+
+    public void initializeGallery(VehicleGallery gallery) {
+        if(id!=null) throw new IllegalStateException("Only a new vehicle can initialize its gallery.");
+        this.gallery=Objects.requireNonNull(gallery);
+    }
+
+    public boolean replaceGallery(VehicleGallery gallery,long expectedRevision,Instant now) {
+        if(status!=VehicleStatus.ACTIVE || legacyDeleted) throw new VehicleLifecycleConflictException("Only active vehicles can change their gallery.");
+        Objects.requireNonNull(gallery);Objects.requireNonNull(now);
+        validateUpdatedAtNotBeforeCreatedAt(createdAt,now);
+        if(this.gallery.equals(gallery)) return false;
+        requireGalleryRevision(expectedRevision);
+        this.gallery=gallery;this.galleryRevision++;this.updatedAt=now;return true;
+    }
+
+    public void requireGalleryRevision(long expectedRevision) {
+        if(expectedRevision!=galleryRevision) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException("Vehicle gallery changed; reload it before retrying.");
+    }
+
+    /** A version-unaware writer cannot overwrite an aggregate that has already changed its gallery. */
+    public void assertLegacyPhotoChangeAllowed(String reference) {
+        if(!Objects.equals(getPhoto(),reference) && (gallery.images().size()>1 || galleryRevision!=0))
+            throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException("Use the versioned gallery contract to change a multiple or previously edited gallery.");
     }
 
     /**
@@ -266,5 +353,55 @@ public class Vehicle {
         if (updatedAt != null && updatedAt.isBefore(createdAt)) {
             throw new IllegalStateException("updatedAt cannot be before createdAt.");
         }
+    }
+
+    public boolean archive(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (status == VehicleStatus.ARCHIVED) return false;
+        status = VehicleStatus.ARCHIVED;
+        archivedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean unarchive(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (legacyDeleted) throw new VehicleLifecycleConflictException("Historically deleted vehicle cannot be restored.");
+        if (status == VehicleStatus.INACTIVE) return false;
+        if (status != VehicleStatus.ARCHIVED) {
+            throw new VehicleLifecycleConflictException("Only an archived record can be unarchived.");
+        }
+        status = VehicleStatus.INACTIVE;
+        archivedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void assertNotArchived() {
+        if (status == VehicleStatus.ARCHIVED) {
+            throw new VehicleLifecycleConflictException("Archived record requires explicit unarchive before this operation.");
+        }
+    }
+
+    public boolean activate(Instant now) {
+        assertNotArchived();
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (status == VehicleStatus.ACTIVE) return false;
+        status = VehicleStatus.ACTIVE;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean deactivate(Instant now) {
+        assertNotArchived();
+        Objects.requireNonNull(now, "now cannot be null");
+        validateUpdatedAtNotBeforeCreatedAt(createdAt, now);
+        if (status == VehicleStatus.INACTIVE) return false;
+        status = VehicleStatus.INACTIVE;
+        updatedAt = now;
+        return true;
     }
 }

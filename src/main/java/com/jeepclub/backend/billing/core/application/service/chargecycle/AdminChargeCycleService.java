@@ -59,7 +59,8 @@ public class AdminChargeCycleService {
             LocalDate dueDate,
             Long generatedByUserId
     ) {
-        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(chargeDefinitionId);
+        ChargeDefinition chargeDefinition = chargeDefinitionRepository.findByIdForUpdate(chargeDefinitionId)
+                .orElseThrow(() -> new ChargeDefinitionNotFoundException("Charge definition not found."));
 
         if (!chargeDefinition.isActive()) {
             throw new InactiveChargeDefinitionException(
@@ -75,7 +76,9 @@ public class AdminChargeCycleService {
             );
         }
 
-        Set<Long> targetUserIds = resolveTargetUserIds(chargeDefinitionId);
+        Set<Long> targetUserIds = resolveTargetUserIds(chargeDefinitionId).stream().sorted()
+                .filter(billingMembershipPort::existsActiveMemberByUserIdForUpdate)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
 
         if (targetUserIds.isEmpty()) {
             throw new ChargeCycleWithoutAssignmentsException(
@@ -135,16 +138,28 @@ public class AdminChargeCycleService {
     ) {
         Objects.requireNonNull(canceledByUserId, "canceledByUserId cannot be null");
 
-        ChargeCycle chargeCycle = findChargeCycleOrThrow(id);
+        ChargeCycle chargeCycle = findChargeCycleForUpdateOrThrow(id);
         Instant now = Instant.now(clock);
 
         chargeCycle.cancel(canceledByUserId, now);
 
-        // Match confirmation lock order: payments before charges. Never overwrite a concurrent payment.
+        return cancelFinancialObligations(chargeCycle, canceledByUserId, now);
+    }
+
+    /** Only the Event-scoped command calls this; generic cancellation keeps its original rules. */
+    @Transactional
+    public ChargeCycleResult cancelForEvent(Long id, Long actorId) {
+        var cycle = findChargeCycleForUpdateOrThrow(id);
+        var now = Instant.now(clock);
+        if (!cycle.cancelForEvent(actorId, now)) return ChargeCycleResult.from(cycle);
+        return cancelFinancialObligations(cycle, actorId, now);
+    }
+
+    private ChargeCycleResult cancelFinancialObligations(ChargeCycle chargeCycle, Long canceledByUserId, Instant now) {
+        Long id = chargeCycle.getId();
+        // All confirmations/cancellations lock cycle -> payment -> charge.
         var chargeIds = memberChargeRepository.findByChargeCycleId(id).stream().map(MemberCharge::getId).toList();
-        memberPaymentRepository.findByMemberChargeIdIn(chargeIds).stream()
-                .sorted(java.util.Comparator.comparing(com.jeepclub.backend.billing.core.domain.model.MemberPayment::getId))
-                .forEach(payment -> memberPaymentRepository.findByIdForUpdate(payment.getId()));
+        chargeIds.stream().sorted().forEach(memberPaymentRepository::findByMemberChargeIdForUpdate);
 
         cancelOpenMemberCharges(id, now);
 
@@ -166,7 +181,7 @@ public class AdminChargeCycleService {
     ) {
         Objects.requireNonNull(finishedByUserId, "finishedByUserId cannot be null");
 
-        ChargeCycle chargeCycle = findChargeCycleOrThrow(id);
+        ChargeCycle chargeCycle = findChargeCycleForUpdateOrThrow(id);
 
         chargeCycle.finish(
                 finishedByUserId,
@@ -185,7 +200,7 @@ public class AdminChargeCycleService {
     ) {
         Objects.requireNonNull(archivedByUserId, "archivedByUserId cannot be null");
 
-        ChargeCycle chargeCycle = findChargeCycleOrThrow(id);
+        ChargeCycle chargeCycle = findChargeCycleForUpdateOrThrow(id);
 
         chargeCycle.archive(
                 archivedByUserId,
@@ -318,6 +333,12 @@ public class AdminChargeCycleService {
                 .orElseThrow(() -> new ChargeCycleNotFoundException(
                         "Charge cycle not found."
                 ));
+    }
+
+    private ChargeCycle findChargeCycleForUpdateOrThrow(Long id) {
+        Objects.requireNonNull(id, "id cannot be null");
+        return chargeCycleRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ChargeCycleNotFoundException("Charge cycle not found."));
     }
 
     private static String normalizeCode(String code) {

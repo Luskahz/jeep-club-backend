@@ -1,0 +1,1134 @@
+{
+  "ticket": "BACK-525",
+  "date": "2026-10-19",
+  "branch": "feat/back-525-vehicle-gallery",
+  "baseBranch": "feat/back-524-dependent-photo",
+  "base": "3ea39a5347ea9212ddf185a5e4e427fa427068f6",
+  "previousPullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/109",
+  "codeCommit": "1d4b09346eb5deb5c1e2c409f154fcce5a88ece1",
+  "publication": {
+    "tracking": "Exact published-head CI recorded in PR and consolidated sprint audit; this file records final local source gates."
+  },
+  "environment": {
+    "java": "Microsoft OpenJDK17.0.18",
+    "os": "Windows",
+    "mysql": "8.0.46",
+    "database": "Local disposable Testcontainers only"
+  },
+  "gates": [
+    {
+      "name": "Full verify",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "log": "target/back-525-full-verify-final.log",
+      "result": "passed",
+      "logSha256": "da89987730251f09e6d7c7b3a3ad79e2bbf5fce46c9494da95c09b73a8175b46",
+      "tests": 2100,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.identity.api.controller.AdminUserUpdateIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.time.TimeConfigPrecisionTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.contract.VehiclesOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleAdminSecurityIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleEditContractCharacterizationTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleLifecycleIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaMultipartHttpIntegrationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationIntegrationTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleOwnerAuthenticationIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.http.validation.RenavamValidatorTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.query.EventVehicleQueryServiceTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.internal.VehicleEditResolverTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleServiceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleTest",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.infra.persistence.adapter.VehicleRepositoryAdapterTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Complete MySQL profile",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "log": "target/back-525-mysql-full-final.log",
+      "result": "passed",
+      "logSha256": "351b5f605c3c34eab23c3fe02bc18251e2e763cb6b299ca1c3a8fd916cef412e",
+      "tests": 219,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ],
+      "executionDirectory": "target/back525-mysql-source-1d4b0934, an unmodified git archive of source commit 1d4b09346eb5deb5c1e2c409f154fcce5a88ece1; separate target from full verify"
+    },
+    {
+      "name": "Future migration",
+      "command": "bash deploy/test-future-migration.sh (unchanged script via Windows adapter, isolated committed Git archive)",
+      "log": "target/back-525-forward-final.log",
+      "result": "passed",
+      "logSha256": "337c17be27744316e06f6942ca7aaa9c0d4d3e2afe085f2a4ca2d942a6642295",
+      "tests": 219,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ],
+      "temporaryMigration": "V9 only in isolated committed Git archive; release migration is V8"
+    }
+  ],
+  "developmentAttempts": [
+    {
+      "name": "First full verify interrupted during session pause; no final result",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-full-verify-interrupted.log",
+      "result": "interrupted_or_incomplete",
+      "logSha256": "4d846f7b7d1f56c0253be302cc6d6572752e9a32a52790886040b57f630ce86c",
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.identity.api.controller.AdminUserUpdateIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "First isolated forward gate interrupted during session pause; no final result",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-forward-interrupted.log",
+      "result": "interrupted_or_incomplete",
+      "logSha256": "67c31614e41819b7aba7805abb94e4070f573a7f712edae2be77d6970ffd8e77",
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "First resumed full verify: 2098 tests, three onboarding failures; later JDBC control proves submicrosecond rounding; fixed via shared Clock precision and explicit-past expiry fixture",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-full-verify-resume-first.log",
+      "result": "failed",
+      "logSha256": "97a7562c0713026d237cc262bbfdac3291b329881dacf97cfeec75cca342334b",
+      "tests": 2098,
+      "failures": 3,
+      "errors": 0,
+      "skips": 1,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.identity.api.controller.AdminUserUpdateIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 3,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.contract.VehiclesOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleAdminSecurityIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleEditContractCharacterizationTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleLifecycleIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaMultipartHttpIntegrationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationIntegrationTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleOwnerAuthenticationIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.http.validation.RenavamValidatorTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.query.EventVehicleQueryServiceTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.internal.VehicleEditResolverTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleServiceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleTest",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.infra.persistence.adapter.VehicleRepositoryAdapterTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Second full verify before precision correction: lifecycle and identity timestamp ordering plus expiry fixture failures retained",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-full-verify-resume-second.log",
+      "result": "failed",
+      "logSha256": "df774e29b7208f32fcbb795b7bed2e0216f6b649ff193db0d91c01195785f945",
+      "tests": 2098,
+      "failures": 2,
+      "errors": 2,
+      "skips": 1,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.identity.api.controller.AdminUserUpdateIntegrationTest",
+          "tests": 42,
+          "failures": 1,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 2,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 1,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.contract.VehiclesOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleAdminSecurityIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleEditContractCharacterizationTest",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleLifecycleIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaMultipartHttpIntegrationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationIntegrationTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleOwnerAuthenticationIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.http.validation.RenavamValidatorTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.query.EventVehicleQueryServiceTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.internal.VehicleEditResolverTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleServiceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleTest",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.infra.persistence.adapter.VehicleRepositoryAdapterTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Original committed gallery forward gate passed 219 cases before shared Clock precision correction; final forward gate rerun on corrected commit",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-forward-before-precision.log",
+      "result": "passed",
+      "logSha256": "79adc56b9c4960d07e9cb3be12e4a12f71dfc06ec8bb95f2deb68e68bc846adb",
+      "tests": 219,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 49,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Deterministic JDBC precision regression and all three previously failing integration suites after correction",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-precision-focal.log",
+      "result": "passed",
+      "logSha256": "0cb7fe5d8d24558f0c537fb848f8031f1ffbcbfae96b4cc2d2958094ad343312",
+      "tests": 95,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.identity.api.controller.AdminUserUpdateIntegrationTest",
+          "tests": 42,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.platform.time.TimeConfigPrecisionTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Unchanged 28-case onboarding diagnostic after full-suite failures; JDBC trace confined to ignored local log, no diagnostic logging committed",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-onboarding-diagnostic.log",
+      "result": "passed",
+      "logSha256": "caf4b02d6382528ac3a1bf62fe5ec0c733284dcb0fc2d338b4db69313b0f46e4",
+      "tests": 28,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Initial gallery domain and JPA regression",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-domain-first.log",
+      "result": "passed",
+      "logSha256": "ef465fcaa0032e0bdff9e417d56dd22cb5471bdb56247b75800de4e4a3c84b98",
+      "tests": 67,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleTest",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.infra.persistence.adapter.VehicleRepositoryAdapterTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Initial application regression; owner fixture overly broad and corrected to user10 only",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-integration-first.log",
+      "result": "failed",
+      "logSha256": "37d3dcb42f428930dd8c0c1b70cdf06458f58187179d282169f5c42432a64812",
+      "tests": 105,
+      "failures": 1,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.contract.VehiclesOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationIntegrationTest",
+          "tests": 16,
+          "failures": 1,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleServiceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleTest",
+          "tests": 46,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.infra.persistence.adapter.VehicleRepositoryAdapterTest",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "V8 full physical schema equality",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-mysql-schema-first.log",
+      "result": "passed",
+      "logSha256": "a30877a7b77715a57ae825eeec97c8226865883f4d3300a3bb4bcb0b3f5517d4",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Initial 27-case photo suite; reused bearer builder and cross-test file count fixtures corrected",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-gallery-focal-first.log",
+      "result": "failed",
+      "logSha256": "25917579c183112c3de0d07b9d49b0eafa4cd3806bb0051d7f38f252d41e1b25",
+      "tests": 52,
+      "failures": 2,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 27,
+          "failures": 2,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationIntegrationTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Corrected gallery/media regression and real servlet five-file limit",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-gallery-focal-second.log",
+      "result": "passed",
+      "logSha256": "15d9eaa89562cff3f4dd589ff66f01075ed8a92f316f4f0ea4fd73c6850d1f79",
+      "tests": 45,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaMultipartHttpIntegrationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationIntegrationTest",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Real MySQL 27-case gallery suite and two migration scenarios before extra legacy-writer race",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-mysql-gallery-first.log",
+      "result": "passed",
+      "logSha256": "13f9bd6945fe701a938b1a08635ba3a1e25d7f4d92578e0230a7e27ea39711a9",
+      "tests": 29,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Compilation: nested type-use annotation qualification corrected; unrelated Lombok errors were cascades",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-final-focal-compile-first.log",
+      "result": "failed",
+      "logSha256": "fb690c186a3c63a7c26845e27cc8a54bc959eb3d2f2ce55e66ad749aeacb5b84",
+      "affectedSuiteResults": []
+    },
+    {
+      "name": "Final DTO/OpenAPI, services, real multipart and domain focal",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-final-focal.log",
+      "result": "passed",
+      "logSha256": "44c82cfb6cbed14e61b883ccd9788cf2ccf7969f3d908622ba8eaef6dd4ad658",
+      "tests": 60,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.contract.VehiclesOpenApiIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 27,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaMultipartHttpIntegrationTest",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleServiceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    },
+    {
+      "name": "Extra legacy-writer race and version guard focal",
+      "command": "Development focal/compile, not a substitute for final gates",
+      "log": "target/back-525-legacy-concurrency-focal.log",
+      "result": "passed",
+      "logSha256": "3f6f42e2bdda5260708f0c3c3316f514e5779158467ff697458990f40aae3226",
+      "tests": 58,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "affectedSuiteResults": [
+        {
+          "suite": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryIntegrationTest",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.AdminVehicleServiceTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.application.service.vehicle.VehicleServiceTest",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        },
+        {
+          "suite": "com.jeepclub.backend.vehicles.core.domain.model.VehicleGalleryTest",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skips": 0
+        }
+      ]
+    }
+  ],
+  "windowsSkip": "Pre-existing symlink capability test. No new disabled tests or skips.",
+  "expectedNegativeLogs": "Intentional migration/startup/DDL failures and injected storage/JPA/audit/cleanup faults are classified by final JUnit and BUILD summaries. Earlier development JaCoCo append mismatches are not used as final coverage evidence; final verify starts with fresh execution data.",
+  "coverage": {
+    "domain": "Own immutable VehicleImage/VehicleGallery: zero, one, five; rejects six, duplicate positions/keys, gaps, invalid primary/null; legacy reconstruction, revision and lifecycle.",
+    "integration": "28 committed HTTP/application/persistence/security scenarios inherited unchanged by VehicleGalleryMySqlIT.",
+    "concurrency": "Four deterministic races with a pre-lock ORM/MVCC snapshot: stale complete replacement; deletion wins upload replacement; gallery update wins deletion and is snapshotted; legacy photo writer cannot bypass versioned mutation.",
+    "http": "Same member/admin business create endpoints, optional photos/gallery multipart and legacy single photo compatibility; one complete replacement endpoint per surface, JSON/multipart; canonical ordered images/revision, derived photo cover; protected history read; explicit required OpenAPI fields.",
+    "realServlet": "Five files of 5 MiB accepted in one request; 5 MiB+one byte image rejected. Total servlet/repo proxy30MiB, per-file servlet10MiB preserving Billing receipt ceiling, command image5MiB.",
+    "media": "Same public Platform command/provider; each new image compensated on rollback; old/shared/history files retained; storage unavailable, partial upload, JPA/audit rollback and failing cleanup preserve original failure. Private Dependent namespace cannot be newly associated.",
+    "security": "Real Identity/Authorization/Session fixtures, owner isolation, dedicated admin authorities, inactive/archived eligibility, revoked access, sanitized storage errors; expected revision cannot be bypassed by legacy writer after first association change.",
+    "persistence": "V8 additive live/history collections and revision; current child read under lock; immutable independent history; binary collation/unique reference and position/FKs/position checks; full physical schema equality.",
+    "legacy": "Storage key, URL, null and blank photo values backfilled unchanged in live/history; replay does not duplicate/overwrite populated gallery or resurrect explicit clear; unrelated update preserves URL, no server-side URL fetch.",
+    "timestampPrecision": "Shared Platform Clock floors to DATETIME(6) microseconds. Deterministic H2 negative control reproduces rounding into future, corrected-clock round trip preserves time ordering. No sleeps, validation relaxation or production TTL changes; inherited expiry fixture uses explicitly past time.",
+    "reads": "Parent pagination plus batch collection fetch, tested at at most three SQL statements with no lazy collection fetch; no duplicate vehicles; CSV/PDF use collection without storage keys; Events public query remains media-free."
+  },
+  "reviewLimits": [
+    "Frontend must migrate photo mutations: legacy alias changes only while gallery has at most one image and revision zero; thereafter versioned complete replacement is required (409). Same value/omission remain compatible.",
+    "No mixed-version writers. Old binaries cannot maintain collection/revision or full deletion history; retaining photo gives read compatibility only. Coordinate rollout or maintenance window.",
+    "Primary uniqueness/contiguity are aggregate invariants under parent lock; physical constraints bound positions/count and reference/position uniqueness. Arbitrary manual SQL is not an application API.",
+    "No distributed ACID with storage. Cleanup failure/unknown commit needs controlled reconciliation; no old/shared/history image deletion.",
+    "No private VPS/proxy/CDN configuration, production DDL/load/startup, real imports or Registry operational activation tested/performed. Repo proxy limit changes require future rollout.",
+    "Larger multipart total increases bounded memory/temp-disk demand; homologate capacity and every proxy/servlet override. Billing individual validation remains unchanged.",
+    "Shared Clock precision correction was discovered in final cross-module regression and is isolated in its own BACK-525 commit for review. It floors to database microseconds; it does not provide monotonic time or change production TTLs. Earlier PR evidence remains tied to those unchanged earlier heads.",
+    "Downgrade cannot reconstruct full gallery/history from cover; prefer forward fix or coordinated DB/code/storage restoration."
+  ],
+  "migrations": [
+    "V8__vehicle_gallery.sql"
+  ],
+  "protectedChanges": "V1-V7, baseline, workflows, protected branches, production flags and VPS unchanged."
+}

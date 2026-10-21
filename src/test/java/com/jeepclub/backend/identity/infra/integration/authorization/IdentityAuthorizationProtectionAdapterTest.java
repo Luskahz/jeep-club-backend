@@ -1,6 +1,6 @@
 package com.jeepclub.backend.identity.infra.integration.authorization;
 
-import com.jeepclub.backend.iam.authorization.api.module.role.RoleQuery;
+import com.jeepclub.backend.iam.authorization.api.module.role.RoleLifecycleLock;
 import com.jeepclub.backend.iam.identity.infra.integration.authorization.IdentityAuthorizationProtectionAdapter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +16,7 @@ import static org.mockito.Mockito.when;
 class IdentityAuthorizationProtectionAdapterTest {
 
     @Mock
-    private RoleQuery roleQuery;
+    private RoleLifecycleLock roleQuery;
 
     private IdentityAuthorizationProtectionAdapter adapter;
 

@@ -26,6 +26,7 @@ public interface MemberRefundJpaRepository extends JpaRepository<MemberRefundEnt
             Pageable pageable
     );
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     Optional<MemberRefundEntity> findFirstByMemberPaymentIdAndStatusIn(
             Long memberPaymentId,
             Collection<MemberRefundStatus> statuses

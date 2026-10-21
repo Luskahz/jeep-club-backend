@@ -81,6 +81,9 @@ public class DependentHistoryEntity {
     )
     private String phoneNumber;
 
+    @Column(name = "photo_storage_key", length = 512)
+    private String photoStorageKey;
+
     @Column(
             name = "user_id",
             nullable = false
@@ -119,4 +122,7 @@ public class DependentHistoryEntity {
             updatable = false
     )
     private Instant deletedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
 }

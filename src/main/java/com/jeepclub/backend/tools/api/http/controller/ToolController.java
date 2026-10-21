@@ -48,7 +48,7 @@ public class ToolController {
     @GetMapping
     @Operation(
             summary = "Listar ferramentas do membro autenticado",
-            description = "Retorna uma página das ferramentas do membro sem filtro implícito de status; itens ACTIVE e INACTIVE podem aparecer. A paginação usa os defaults globais: página zero-based e size 20, limitado a 50.",
+            description = "Retorna uma página das ferramentas do membro sem filtro implícito de status; itens ACTIVE, INACTIVE e ARCHIVED podem aparecer. A paginação usa os defaults globais: página zero-based e size 20, limitado a 50.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Página de ferramentas retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = ToolSummaryPageResponseSchema.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
@@ -130,6 +130,7 @@ public class ToolController {
     }
 
     @PatchMapping("/{id}/activate")
+    @ApiResponse(responseCode="409",description="Ferramenta arquivada exige desarquivamento prévio.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @Operation(
             summary = "Ativar ferramenta do membro",
             description = "Muda INACTIVE para ACTIVE. Quando já está ACTIVE, a operação é idempotente, retorna o mesmo recurso e não persiste mutação.",
@@ -149,6 +150,7 @@ public class ToolController {
     }
 
     @PatchMapping("/{id}/deactivate")
+    @ApiResponse(responseCode="409",description="Ferramenta arquivada exige desarquivamento prévio.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @Operation(
             summary = "Desativar ferramenta do membro",
             description = "Muda ACTIVE para INACTIVE. Quando já está INACTIVE, a operação é idempotente, retorna o mesmo recurso e não persiste mutação.",
@@ -185,5 +187,23 @@ public class ToolController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         toolService.deleteTool(id, userPrincipal.getUserId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/archive")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Arquivar ferramenta", description="Unarchive retorna a INACTIVE; requer ativação explícita.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<ToolResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(new ToolResponseDTO(toolService.archiveTool(id,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Desarquivar ferramenta", description="Unarchive retorna a INACTIVE; requer ativação explícita.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<ToolResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(new ToolResponseDTO(toolService.unarchiveTool(id,principal.getUserId())));
     }
 }

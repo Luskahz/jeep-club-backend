@@ -14,6 +14,12 @@ public interface MembershipApplicationRepository {
 
     Optional<MembershipApplication> findById(Long id);
 
+    Optional<MembershipApplication> findByIdForUpdate(Long id);
+
+    MembershipApplication saveAndFlush(MembershipApplication application);
+
+    Optional<MembershipApplication> findByCreatedUserIdAndStatusForUpdate(Long userId, MembershipApplicationStatus status);
+
     Optional<MembershipApplication> findByCpf(String cpf);
 
     List<MembershipApplication> findAll();

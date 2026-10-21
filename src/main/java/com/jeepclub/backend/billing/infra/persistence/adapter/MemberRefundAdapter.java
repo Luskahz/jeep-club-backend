@@ -85,17 +85,17 @@ public class MemberRefundAdapter implements MemberRefundRepository {
 
     @Override
     public boolean existsActiveByMemberPaymentId(Long memberPaymentId) {
-        return jpa.existsByMemberPaymentIdAndStatusIn(
+        return jpa.findFirstByMemberPaymentIdAndStatusIn(
                 memberPaymentId,
                 ACTIVE_REFUND_STATUSES
-        );
+        ).isPresent();
     }
 
     @Override
     public boolean existsRefundedByMemberPaymentId(Long memberPaymentId) {
-        return jpa.existsByMemberPaymentIdAndStatus(
+        return jpa.findFirstByMemberPaymentIdAndStatusIn(
                 memberPaymentId,
-                MemberRefundStatus.REFUNDED
-        );
+                List.of(MemberRefundStatus.REFUNDED)
+        ).isPresent();
     }
 }

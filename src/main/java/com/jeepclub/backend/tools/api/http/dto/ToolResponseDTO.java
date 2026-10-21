@@ -16,7 +16,7 @@ public record ToolResponseDTO(
         @Schema(description = "Descrição detalhada da ferramenta.", example = "Macaco tipo jacaré, cor vermelha, ideal para troca de pneus.")
         String description,
 
-        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE"})
+        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"})
         ToolStatus status,
 
         @Schema(description = "Identificador único do usuário dono da ferramenta.", example = "42")

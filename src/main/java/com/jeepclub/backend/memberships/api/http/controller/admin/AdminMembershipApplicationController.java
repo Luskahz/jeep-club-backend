@@ -134,6 +134,8 @@ public class AdminMembershipApplicationController {
             description = "Cria o usuário com PENDING_FIRST_ACCESS e retorna a senha temporária uma única vez para o administrador.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Solicitação aprovada e usuário criado.",
+                            headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control",
+                                    description = "Resposta contém credencial exibida uma única vez.", schema = @Schema(type = "string", example = "no-store")),
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = TemporaryPasswordApprovalResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Identificador da solicitação inválido.",
@@ -163,7 +165,7 @@ public class AdminMembershipApplicationController {
                 principal.getUserId()
         );
 
-        return ResponseEntity.ok(TemporaryPasswordApprovalResponseDTO.from(result));
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(TemporaryPasswordApprovalResponseDTO.from(result));
     }
 
     @PostMapping("/{id}/approve/access-link")
@@ -172,9 +174,11 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Aprovar solicitação com link de acesso",
-            description = "Cria o usuário com PENDING_FIRST_ACCESS, emite o token próprio de Membership e envia o convite por e-mail sem retornar o segredo.",
+            description = "Cria o usuário com PENDING_FIRST_ACCESS, emite o token próprio de Membership e envia o convite por e-mail e retorna o mesmo link uma única vez. A resposta sensível usa Cache-Control: no-store; não registrar seu corpo.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Solicitação aprovada e usuário criado.",
+                            headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control",
+                                    description = "Resposta contém credencial exibida uma única vez.", schema = @Schema(type = "string", example = "no-store")),
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                                     schema = @Schema(implementation = AccessLinkApprovalResponseDTO.class))),
                     @ApiResponse(responseCode = "400", description = "Identificador da solicitação inválido.",
@@ -204,7 +208,7 @@ public class AdminMembershipApplicationController {
                 principal.getUserId()
         );
 
-        return ResponseEntity.ok(AccessLinkApprovalResponseDTO.from(result));
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(AccessLinkApprovalResponseDTO.from(result));
     }
 
     @PostMapping("/{id}/activation-link/resend")
@@ -241,7 +245,7 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Rejeitar solicitação",
-            description = "Motivo é opcional. Quando informado, é incluído na notificação ao candidato.",
+            description = "Aceita PENDING ou APPROVED ainda reversível antes do primeiro acesso. Vínculos impeditivos ou ativação concluída retornam 409 sem efeitos parciais. Motivo opcional é enviado após commit.",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Solicitação rejeitada."),
                     @ApiResponse(responseCode = "400", description = "Identificador da solicitação inválido.",
@@ -256,7 +260,7 @@ public class AdminMembershipApplicationController {
                     @ApiResponse(responseCode = "404", description = "Solicitação não encontrada.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
-                    @ApiResponse(responseCode = "409", description = "Solicitação não está pendente para rejeição.",
+                    @ApiResponse(responseCode = "409", description = "Solicitação já concluída/rejeitada ou provisionamento não pode ser revertido com segurança.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
@@ -278,7 +282,7 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Rejeitar solicitação e bloquear CPF",
-            description = "Rejeita uma solicitação pendente e impede novas solicitações para o CPF na mesma transação.",
+            description = "Rejeita PENDING ou reverte APPROVED ainda pendente de primeiro acesso, sem vínculos impeditivos, e bloqueia o CPF na mesma transação.",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Solicitação rejeitada e CPF bloqueado."),
                     @ApiResponse(responseCode = "400", description = "Identificador ou motivo do bloqueio inválido.",

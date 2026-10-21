@@ -14,6 +14,7 @@ import com.jeepclub.backend.shared.storage.exception.StorageOperationException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
@@ -63,19 +64,28 @@ public class LocalFileStorage implements FileStorage {
             throw new StorageOperationException(StorageOperationException.Operation.WRITE, exception);
         }
 
-        try {
-            Files.write(
+        boolean created = false;
+        try (OutputStream output = Files.newOutputStream(
                     target,
-                    file.content(),
                     StandardOpenOption.CREATE_NEW,
                     StandardOpenOption.WRITE
-            );
-            return new StoredFile(storageKey);
+            )) {
+            created = true;
+            writeContent(output, file.content());
         } catch (FileAlreadyExistsException exception) {
             throw new StorageCollisionException();
         } catch (IOException exception) {
+            if (created) {
+                try { Files.deleteIfExists(target); }
+                catch (IOException cleanup) { exception.addSuppressed(cleanup); }
+            }
             throw new StorageOperationException(StorageOperationException.Operation.WRITE, exception);
         }
+        return new StoredFile(storageKey);
+    }
+
+    void writeContent(OutputStream output, byte[] content) throws IOException {
+        output.write(content);
     }
 
     @Override

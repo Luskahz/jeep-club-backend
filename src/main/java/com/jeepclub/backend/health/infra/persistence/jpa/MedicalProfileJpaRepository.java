@@ -44,4 +44,7 @@ public interface MedicalProfileJpaRepository extends JpaRepository<MedicalProfil
             Long ownerId
     );
 
+
+    @org.springframework.data.jpa.repository.Query(value="select id from medical_profiles where owner_type='DEPENDENT' and owner_id=:id limit 1 for update", nativeQuery=true)
+    java.util.Optional<Long> lockDependentReference(@org.springframework.data.repository.query.Param("id") Long id);
 }

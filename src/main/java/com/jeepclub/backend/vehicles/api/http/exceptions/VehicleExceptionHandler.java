@@ -22,6 +22,21 @@ import java.util.Locale;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.vehicles")
 public class VehicleExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleGalleryConflict(com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException exception) {
+        return buildErrorResponse("VEHICLE_GALLERY_CONFLICT",exception.getMessage(),HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
+        return buildErrorResponse("VEHICLE_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleLifecycleConflict(com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException exception) {
+        return buildErrorResponse("VEHICLE_LIFECYCLE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
 
     @ExceptionHandler(VehiclePlateAlreadyExistsException.class)
     public ResponseEntity<ApiErrorResponse> handleVehiclePlateAlreadyExists(VehiclePlateAlreadyExistsException exception) {

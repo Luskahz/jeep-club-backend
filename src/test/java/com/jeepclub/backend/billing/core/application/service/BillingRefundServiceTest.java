@@ -78,21 +78,23 @@ class BillingRefundServiceTest {
     }
     @ParameterizedTest @ValueSource(ints = {0, 1, 2, 3})
     void lateEligibilityIsOnlyCreatedForConfirmedPaymentWithoutActiveOrCompletedRefund(int outcome) {
-        var p = payment(); if (outcome != 0) p.confirm(99L, NOW);
+        var p = payment(); if (outcome != 0) p.confirm(99L, NOW.plus(Duration.ofDays(31)));
         if (outcome == 2) when(refunds.existsActiveByMemberPaymentId(1L)).thenReturn(true);
         if (outcome == 3) when(refunds.existsRefundedByMemberPaymentId(1L)).thenReturn(true);
         admin = new AdminMemberRefundService(refunds, charges, payments, Clock.offset(CLOCK, Duration.ofDays(31)));
         admin.ensureLateEligibility(charge(), p, 99L, NOW);
         if (outcome == 1) {
             var captor = ArgumentCaptor.forClass(MemberRefund.class); verify(refunds).save(captor.capture()); var r = captor.getValue();
-            assertThat(r.getEligibleAt()).isEqualTo(NOW); assertThat(r.getEligibleUntil()).isEqualTo(NOW.plus(Duration.ofDays(30)));
+            assertThat(r.getEligibleAt()).isEqualTo(NOW.plus(Duration.ofDays(31)));
+            assertThat(r.getEligibleUntil()).isEqualTo(NOW.plus(Duration.ofDays(61)));
             assertThat(r.getCreatedAt()).isEqualTo(NOW.plus(Duration.ofDays(31)));
-            assertThatThrownBy(() -> r.request(10L, NOW.plus(Duration.ofDays(31)))).isInstanceOf(InvalidMemberRefundStateException.class);
+            r.request(10L, NOW.plus(Duration.ofDays(31)));
+            assertThat(r.isRequested()).isTrue();
         } else verify(refunds, never()).save(any());
     }
     @Test void cycleCancellationCreatesOneEligibilityAndSkipsActiveOrCompletedRefundOnRepeat() {
         var p = payment(); p.confirm(99L, NOW); when(charges.findByChargeCycleId(4L)).thenReturn(List.of(charge()));
-        when(payments.findByMemberChargeIdAndStatusIn(eq(2L), any())).thenReturn(List.of(p)); when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(p));
+        when(payments.findByMemberChargeIdForUpdate(2L)).thenReturn(List.of(p));
         assertThat(admin.createEligibilityForCanceledCycle(4L, 99L, NOW)).isEqualTo(1);
         when(refunds.existsActiveByMemberPaymentId(1L)).thenReturn(true); assertThat(admin.createEligibilityForCanceledCycle(4L, 99L, NOW)).isZero();
         when(refunds.existsActiveByMemberPaymentId(1L)).thenReturn(false); when(refunds.existsRefundedByMemberPaymentId(1L)).thenReturn(true);

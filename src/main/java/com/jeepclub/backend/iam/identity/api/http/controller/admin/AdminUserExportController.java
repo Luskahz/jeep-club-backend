@@ -2,6 +2,7 @@ package com.jeepclub.backend.iam.identity.api.http.controller.admin;
 import com.jeepclub.backend.iam.identity.core.application.service.user.UserExportService;
 import com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserFilterDTO;
 import com.jeepclub.backend.shared.export.*;
+import com.jeepclub.backend.iam.identity.core.application.query.user.UserExportLayout;
 import com.jeepclub.backend.platform.export.*;
 import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,10 +18,11 @@ public class AdminUserExportController {
     private final UserExportService service;
     @GetMapping(value="/identity/admin/users/export",produces={"text/csv","application/pdf"})
     @PreAuthorize("hasAuthority('IDENTITY_USER_EXPORT')") @RequiredPermission("IDENTITY_USER_EXPORT")
-    @Operation(summary="Exportar usuários",description="Todos, por ID ou filtros cadastrais idênticos à listagem. CSV/PDF contém cadastro, estado, datas e existência de foto. Sem paginação HTTP, sem credenciais ou storage keys. Datas em America/Sao_Paulo.")
+    @Operation(summary="Exportar usuários",description="Todos, por ID ou filtros cadastrais idênticos à listagem. CSV/PDF contém cadastro, estado, datas e existência de foto. Sem paginação HTTP, sem credenciais ou storage keys. Datas em America/Sao_Paulo. layout=MEMBER (padrão) prioriza Matrícula e deixa ID técnico na última coluna. layout=TECHNICAL preserva cabeçalhos e ordem anteriores; ID significa a chave técnica, nunca matrícula. Ambos usam a matrícula vigente.")
     @ExportResponse
     public ResponseEntity<byte[]> export(@Valid @ParameterObject @ModelAttribute AdminUserFilterDTO filter,
-            @RequestParam(defaultValue="CSV") ExportFormat format) {
-        return ExportDownload.response(service.export(filter.toFilter(),format));
+            @RequestParam(defaultValue="CSV") ExportFormat format,
+            @RequestParam(defaultValue="MEMBER") UserExportLayout layout) {
+        return ExportDownload.response(service.export(filter.toFilter(),format,layout));
     }
 }

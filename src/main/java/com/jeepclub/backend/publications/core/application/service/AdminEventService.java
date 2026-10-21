@@ -19,7 +19,7 @@ import java.time.*;
 import java.util.*;
 import static com.jeepclub.backend.publications.core.application.service.internal.EventOperations.error;
 
-@Service @RequiredArgsConstructor @Transactional
+@Service @RequiredArgsConstructor @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
 public class AdminEventService {
     private final EventOperations events;
     private final PublicationRepository publications;
@@ -93,7 +93,12 @@ public class AdminEventService {
     public Event publish(Long id) { var e = events.locked(id); e.publish(events.now()); return (Event) publications.save(e); }
     public Event finish(Long id) { var e = events.locked(id); events.refreshed(id); e.finish(events.now()); return (Event) publications.save(e); }
     public Event cancel(Long id, Long actor) {
-        var e = events.locked(id); e.cancel(events.now()); billing.cancelEventCycles(id, actor);
+        var e = events.locked(id);
+        if (e.getEventStatus() == EventStatus.CANCELLED) {
+            billing.cancelEventCycles(id, actor);
+            return e;
+        }
+        e.cancel(events.now()); billing.cancelEventCycles(id, actor);
         return (Event) publications.save(e);
     }
     public void delete(Long id, Long actor) {
@@ -103,8 +108,8 @@ public class AdminEventService {
         publications.delete(id, actor, events.now());
     }
     public List<EventGuestRequest> guests(Long id) { events.locked(id); return operations.guests(id); }
-    public long visits(String cpf) { return operations.approvedVisits(cpf); }
-    public Map<String,Long> visits(Collection<String> cpfs) { return operations.approvedVisits(cpfs); }
+    public long currentApprovedGuestCount(String cpf) { return operations.currentApprovedGuestCount(cpf); }
+    public Map<String,Long> currentApprovedGuestCounts(Collection<String> cpfs) { return operations.currentApprovedGuestCounts(cpfs); }
     public EventGuestRequest createGuest(Long id, Long actor, String cpf, String guestName) {
         if(guestName==null || guestName.isBlank() || guestName.trim().length()>150)throw new IllegalArgumentException("Guest name required.");
         return events.requestGuest(events.locked(id),actor,null,cpf,true,guestName);
@@ -113,19 +118,50 @@ public class AdminEventService {
     public EventGuestRequest reviewGuest(Long id, Long guest, Long actor, boolean approve, String reason) {
         return events.reviewGuest(events.locked(id), guest, approve, null, actor, reason);
     }
+    public EventGuestRequest allocateGuest(Long id,Long guest,Long vehicle,Long registration,Long actor,String reason) {
+        return events.assign(events.locked(id,List.of(vehicle),List.of()),guest,vehicle,registration,null,actor,reason);
+    }
+    public EventGuestRequest unassignGuest(Long id,Long guest,Long actor,String reason) {
+        return events.unassign(events.locked(id),guest,actor,reason);
+    }
+    public EventGuestRequest cancelGuest(Long id,Long guest,Long actor,String reason) {
+        return events.cancelGuest(events.locked(id),guest,actor,reason,true);
+    }
+    public EventGuestRequest reactivateGuest(Long id,Long guest,Long actor,String reason) {
+        return events.reactivate(events.locked(id),guest,actor,reason);
+    }
+    @Transactional(readOnly=true)
+    public List<EventGuestTransition> guestHistory(Long id,Long guest) {
+        // Scalar operational IDs and independent history survive Event hard delete.
+        events.guest(id,guest);
+        return operations.history(id,guest);
+    }
     public List<EventRideOffer> offers(Long id) { events.locked(id); return operations.offers(id); }
     public EventRideOffer select(Long id, Long offerId, Long actor) {
         var event = events.locked(id); events.requireOpen(event);
         var offer = operations.offers(id).stream().filter(o -> o.id().equals(offerId)).findFirst().orElseThrow(() -> error("EVENT_RIDE_OFFER_NOT_FOUND"));
         if (offer.status() != EventRideOffer.Status.ACCEPTED) throw error("EVENT_RIDE_OFFER_INVALID");
-        try { events.guestSpace(id, offer.vehicleId()); }
-        catch (com.jeepclub.backend.publications.core.application.exception.EventOperationException ex) { throw error("EVENT_RIDE_CAPACITY_CHANGED"); }
-        events.reviewGuest(event, offer.guestRequestId(), true, offer.vehicleId(), actor, null);
-        return operations.save(offer.select(events.now()));
+        var guest = events.guest(id,offer.guestRequestId());
+        if (!guest.administrative() || guest.transportStatus() != EventGuestRequest.TransportStatus.STANDBY) throw error("EVENT_RIDE_OFFER_INVALID");
+        try { events.assign(event,guest.id(),offer.vehicleId(),offer.registrationId(),offer.id(),actor,"RIDE_OFFER_SELECTED"); }
+        catch (com.jeepclub.backend.publications.core.application.exception.EventOperationException ex) {
+            if (ex.getCode().equals("EVENT_VEHICLE_CAPACITY_EXCEEDED")) throw error("EVENT_RIDE_CAPACITY_CHANGED");
+            throw ex;
+        }
+        var saved = operations.save(offer.select(events.now()));
+        var allocated = events.guest(id,guest.id());
+        events.record(guest,allocated,"OFFER_SELECTED",actor,"RIDE_OFFER_SELECTED",offer.id());
+        return saved;
     }
     public record Dashboard(List<EventRegistration> registrations, long dependents, long guestsPending, long guestsApproved,
         long totalPeople, int vehicles, int totalCapacity, int availableSeats, long unpaidCharges, long pendingValidation,
-        long postCutoffPending, List<EventFinancialQuery.State> financial) {}
+        long postCutoffPending, List<EventFinancialQuery.State> financial,long guestsStandby,long guestsAllocated,long guestsCancelled) {
+        public Dashboard(List<EventRegistration> registrations,long dependents,long guestsPending,long guestsApproved,long totalPeople,
+                int vehicles,int totalCapacity,int availableSeats,long unpaidCharges,long pendingValidation,long postCutoffPending,List<EventFinancialQuery.State> financial) {
+            this(registrations,dependents,guestsPending,guestsApproved,totalPeople,vehicles,totalCapacity,availableSeats,
+                unpaidCharges,pendingValidation,postCutoffPending,financial,0,guestsApproved,0);
+        }
+    }
     public Dashboard dashboard(Long id) {
         events.locked(id);
         return dashboard(id, events.refreshed(id), false);
@@ -141,6 +177,8 @@ public class AdminEventService {
             + confirmed.stream().mapToLong(r -> r.unallocatedDependentIds().size()).sum();
         var guests = operations.guests(id);
         long approved = guests.stream().filter(g -> g.status() == EventGuestRequest.Status.APPROVED).count();
+        long allocated = guests.stream().filter(g -> g.transportStatus() == EventGuestRequest.TransportStatus.ALLOCATED).count();
+        long standby = guests.stream().filter(g -> g.transportStatus() == EventGuestRequest.TransportStatus.STANDBY).count();
         var vehicleIds = active.stream().flatMap(r -> r.allocations().stream()).map(EventRegistration.Allocation::vehicleId).distinct().toList();
         int capacity = 0;
         for (int i = 0; i < vehicleIds.size(); i += 500) {
@@ -156,8 +194,9 @@ public class AdminEventService {
         long late = states.stream().filter(s -> !"PAID".equals(s.effectiveStatus()) && !"CANCELED".equals(s.effectiveStatus())
             && rules.stream().anyMatch(r -> r.chargeDefinitionId().equals(s.chargeDefinitionId()) && !events.now().isBefore(r.participationCutoff()))).count();
         return new Dashboard(registrations, dependentCount, guests.stream().filter(g -> g.status() == EventGuestRequest.Status.PENDING).count(),
-            approved, confirmed.size() + dependentCount + approved, vehicleIds.size(), capacity, Math.max(0, capacity - reserved - (int) approved),
-            unpaid, states.stream().filter(s -> "PENDING_VALIDATION".equals(s.paymentStatus())).count(), late, states);
+            approved, confirmed.size() + dependentCount + approved, vehicleIds.size(), capacity, Math.max(0, capacity - reserved - (int) allocated),
+            unpaid, states.stream().filter(s -> "PENDING_VALIDATION".equals(s.paymentStatus())).count(), late, states,standby,allocated,
+            guests.stream().filter(g -> g.status() == EventGuestRequest.Status.CANCELLED).count());
     }
     public EmergencyMedicalProfileQuery.Profile health(Long id, MedicalProfileOwner type, Long target, Long actor) {
         boolean success = false;

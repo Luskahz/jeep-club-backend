@@ -44,6 +44,7 @@ class AdminVehicleServiceTest {
     private UserPort userPort;
     @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaService images;
 
+    @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
     private AdminVehicleService service;
 
     @BeforeEach
@@ -51,8 +52,8 @@ class AdminVehicleServiceTest {
         service = new AdminVehicleService(
                 vehicleRepository,
                 userPort,
-                Clock.fixed(NOW, ZoneOffset.UTC), images
-        );
+                Clock.fixed(NOW, ZoneOffset.UTC), images, mediaCommand, new com.jeepclub.backend.vehicles.core.application.service.internal.VehicleGalleryAssembler(images,mediaCommand)
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 
     @Test
@@ -85,7 +86,7 @@ class AdminVehicleServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Vehicle vehicle = service.createForOwner(
-                "Trovão", "photo", "  abc1d23  ", "382.492.064-28", "Jeep",
+                "Trovão", upload(), "  abc1d23  ", "382.492.064-28", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
                 2.0, true, 7L
         );
@@ -128,6 +129,9 @@ class AdminVehicleServiceTest {
         when(vehicleRepository.findAllByStatus(VehicleStatus.ACTIVE, pageable))
                 .thenReturn(new PageImpl<>(List.of(vehicle)));
         when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle));
+        when(vehicleRepository.findAllByStatus(VehicleStatus.ACTIVE, pageable))
+                .thenReturn(new PageImpl<>(List.of(vehicle)));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle));
 
         assertThat(service.findAll(pageable).getContent()).containsExactly(vehicle);
         assertThat(service.findById(1L)).isSameAs(vehicle);
@@ -144,7 +148,7 @@ class AdminVehicleServiceTest {
 
     @Test
     void omittedFieldsPreserveCurrentValuesOnUpdate() {
-        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle()));
 
         VehicleEditFields onlyNickname = new VehicleEditFields(
                 FieldUpdate.of("Atualizado"),
@@ -173,7 +177,7 @@ class AdminVehicleServiceTest {
 
     @Test
     void canonicalizesPlateAndRenavamOnUpdateBeforeDuplicateCheck() {
-        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle()));
 
         VehicleEditFields updates = fullEditFields(
                 FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.of("  xyz9z99  "),
@@ -194,7 +198,7 @@ class AdminVehicleServiceTest {
 
     @Test
     void rejectsExplicitNullOnRequiredFieldWithoutTouchingPersistence() {
-        when(vehicleRepository.findById(1L)).thenReturn(Optional.of(vehicle()));
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle()));
 
         VehicleEditFields nullPlate = fullEditFields(
                 FieldUpdate.omitted(), FieldUpdate.omitted(), FieldUpdate.explicitNull(),
@@ -215,7 +219,7 @@ class AdminVehicleServiceTest {
         Vehicle legacy = Vehicle.reconstitute(
                 1L, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, VehicleStatus.SOFT_DELETED, true, 7L, NOW.minusSeconds(60), null
+                2.0, VehicleStatus.ARCHIVED, true, 7L, NOW.minusSeconds(60), null, NOW, true
         );
         when(vehicleRepository.findById(1L)).thenReturn(Optional.of(legacy));
 
@@ -226,7 +230,7 @@ class AdminVehicleServiceTest {
 
     private Vehicle createVehicle() {
         return service.createForOwner(
-                "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
+                "Trovão", upload(), "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
                 2.0, true, 7L
         );
@@ -274,5 +278,10 @@ class AdminVehicleServiceTest {
                 nickname, photo, plate, renavam, brand, model, manufacturingYear,
                 modelYear, color, seatingCapacity, fuelType, engineDisplacement, towing
         );
+    }
+
+    private static com.jeepclub.backend.platform.storage.image.ImageUpload upload() {
+        return new com.jeepclub.backend.platform.storage.image.ImageUpload("vehicle.png", "image/png",
+            new byte[]{(byte)137,80,78,71,13,10,26,10});
     }
 }

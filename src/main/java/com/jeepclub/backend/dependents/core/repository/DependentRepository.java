@@ -17,9 +17,12 @@ public interface DependentRepository {
 
     Optional<Dependent> findById(Long id);
 
+    Optional<Dependent> findByIdForUpdate(Long id);
+
     Optional<Dependent> findActiveById(Long id);
 
     List<Dependent> findAllByUserId(Long userId);
+    List<Dependent> findAllByUserIdAndStatus(Long userId, com.jeepclub.backend.dependents.core.domain.enums.DependentStatus status);
 
     List<Dependent> findAllActiveByUserId(Long userId);
 

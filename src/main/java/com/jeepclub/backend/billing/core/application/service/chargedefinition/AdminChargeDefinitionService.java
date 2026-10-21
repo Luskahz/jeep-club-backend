@@ -28,6 +28,8 @@ public class AdminChargeDefinitionService {
     private final ChargeDefinitionRepository chargeDefinitionRepository;
     private final ChargeAssignmentRepository chargeAssignmentRepository;
     private final Clock clock;
+    private final java.util.List<com.jeepclub.backend.billing.api.module.spi.ChargeDefinitionDeletionGuard> deletionGuards;
+    private final com.jeepclub.backend.platform.logging.SystemLogService audit;
 
     @Transactional
     public ChargeDefinitionResult create(
@@ -85,7 +87,7 @@ public class AdminChargeDefinitionService {
 
     @Transactional
     public ChargeDefinitionResult activate(Long id) {
-        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
+        ChargeDefinition chargeDefinition = findChargeDefinitionForUpdate(id);
 
         chargeDefinition.activate(Instant.now(clock));
 
@@ -96,7 +98,7 @@ public class AdminChargeDefinitionService {
 
     @Transactional
     public ChargeDefinitionResult deactivate(Long id) {
-        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
+        ChargeDefinition chargeDefinition = findChargeDefinitionForUpdate(id);
 
         chargeDefinition.deactivate(Instant.now(clock));
 
@@ -107,7 +109,7 @@ public class AdminChargeDefinitionService {
 
     @Transactional
     public ChargeDefinitionResult archive(Long id) {
-        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
+        ChargeDefinition chargeDefinition = findChargeDefinitionForUpdate(id);
 
         Instant now = Instant.now(clock);
 
@@ -137,7 +139,7 @@ public class AdminChargeDefinitionService {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
         Objects.requireNonNull(paymentAcceptancePolicy, "paymentAcceptancePolicy cannot be null");
 
-        ChargeDefinition chargeDefinition = findChargeDefinitionOrThrow(id);
+        ChargeDefinition chargeDefinition = findChargeDefinitionForUpdate(id);
 
         String normalizedName = normalizeName(name);
 
@@ -195,4 +197,51 @@ public class AdminChargeDefinitionService {
 
         return name.trim().toLowerCase(Locale.ROOT);
     }
+
+    @Transactional
+    public void delete(Long definitionId, Long actorId) {
+        java.util.Objects.requireNonNull(actorId, "Deletion actor is required");
+        findChargeDefinitionForUpdate(definitionId);
+        if (deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(definitionId))) {
+            throw new com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionDeletionConflictException();
+        }
+        Instant now = Instant.now(clock);
+        chargeDefinitionRepository.deleteWithHistory(definitionId, actorId, now);
+        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
+                "BILLING_CHARGE_DEFINITION_DELETE", "DELETE", "/billing/charge-definitions/" + definitionId,
+                204, com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS, 0, null, now));
+    }
+
+    private ChargeDefinition findChargeDefinitionForUpdate(Long id) {
+        return chargeDefinitionRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ChargeDefinitionNotFoundException("Charge definition not found."));
+    }
+    @Transactional
+    public ChargeDefinitionResult activate(Long id,Long actorId) {
+        var definition=findChargeDefinitionForUpdate(id);
+        if(definition.getStatus().name().equals("ACTIVE")) return ChargeDefinitionResult.from(definition);
+        var result=activate(id);
+        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,"BILLING_CHARGE_DEFINITION_ACTIVATE",
+                "PATCH","/billing/charge-definitions/"+id+"/activate",200,com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+    @Transactional
+    public ChargeDefinitionResult deactivate(Long id,Long actorId) {
+        var definition=findChargeDefinitionForUpdate(id);
+        if(definition.getStatus().name().equals("INACTIVE")) return ChargeDefinitionResult.from(definition);
+        var result=deactivate(id);
+        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,"BILLING_CHARGE_DEFINITION_DEACTIVATE",
+                "PATCH","/billing/charge-definitions/"+id+"/deactivate",200,com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+    @Transactional
+    public ChargeDefinitionResult archive(Long id,Long actorId) {
+        var definition=findChargeDefinitionForUpdate(id);
+        if(definition.getStatus().name().equals("ARCHIVED")) return ChargeDefinitionResult.from(definition);
+        var result=archive(id);
+        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,"BILLING_CHARGE_DEFINITION_ARCHIVE",
+                "PATCH","/billing/charge-definitions/"+id+"/archive",200,com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,Instant.now(clock)));
+        return result;
+    }
+
 }

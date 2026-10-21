@@ -1,14 +1,12 @@
 package com.jeepclub.backend.memberships.infra.mail;
 
 import com.jeepclub.backend.memberships.core.port.MemberActivationMailSender;
-import com.jeepclub.backend.memberships.core.port.MembershipActivationUrlProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
 @Profile("!dev & !test")
@@ -16,18 +14,12 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class SmtpMemberActivationMailSender implements MemberActivationMailSender {
 
     private final JavaMailSender mailSender;
-    private final MembershipActivationUrlProperties urlProperties;
 
     @Value("${app.mail.from}")
     private String from;
 
     @Override
-    public void sendActivationLink(String recipientEmail, String recipientName, String activationToken) {
-        String link = UriComponentsBuilder.fromUriString(urlProperties.activationUrl())
-                .queryParam("token", activationToken)
-                .build()
-                .encode()
-                .toUriString();
+    public void sendActivationLink(String recipientEmail, String recipientName, String link) {
         send(
                 recipientEmail,
                 "Bem-vindo ao Jeep Club - ative seu acesso",

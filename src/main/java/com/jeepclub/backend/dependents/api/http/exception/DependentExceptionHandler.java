@@ -15,6 +15,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.dependents")
 public class DependentExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
+        return buildErrorResponse("DEPENDENT_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleLifecycleConflict(com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException exception) {
+        return buildErrorResponse("DEPENDENT_LIFECYCLE_CONFLICT", exception.getMessage(), HttpStatus.CONFLICT);
+    }
+
 
     @ExceptionHandler(DependentNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleDependentNotFound(

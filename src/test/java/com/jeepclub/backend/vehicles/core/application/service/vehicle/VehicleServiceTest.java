@@ -41,14 +41,18 @@ class VehicleServiceTest {
     private VehicleRepository vehicleRepository;
     @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaService images;
 
+    @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
+    @Mock private com.jeepclub.backend.vehicles.core.port.UserPort userPort;
     private VehicleService service;
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(userPort.existsById(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
+        org.mockito.Mockito.lenient().when(userPort.existsActiveById(org.mockito.ArgumentMatchers.anyLong())).thenReturn(true);
         service = new VehicleService(
                 vehicleRepository,
-                Clock.fixed(NOW, ZoneOffset.UTC), images
-        );
+                Clock.fixed(NOW, ZoneOffset.UTC), userPort, images, mediaCommand, new com.jeepclub.backend.vehicles.core.application.service.internal.VehicleGalleryAssembler(images,mediaCommand)
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
     }
 
     @Test
@@ -64,9 +68,9 @@ class VehicleServiceTest {
     }
 
     @Test
-    void doesNotPersistVehicleWithMissingPhoto() {
+    void doesNotPersistVehicleWhenImageUploadFails() {
         org.mockito.Mockito.doThrow(new StorageObjectNotFoundException())
-                .when(images).requireExisting("photo");
+                .when(mediaCommand).storeInTransaction(any());
 
         assertThatThrownBy(this::createVehicle)
                 .isInstanceOf(StorageObjectNotFoundException.class);
@@ -88,7 +92,7 @@ class VehicleServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Vehicle vehicle = service.create(
-                "Trovão", "photo", "  abc1d23  ", "382.492.064-28", "Jeep",
+                "Trovão", upload(), "  abc1d23  ", "382.492.064-28", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
                 2.0, true, 7L
         );
@@ -116,7 +120,7 @@ class VehicleServiceTest {
     @Test
     void hidesSoftDeletedVehicle() {
         when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
-                .thenReturn(Optional.of(vehicle(1L, 7L, VehicleStatus.SOFT_DELETED)));
+                .thenReturn(Optional.of(vehicle(1L, 7L, VehicleStatus.ARCHIVED)));
 
         assertThatThrownBy(() -> service.findById(1L, 7L))
                 .isInstanceOf(VehicleIdNotFoundException.class)
@@ -126,7 +130,7 @@ class VehicleServiceTest {
     @Test
     void updatesAndDeletesOwnedVehicleWithAuditData() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         service.update(1L, 7L, fullEdit(
@@ -146,7 +150,7 @@ class VehicleServiceTest {
     @Test
     void omittedFieldsPreserveCurrentValuesOnMemberUpdate() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields onlyColor = new VehicleEditFields(
@@ -167,7 +171,7 @@ class VehicleServiceTest {
     @Test
     void clearsNullableFieldOnExplicitNull() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields clearNickname = new VehicleEditFields(
@@ -186,7 +190,7 @@ class VehicleServiceTest {
     @Test
     void canonicalizesPlateAndRenavamOnUpdateBeforeDuplicateCheck() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields updates = new VehicleEditFields(
@@ -209,7 +213,7 @@ class VehicleServiceTest {
     @Test
     void rejectsExplicitNullOnRequiredFieldWithoutTouchingPersistence() {
         Vehicle vehicle = vehicle(1L, 7L, VehicleStatus.ACTIVE);
-        when(vehicleRepository.findByIdAndOwnerId(1L, 7L))
+        when(vehicleRepository.findByIdForUpdate(1L))
                 .thenReturn(Optional.of(vehicle));
 
         VehicleEditFields nullBrand = new VehicleEditFields(
@@ -228,7 +232,7 @@ class VehicleServiceTest {
 
     private Vehicle createVehicle() {
         return service.create(
-                "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
+                "Trovão", upload(), "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
                 2.0, true, 7L
         );
@@ -238,7 +242,8 @@ class VehicleServiceTest {
         return Vehicle.reconstitute(
                 id, "Trovão", "photo", "ABC1D23", "38249206428", "Jeep",
                 "Wrangler", 2023, 2024, "Verde", 5, FuelType.DIESEL,
-                2.0, status, true, ownerId, NOW.minusSeconds(60), null
+                2.0, status, true, ownerId, NOW.minusSeconds(60), null,
+                status == VehicleStatus.ARCHIVED ? NOW : null, status == VehicleStatus.ARCHIVED
         );
     }
 
@@ -262,5 +267,10 @@ class VehicleServiceTest {
                 FieldUpdate.of(engineDisplacement),
                 FieldUpdate.of(towing)
         );
+    }
+
+    private static com.jeepclub.backend.platform.storage.image.ImageUpload upload() {
+        return new com.jeepclub.backend.platform.storage.image.ImageUpload("vehicle.png", "image/png",
+            new byte[]{(byte)137,80,78,71,13,10,26,10});
     }
 }

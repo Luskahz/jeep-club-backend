@@ -93,4 +93,7 @@ public class ToolHistoryEntity {
             updatable = false
     )
     private LocalDateTime deletedAt;
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
 }

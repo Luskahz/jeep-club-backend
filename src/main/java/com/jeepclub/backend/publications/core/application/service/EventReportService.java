@@ -43,7 +43,7 @@ public class EventReportService {
         volume.requireWithinLimit(eventId);finance.requireWithinLimit(eventId);
         var dashboard=event==null?administration.historicalDashboard(eventId):administration.dashboard(eventId);
         var registrations=dashboard.registrations();var guests=operations.guests(eventId);var rules=operations.rules(eventId);
-        var userIds=new HashSet<Long>();registrations.forEach(r->userIds.add(r.userId()));guests.forEach(g->userIds.add(g.requesterUserId()));
+        var userIds=new HashSet<Long>();registrations.forEach(r->userIds.add(r.userId()));guests.forEach(g->{userIds.add(g.requesterUserId());if(g.responsibleUserId()!=null)userIds.add(g.responsibleUserId());});
         var depIds=new HashSet<Long>();registrations.forEach(r->{depIds.addAll(r.unallocatedDependentIds());r.allocations().forEach(a->depIds.addAll(a.dependentIds()));});
         var vehicleIds=new HashSet<Long>();registrations.forEach(r->r.allocations().forEach(a->vehicleIds.add(a.vehicleId())));guests.stream().map(EventGuestRequest::vehicleId).filter(Objects::nonNull).forEach(vehicleIds::add);
         var vs=batch(vehicleIds,historical==null?vehicles::findDetailsBatch:vehicles::findPresentationDetailsBatch).stream().collect(Collectors.toMap(EventVehicleQuery.Details::id,v->v));
@@ -125,7 +125,7 @@ public class EventReportService {
     }
     private void transport(TransportView view,List<Person> all,Map<Long,EventVehicleQuery.Details> vs,Map<Long,UserDetails> us,List<EventRideOffer> offers,Consumer<ExportRow> sink) {
         if(view==TransportView.UNALLOCATED_PEOPLE || view==TransportView.UNALLOCATED_GUESTS || view==TransportView.PENDING_GUESTS) {
-            for(var p:all)if(!p.registrationStatus().equals("CANCELLED") && (view==TransportView.UNALLOCATED_PEOPLE?p.vehicleId()==null:view==TransportView.UNALLOCATED_GUESTS?p.type().equals("GUEST")&&p.vehicleId()==null:p.type().equals("GUEST")&&"PENDING".equals(p.guestStatus())))
+            for(var p:all)if(!List.of("CANCELLED","REJECTED").contains(p.registrationStatus()) && (view==TransportView.UNALLOCATED_PEOPLE?p.vehicleId()==null&&(!p.type().equals("GUEST")||"APPROVED".equals(p.guestStatus())):view==TransportView.UNALLOCATED_GUESTS?p.type().equals("GUEST")&&"APPROVED".equals(p.guestStatus())&&p.vehicleId()==null:p.type().equals("GUEST")&&"PENDING".equals(p.guestStatus())))
                 sink.accept(ExportRow.of(null,p.holder(),"","Não alocado","","",p.name(),p.type().equals("DEPENDENT")?p.name():"",p.type().equals("GUEST")?p.name():"","","",p.registrationStatus()));
             return;
         }

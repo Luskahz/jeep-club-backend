@@ -64,7 +64,7 @@ public record DependentResponseDTO(
         @Schema(
                 description = "Status atual do dependente.",
                 example = "ACTIVE",
-                allowableValues = {"ACTIVE", "DISABLED"},
+                allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"},
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         DependentStatus status,
@@ -81,7 +81,10 @@ public record DependentResponseDTO(
                 example = "2026-05-23T14:20:00Z",
                 nullable = true
         )
-        Instant updatedAt
+        Instant updatedAt,
+        @Schema(description = "Rota protegida de leitura da foto; não é chave de storage nem URL física.", nullable = true,
+                example = "/dependents/1/photo")
+        String photoUrl
 
 ) {
 
@@ -101,7 +104,15 @@ public record DependentResponseDTO(
                 result.userId(),
                 result.status(),
                 result.createdAt(),
-                result.updatedAt()
+                result.updatedAt(),
+                result.photoStorageKey() == null ? null : "/dependents/" + result.id() + "/photo"
         );
     }
+    public static DependentResponseDTO fromAdmin(DependentResult result) {
+        var dto = from(result);
+        return new DependentResponseDTO(dto.id(),dto.name(),dto.cpf(),dto.birthDate(),dto.relationshipType(),
+                dto.phoneNumber(),dto.userId(),dto.status(),dto.createdAt(),dto.updatedAt(),
+                result.photoStorageKey() == null ? null : "/users/" + result.userId() + "/dependents/" + result.id() + "/photo");
+    }
+
 }

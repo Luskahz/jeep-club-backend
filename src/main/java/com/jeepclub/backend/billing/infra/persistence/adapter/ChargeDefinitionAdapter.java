@@ -15,13 +15,23 @@ import java.util.Optional;
 @Repository
 @RequiredArgsConstructor
 public class ChargeDefinitionAdapter implements ChargeDefinitionRepository {
+    private final jakarta.persistence.EntityManager entityManager;
+
 
     private final ChargeDefinitionJpaRepository jpa;
     private final ChargeDefinitionMapper mapper;
+    private final com.jeepclub.backend.billing.infra.persistence.jpa.ChargeCycleJpaRepository cycles;
+    private final com.jeepclub.backend.billing.infra.persistence.jpa.MemberChargeJpaRepository charges;
+    private final com.jeepclub.backend.billing.infra.persistence.jpa.EventChargeContextJpaRepository eventContexts;
+    private final com.jeepclub.backend.billing.infra.persistence.jpa.assignment.ChargeAssignmentJpaRepository assignments;
+    private final com.jeepclub.backend.billing.infra.persistence.jpa.ChargeDefinitionDeletionHistoryJpaRepository deletionHistory;
 
     @Override
     public Optional<ChargeDefinition> findByIdForUpdate(Long id) {
-        return jpa.findByIdForUpdate(id).map(mapper::toDomain);
+        var locked = jpa.findByIdForUpdate(id);
+        // Retain the DB lock while discarding any pre-lock ORM snapshot (MySQL REPEATABLE READ).
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpa.findByIdForUpdate(id)).map(mapper::toDomain);
     }
 
     @Override
@@ -59,5 +69,25 @@ public class ChargeDefinitionAdapter implements ChargeDefinitionRepository {
     @Override
     public boolean existsByNameAndIdNot(String name, Long id) {
         return jpa.existsByNameAndIdNot(name, id);
+    }
+
+    @Override
+    public void deleteWithHistory(Long definitionId, Long actorId, java.time.Instant now) {
+        java.util.Objects.requireNonNull(actorId, "Deletion actor is required");
+        var definition = findByIdForUpdate(definitionId).orElseThrow(() ->
+                new com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionNotFoundException("Charge definition not found."));
+        if (cycles.findFirstByChargeDefinitionIdOrderById(definitionId).isPresent()
+                || charges.findFirstByChargeDefinitionIdOrderById(definitionId).isPresent()
+                || assignments.findFirstByChargeDefinitionIdOrderById(definitionId).isPresent()
+                || eventContexts.findFirstByChargeDefinitionIdOrderById(definitionId).isPresent()) {
+            throw new com.jeepclub.backend.billing.core.domain.exception.definition.ChargeDefinitionDeletionConflictException();
+        }
+        deletionHistory.saveAndFlush(new com.jeepclub.backend.billing.infra.persistence.entity.ChargeDefinitionDeletionHistoryEntity(
+                definition.getId(), definition.getName(), definition.getDescription(), definition.getDefaultAmount(),
+                definition.getRecurrenceType().name(), definition.getRequired(), definition.getPaymentAcceptancePolicy().name(),
+                definition.getLatePaymentGraceDays(), definition.getStatus().name(), definition.getCreatedAt(),
+                definition.getUpdatedAt(), definition.getArchivedAt(), actorId, now, "ADMINISTRATIVE_DELETE", 1));
+        jpa.deleteById(definitionId);
+        jpa.flush();
     }
 }

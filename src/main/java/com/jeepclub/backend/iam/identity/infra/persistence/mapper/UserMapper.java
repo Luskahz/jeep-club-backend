@@ -25,6 +25,7 @@ public class UserMapper {
         entity.setCreatedAt(domain.getCreatedAt());
         entity.setDisabledAt(domain.getDisabledAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
+        entity.setArchivedAt(domain.getArchivedAt());
         return entity;
     }
 
@@ -45,7 +46,8 @@ public class UserMapper {
                 entity.getStatus(),
                 entity.getCreatedAt(),
                 entity.getDisabledAt(),
-                entity.getUpdatedAt()
+                entity.getUpdatedAt(),
+                entity.getArchivedAt()
         );
     }
 }

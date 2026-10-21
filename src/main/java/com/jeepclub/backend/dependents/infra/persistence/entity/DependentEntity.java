@@ -67,6 +67,9 @@ public class DependentEntity {
     )
     private String phoneNumber;
 
+    @Column(name = "photo_storage_key", length = 512)
+    private String photoStorageKey;
+
     @Column(
             name = "user_id",
             nullable = false
@@ -92,4 +95,7 @@ public class DependentEntity {
             name = "updated_at"
     )
     private Instant updatedAt;
+
+    @Column(name = "archived_at")
+    private Instant archivedAt;
 }

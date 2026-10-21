@@ -37,6 +37,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.databind.JsonNode;
+import com.jeepclub.backend.platform.storage.image.ImageUpload;
+import com.jeepclub.backend.platform.storage.image.ImageMultipartAdapter;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/vehicles")
@@ -44,14 +49,14 @@ import tools.jackson.databind.JsonNode;
 @Validated
 @Tag(
         name = "Vehicles - Member",
-        description = "Operações do membro autenticado sobre seus próprios veículos ativos."
+        description = "Operações do membro autenticado sobre seus veículos; leitura de disponibilidade e edição somente elegível."
 )
 public class VehicleController {
 
     private final VehicleService vehicleService;
     private final EditRequestFieldReader editRequestFieldReader;
 
-    @PostMapping("/include/member")
+    @PostMapping(value = "/include/member", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Cadastrar veículo do membro autenticado",
             description = "Cria um veículo ACTIVE usando o userId do principal autenticado como proprietário.",
@@ -66,9 +71,43 @@ public class VehicleController {
             @RequestBody @Valid IncludeRequestDTO request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
+        return createVehicle(request, null, principal.getUserId());
+    }
+
+    @PostMapping(value = "/include/member", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Cadastrar veículo com foto opcional",
+        description = "Part vehicle: JSON validado sem photo/storageKey. Part photos: zero a cinco arquivos JPEG/PNG/WebP até 5 MiB cada; gallery opcional define ordem/principal por uploadIndex. photo único legado não pode ser combinado. Upload e cadastro são orquestrados; rollback compensa exclusivamente o novo arquivo.",
+        responses = {@ApiResponse(responseCode = "201", description = "Veículo cadastrado."),
+            @ApiResponse(responseCode = "400", description = "DTO ou imagem inválida.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Identificadores já cadastrados.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "413", description = "Limite multipart do servidor excedido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "415", description = "Part vehicle exige application/json.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
+            @ApiResponse(responseCode = "503", description = "Storage indisponível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))})
+    public ResponseEntity<Void> includeVehicleWithPhoto(
+            @RequestPart("vehicle") @Valid IncludeRequestDTO request,
+            @RequestPart(value = "photo", required = false) MultipartFile photo,
+            @RequestPart(value="photos",required=false) java.util.List<MultipartFile> photos,
+            @RequestPart(value="gallery",required=false) @Valid com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryRequest gallery,
+            @Parameter(hidden = true) org.springframework.web.multipart.MultipartHttpServletRequest multipart,
+            @AuthenticationPrincipal UserPrincipal principal) throws IOException {
+        com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.validate(multipart,true);
+        if(gallery==null && (multipart.getMultiFileMap().containsKey("gallery") || multipart.getParameterMap().containsKey("gallery")))
+            throw new com.jeepclub.backend.shared.storage.exception.InvalidStorageFileException("Explicit gallery must be a JSON object.");
+        if(photos!=null || gallery!=null) {
+            var change=com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.change(gallery,photos);
+            vehicleService.createWithGallery(request.nickname(),change,request.plate(),request.renavam(),request.brand(),request.model(),
+                    request.manufacturingYear(),request.modelYear(),request.color(),request.seatingCapacity(),request.fuelType(),
+                    request.engineDisplacement(),request.towing(),principal.getUserId());
+            return ResponseEntity.status(HttpStatus.CREATED).build();
+        }
+        return createVehicle(request,ImageMultipartAdapter.read(photo),principal.getUserId());
+    }
+
+    private ResponseEntity<Void> createVehicle(IncludeRequestDTO request, ImageUpload photo, Long ownerId) {
         vehicleService.create(
                 request.nickname(),
-                request.photo(),
+                photo,
                 request.plate(),
                 request.renavam(),
                 request.brand(),
@@ -80,7 +119,7 @@ public class VehicleController {
                 request.fuelType(),
                 request.engineDisplacement(),
                 request.towing(),
-                principal.getUserId()
+                ownerId
         );
 
         return ResponseEntity.status(HttpStatus.CREATED).build();
@@ -97,11 +136,14 @@ public class VehicleController {
     )
     public ResponseEntity<PageResponse<ListResponseDTO>> listMemberVehicles(
             @AuthenticationPrincipal UserPrincipal principal,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue="ACTIVE") com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus status,
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
         return ResponseEntity.ok(PageResponse.from(
-                vehicleService.findAll(principal.getUserId(), pageable)
+                (status == com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE
+                        ? vehicleService.findAll(principal.getUserId(),pageable)
+                        : vehicleService.findAll(principal.getUserId(),status,pageable))
                         .map(ListResponseDTO::from)
         ));
     }
@@ -109,7 +151,7 @@ public class VehicleController {
     @GetMapping("/detail/member/{vehicleId}")
     @Operation(
             summary = "Consultar veículo do membro autenticado",
-            description = "Retorna somente veículo ACTIVE pertencente ao membro; inexistência, outro proprietário e status não ativo são ocultados como não encontrado.",
+            description = "Retorna veículo próprio com galeria, capa e revisão, inclusive INACTIVE/ARCHIVED atuais; inexistência, outro proprietário e exclusão legada são ocultados como não encontrado.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Veículo retornado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DetailResponseDTO.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -130,7 +172,7 @@ public class VehicleController {
     @Operation(
             operationId = "detailMemberVehicle_1",
             summary = "Consultar dados de edição do veículo do membro",
-            description = "Retorna os dados editáveis somente de veículo ACTIVE pertencente ao membro; ownership inválido é ocultado como não encontrado.",
+            description = "Retorna dados/galeria/revisão do veículo próprio, inclusive INACTIVE/ARCHIVED para leitura. Escrita exige ACTIVE; ownership inválido ou exclusão legada produz 404.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Dados de edição retornados.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DetailForEditResponseDTO.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -183,7 +225,7 @@ public class VehicleController {
     @DeleteMapping("/delete/member/{vehicleId}")
     @Operation(
             summary = "Deletar veículo do membro logado",
-            description = "Sob lock, arquiva o snapshot e remove fisicamente o veículo ACTIVE pertencente ao membro.",
+            description = "Sob lock, arquiva o snapshot e remove fisicamente o veículo pertencente ao membro quando não há vínculos impeditivos.",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Veículo removido e histórico arquivado."),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -198,5 +240,67 @@ public class VehicleController {
     ) {
         vehicleService.delete(vehicleId, principal.getUserId());
         return ResponseEntity.noContent().build();
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/activate/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Ativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> activate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.activate(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/deactivate/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Desativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> deactivate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.deactivate(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/archive/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Arquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.archive(vehicleId,principal.getUserId())));
+    }
+
+    @org.springframework.web.bind.annotation.PatchMapping("/unarchive/member/{vehicleId}")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Desarquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DetailResponseDTO.from(vehicleService.unarchive(vehicleId,principal.getUserId())));
+    }
+
+    @PutMapping(value="/gallery/member/{vehicleId}",consumes=MediaType.APPLICATION_JSON_VALUE)
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Substituir galeria completa do veículo",description="expectedRevision obrigatório; images [] limpa. Reordena/troca principal/retém referências legadas próprias. Nova referência pública exige existência. Foto omitida nos endpoints de dados cadastrais preserva a galeria.")
+    @ApiResponse(responseCode="200",description="Galeria atual; repetição idêntica é idempotente.",content=@Content(mediaType=MediaType.APPLICATION_JSON_VALUE,schema=@Schema(implementation=DetailResponseDTO.class)))
+    @ApiResponse(responseCode="409",description="Revisão desatualizada ou cadastro inelegível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> replaceGallery(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @RequestBody @Valid com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryUpdateRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(DetailResponseDTO.from(vehicleService.replaceGallery(vehicleId,principal.getUserId(),request.change(java.util.List.of()))));
+    }
+
+    @PutMapping(value="/gallery/member/{vehicleId}",consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary="Substituir galeria com upload de novas imagens",description="gallery JSON com expectedRevision/images é obrigatório; photos contém até cinco arquivos, indexados a partir de zero por uploadIndex. Não apaga arquivos antigos/compartilhados. Rollback compensa somente os novos.")
+    @ApiResponse(responseCode="200",description="Galeria completa atualizada.",content=@Content(mediaType=MediaType.APPLICATION_JSON_VALUE,schema=@Schema(implementation=DetailResponseDTO.class)))
+    @ApiResponse(responseCode="409",description="Revisão desatualizada ou cadastro inelegível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DetailResponseDTO> replaceGalleryWithUploads(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
+            @RequestPart("gallery") @Valid com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryUpdateRequest request,
+            @RequestPart(value="photos",required=false) java.util.List<MultipartFile> photos,
+            @Parameter(hidden=true) org.springframework.web.multipart.MultipartHttpServletRequest multipart,
+            @AuthenticationPrincipal UserPrincipal principal) throws IOException {
+        com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.validate(multipart,false);
+        var change=com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.change(request.asGallery(),photos);
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(DetailResponseDTO.from(vehicleService.replaceGallery(vehicleId,principal.getUserId(),change)));
     }
 }

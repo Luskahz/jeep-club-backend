@@ -1,5 +1,6 @@
 package com.jeepclub.backend.iam.identity.core.domain.model;
 
+import com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException;
 import com.jeepclub.backend.iam.identity.api.module.UserStatus;
 import com.jeepclub.backend.shared.storage.ImageReference;
 import com.jeepclub.backend.iam.identity.core.domain.exception.UserAlreadyDisabledException;
@@ -35,6 +36,7 @@ public class User {
     private Instant createdAt;
     private Instant disabledAt;
     private Instant updatedAt;
+    private Instant archivedAt;
 
     public static User create(
             String name,
@@ -75,6 +77,34 @@ public class User {
             Instant disabledAt,
             Instant updatedAt
     ) {
+        return reconstitute(id, name, birthDate, email, cpf, rg, phoneNumber, profilePhotoStorageKey, status, createdAt, disabledAt, updatedAt, null);
+    }
+
+    public static User reconstitute(
+            Long id,
+            String name,
+            LocalDate birthDate,
+            String email,
+            String cpf,
+            String rg,
+            String phoneNumber,
+            String profilePhotoStorageKey,
+            UserStatus status,
+            Instant createdAt,
+            Instant disabledAt,
+            Instant updatedAt,
+            Instant archivedAt
+    ) {
+        if ((status == UserStatus.ARCHIVED) != (archivedAt != null)) {
+            throw new IllegalArgumentException("Archived state requires its archival timestamp only.");
+        }
+        if (archivedAt != null && (createdAt == null || archivedAt.isBefore(createdAt))) {
+            throw new IllegalArgumentException("archivedAt cannot be before createdAt.");
+        }
+        if (status == UserStatus.ARCHIVED && disabledAt == null) {
+            throw new IllegalArgumentException("Archived user must retain disabledAt.");
+        }
+
         validateId(id);
         Objects.requireNonNull(status, "status cannot be null");
         Objects.requireNonNull(createdAt, "createdAt cannot be null");
@@ -93,16 +123,18 @@ public class User {
         user.createdAt = createdAt;
         user.disabledAt = disabledAt;
         user.updatedAt = updatedAt;
+        user.archivedAt = archivedAt;
         return user;
     }
 
     public void disable(Instant now) {
+        assertNotArchived();
         validateMutationInstant(now);
         if (isDisabled()) {
             throw new UserAlreadyDisabledException(id);
         }
 
-        status = UserStatus.DISABLED;
+        status = UserStatus.INACTIVE;
         disabledAt = now;
         updatedAt = now;
     }
@@ -119,6 +151,7 @@ public class User {
     }
 
     public void updateEmail(String newEmail, Instant now) {
+        assertNotArchived();
         validateMutationInstant(now);
         String normalizedEmail = normalizeEmail(newEmail);
         if (normalizedEmail == null) {
@@ -129,6 +162,7 @@ public class User {
     }
 
     public void updateProfilePhoto(String storageKey, Instant now) {
+        assertNotArchived();
         validateMutationInstant(now);
         profilePhotoStorageKey = normalizeProfilePhotoStorageKey(storageKey);
         updatedAt = now;
@@ -136,6 +170,7 @@ public class User {
 
     public void updateProfile(String name, LocalDate birthDate, String rg, String phoneNumber,
                               String profilePhotoStorageKey, Instant now) {
+        assertNotArchived();
         validateMutationInstant(now);
         // Validate every value before mutating any field, including when called without a transaction.
         String normalizedName = normalizeName(name);
@@ -185,7 +220,7 @@ public class User {
     }
 
     public boolean isDisabled() {
-        return status == UserStatus.DISABLED;
+        return status == UserStatus.INACTIVE;
     }
 
     public static String normalizeName(String rawName) {
@@ -262,7 +297,7 @@ public class User {
         if (status == UserStatus.ACTIVE && disabledAt != null) {
             throw new IllegalArgumentException("active user cannot have disabledAt");
         }
-        if (status == UserStatus.DISABLED && disabledAt == null) {
+        if (status == UserStatus.INACTIVE && disabledAt == null) {
             throw new IllegalArgumentException("disabled user must have disabledAt");
         }
         if (disabledAt != null && disabledAt.isBefore(createdAt)) {
@@ -344,6 +379,34 @@ public class User {
             throw new IllegalArgumentException(
                     field + " must have at most " + maxLength + " characters"
             );
+        }
+    }
+
+    public boolean archive(Instant now) {
+        validateMutationInstant(now);
+        if (status == UserStatus.ARCHIVED) return false;
+        if (disabledAt == null) disabledAt = now;
+        status = UserStatus.ARCHIVED;
+        archivedAt = now;
+        updatedAt = now;
+        return true;
+    }
+
+    public boolean unarchive(Instant now) {
+        validateMutationInstant(now);
+        if (status == UserStatus.INACTIVE) return false;
+        if (status != UserStatus.ARCHIVED) {
+            throw new UserLifecycleConflictException("Only an archived record can be unarchived.");
+        }
+        status = UserStatus.INACTIVE;
+        archivedAt = null;
+        updatedAt = now;
+        return true;
+    }
+
+    private void assertNotArchived() {
+        if (status == UserStatus.ARCHIVED) {
+            throw new UserLifecycleConflictException("Archived record requires explicit unarchive before this operation.");
         }
     }
 }

@@ -163,4 +163,10 @@ public class PasswordRecoveryRequestRepositoryAdapter
                 .map(PasswordRecoveryRequestMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<PasswordRecoveryRequest> findAllOpenByUserIdForUpdate(Long userId) {
+        return jpaRepository.findAllOpenByUserIdForUpdate(userId).stream()
+                .map(PasswordRecoveryRequestMapper::toDomain).toList();
+    }
 }

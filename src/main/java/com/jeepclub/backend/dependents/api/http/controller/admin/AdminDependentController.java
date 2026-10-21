@@ -29,6 +29,7 @@ import java.util.List;
 public class AdminDependentController {
 
     private final AdminDependentService adminDependentService;
+    private final com.jeepclub.backend.dependents.core.application.service.dependent.DependentService lifecycle;
 
     @GetMapping
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_READ')")
@@ -61,7 +62,7 @@ public class AdminDependentController {
         List<DependentResponseDTO> response = adminDependentService
                 .findAllByUserId(userId)
                 .stream()
-                .map(DependentResponseDTO::from)
+                .map(DependentResponseDTO::fromAdmin)
                 .toList();
 
         return ResponseEntity.ok(response);
@@ -105,12 +106,69 @@ public class AdminDependentController {
             @PathVariable Long id
     ) {
         return ResponseEntity.ok(
-                DependentResponseDTO.from(
+                DependentResponseDTO.fromAdmin(
                         adminDependentService.findByUserIdAndId(
                                 userId,
                                 id
                         )
                 )
         );
+    }
+
+    @PatchMapping("/{id}/disable")
+    @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_DEACTIVATE')")
+    @RequiredPermission("DEPENDENTS_DEPENDENT_DEACTIVATE")
+    @Operation(summary="disable dependente administrativamente", description="Preserva titular e histórico; unarchive retorna a INACTIVE.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> disable(@PathVariable @jakarta.validation.constraints.Positive Long userId,
+            @PathVariable @jakarta.validation.constraints.Positive Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.disable(id,userId,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/enable")
+    @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_ACTIVATE')")
+    @RequiredPermission("DEPENDENTS_DEPENDENT_ACTIVATE")
+    @Operation(summary="enable dependente administrativamente", description="Preserva titular e histórico; unarchive retorna a INACTIVE.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> enable(@PathVariable @jakarta.validation.constraints.Positive Long userId,
+            @PathVariable @jakarta.validation.constraints.Positive Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.enable(id,userId,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/archive")
+    @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_ARCHIVE')")
+    @RequiredPermission("DEPENDENTS_DEPENDENT_ARCHIVE")
+    @Operation(summary="archive dependente administrativamente", description="Preserva titular e histórico; unarchive retorna a INACTIVE.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long userId,
+            @PathVariable @jakarta.validation.constraints.Positive Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.archive(id,userId,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_UNARCHIVE')")
+    @RequiredPermission("DEPENDENTS_DEPENDENT_UNARCHIVE")
+    @Operation(summary="unarchive dependente administrativamente", description="Preserva titular e histórico; unarchive retorna a INACTIVE.")
+    @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long userId,
+            @PathVariable @jakarta.validation.constraints.Positive Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.fromAdmin(lifecycle.unarchive(id,userId,principal.getUserId())));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_DELETE')")
+    @RequiredPermission("DEPENDENTS_DEPENDENT_DELETE")
+    @Operation(summary="Excluir dependente administrativamente", description="Snapshot registra o administrador real. Health/Event retidos impedem a exclusão.")
+    @ApiResponse(responseCode="204",description="Excluído com histórico.")
+    @ApiResponse(responseCode="409",description="Referências impeditivas.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<Void> delete(@PathVariable @jakarta.validation.constraints.Positive Long userId,
+            @PathVariable @jakarta.validation.constraints.Positive Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.jeepclub.backend.platform.security.principal.UserPrincipal principal) {
+        lifecycle.delete(id,userId,principal.getUserId());
+        return ResponseEntity.noContent().build();
     }
 }

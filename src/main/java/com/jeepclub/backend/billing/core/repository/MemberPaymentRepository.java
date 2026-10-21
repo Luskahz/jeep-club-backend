@@ -16,6 +16,10 @@ public interface MemberPaymentRepository {
 
     Optional<MemberPayment> findById(Long id);
 
+    Optional<Long> findChargeCycleIdById(Long id);
+
+    List<MemberPayment> findByMemberChargeIdForUpdate(Long id);
+
     Optional<MemberPayment> findByIdForUpdate(Long id);
 
     Page<MemberPayment> findAll(Pageable pageable);

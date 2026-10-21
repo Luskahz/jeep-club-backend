@@ -10,13 +10,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@org.springframework.core.annotation.Order(org.springframework.core.Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(basePackages = {
         "com.jeepclub.backend.platform.storage.image",
         "com.jeepclub.backend.iam.identity.api.http.controller",
         "com.jeepclub.backend.vehicles.api.http.controller",
-        "com.jeepclub.backend.tools.api.http.controller"
+        "com.jeepclub.backend.tools.api.http.controller",
+        "com.jeepclub.backend.dependents.api.http.controller"
 })
 public class ImageMediaExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.shared.storage.exception.StorageOperationException.class)
+    public ResponseEntity<ApiErrorResponse> unavailable(RuntimeException exception) {
+        return buildErrorResponse("IMAGE_STORAGE_UNAVAILABLE", "Image storage is unavailable.", HttpStatus.SERVICE_UNAVAILABLE);
+    }
     @ExceptionHandler({InvalidStorageFileException.class, InvalidStorageKeyException.class})
     public ResponseEntity<ApiErrorResponse> invalid(RuntimeException exception) {
         return buildErrorResponse("INVALID_IMAGE", exception.getMessage(), HttpStatus.BAD_REQUEST);

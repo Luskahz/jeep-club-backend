@@ -11,6 +11,8 @@ public interface RoleRepository {
 
     Optional<Role> findById(Long id);
 
+    Optional<Role> findByIdForUpdate(Long id);
+
     Optional<Role> findByName(String name);
 
     boolean existsByName(String name);
@@ -19,5 +21,8 @@ public interface RoleRepository {
 
     Role save(Role role);
 
+    void deleteWithHistory(Long roleId, Long actorId, java.time.Instant now);
+
     Optional<Role> findRoot();
+    Optional<Role> findRootForUpdate();
 }

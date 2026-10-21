@@ -1,0 +1,116 @@
+{
+  "ticket": "BACK-510",
+  "date": "2026-10-18",
+  "branch": "feat/back-510-media-orchestration",
+  "baseBranch": "feat/back-460-event-billing-fixes",
+  "base": "5df55533b7d6f11f225f9c09e079a1b091bb8627",
+  "codeCommit": "c96450deeaf5ac2e7778642abd8b7aa62bc32cfd",
+  "environment": {
+    "java": "Microsoft OpenJDK 17.0.18",
+    "os": "Windows",
+    "mysql": "8.0.46",
+    "database": "Local disposable Testcontainers only"
+  },
+  "gates": [
+    {
+      "name": "Full verify",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "tests": 1977,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "skip": "Pre-existing Windows symlink capability test",
+      "result": "passed"
+    },
+    {
+      "name": "Complete MySQL profile",
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "tests": 115,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "result": "passed"
+    },
+    {
+      "name": "Future migration",
+      "command": "bash deploy/test-future-migration.sh (Windows adapter supplies Python3 and confines temporary cleanup)",
+      "tests": 115,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "result": "passed",
+      "temporaryMigration": "V5 in Git archive only"
+    }
+  ],
+  "focalGates": [
+    {
+      "name": "Vehicles and Platform",
+      "tests": 200,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1,
+      "scope": "Before additional transport edge cases"
+    },
+    {
+      "name": "Vehicle orchestration MySQL",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "scope": "Before final additional multipart validation case"
+    },
+    {
+      "name": "Real HTTP, multipart and Platform final focal",
+      "tests": 82,
+      "failures": 0,
+      "errors": 0,
+      "skips": 1
+    }
+  ],
+  "developmentFindings": [
+    {
+      "finding": "The actual servlet ceiling rejected a valid 5 MiB image although MockMvc passed.",
+      "cause": "Default 1 MiB Boot limit; first override was in the dev-only document.",
+      "resolution": "Move 10 MiB/12 MiB transport limits to the global property document; rerun identical real HTTP 5 MiB/5 MiB+1 case successfully."
+    }
+  ],
+  "coverage": [
+    "Commit keeps fresh media",
+    "Rollback after real JPA failure removes only newly created media",
+    "Outer transaction rollback",
+    "Compensation failure preserves original exception and sanitized log",
+    "Unknown commit retains media for reconciliation",
+    "Provider partial-write cleanup preserves existing files",
+    "Concurrent duplicate Vehicle creation keeps winner image and cleans loser image",
+    "JSON without photo and optional multipart photo",
+    "Invalid DTO, signatures, sizes, parts, unknown fields and owner injection",
+    "Actual 127.0.0.1 servlet HTTP at image limits",
+    "Member ownership, admin authority and active owner",
+    "Generated OpenAPI"
+  ],
+  "migrations": "None. V1-V4 untouched.",
+  "reviewPoints": [
+    "Coordinate Vehicle create contract with frontend.",
+    "Global upload remains for audited legitimate consumers.",
+    "Cleanup failure/unknown transaction outcome requires reconciliation.",
+    "Do not delete old/shared references automatically.",
+    "Private dependent images are addressed by BACK-524.",
+    "No production load or distributed provider validation."
+  ],
+  "githubCI": "Consult PR checks and description after publication. This file records local gates.",
+  "operations": {
+    "merge": false,
+    "protectedBranchPush": false,
+    "deploy": false,
+    "vpsAccess": false,
+    "sharedOrProductionDatabaseAccess": false,
+    "realImport": false
+  },
+  "mysqlSuites": {
+    "MembershipRegistryOnboardingMySqlIT": 8,
+    "MemberRegistryMySqlIT": 28,
+    "MySqlMigrationIT": 14,
+    "EventOperationsMySqlIT": 49,
+    "VehicleMediaOrchestrationMySqlIT": 16
+  }
+}

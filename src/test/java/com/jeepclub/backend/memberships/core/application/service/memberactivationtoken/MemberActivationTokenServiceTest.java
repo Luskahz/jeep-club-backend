@@ -39,6 +39,7 @@ class MemberActivationTokenServiceTest {
         when(hashPort.hash("raw")).thenReturn("hash");
         when(tokenRepository.findApplicationIdByTokenHash("hash")).thenReturn(Optional.of(1L));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(approvedApplication()));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(approvedApplication()));
         when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
         when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
         assertThatThrownBy(() -> service.complete("raw", "new-password"))
@@ -72,15 +73,17 @@ class MemberActivationTokenServiceTest {
     @Mock CompletePendingFirstAccessPort firstAccessPort;
     @Mock ActivationRecipientPort recipientPort;
     @Mock MemberActivationMailSender mailSender;
+    @Mock MemberActivationLinkFactory linkFactory;
+    @Mock PendingMembershipAuthentication pendingAuthentication;
     private MemberActivationTokenService service;
 
     @BeforeEach
     void setUp() {
         service = new MemberActivationTokenService(
                 tokenRepository, hashPort, tokenGenerator, timeProperties,
-                applicationRepository, firstAccessPort, recipientPort, mailSender,
+                applicationRepository, firstAccessPort, recipientPort, mailSender, linkFactory, pendingAuthentication,
                 Clock.fixed(NOW, ZoneOffset.UTC)
-        );
+        , org.mockito.Mockito.mock(com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService.class));
     }
 
     @Test
@@ -149,6 +152,7 @@ class MemberActivationTokenServiceTest {
         when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
         when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
 
         service.complete("raw", "new-password");
 
@@ -169,6 +173,7 @@ class MemberActivationTokenServiceTest {
         when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
         when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
         doThrow(new IllegalStateException("authentication failed"))
                 .when(firstAccessPort).complete(20L, "new-password");
 
@@ -189,14 +194,35 @@ class MemberActivationTokenServiceTest {
         when(hashPort.hash("raw-secret")).thenReturn("stored-hash");
         when(timeProperties.activationTokenTtl()).thenReturn(Duration.ofHours(72));
 
-        service.issueAndSend(application);
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        when(linkFactory.create("raw-secret")).thenReturn("https://app.example/activate?token=raw-secret");
+        assertThat(service.issueAndSend(application)).isEqualTo("https://app.example/activate?token=raw-secret");
 
         ArgumentCaptor<MemberActivationToken> captor = ArgumentCaptor.forClass(MemberActivationToken.class);
         verify(tokenRepository).invalidateAllByApplicationId(1L, NOW);
         verify(tokenRepository).save(captor.capture());
         assertThat(captor.getValue().getTokenHash()).isEqualTo("stored-hash");
         assertThat(captor.getValue().getTokenHash()).doesNotContain("raw-secret");
-        verify(mailSender).sendActivationLink("candidate@example.com", "Candidate", "raw-secret");
+        verify(mailSender).sendActivationLink("candidate@example.com", "Candidate", "https://app.example/activate?token=raw-secret");
+    }
+
+    @Test
+    void providerFailureCannotExposeItsMessageCauseOrSuppressedBearerCredential() {
+        var application = approvedApplication();
+        when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate", "candidate@example.com")));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        when(tokenGenerator.generate()).thenReturn("synthetic-sensitive-token");
+        when(hashPort.hash("synthetic-sensitive-token")).thenReturn("stored-hash");
+        when(timeProperties.activationTokenTtl()).thenReturn(Duration.ofHours(72));
+        String link = "https://app.example/activate?token=synthetic-sensitive-token";
+        when(linkFactory.create("synthetic-sensitive-token")).thenReturn(link);
+        var providerFailure = new org.springframework.mail.MailSendException("private@example.com " + link);
+        providerFailure.addSuppressed(new RuntimeException(link));
+        doThrow(providerFailure).when(mailSender).sendActivationLink(any(), any(), eq(link));
+        assertThatThrownBy(() -> service.issueAndSend(application))
+                .isInstanceOf(com.jeepclub.backend.memberships.core.application.exception.MembershipInvitationDeliveryException.class)
+                .hasNoCause().hasMessageNotContaining(link).hasMessageNotContaining("private@example.com")
+                .satisfies(failure -> assertThat(failure.getSuppressed()).isEmpty());
     }
 
     private MemberActivationToken validToken() {
@@ -219,7 +245,7 @@ class MemberActivationTokenServiceTest {
         Clock changing=mock(Clock.class);
         when(changing.instant()).thenAnswer(call -> current.get());
         service=new MemberActivationTokenService(tokenRepository,hashPort,tokenGenerator,timeProperties,
-                applicationRepository,firstAccessPort,recipientPort,mailSender,changing);
+                applicationRepository,firstAccessPort,recipientPort,mailSender,linkFactory,pendingAuthentication,changing, org.mockito.Mockito.mock(com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService.class));
         MemberActivationToken token=MemberActivationToken.reconstitute(10L,1L,"hash",NOW.plusSeconds(60),null,NOW.minusSeconds(60));
         MembershipApplication application=approvedApplication();
         when(hashPort.hash("raw")).thenReturn("hash");
@@ -227,6 +253,7 @@ class MemberActivationTokenServiceTest {
         when(recipientPort.findByIdentityId(20L)).thenReturn(Optional.of(new ActivationRecipient("Candidate","candidate@example.com")));
         when(tokenRepository.findByTokenHashForUpdate("hash")).thenReturn(Optional.of(token));
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
         doAnswer(call -> { current.set(NOW.plusSeconds(120)); return null; }).when(firstAccessPort).complete(20L,"new-password");
         assertThatThrownBy(() -> service.complete("raw","new-password")).isInstanceOf(MemberActivationTokenExpiredException.class);
         assertThat(token.getUsedAt()).isNull();

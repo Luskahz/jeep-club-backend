@@ -163,7 +163,7 @@ class HealthHttpIntegrationTest {
     @ValueSource(strings = {"GET", "PUT", "DELETE"})
     void inactiveAndMissingDependentsHaveControlledErrors(String method) throws Exception {
         var saved = seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
-        dependent.setStatus(DependentStatus.DISABLED);
+        dependent.setStatus(DependentStatus.INACTIVE);
         em.flush();
         problem(call(method, "/medical-profiles/dependents/" + dependent.getId(), "{}"), 409)
                 .andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_INACTIVE"));
@@ -197,7 +197,7 @@ class HealthHttpIntegrationTest {
     void adminSummaryPaginationAndMutationDoNotExposeClinicalContentAndInactiveOwnerCanBeCleaned() throws Exception {
         seed(MedicalProfileOwnerType.USER, user.getId());
         var inactive = seed(MedicalProfileOwnerType.USER, other.getId());
-        other.setStatus(UserStatus.DISABLED);
+        other.setStatus(UserStatus.INACTIVE);
         seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
         em.flush();
         permissions("HEALTH_MEDICAL_PROFILE_READ", "HEALTH_MEDICAL_PROFILE_UPDATE", "HEALTH_MEDICAL_PROFILE_DELETE");

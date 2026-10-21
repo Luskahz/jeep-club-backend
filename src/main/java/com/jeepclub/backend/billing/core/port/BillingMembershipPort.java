@@ -7,4 +7,6 @@ public interface BillingMembershipPort {
     List<Long> findActiveMemberUserIds();
 
     boolean existsActiveMemberByUserId(Long userId);
+
+    boolean existsActiveMemberByUserIdForUpdate(Long userId);
 }

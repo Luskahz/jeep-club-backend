@@ -19,6 +19,34 @@ import java.util.Optional;
 public class MembershipApplicationRepositoryAdapter implements MembershipApplicationRepository {
 
     private final MembershipApplicationJpaRepository jpaRepository;
+    private final jakarta.persistence.EntityManager entityManager;
+
+    @Override
+    public MembershipApplication saveAndFlush(MembershipApplication application) {
+        return MembershipApplicationMapper.toDomain(jpaRepository.saveAndFlush(MembershipApplicationMapper.toEntity(application)));
+    }
+
+    @Override
+    public Optional<MembershipApplication> findByIdForUpdate(Long id) {
+        // A candidate read can precede the Identity lock wait. Hibernate checks @Version
+        // while hydrating a locking query, before we could detach its stale managed result.
+        entityManager.flush();
+        MembershipApplicationEntity stale = entityManager.find(MembershipApplicationEntity.class, id);
+        if (stale != null) entityManager.detach(stale);
+        return jpaRepository.findByIdForUpdate(id).map(locked -> {
+            entityManager.detach(locked);
+            MembershipApplicationEntity current = entityManager.find(MembershipApplicationEntity.class, id,
+                    jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            return MembershipApplicationMapper.toDomain(current);
+        });
+    }
+
+    @Override
+    public Optional<MembershipApplication> findByCreatedUserIdAndStatusForUpdate(Long userId, MembershipApplicationStatus status) {
+        return jpaRepository.findIdByCreatedUserIdAndStatus(userId, status)
+                .flatMap(this::findByIdForUpdate)
+                .filter(a -> a.getStatus() == status && java.util.Objects.equals(a.getCreatedUserId(), userId));
+    }
 
     @Override
     public MembershipApplication save(MembershipApplication application) {

@@ -35,6 +35,8 @@ class AdminDependentControllerTest {
     @MockitoBean
     private AdminDependentService adminDependentService;
     @MockitoBean
+    private com.jeepclub.backend.dependents.core.application.service.dependent.DependentService dependentService;
+    @MockitoBean
     private JwtTokenParser jwtTokenParser;
     @MockitoBean
     private UserAuthoritiesProvider userAuthoritiesProvider;
@@ -49,7 +51,7 @@ class AdminDependentControllerTest {
         result = new DependentResult(
                 10L, "Pedro Silva", "52998224725",
                 LocalDate.of(2010, 5, 20), RelationshipType.CHILD,
-                null, 5L, DependentStatus.DISABLED, now, now
+                null, 5L, DependentStatus.INACTIVE, now, now
         );
     }
 
@@ -60,7 +62,7 @@ class AdminDependentControllerTest {
 
         mockMvc.perform(get("/users/5/dependents"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].status").value("DISABLED"));
+                .andExpect(jsonPath("$[0].status").value("INACTIVE"));
         mockMvc.perform(get("/users/5/dependents/10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10L));

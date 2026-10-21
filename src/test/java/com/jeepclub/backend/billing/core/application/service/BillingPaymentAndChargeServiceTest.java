@@ -50,21 +50,24 @@ class BillingPaymentAndChargeServiceTest {
     private MemberPaymentService memberPayments(Clock clock) {
         return new MemberPaymentService(payments, charges, new PaymentReceiptValidator(new PaymentReceiptValidationProperties()), lifecycle, storage, clock);
     }
-    @Test void confirmationUsesPaymentThenChargeLockAndPaysWithoutRecheckingExpiredWindow() {
+    @Test void confirmationUsesCycleThenPaymentThenChargeLockWithoutRecheckingExpiredWindow() {
         var p = payment(); var c = charge();
         adminPayments = new AdminMemberPaymentService(payments, charges, Clock.offset(CLOCK, Duration.ofDays(1)), cycles, refunds);
         when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(p)); when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(c));
-        when(cycles.findById(4L)).thenReturn(Optional.of(cycle())); when(payments.save(p)).thenReturn(p);
+        when(payments.findChargeCycleIdById(1L)).thenReturn(Optional.of(4L)); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle())); when(payments.save(p)).thenReturn(p);
         var result = adminPayments.confirm(1L, 99L);
         assertThat(result.status()).isEqualTo(MemberPaymentStatus.CONFIRMED); assertThat(c.isPaid()).isTrue();
         assertThat(c.getPaidAt()).isEqualTo(p.getPaidAt()); assertThat(p.getConfirmedAt()).isEqualTo(NOW.plus(Duration.ofDays(1)));
-        var order = inOrder(payments, charges); order.verify(payments).findByIdForUpdate(1L); order.verify(charges).findByIdForUpdate(2L);
+        var order = inOrder(cycles, payments, charges);
+        order.verify(payments).findChargeCycleIdById(1L);
+        order.verify(cycles).findByIdForUpdate(4L);
+        order.verify(payments).findByIdForUpdate(1L); order.verify(charges).findByIdForUpdate(2L);
         order.verify(charges).save(c); order.verify(payments).save(p); verifyNoInteractions(refunds);
     }
     @Test void lateConfirmationPreservesCanceledChargeAndDelegatesEligibilityToCancellationDate() {
         var p = payment(); var c = charge(); c.cancel(NOW); var cycle = cycle(); cycle.cancel(99L, NOW);
         when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(p)); when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(c));
-        when(cycles.findById(4L)).thenReturn(Optional.of(cycle)); when(payments.save(p)).thenReturn(p);
+        when(payments.findChargeCycleIdById(1L)).thenReturn(Optional.of(4L)); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle)); when(payments.save(p)).thenReturn(p);
         adminPayments.confirm(1L, 99L); assertThat(c.isCanceled()).isTrue(); assertThat(p.isConfirmed()).isTrue();
         verify(refunds).ensureLateEligibility(c, p, 99L, NOW);
     }
@@ -72,7 +75,7 @@ class BillingPaymentAndChargeServiceTest {
     void confirmationRejectsClosedChargeOrAmountMismatchWithoutSaving(int conflict) {
         var c = charge(); if (conflict == 0) c.cancel(NOW); if (conflict == 1) c.markAsPaid(NOW, NOW); if (conflict == 2) c.updateFinalAmount(BigDecimal.TEN, DUE, NOW);
         var p = payment(); when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(p)); when(charges.findByIdForUpdate(2L)).thenReturn(Optional.of(c));
-        when(cycles.findById(4L)).thenReturn(Optional.of(cycle()));
+        when(payments.findChargeCycleIdById(1L)).thenReturn(Optional.of(4L)); when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle()));
         assertThatThrownBy(() -> adminPayments.confirm(1L, 99L)).isInstanceOf(InvalidMemberPaymentStateException.class);
         assertThat(p.isPendingValidation()).isTrue(); verify(payments, never()).save(any()); verify(charges, never()).save(any());
     }
@@ -155,6 +158,8 @@ class BillingPaymentAndChargeServiceTest {
         assertThatThrownBy(() -> adminPayments.confirm(404L, 99L)).isInstanceOf(MemberPaymentNotFoundException.class);
         assertThatThrownBy(() -> adminCharges.cancel(404L)).isInstanceOf(MemberChargeNotFoundException.class);
         when(payments.findByIdForUpdate(1L)).thenReturn(Optional.of(payment()));
+        when(payments.findChargeCycleIdById(1L)).thenReturn(Optional.of(4L));
+        when(cycles.findByIdForUpdate(4L)).thenReturn(Optional.of(cycle()));
         assertThatThrownBy(() -> adminPayments.confirm(1L, 99L)).isInstanceOf(MemberChargeNotFoundException.class);
         when(payments.findAll(Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(payment())));
         when(payments.findByStatus(MemberPaymentStatus.PENDING_VALIDATION, Pageable.unpaged())).thenReturn(new PageImpl<>(List.of(payment())));

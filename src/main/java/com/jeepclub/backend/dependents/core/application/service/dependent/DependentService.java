@@ -22,6 +22,16 @@ public class DependentService {
     private final DependentRepository dependentRepository;
     private final DependentUserPort dependentUserPort;
     private final Clock clock;
+    private final com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
+    private final com.jeepclub.backend.platform.storage.image.PrivateImageMediaQuery privateImages;
+    private final com.jeepclub.backend.platform.logging.SystemLogService audit;
+    private final java.util.List<com.jeepclub.backend.dependents.api.module.spi.DependentDeletionGuard> deletionGuards;
+
+    @Transactional
+    public DependentResult create(String name, String cpf, LocalDate birthDate,
+            RelationshipType relationshipType, String phoneNumber, Long userId) {
+        return create(name,cpf,birthDate,relationshipType,phoneNumber,userId,null);
+    }
 
     @Transactional
     public DependentResult create(
@@ -30,7 +40,8 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long userId
+            Long userId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo
     ) {
         assertUserCanOwnDependent(userId);
 
@@ -48,9 +59,10 @@ public class DependentService {
                 Instant.now(clock)
         );
 
-        return toResult(
-                dependentRepository.save(dependent)
-        );
+        if (photo != null) dependent.changePhoto(mediaCommand.storePrivateInTransaction(photo), Instant.now(clock));
+        var saved = dependentRepository.save(dependent);
+        if (photo != null) record(userId,saved.getId(),"PHOTO_CREATE","POST",201,Instant.now(clock));
+        return toResult(saved);
     }
 
     @Transactional(readOnly = true)
@@ -66,7 +78,7 @@ public class DependentService {
             Long id,
             Long requestingUserId
     ) {
-        Dependent dependent = findActiveDependentById(id);
+        Dependent dependent = findDependentById(id);
 
         assertBelongsTo(
                 dependent,
@@ -77,6 +89,12 @@ public class DependentService {
     }
 
     @Transactional
+    public DependentResult update(Long id, String name, String cpf, LocalDate birthDate,
+            RelationshipType relationshipType, String phoneNumber, Long requestingUserId) {
+        return update(id,name,cpf,birthDate,relationshipType,phoneNumber,requestingUserId,null);
+    }
+
+    @Transactional
     public DependentResult update(
             Long id,
             String name,
@@ -84,15 +102,18 @@ public class DependentService {
             LocalDate birthDate,
             RelationshipType relationshipType,
             String phoneNumber,
-            Long requestingUserId
+            Long requestingUserId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo
     ) {
-        Dependent dependent = findActiveDependentById(id);
+        if (photo != null) assertUserCanOwnDependent(requestingUserId);
+        Dependent dependent = findDependentForUpdate(id);
 
         assertBelongsTo(
                 dependent,
                 requestingUserId
         );
 
+        if (!dependent.isActive()) throw new com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException("Only active dependents can be edited.");
         String normalizedCpf = normalizeCpf(cpf);
 
         if (!normalizedCpf.equals(dependent.getCpf())) {
@@ -102,79 +123,100 @@ public class DependentService {
             );
         }
 
+        Instant now = Instant.now(clock);
         dependent.update(
                 name,
                 normalizedCpf,
                 birthDate,
                 relationshipType,
                 phoneNumber,
-                Instant.now(clock)
+                now
         );
 
-        return toResult(
-                dependentRepository.save(dependent)
-        );
+        if (photo != null) dependent.changePhoto(mediaCommand.storePrivateInTransaction(photo), now);
+        var saved = dependentRepository.save(dependent);
+        if (photo != null) record(requestingUserId,id,"PHOTO_REPLACE","PUT",200,now);
+        return toResult(saved);
     }
 
     @Transactional
-    public DependentResult disable(
-            Long id,
-            Long requestingUserId
-    ) {
-        Dependent dependent = findDependentById(id);
-
-        assertBelongsTo(
-                dependent,
-                requestingUserId
-        );
-
-        dependent.disable(
-                Instant.now(clock)
-        );
-
-        return toResult(
-                dependentRepository.save(dependent)
-        );
+    public DependentResult disable(Long id, Long requestingUserId) {
+        return transition(id, requestingUserId, requestingUserId, "DISABLE");
     }
 
     @Transactional
-    public DependentResult enable(
-            Long id,
-            Long requestingUserId
-    ) {
-        Dependent dependent = findDependentById(id);
-
-        assertBelongsTo(
-                dependent,
-                requestingUserId
-        );
-
-        dependent.enable(
-                Instant.now(clock)
-        );
-
-        return toResult(
-                dependentRepository.save(dependent)
-        );
+    public DependentResult enable(Long id, Long requestingUserId) {
+        return transition(id, requestingUserId, requestingUserId, "ENABLE");
     }
 
     @Transactional
-    public void delete(
-            Long id,
-            Long requestingUserId
-    ) {
-        Dependent dependent = findDependentById(id);
+    public void delete(Long id, Long requestingUserId) { delete(id,requestingUserId,requestingUserId); }
 
-        assertBelongsTo(
-                dependent,
-                requestingUserId
-        );
+    @Transactional
+    public void delete(Long id, Long ownerId, Long actorId) {
+        var dependent=findDependentForUpdate(id);
+        assertBelongsTo(dependent,ownerId);
+        if(deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(id)))
+            throw new com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException("Dependent has retained Health/Event references.");
+        var now=Instant.now(clock);
+        dependentRepository.delete(dependent,actorId,now);
+        record(actorId,id,"DELETE","DELETE",204,now);
+    }
 
-        dependentRepository.delete(
-                dependent,
-                requestingUserId,
-                Instant.now(clock)
-        );
+    @Transactional
+    public DependentResult replacePhoto(Long id, Long ownerId, com.jeepclub.backend.platform.storage.image.ImageUpload photo) {
+        return changePhoto(id,ownerId,ownerId,java.util.Objects.requireNonNull(photo),false);
+    }
+
+    @Transactional
+    public DependentResult removePhoto(Long id, Long ownerId) { return changePhoto(id,ownerId,ownerId,null,false); }
+
+    @Transactional
+    public DependentResult replacePhotoForAdmin(Long id, Long ownerId, Long actorId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo) {
+        return changePhoto(id,ownerId,actorId,java.util.Objects.requireNonNull(photo),true);
+    }
+
+    @Transactional
+    public DependentResult removePhotoForAdmin(Long id, Long ownerId, Long actorId) { return changePhoto(id,ownerId,actorId,null,true); }
+
+    private DependentResult changePhoto(Long id,Long ownerId,Long actorId,
+            com.jeepclub.backend.platform.storage.image.ImageUpload photo,boolean administrative) {
+        assertUserCanOwnDependent(ownerId); // User -> Dependent, before upload and every association change.
+        Dependent dependent=findDependentForUpdate(id);
+        authorizePhoto(dependent,ownerId,administrative);
+        if (!dependent.isActive()) throw new com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException("Only active dependents can change photos.");
+        String key=photo==null?null:mediaCommand.storePrivateInTransaction(photo);
+        Instant now=Instant.now(clock);
+        if (!dependent.changePhoto(key,now)) return toResult(dependent);
+        var saved=dependentRepository.save(dependent);
+        record(actorId,id,photo==null?"PHOTO_REMOVE":"PHOTO_REPLACE",photo==null?"DELETE":"PATCH",200,now);
+        return toResult(saved);
+    }
+
+    @Transactional
+    public com.jeepclub.backend.platform.storage.image.ImageMediaContent photo(Long id,Long ownerId) {
+        assertUserCanOwnDependent(ownerId);
+        return readPhoto(id,ownerId,ownerId,false);
+    }
+
+    @Transactional
+    public com.jeepclub.backend.platform.storage.image.ImageMediaContent photoForAdmin(Long id,Long ownerId,Long actorId) {
+        return readPhoto(id,ownerId,actorId,true);
+    }
+
+    private com.jeepclub.backend.platform.storage.image.ImageMediaContent readPhoto(Long id,Long ownerId,Long actorId,boolean administrative) {
+        Dependent dependent=findDependentForUpdate(id);
+        authorizePhoto(dependent,ownerId,administrative);
+        if(dependent.getPhotoStorageKey()==null) throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException();
+        var content=privateImages.loadPrivate(dependent.getPhotoStorageKey());
+        record(actorId,id,"PHOTO_READ","GET",200,Instant.now(clock));
+        return content;
+    }
+
+    private void authorizePhoto(Dependent dependent,Long ownerId,boolean administrative) {
+        if (administrative && !dependent.getUserId().equals(ownerId)) throw new DependentNotFoundException(dependent.getId());
+        assertBelongsTo(dependent,ownerId);
     }
 
     private Dependent findActiveDependentById(Long id) {
@@ -246,5 +288,46 @@ public class DependentService {
         }
 
         return cpf.replaceAll("\\D", "");
+    }
+
+    @Transactional(readOnly=true)
+    public List<DependentResult> findAllByUserId(Long ownerId, com.jeepclub.backend.dependents.core.domain.enums.DependentStatus status) {
+        return dependentRepository.findAllByUserIdAndStatus(ownerId,status).stream().map(this::toResult).toList();
+    }
+
+    @Transactional
+    public DependentResult archive(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"ARCHIVE"); }
+    @Transactional
+    public DependentResult unarchive(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"UNARCHIVE"); }
+    @Transactional
+    public DependentResult disable(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"DISABLE"); }
+    @Transactional
+    public DependentResult enable(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"ENABLE"); }
+
+    private DependentResult transition(Long id,Long owner,Long actor,String action) {
+        java.util.Objects.requireNonNull(actor,"Lifecycle actor is required");
+        var dependent=findDependentForUpdate(id);
+        assertBelongsTo(dependent,owner);
+        var before=dependent.getStatus();
+        var now=Instant.now(clock);
+        switch(action) {
+            case "ARCHIVE" -> dependent.archive(now);
+            case "UNARCHIVE" -> dependent.unarchive(now);
+            case "DISABLE" -> dependent.disable(now);
+            case "ENABLE" -> dependent.enable(now);
+            default -> throw new IllegalArgumentException("Unknown dependent lifecycle operation.");
+        }
+        if(before!=dependent.getStatus()) {
+            dependent=dependentRepository.save(dependent);
+            record(actor,id,action+":"+before+":"+dependent.getStatus(),"PATCH",200,now);
+        }
+        return toResult(dependent);
+    }
+    private Dependent findDependentForUpdate(Long id) {
+        return dependentRepository.findByIdForUpdate(id).orElseThrow(() -> new DependentNotFoundException(id));
+    }
+    private void record(Long actor,Long id,String action,String method,int status,Instant now) {
+        audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actor,"DEPENDENT_"+action,
+                method,"/dependents/"+id,status,com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS,0,null,now));
     }
 }

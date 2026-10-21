@@ -48,6 +48,7 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     private final PublicationCommentJpaRepository comments;
     private final PublicationMapper mapper;
     private final PublicationHistoryMapper historyMapper;
+    private final com.jeepclub.backend.publications.infra.persistence.mapper.CurrentEventMapper currentEventMapper;
     @Override
     public org.springframework.data.domain.Page<com.jeepclub.backend.publications.core.domain.model.Event> findEvents(org.springframework.data.domain.Pageable pageable) {
         return publications.findEvents(pageable).map(e -> (com.jeepclub.backend.publications.core.domain.model.Event) mapper.toDomain(e));
@@ -74,6 +75,11 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
     public Optional<Publication> findByIdForUpdate(Long id) {
         return lockedEntity(id).map(mapper::toDomain);
     }
+    @Override
+    public Optional<com.jeepclub.backend.publications.core.domain.model.Event> findEventByIdForUpdate(Long id) {
+        if(publications.lockRootId(id).isEmpty())return Optional.empty();
+        return currentEvent(id);
+    }
 
     @Override
     public void delete(Long id, Long deletedByUserId, Instant deletedAt) {
@@ -82,7 +88,13 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
         }
         PublicationEntity entity = lockedEntity(id)
                 .orElseThrow(() -> new PublicationAlreadyDeletedException(id));
-        history.saveAndFlush(historyMapper.snapshot(entity, deletedByUserId, deletedAt));
+        var snapshot=entity;
+        if(entity instanceof EventEntity) {
+            // Preserve the current Event/images even when the deleting transaction
+            // cached a pre-lock polymorphic entity under MySQL REPEATABLE READ.
+            snapshot=mapper.newEntity(currentEvent(id).orElseThrow());snapshot.setId(id);
+        }
+        history.saveAndFlush(historyMapper.snapshot(snapshot, deletedByUserId, deletedAt));
         comments.deleteAll(comments.findAllByPublication_Id(id));
         comments.flush();
         likes.deleteAll(likes.findAllByPublication_Id(id));
@@ -93,5 +105,8 @@ public class PublicationRepositoryAdapter implements PublicationRepository {
 
     private Optional<PublicationEntity> lockedEntity(Long id) {
         return publications.lockRootId(id).flatMap(publications::findById);
+    }
+    private Optional<com.jeepclub.backend.publications.core.domain.model.Event> currentEvent(Long id) {
+        return publications.currentEvent(id).stream().findFirst().map(row -> currentEventMapper.toDomain(row,publications.currentImages(id)));
     }
 }

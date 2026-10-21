@@ -1,5 +1,32 @@
 # Identity
 
+## Lifecycle vigente — BACK-512
+
+Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
+com histórico independente, e não um status. As regras por agregado, novas rotas,
+permissions, migration V5, limites de retenção e checklist de rollout estão em
+`docs/back-512-entity-lifecycle.md` na raiz do repositório. V1–V4 não foram alteradas.
+Flyway governa o schema; Hibernate usa validate. Não usar ddl-auto=update.
+
+
+## Projeção da matrícula — BACK-531
+
+User.id continua a chave técnica e não é matrícula. A SPI pública
+`UserMembershipNumberProjection` expressa a necessidade de apresentação de
+Identity; o adapter em `platform.composition.membership` consulta
+`memberships.api.module.MemberRegistrationQuery`. O lookup não depende dos
+serviços de escrita de Identity, evitando ciclo de beans. Não existe coluna
+membershipNumber em Identity nem cache da matrícula.
+
+As respostas de `/identity/me`, perfis complementares, detalhe administrativo e
+listagem administrativa adicionam `membershipNumber`. Na listagem a projeção em
+lote acompanha resultados com ID selecionado (padrão). IDs técnicos continuam
+disponíveis. Para usuário sem Member o campo é null, ou omitido no DTO
+administrativo que já usa NON_NULL. Exportações de usuários acrescentam a coluna
+Matrícula e resolvem os números por lote de 200. A pesquisa por matrícula vigente
+pertence à API administrativa do registry. Veja as
+[regras do registry](../../../memberships/docs/member-registry.md).
+
 Criação administrativa de User e integração com Authentication: [BACK-511](../../../../../../../../../docs/back-511-admin-user-creation.md).
 
 Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
@@ -26,7 +53,7 @@ ROOT, retornando 409 CONFLICT com código `USER_ROOT_CANNOT_BE_DISABLED` sem pro
 efeitos em Identity ou Authentication. O `enable` administrativo continua permitido
 para recuperação de estado.
 
-`User` é criado com `UserStatus.ACTIVE`. O único outro estado é `DISABLED`:
+`User` é criado com `UserStatus.ACTIVE`. Os demais estados são INACTIVE e ARCHIVED. Nas transições ACTIVE/INACTIVE:
 `disable` define `disabledAt` e `updatedAt`; `enable` remove `disabledAt` e
 atualiza `updatedAt`. Desabilitar um usuário já desabilitado e habilitar um
 usuário ativo são conflitos. O agregado não conhece lock de autenticação nem
@@ -115,7 +142,7 @@ A política ROOT permite CPF/e-mail somente quando o ator é o próprio alvo, j�
 portador de `IDENTITY_USER_UPDATE`; outro administrador recebe 409. Os demais
 campos podem ser corrigidos por um administrador autorizado. O bootstrap dev
 preserva o titular ROOT pelo vínculo com ID estável, sem promover quem ocupe seu
-CPF anterior. Usuários DISABLED
+CPF anterior. Usuários INACTIVE
 podem ser editados sem reativação. BACK-512/BACK-514 estão pendentes: não se antecipa
 ACTIVE/INACTIVE/ARCHIVED nesta feature; quando integradas, devem continuar isoladas
 da edição cadastral.
@@ -217,7 +244,7 @@ não há catálogo Markdown concorrente.
 O perfil complementar pertence exclusivamente a Identity e possui associação
 opcional 1:1 com User. `UserProfile` reúne `WorkProfile` e `ResidentialAddress`,
 sem dependências HTTP/JPA. Sua ausência não altera onboarding, autenticação,
-Membership ou o lifecycle ACTIVE/DISABLED.
+Membership ou o lifecycle ACTIVE/INACTIVE.
 
 A pendência é derivada: ocupação e local de trabalho devem estar preenchidos,
 assim como CEP, logradouro, número (ou S/N), bairro, cidade e UF; complemento
@@ -259,7 +286,7 @@ pessimista em User e participam da mesma transação do efeito em Authentication
 Há uma associação física legada de chave compartilhada entre User e
 `AuthenticationAccount`, necessária à PK/FK existente. Ela não permite acesso
 cross-module a modelos internos. A política de schema é a global atual: entities
-e Hibernate representam mudanças e não há migrations versionadas obrigatórias.
+e Hibernate representam o ORM, com validate, e migrations Flyway versionadas governam a evolução do schema.
 
 ## Testes
 
@@ -275,3 +302,29 @@ cobertura proporcional conforme as
 UserQuery.findByIds e findAfterId oferecem leitura administrativa em lote de até 500, incluindo cadastros desativados para auditoria. Export mantém filtros AdminUserFilter existentes; foto aparece somente como booleano. IDENTITY_USER_EXPORT é independente de READ.
 
 Contratos HTTP, limites, segurança e evidências estão em `docs/exports/` na raiz do repositório. As exportações são administrativas, sem paginação HTTP, com auditoria síncrona e `Cache-Control: no-store`.
+
+
+## Matrícula cadastral — revisão BACK-526
+
+Matrícula vigente é o identificador principal de apresentação do associado;
+User.id é técnico e continua aceito nas operações. A seleção MEMBERSHIP_NUMBER
+independe de ID: a persistência recupera a chave auxiliar sem expô-la quando não
+solicitada. O lookup usa a SPI pública implementada por composição da query de
+Memberships. Sem Member, não há fallback artificial.
+
+A consulta administrativa aceita `membershipNumber` exata e inclui matrícula
+vigente exata no OR de `q`, combinando com filtros/paginação no banco. Histórico
+não participa. Sort por matrícula não é suportado em Identity (400); use a
+listagem de associados para ordenação global. CSV/PDF priorizam matrícula em
+layout MEMBER; TECHNICAL preserva a ordem/cabeçalhos anteriores para integrações.
+Disable/enable e alterações cadastrais preservam o vínculo. Não existe endpoint
+atual de exclusão física; a FK restritiva será considerada pela BACK-512.
+
+## Reversão de onboarding (BACK-523)
+
+Memberships reutiliza `UserAdministration.delete` após verificar primeiro acesso
+pendente e gravar a rejeição na mesma transação. O contrato de exclusão normaliza
+impedimentos privados de lifecycle em `UserDeletionConflictException` público;
+o HTTP administrativo devolve `USER_DELETION_CONFLICT` (409) para esses deletes.
+Member/FKs, finanças, histórico de sessão e retenções continuam impeditivos.
+A ausência de Authentication não autoriza reversão de aprovação em Memberships.

@@ -35,7 +35,7 @@ public class DependentController {
 
     private final DependentService dependentService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Adicionar dependente",
             description = "Cadastra um novo dependente associado ao usuário autenticado.",
@@ -89,11 +89,13 @@ public class DependentController {
             }
     )
     public ResponseEntity<List<DependentResponseDTO>> getMyDependents(
-            @AuthenticationPrincipal UserPrincipal principal
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue="ACTIVE") com.jeepclub.backend.dependents.core.domain.enums.DependentStatus status
     ) {
-        List<DependentResponseDTO> response = dependentService
-                .findAllByUserId(principal.getUserId())
-                .stream()
+        var values = status == com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.ACTIVE
+                ? dependentService.findAllByUserId(principal.getUserId())
+                : dependentService.findAllByUserId(principal.getUserId(),status);
+        List<DependentResponseDTO> response = values.stream()
                 .map(DependentResponseDTO::from)
                 .toList();
 
@@ -103,7 +105,7 @@ public class DependentController {
     @GetMapping("/{id}")
     @Operation(
             summary = "Consultar dependente",
-            description = "Retorna um dependente ativo pertencente ao usuário autenticado.",
+            description = "Retorna o cadastro do próprio dependente, incluindo INACTIVE e ARCHIVED.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Dependente ativo retornado.",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
@@ -137,7 +139,7 @@ public class DependentController {
         );
     }
 
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(
             summary = "Atualizar dependente",
             description = "Atualiza um dependente ativo pertencente ao usuário autenticado.",
@@ -217,5 +219,41 @@ public class DependentController {
         );
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/disable")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary = "disable meu dependente", description = "Ownership obrigatório; unarchive retorna a INACTIVE e não ativa automaticamente.")
+    @ApiResponse(responseCode="409", description="Transição incompatível.", content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> disable(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.from(dependentService.disable(id,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/enable")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary = "enable meu dependente", description = "Ownership obrigatório; unarchive retorna a INACTIVE e não ativa automaticamente.")
+    @ApiResponse(responseCode="409", description="Transição incompatível.", content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> enable(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.from(dependentService.enable(id,principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/archive")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary = "archive meu dependente", description = "Ownership obrigatório; unarchive retorna a INACTIVE e não ativa automaticamente.")
+    @ApiResponse(responseCode="409", description="Transição incompatível.", content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.from(dependentService.archive(id,principal.getUserId(),principal.getUserId())));
+    }
+
+    @PatchMapping("/{id}/unarchive")
+    @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
+    @Operation(summary = "unarchive meu dependente", description = "Ownership obrigatório; unarchive retorna a INACTIVE e não ativa automaticamente.")
+    @ApiResponse(responseCode="409", description="Transição incompatível.", content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<DependentResponseDTO> unarchive(@PathVariable @jakarta.validation.constraints.Positive Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(DependentResponseDTO.from(dependentService.unarchive(id,principal.getUserId(),principal.getUserId())));
     }
 }

@@ -35,7 +35,6 @@ class VehicleOwnerAuthenticationIntegrationTest {
     private static final String VEHICLE_REQUEST = """
             {
               "nickname": "Trovão",
-              "photo": "photo",
               "plate": "ABC1D23",
               "renavam": "38249206428",
               "brand": "Jeep",
@@ -79,7 +78,7 @@ class VehicleOwnerAuthenticationIntegrationTest {
                 .andExpect(status().isCreated());
 
         verify(vehicleService).create(
-                eq("Trovão"), eq("photo"), eq("ABC1D23"), eq("38249206428"),
+                eq("Trovão"), org.mockito.ArgumentMatchers.isNull(), eq("ABC1D23"), eq("38249206428"),
                 eq("Jeep"), eq("Wrangler"), eq(2023), eq(2024), eq("Verde"), eq(5),
                 eq(com.jeepclub.backend.vehicles.core.domain.enums.FuelType.DIESEL), eq(2.0),
                 eq(true), eq(userId)

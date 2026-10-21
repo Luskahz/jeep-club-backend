@@ -13,6 +13,13 @@ import java.util.Objects;
 public class IdentityBillingMembershipAdapter implements BillingMembershipPort {
 
     private final UserQuery identityQuery;
+    private final com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLock;
+
+    @Override
+    public boolean existsActiveMemberByUserIdForUpdate(Long userId) {
+        return identityLock.byId(userId).map(com.jeepclub.backend.iam.identity.api.module.UserDetails::administrativelyActive).orElse(false);
+    }
+
 
     @Override
     public List<Long> findActiveMemberUserIds() {

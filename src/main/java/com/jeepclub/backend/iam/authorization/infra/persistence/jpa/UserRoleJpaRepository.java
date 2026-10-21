@@ -10,7 +10,15 @@ import java.util.List;
 
 public interface UserRoleJpaRepository extends JpaRepository<UserRoleEntity, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    List<UserRoleEntity> findByRole_IdOrderById(Long roleId);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    List<UserRoleEntity> findByUserIdOrderById(Long userId);
+
     boolean existsByUserIdAndRole_Id(Long userId, Long roleId);
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<UserRoleEntity> findLockedByUserIdAndRole_Id(Long userId, Long roleId);
 
     @Query("""
             select userRole.role

@@ -13,6 +13,7 @@ import java.util.Objects;
 public class BillingAuthorizationAdapter implements BillingAuthorizationPort {
 
     private final RoleQuery roleQuery;
+    private final com.jeepclub.backend.iam.authorization.api.module.role.RoleLifecycleLock roleLock;
 
     @Override
     public List<Long> findUserIdsByRoleId(Long roleId) {
@@ -26,5 +27,9 @@ public class BillingAuthorizationAdapter implements BillingAuthorizationPort {
         Objects.requireNonNull(roleId, "roleId cannot be null");
 
         return roleQuery.existsActiveRoleById(roleId);
+    }
+
+    @Override public boolean existsActiveRoleByIdForUpdate(Long roleId) {
+        return roleLock.isActive(roleId);
     }
 }

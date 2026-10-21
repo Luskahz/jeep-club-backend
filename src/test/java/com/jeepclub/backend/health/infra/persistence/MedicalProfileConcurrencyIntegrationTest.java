@@ -124,12 +124,18 @@ class MedicalProfileConcurrencyIntegrationTest {
         MedicalProfileService memberService = new MedicalProfileService(
                 repository,
                 (dependentId, userId) -> true,
-                (ownerType, ownerId) -> MedicalProfileOwnerStatus.ACTIVE,
+                new com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker() {
+                    public MedicalProfileOwnerStatus getStatus(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
+                    public MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
+                },
                 Clock.fixed(NOW.plusSeconds(10), ZoneOffset.UTC)
         );
         AdminMedicalProfileService adminService = new AdminMedicalProfileService(
                 repository,
-                (ownerType, ownerId) -> MedicalProfileOwnerStatus.ACTIVE,
+                new com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker() {
+                    public MedicalProfileOwnerStatus getStatus(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
+                    public MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
+                },
                 (ownerType, ownerIds) -> java.util.Set.of(),
                 Clock.fixed(NOW.plusSeconds(20), ZoneOffset.UTC)
         );

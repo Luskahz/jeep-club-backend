@@ -48,13 +48,27 @@ public class AuthenticationAccountRepositoryAdapter
 
     @Override
     public Optional<AuthenticationAccount> findByIdentityIdForUpdate(Long identityId) {
-        return jpaRepository.findByIdentityIdForUpdate(identityId)
+        var locked = jpaRepository.findByIdentityIdForUpdate(identityId);
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByIdentityIdForUpdate(identityId))
                 .map(mapper::toDomain);
     }
 
     @Override
     public boolean existsByIdentityId(Long identityId) {
         return jpaRepository.existsById(identityId);
+    }
+
+    @Override
+    public boolean hasSessionHistoryForUpdate(Long identityId) {
+        return !entityManager.createNativeQuery("SELECT id FROM authentication_sessions WHERE user_id = :id LIMIT 1 FOR UPDATE")
+                .setParameter("id", identityId).getResultList().isEmpty();
+    }
+
+    @Override
+    public void deletePending(Long identityId) {
+        jpaRepository.deleteById(identityId);
+        jpaRepository.flush();
     }
 
     private AuthenticationAccountEntity toEntity(AuthenticationAccount account) {

@@ -59,6 +59,7 @@ import java.net.URI;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
     private final Validator validator;
     private final UserRegistration userRegistration;
     private final Clock clock;
@@ -84,7 +85,7 @@ public class AdminUserController {
             @RequestBody JsonNode body) {
         var update = AdminUpdateUserRequestDTO.read(body, validator);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(AdminUserResponseDTO.from(adminUserService.update(userId, principal.getUserId(), update)));
+                .body(AdminUserResponseDTO.from(adminUserService.update(userId, principal.getUserId(), update),membershipNumbers.currentNumber(userId)));
     }
 
     @GetMapping("/{userId}/profile")
@@ -99,7 +100,7 @@ public class AdminUserController {
     @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     public ResponseEntity<UserProfileResponseDTO> getProfile(@PathVariable @Positive Long userId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(UserProfileResponseDTO.from(adminUserService.getProfile(userId)));
+                .body(UserProfileResponseDTO.from(adminUserService.getProfile(userId),membershipNumbers.currentNumber(userId)));
     }
 
     @PutMapping(value = "/{userId}/profile", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -122,7 +123,7 @@ public class AdminUserController {
         var data = UserProfileDataDTO.read(body);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
                 .body(UserProfileResponseDTO.from(adminUserService.replaceProfile(userId, principal.getUserId(),
-                        data.workProfile() == null ? null : data.workProfile().toDomain(), data.address() == null ? null : data.address().toDomain())));
+                        data.workProfile() == null ? null : data.workProfile().toDomain(), data.address() == null ? null : data.address().toDomain()),membershipNumbers.currentNumber(userId)));
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -167,11 +168,16 @@ public class AdminUserController {
                 - paginação zero-based por `page` e `size` (padrão 20, máximo 50);
                 - ordenação por `sort`;
                 - filtros administrativos combináveis;
-                - busca textual por `q`;
+                - matrícula vigente exata por `membershipNumber`, combinável com os demais filtros;
+                - busca textual por `q`, incluindo matrícula vigente exata;
                 - seleção dos campos retornados por `fields`.
 
                 Quando `fields` não é informado, todos os campos disponíveis
-                em AdminUserResponse são considerados no retorno.
+                em AdminUserResponse são considerados no retorno, incluindo MEMBERSHIP_NUMBER.
+                fields=NAME,MEMBERSHIP_NUMBER não expõe id; sua chave auxiliar é interna.
+                fields=ID,NAME omite matrícula intencionalmente.
+                sort=membershipNumber não é suportado nesta superfície (400);
+                use /admin/members para ordenação global de associados por matrícula.
 
                 Os filtros, paginação, ordenação e seleção de campos são
                 aplicados na consulta de persistência.
@@ -241,13 +247,12 @@ public class AdminUserController {
                         ? EnumSet.allOf(AdminUserField.class)
                         : EnumSet.copyOf(fields);
 
+        var page = adminUserService.findAll(filters.toFilter(), selectedFields, pageable);
+        var numbers = selectedFields.contains(AdminUserField.MEMBERSHIP_NUMBER)
+                ? membershipNumbers.currentNumbers(page.getContent().stream().map(AdminUserResult::id)
+                    .filter(java.util.Objects::nonNull).toList()) : java.util.Map.<Long,String>of();
         PageResponse<AdminUserResponseDTO> response = PageResponse.from(
-                adminUserService.findAll(
-                                filters.toFilter(),
-                                selectedFields,
-                                pageable
-                        )
-                        .map(AdminUserResponseDTO::from));
+                page.map(result -> AdminUserResponseDTO.from(result,result.id()==null ? null : numbers.get(result.id()),selectedFields.contains(AdminUserField.ID))));
 
         return ResponseEntity.ok(response);
     }
@@ -301,7 +306,7 @@ public class AdminUserController {
     ) {
         AdminUserResult result = adminUserService.findById(userId);
 
-        return ResponseEntity.ok(AdminUserResponseDTO.from(result));
+        return ResponseEntity.ok(AdminUserResponseDTO.from(result,membershipNumbers.currentNumber(result.id())));
     }
 
     @PatchMapping("/{userId}/disable")
@@ -367,11 +372,11 @@ public class AdminUserController {
             }
     )
     public ResponseEntity<AdminUserResponseDTO> disable(
-            @PathVariable @Positive Long userId
+            @PathVariable @Positive Long userId, @AuthenticationPrincipal UserPrincipal principal
     ) {
-        AdminUserResult result = adminUserService.disable(userId);
+        AdminUserResult result = adminUserService.disable(userId,principal.getUserId());
 
-        return ResponseEntity.ok(AdminUserResponseDTO.from(result));
+        return ResponseEntity.ok(AdminUserResponseDTO.from(result,membershipNumbers.currentNumber(result.id())));
     }
 
     @PatchMapping("/{userId}/enable")
@@ -433,10 +438,46 @@ public class AdminUserController {
             }
     )
     public ResponseEntity<AdminUserResponseDTO> enable(
-            @PathVariable @Positive Long userId
+            @PathVariable @Positive Long userId, @AuthenticationPrincipal UserPrincipal principal
     ) {
-        AdminUserResult result = adminUserService.enable(userId);
+        AdminUserResult result = adminUserService.enable(userId,principal.getUserId());
 
-        return ResponseEntity.ok(AdminUserResponseDTO.from(result));
+        return ResponseEntity.ok(AdminUserResponseDTO.from(result,membershipNumbers.currentNumber(result.id())));
+    }
+
+    @PatchMapping("/{userId}/archive")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_ARCHIVE')")
+    @RequiredPermission("IDENTITY_USER_ARCHIVE")
+    @Operation(summary = "Arquivar usuário", description = "Bloqueia acesso e revoga credenciais/convites pendentes na mesma transação. ROOT protegido.")
+    @ApiResponse(responseCode = "409", description = "ROOT protegido ou lifecycle composto inconsistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<AdminUserResponseDTO> archive(@PathVariable @Positive Long userId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = adminUserService.archive(userId, principal.getUserId());
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(AdminUserResponseDTO.from(result, membershipNumbers.currentNumber(result.id())));
+    }
+
+    @PatchMapping("/{userId}/unarchive")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_UNARCHIVE')")
+    @RequiredPermission("IDENTITY_USER_UNARCHIVE")
+    @Operation(summary = "Desarquivar usuário", description = "Retorna a INACTIVE; Authentication permanece desabilitada até enable explícito.")
+    @ApiResponse(responseCode = "409", description = "Transição incompatível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Usuário inexistente.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<AdminUserResponseDTO> unarchive(@PathVariable @Positive Long userId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = adminUserService.unarchive(userId, principal.getUserId());
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(AdminUserResponseDTO.from(result, membershipNumbers.currentNumber(result.id())));
+    }
+    @org.springframework.web.bind.annotation.DeleteMapping("/{userId}")
+    @PreAuthorize("hasAuthority('IDENTITY_USER_DELETE')")
+    @RequiredPermission("IDENTITY_USER_DELETE")
+    @Operation(summary="Excluir cadastro pendente sem vínculos", description="Preserva histórico próprio. ROOT, Member, primeiro acesso concluído e relações retidas impedem exclusão.")
+    @ApiResponse(responseCode="204",description="Cadastro pendente excluído.")
+    @ApiResponse(responseCode="409",description="Retenção ou integridade impede exclusão.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    public ResponseEntity<Void> delete(@PathVariable @Positive Long userId, @AuthenticationPrincipal UserPrincipal principal) {
+        adminUserService.delete(userId,principal.getUserId());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 }

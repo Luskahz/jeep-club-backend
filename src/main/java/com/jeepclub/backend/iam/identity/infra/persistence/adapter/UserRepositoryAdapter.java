@@ -21,6 +21,8 @@ import java.util.Set;
 @Repository
 @RequiredArgsConstructor
 public class UserRepositoryAdapter implements UserRepository {
+    private final jakarta.persistence.EntityManager entityManager;
+
     public List<User> findByIds(Collection<Long> ids) {
         return ids.isEmpty() ? List.of() : jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
     }
@@ -32,6 +34,26 @@ public class UserRepositoryAdapter implements UserRepository {
 
     private final UserJpaRepository jpaRepository;
     private final UserMapper mapper;
+    private final com.jeepclub.backend.iam.identity.infra.persistence.jpa.UserProfileJpaRepository profiles;
+    private final com.jeepclub.backend.iam.identity.infra.persistence.jpa.UserDeletionHistoryJpaRepository deletionHistory;
+
+    @Override
+    public void deleteWithHistory(Long id, Long actorId, java.time.Instant now) {
+        User user = findByIdForUpdate(id).orElseThrow(() -> new com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException(id));
+        if (profiles.existsById(id)) {
+            throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException("A complementary profile requires retention.");
+        }
+        deletionHistory.saveAndFlush(new com.jeepclub.backend.iam.identity.infra.persistence.entity.UserDeletionHistoryEntity(
+                id, user.getStatus().name(), user.getCreatedAt(), user.getDisabledAt(), user.getArchivedAt(),
+                user.getUpdatedAt(), actorId, now, "SAFE_PENDING_DELETION", 1));
+        try {
+            jpaRepository.deleteById(id);
+            jpaRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new com.jeepclub.backend.iam.identity.core.domain.exception.UserLifecycleConflictException("User has a restrictive retained relationship.");
+        }
+    }
+
 
     @Override
     public User create(User user) {
@@ -63,12 +85,19 @@ public class UserRepositoryAdapter implements UserRepository {
 
     @Override
     public Optional<User> findByIdForUpdate(Long id) {
-        return jpaRepository.findByIdForUpdate(id).map(mapper::toDomain);
+        var locked = jpaRepository.findByIdForUpdate(id);
+        // Retain the DB lock while discarding any pre-lock ORM snapshot (MySQL REPEATABLE READ).
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByIdForUpdate(id)).map(mapper::toDomain);
     }
 
     @Override
     public Optional<User> findByCpfForUpdate(String cpf) {
-        return cpf == null ? Optional.empty() : jpaRepository.findByCpfForUpdate(User.normalizeCpf(cpf)).map(mapper::toDomain);
+        if (cpf == null) return Optional.empty();
+        String normalized = User.normalizeCpf(cpf);
+        var locked = jpaRepository.findByCpfForUpdate(normalized);
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByCpfForUpdate(normalized)).map(mapper::toDomain);
     }
 
     @Override

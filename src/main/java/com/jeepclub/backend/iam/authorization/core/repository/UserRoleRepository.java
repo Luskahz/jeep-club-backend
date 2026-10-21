@@ -12,6 +12,7 @@ public interface UserRoleRepository {
     List<UserRole> saveAll(List<UserRole> userRoles);
 
     boolean existsByUserIdAndRoleId(Long userId, Long roleId);
+    boolean existsByUserIdAndRoleIdForUpdate(Long userId, Long roleId);
 
     List<Role> findRolesByUserId(Long userId);
 

@@ -2,7 +2,6 @@ package com.jeepclub.backend.billing.core.application.service.memberrefund;
 
 import com.jeepclub.backend.billing.core.application.exception.refund.MemberRefundNotFoundException;
 import com.jeepclub.backend.billing.core.application.result.MemberRefundResult;
-import com.jeepclub.backend.billing.core.domain.enums.payment.MemberPaymentStatus;
 import com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberCharge;
 import com.jeepclub.backend.billing.core.domain.model.MemberPayment;
@@ -27,10 +26,6 @@ import java.util.Objects;
 public class AdminMemberRefundService {
 
     private static final Duration REFUND_ELIGIBILITY_DURATION = Duration.ofDays(30);
-    private static final List<MemberPaymentStatus> REFUNDABLE_PAYMENT_STATUSES = List.of(
-            MemberPaymentStatus.CONFIRMED
-    );
-
     private final MemberRefundRepository memberRefundRepository;
     private final MemberChargeRepository memberChargeRepository;
     private final MemberPaymentRepository memberPaymentRepository;
@@ -45,12 +40,9 @@ public class AdminMemberRefundService {
         int createdRefunds = 0;
 
         for (MemberCharge charge : memberChargeRepository.findByChargeCycleId(cycleId)) {
-            List<MemberPayment> payments = memberPaymentRepository.findByMemberChargeIdAndStatusIn(
-                    charge.getId(),
-                    REFUNDABLE_PAYMENT_STATUSES
-            );
+            List<MemberPayment> payments = memberPaymentRepository.findByMemberChargeIdForUpdate(charge.getId());
             for (MemberPayment payment : payments) {
-                payment = memberPaymentRepository.findByIdForUpdate(payment.getId()).orElseThrow();
+                if (!payment.isConfirmed()) continue;
                 if (memberRefundRepository.existsActiveByMemberPaymentId(payment.getId())
                         || memberRefundRepository.existsRefundedByMemberPaymentId(payment.getId())) {
                     continue;
@@ -78,9 +70,11 @@ public class AdminMemberRefundService {
     public void ensureLateEligibility(MemberCharge charge, MemberPayment payment, Long actor, Instant canceledAt) {
         if (!payment.isConfirmed() || memberRefundRepository.existsActiveByMemberPaymentId(payment.getId())
                 || memberRefundRepository.existsRefundedByMemberPaymentId(payment.getId())) return;
+        Instant confirmedAt = payment.getConfirmedAt();
+        Instant eligibleAt = confirmedAt.isAfter(canceledAt) ? confirmedAt : canceledAt;
         memberRefundRepository.save(MemberRefund.createEligibilityForCanceledCycle(charge.getId(), payment.getId(),
-            charge.getChargeCycleId(), charge.getUserId(), payment.getAmount(), actor, canceledAt,
-            canceledAt.plus(REFUND_ELIGIBILITY_DURATION), Instant.now(clock)));
+            charge.getChargeCycleId(), charge.getUserId(), payment.getAmount(), actor, eligibleAt,
+            eligibleAt.plus(REFUND_ELIGIBILITY_DURATION), Instant.now(clock)));
     }
 
     @Transactional(readOnly = true)

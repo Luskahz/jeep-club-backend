@@ -20,6 +20,8 @@ public class MedicalProfileOwnerStatusAdapter implements
 
     private final UserQuery userQuery;
     private final DependentsQuery dependentsQuery;
+    private final com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identities;
+    private final com.jeepclub.backend.dependents.api.module.DependentLifecycleLock dependentLocks;
 
     @Override
     public MedicalProfileOwnerStatus getStatus(
@@ -71,5 +73,17 @@ public class MedicalProfileOwnerStatusAdapter implements
         return dependentsQuery.existsActiveById(ownerId)
                 ? MedicalProfileOwnerStatus.ACTIVE
                 : MedicalProfileOwnerStatus.INACTIVE;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(propagation=org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id) {
+        if(type==null || id==null || id<=0) return MedicalProfileOwnerStatus.NOT_FOUND;
+        return switch(type) {
+            case USER -> identities.byId(id).map(user -> user.administrativelyActive()
+                    ? MedicalProfileOwnerStatus.ACTIVE : MedicalProfileOwnerStatus.INACTIVE).orElse(MedicalProfileOwnerStatus.NOT_FOUND);
+            case DEPENDENT -> dependentLocks.byId(id).map(dependent -> dependent.active()
+                    ? MedicalProfileOwnerStatus.ACTIVE : MedicalProfileOwnerStatus.INACTIVE).orElse(MedicalProfileOwnerStatus.NOT_FOUND);
+        };
     }
 }

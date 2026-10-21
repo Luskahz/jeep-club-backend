@@ -1,5 +1,14 @@
 # Authorization
 
+## Lifecycle vigente — BACK-512
+
+Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,
+com histórico independente, e não um status. As regras por agregado, novas rotas,
+permissions, migration V5, limites de retenção e checklist de rollout estão em
+`docs/back-512-entity-lifecycle.md` na raiz do repositório. V1–V4 não foram alteradas.
+Flyway governa o schema; Hibernate usa validate. Não usar ddl-auto=update.
+
+
 Leia primeiro a [governança global](../../../../../../../../../docs/architecture/README.md), a
 [organização dos módulos](../../../../../../../../../docs/architecture/module-organization.md)
 e as [regras de desenvolvimento](../../../../../../../../../docs/architecture/feature-development-rules.md).
@@ -31,8 +40,7 @@ pela API administrativa.
 
 Uma `Role` possui nome único, descrição opcional, `kind`, status e timestamps.
 Roles criadas pela API são `CUSTOM` e começam `ACTIVE`. Uma role customizada
-pode ser atualizada, ativada, desativada ou excluída logicamente; uma role
-`DELETED` não pode voltar a ser usada ou alterada. `RolePermission` e
+pode ser atualizada, ativada, desativada, arquivada/desarquivada ou excluída fisicamente quando não há vínculos impeditivos; configuração e associações são preservadas em histórico próprio. O valor legado DELETED é transformado pela V5. `RolePermission` e
 `UserRole` são vínculos únicos por par de IDs, preservados também por constraints
 da persistência. Só roles ativas recebem ou são atribuídas em operações manuais.
 
@@ -119,3 +127,15 @@ com IDs de User existentes. Se já houver um titular ROOT, não atribui ROOT a q
 ocupar o CPF originalmente configurado após uma correção cadastral. O CPF de
 bootstrap é usado para estabelecer o primeiro vínculo, não como identidade
 permanente de uma conta privilegiada.
+
+## Gestão do registro de associados — BACK-530
+
+O catálogo separa READ, REGISTRATION_MANAGE, AUDIT_READ, NUMBER_RESERVE,
+NUMBER_ISSUE e IMPORT sob o prefixo `MEMBERSHIP_MEMBER_`. Os grants são
+independentes: leitura não concede escrita e MANAGE não permite importação.
+Veja a [matriz proprietária de Memberships](../../../memberships/docs/member-registry.md#autorizações-separadas-e-habilitação-da-importação).
+PreAuthorize e RequiredPermission coincidem por operação. ROOT recebe as novas
+permissions estruturalmente; CUSTOM não recebe concessão automática. A V4 amplia
+o ENUM acrescentando valores ao final, preservando posições existentes; V1–V3
+continuam imutáveis. Importação também exige habilitação operacional própria,
+além da permission. Não há exceção por identidade pessoal de administrador.

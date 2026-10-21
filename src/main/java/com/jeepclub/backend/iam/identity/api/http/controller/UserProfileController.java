@@ -25,6 +25,7 @@ import tools.jackson.databind.JsonNode;
 @ApiResponse(responseCode = "404", description = "User não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
 public class UserProfileController {
     private final UserProfileService profiles;
+    private final com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
 
     @GetMapping
     @SwaggerOperationGroup(value = "Rotas autenticadas", order = 20)
@@ -32,7 +33,7 @@ public class UserProfileController {
             + "Perfil ainda não preenchido retorna 200, blocos null e profileCompletionPending=true, sem criar registro.")
     @ApiResponse(responseCode = "200", description = "Perfil complementar e pendência derivados dos dados.", content = @Content(schema = @Schema(implementation = UserProfileResponseDTO.class)))
     public UserProfileResponseDTO get(@AuthenticationPrincipal UserPrincipal principal) {
-        return UserProfileResponseDTO.from(profiles.get(principal.getUserId()));
+        return UserProfileResponseDTO.from(profiles.get(principal.getUserId()),membershipNumbers.currentNumber(principal.getUserId()));
     }
 
     @PutMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -48,6 +49,6 @@ public class UserProfileController {
         var data = UserProfileDataDTO.read(body);
         return UserProfileResponseDTO.from(profiles.replace(principal.getUserId(),
                 data.workProfile() == null ? null : data.workProfile().toDomain(),
-                data.address() == null ? null : data.address().toDomain()));
+                data.address() == null ? null : data.address().toDomain()),membershipNumbers.currentNumber(principal.getUserId()));
     }
 }

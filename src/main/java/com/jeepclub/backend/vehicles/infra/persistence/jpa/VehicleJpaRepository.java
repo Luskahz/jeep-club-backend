@@ -24,17 +24,20 @@ public interface VehicleJpaRepository extends JpaRepository<VehicleEntity, Long>
             @Param("id") Long id
     );
 
+    @Query("select distinct v from VehicleEntity v left join fetch v.images where v.id in :ids")
+    java.util.List<VehicleEntity> findWithImagesByIds(@Param("ids") java.util.Collection<Long> ids);
+
     boolean existsByPlate(String plate);
 
     boolean existsByRenavam(String renavam);
 
     Optional<VehicleEntity> findByIdAndOwnerId(Long id, Long ownerId);
 
-    Page<VehicleEntity> findAllByOwnerIdAndStatus(
+    Page<VehicleEntity> findAllByOwnerIdAndStatusAndLegacyDeletedFalse(
             Long ownerId,
             VehicleStatus status,
             Pageable pageable
     );
 
-    Page<VehicleEntity> findAllByStatus(VehicleStatus status, Pageable pageable);
+    Page<VehicleEntity> findAllByStatusAndLegacyDeletedFalse(VehicleStatus status, Pageable pageable);
 }

@@ -36,7 +36,7 @@ class AdminToolServiceTest {
     @Mock ImageMediaService images;
 
     private AdminToolService service() {
-        return new AdminToolService(repository, Clock.fixed(INSTANT, ZoneOffset.UTC), ownerQuery, images);
+        return new AdminToolService(repository, Clock.fixed(INSTANT, ZoneOffset.UTC), ownerQuery, images, org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class));
     }
 
     @Test
@@ -55,6 +55,7 @@ class AdminToolServiceTest {
     @Test
     void missingToolIsRejectedBeforeAdministrativeMutation() {
         when(repository.findById(1L)).thenReturn(Optional.empty());
+        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service().getToolDetails(1L))
                 .isInstanceOf(ToolNotFoundException.class);
@@ -66,7 +67,7 @@ class AdminToolServiceTest {
     @Test
     void updatesAnotherOwnersToolAndPersistsChangedFields() {
         Tool tool = tool(8L, ToolStatus.ACTIVE);
-        when(repository.findById(1L)).thenReturn(Optional.of(tool));
+        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(tool));
         when(repository.save(tool)).thenReturn(tool);
 
         assertThat(service().updateTool(1L, "  Novo  ", "  Descrição  ")).isSameAs(tool);
@@ -79,7 +80,7 @@ class AdminToolServiceTest {
     @Test
     void transitionsPersistOnlyChangesAndDeleteUsesAdministratorsId() {
         Tool tool = tool(8L, ToolStatus.ACTIVE);
-        when(repository.findById(1L)).thenReturn(Optional.of(tool));
+        when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(tool));
         when(repository.save(tool)).thenReturn(tool);
 
         assertThat(service().activateTool(1L)).isSameAs(tool);

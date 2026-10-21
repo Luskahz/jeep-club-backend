@@ -83,9 +83,19 @@ class AdminUserControllerTest {
         pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
         pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, validator, userRegistration, Clock.systemUTC()))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, org.mockito.Mockito.mock(com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection.class), validator, userRegistration, Clock.systemUTC()))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
-                .setCustomArgumentResolvers(pageableResolver)
+                .setCustomArgumentResolvers(pageableResolver, new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
+                        return parameter.hasParameterAnnotation(org.springframework.security.core.annotation.AuthenticationPrincipal.class);
+                    }
+                    public Object resolveArgument(org.springframework.core.MethodParameter parameter,
+                            org.springframework.web.method.support.ModelAndViewContainer container,
+                            org.springframework.web.context.request.NativeWebRequest request,
+                            org.springframework.web.bind.support.WebDataBinderFactory factory) {
+                        return new com.jeepclub.backend.platform.security.principal.UserPrincipal(9L,1L,"Synthetic actor",java.time.Instant.now().plusSeconds(3600));
+                    }
+                })
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .build();
@@ -360,23 +370,23 @@ class AdminUserControllerTest {
 
     @Test
     void disableCoversSuccessNotFoundConflictAndMissingAccountIntegrity() throws Exception {
-        when(adminUserService.disable(7L)).thenReturn(user(7L, UserStatus.DISABLED));
-        when(adminUserService.disable(98L)).thenThrow(new UserNotFoundException(98L));
-        when(adminUserService.disable(97L))
+        when(adminUserService.disable(7L, 9L)).thenReturn(user(7L, UserStatus.INACTIVE));
+        when(adminUserService.disable(98L, 9L)).thenThrow(new UserNotFoundException(98L));
+        when(adminUserService.disable(97L, 9L))
                 .thenThrow(new UserAlreadyDisabledException(97L, new IllegalStateException()));
-        when(adminUserService.disable(96L)).thenThrow(new AuthenticationAccountNotFoundException(96L));
-        when(adminUserService.disable(95L)).thenThrow(new RootUserCannotBeDisabledException(95L));
+        when(adminUserService.disable(96L, 9L)).thenThrow(new com.jeepclub.backend.iam.identity.api.module.exception.UserAuthenticationLifecycleConflictException());
+        when(adminUserService.disable(95L, 9L)).thenThrow(new RootUserCannotBeDisabledException(95L));
 
         mockMvc.perform(patch("/identity/admin/users/7/disable"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("DISABLED"));
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
         mockMvc.perform(patch("/identity/admin/users/98/disable"))
                 .andExpect(status().isNotFound());
         mockMvc.perform(patch("/identity/admin/users/97/disable"))
                 .andExpect(status().isConflict());
         mockMvc.perform(patch("/identity/admin/users/96/disable"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("INVALID_STATE"));
+                .andExpect(jsonPath("$.code").value("USER_AUTHENTICATION_LIFECYCLE_CONFLICT"));
         mockMvc.perform(patch("/identity/admin/users/95/disable"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("USER_ROOT_CANNOT_BE_DISABLED"));
@@ -384,9 +394,9 @@ class AdminUserControllerTest {
 
     @Test
     void enableCoversSuccessNotFoundAndConflict() throws Exception {
-        when(adminUserService.enable(7L)).thenReturn(user(7L, UserStatus.ACTIVE));
-        when(adminUserService.enable(98L)).thenThrow(new UserNotFoundException(98L));
-        when(adminUserService.enable(97L))
+        when(adminUserService.enable(7L, 9L)).thenReturn(user(7L, UserStatus.ACTIVE));
+        when(adminUserService.enable(98L, 9L)).thenThrow(new UserNotFoundException(98L));
+        when(adminUserService.enable(97L, 9L))
                 .thenThrow(new UserNotDisabledException(97L, new IllegalStateException()));
 
         mockMvc.perform(patch("/identity/admin/users/7/enable"))
@@ -402,7 +412,7 @@ class AdminUserControllerTest {
         return new AdminUserResult(
                 id, "Lucas Alves", LocalDate.of(2000, 5, 17), "lucas@example.com",
                 "52998224725", "123456789", "5511999999999", null, status,
-                CREATED_AT, status == UserStatus.DISABLED ? CREATED_AT.plusSeconds(60) : null,
+                CREATED_AT, status == UserStatus.INACTIVE ? CREATED_AT.plusSeconds(60) : null,
                 CREATED_AT.plusSeconds(60)
         );
     }

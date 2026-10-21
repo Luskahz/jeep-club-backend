@@ -13,7 +13,7 @@ public record ToolSummaryResponseDTO(
         @Schema(description = "Nome da ferramenta.", example = "Macaco Hidráulico")
         String name,
 
-        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE"})
+        @Schema(description = "Status operacional atual.", example = "ACTIVE", allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"})
         ToolStatus status,
 
         @Schema(description = "Chave da foto no storage global.", nullable = true)

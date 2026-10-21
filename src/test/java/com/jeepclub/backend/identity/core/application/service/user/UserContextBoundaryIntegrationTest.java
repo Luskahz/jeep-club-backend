@@ -55,7 +55,7 @@ class UserContextBoundaryIntegrationTest {
 
         AdminUserResult disabled = adminUserService.disable(userId);
 
-        assertThat(disabled.status()).isEqualTo(UserStatus.DISABLED);
+        assertThat(disabled.status()).isEqualTo(UserStatus.INACTIVE);
         assertThat(userQuery.isAdministrativelyActive(userId)).isFalse();
         assertThat(accountRepository.findByIdentityId(userId).orElseThrow().getAccessStatus())
                 .isEqualTo(AuthenticationAccessStatus.DISABLED);

@@ -12,7 +12,7 @@ a criação/incremento de contextos financeiros de Event.
 |---|---|
 | enviar pagamento | `MemberCharge` |
 | substituir pagamento | `MemberPayment` -> `MemberCharge` |
-| confirmar pagamento | `MemberPayment` -> `MemberCharge` |
+| confirmar pagamento | `ChargeCycle` -> `MemberPayment` -> `MemberCharge` |
 | rejeitar pagamento | `MemberPayment` |
 | alterar valor final | `MemberCharge` |
 | cancelar cobrança individual | `MemberCharge` |
@@ -29,10 +29,13 @@ serializar inclusive duas primeiras criações. `uk_event_charge_context`,
 `uk_event_charge_context_cycle`, `uk_event_charge_context_assignment` e
 `uk_billing_member_charges_user_cycle` complementam a proteção em banco.
 
-Cancelamento bloqueia pagamentos existentes por ID e depois cobranças, relendo
+Cancelamento e finish/archive bloqueiam o ciclo. Cancelamento bloqueia pagamentos
+por cobrança/ID e depois cobranças, relendo
 seu estado sob lock. A criação de elegibilidade e o request direto também usam
 o lock do pagamento. Confirmação tardia preserva essa ordem e garante somente
 um refund ativo/concluído. Não existe retry invisível de submissão financeira.
+Os pagamentos e refunds são verificados por consultas com lock (current reads),
+evitando snapshot obsoleto no MySQL REPEATABLE READ após espera por lock.
 
 ## Comprovante e transação
 

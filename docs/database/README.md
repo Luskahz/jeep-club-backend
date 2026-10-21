@@ -11,3 +11,5 @@
 8. [Adoção operacional real e automação permanente](08-operational-adoption.md)
 
 Os relatórios 1–7 preservam a auditoria anterior. O relatório 8 e o runbook atualizado registram a execução por SSH e substituem afirmações anteriores de ausência de acesso. Evidências privadas e dados nunca são incluídos no Git. #100 não será integrado nesta execução.
+
+9. [Incremento V4 do registro de associados](09-membership-registry.md) — BACK-526, schema aditivo, emissão desabilitada e ensaio local.

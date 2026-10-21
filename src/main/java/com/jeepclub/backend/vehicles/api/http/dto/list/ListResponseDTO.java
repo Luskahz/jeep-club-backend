@@ -15,7 +15,7 @@ public record ListResponseDTO(
         @Schema(description = "Placa no formato Mercosul (ABC1D23) ou antigo (ABC1234)", example = "ABC1D23")
         String plate,
 
-        @Schema(description = "Chave da imagem no storage global (GET /media/images?key=...)", example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg", nullable = true)
+        @Schema(deprecated=true,description = "Alias de capa derivado da principal; galeria completa no detalhe", example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg", nullable = true)
         String photo,
 
         @Schema(description = "Ano do modelo do veículo", example = "2022")
@@ -25,7 +25,9 @@ public record ListResponseDTO(
         String model,
 
         @Schema(description = "Cor predominante do veículo", example = "Preto")
-        String color
+        String color,
+        @Schema(description="Disponibilidade operacional.")
+        com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus status
 
 ) {
     public static ListResponseDTO from(Vehicle vehicle) {
@@ -36,7 +38,8 @@ public record ListResponseDTO(
                 vehicle.getPhoto(),
                 vehicle.getModelYear(),
                 vehicle.getModel(),
-                vehicle.getColor()
+                vehicle.getColor(),
+                vehicle.getStatus()
         );
     }
 }

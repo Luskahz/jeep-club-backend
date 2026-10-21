@@ -69,7 +69,7 @@ public class EventController {
     @PostMapping("/{id}/registrations/me/cancel")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_REGISTRATION_CANCEL')")
     @RequiredPermission("PUBLICATIONS_EVENT_REGISTRATION_CANCEL")
-    @Operation(summary="Cancel own registration before start; preserve history")
+    @Operation(summary="Cancel own registration before start; preserve history", description="Idempotent and atomic. Preserves debt/payments. Terminally cancels all originating personal guests, including approved; administrative passengers return to standby. Offers are withdrawn with history. Refunds remain a separate Billing decision.")
     @ApiResponse(responseCode="200", description="Cancel own registration before start; preserve history")
     public EventRegistration cancel(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal) {
         return service.cancel(id, principal.getUserId());
@@ -77,19 +77,28 @@ public class EventController {
     @PostMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE")
-    @Operation(summary="Request guest for own allocated vehicle")
+    @Operation(summary="Request guest for own allocated vehicle", description="Creates PENDING without reserving a seat. Multiple requests are allowed even when the vehicle has no available seats. Ownership, active vehicle and eligible registration remain required. Capacity is checked atomically on administrative approval.")
     @ApiResponse(responseCode="201", description="Request guest for own allocated vehicle")
     @ResponseStatus(HttpStatus.CREATED)
-    public EventGuestRequest guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
-        return service.requestGuest(id, principal.getUserId(), r.vehicleId(), r.cpf(), r.guestName());
+    public EventGuestResponseDTO guest(@PathVariable Long id, @Valid @RequestBody EventOperationRequests.Guest r, @AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.requestGuest(id, principal.getUserId(), r.vehicleId(), r.cpf(), r.guestName()));
     }
     @GetMapping("/{id}/guest-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REQUEST_READ')")
     @RequiredPermission("PUBLICATIONS_EVENT_GUEST_REQUEST_READ")
     @Operation(summary="Read own guest requests")
     @ApiResponse(responseCode="200", description="Read own guest requests")
-    public PageResponse<EventGuestRequest> guests(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal, @org.springdoc.core.annotations.ParameterObject Pageable pageable) {
-        return EventPages.of(service.guests(id, principal.getUserId()).stream().sorted(java.util.Comparator.comparing(EventGuestRequest::id)).toList(),pageable);
+    public PageResponse<EventGuestResponseDTO> guests(@PathVariable Long id, @AuthenticationPrincipal UserPrincipal principal, @org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+        return EventPages.of(service.guests(id, principal.getUserId()).stream().sorted(java.util.Comparator.comparing(EventGuestRequest::id)).map(EventGuestResponseDTO::from).toList(),pageable);
+    }
+    @PostMapping("/{id}/guest-requests/{guestId}/cancel")
+    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL')")
+    @RequiredPermission("PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL")
+    @Operation(summary="Terminally cancel own personal guest",description="Preserves member registration, other guests and financial facts. A new request is required to return; same CPF is allowed.")
+    @ApiResponse(responseCode="200",description="Cancelled participation; repeated cancellation is idempotent")
+    public EventGuestResponseDTO cancelGuest(@PathVariable Long id,@PathVariable Long guestId,
+            @Valid @RequestBody EventOperationRequests.GuestDecision r,@AuthenticationPrincipal UserPrincipal principal) {
+        return EventGuestResponseDTO.from(service.cancelGuest(id,guestId,principal.getUserId(),r.reason()));
     }
     @GetMapping("/{id}/ride-requests")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_RIDE_OFFER_READ')")

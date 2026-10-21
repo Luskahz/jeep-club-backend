@@ -9,8 +9,8 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 @Schema(description = "Payload de atualização parcial dos dados editáveis do veículo. Um campo "
-        + "omitido preserva o valor atual. Nickname, photo e color podem ser "
-        + "limpos enviando null explícito. Plate, renavam, brand, model, "
+        + "omitido preserva o valor atual. Nickname e color podem ser "
+        + "limpos enviando null explícito. Photo é alias legado restrito a galeria de até uma imagem e revisão zero; depois use o endpoint versionado de galeria. Plate, renavam, brand, model, "
         + "manufacturingYear, modelYear, seatingCapacity, fuelType e engineDisplacement "
         + "não podem ser limpos: se enviados como null, o request é rejeitado com 400.")
 public record EditRequestDTO(
@@ -27,7 +27,7 @@ public record EditRequestDTO(
         String nickname,
 
         @Schema(
-                description = "Chave de POST /media/images. Omitir preserva o valor atual; "
+                deprecated = true, description = "Alias legado da foto única. Omitir preserva a galeria inteira; alteração explícita exige galeria de até uma imagem e revisão zero (caso contrário 409). Use PUT de galeria. "
                         + "null explícito limpa o campo.",
                 example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.png",
                 nullable = true,

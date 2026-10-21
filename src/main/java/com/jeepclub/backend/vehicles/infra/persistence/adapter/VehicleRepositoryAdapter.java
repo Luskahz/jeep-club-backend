@@ -26,6 +26,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Repository
 public class VehicleRepositoryAdapter implements VehicleRepository {
+    private final jakarta.persistence.EntityManager entityManager;
+
 
     private static final String PLATE_CONSTRAINT = "uk_vehicle_plate";
     private static final String RENAVAM_CONSTRAINT = "uk_vehicle_renavam";
@@ -35,7 +37,7 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
     private final VehicleHistoryMapper historyMapper;
     @Override
     public java.util.List<Vehicle> findAllByIds(java.util.Collection<Long> ids) {
-        return jpaRepository.findAllById(ids).stream().map(VehicleMapper::toDomain).toList();
+        return ids.isEmpty()?java.util.List.of():jpaRepository.findWithImagesByIds(ids).stream().map(VehicleMapper::toDomain).toList();
     }
 
     @Override
@@ -82,6 +84,7 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
             Long deletedByUserId,
             Instant deletedAt
     ) {
+        var current = findByIdForUpdate(vehicle.getId()).orElseThrow(() -> new VehicleAlreadyDeletedException(vehicle.getId()));
         VehicleEntity entity = jpaRepository
                 .findByIdForUpdate(vehicle.getId())
                 .orElseThrow(
@@ -93,7 +96,9 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
         VehicleHistoryEntity history = historyMapper.toHistoryEntity(
                 entity,
                 deletedByUserId,
-                deletedAt
+                deletedAt,
+                current.getGallery(),
+                current.getGalleryRevision()
         );
 
         historyJpaRepository.save(history);
@@ -129,13 +134,44 @@ public class VehicleRepositoryAdapter implements VehicleRepository {
 
     @Override
     public Page<Vehicle> findAllByOwnerIdAndStatus(Long ownerId, VehicleStatus status, Pageable pageable) {
-        return jpaRepository.findAllByOwnerIdAndStatus(ownerId, status, pageable)
-                .map(VehicleMapper::toDomain);
+        var page=jpaRepository.findAllByOwnerIdAndStatusAndLegacyDeletedFalse(ownerId,status,pageable);
+        fetchPageImages(page);
+        return page.map(VehicleMapper::toDomain);
     }
 
     @Override
     public Page<Vehicle> findAllByStatus(VehicleStatus status, Pageable pageable) {
-        return jpaRepository.findAllByStatus(status, pageable)
-                .map(VehicleMapper::toDomain);
+        var page=jpaRepository.findAllByStatusAndLegacyDeletedFalse(status,pageable);
+        fetchPageImages(page);
+        return page.map(VehicleMapper::toDomain);
+    }
+    @Override
+    public Optional<Vehicle> findByIdForUpdate(Long id) {
+        var locked = jpaRepository.findByIdForUpdate(id);
+        // Retain the DB lock while discarding any pre-lock ORM snapshot (MySQL REPEATABLE READ).
+        locked.ifPresent(entityManager::detach);
+        return locked.flatMap(ignored -> jpaRepository.findByIdForUpdate(id)).map(entity -> {
+            // A plain lazy SELECT could reuse the transaction's pre-lock MySQL RR snapshot.
+            @SuppressWarnings("unchecked") java.util.List<Object[]> rows=entityManager.createNativeQuery(
+                    "select storage_key,position,is_primary from vehicle_images where vehicle_id=:id order by position for update")
+                    .setParameter("id",id).getResultList();
+            var gallery=rows.isEmpty()?com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery.legacy(entity.getPhoto()):
+                    com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery.of(rows.stream().map(row ->
+                            new com.jeepclub.backend.vehicles.core.domain.model.VehicleImage((String)row[0],((Number)row[1]).intValue(),
+                                Boolean.TRUE.equals(row[2]) || row[2] instanceof Number n && n.intValue()!=0)).toList());
+            return VehicleMapper.toDomain(entity,gallery);
+        });
+    }
+
+    private void fetchPageImages(Page<VehicleEntity> page) {
+        if(!page.isEmpty()) jpaRepository.findWithImagesByIds(page.getContent().stream().map(VehicleEntity::getId).toList());
+    }
+
+    @Override public Optional<com.jeepclub.backend.vehicles.core.domain.model.VehicleGallerySnapshot> findGalleryHistory(Long id) {
+        return historyJpaRepository.findById(id).map(h -> {
+            var gallery=h.getImages().isEmpty()?com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery.legacy(h.getPhoto()):
+                    com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery.of(h.getImages().stream().map(i -> new com.jeepclub.backend.vehicles.core.domain.model.VehicleImage(i.getStorageKey(),i.getPosition(),i.isPrimary())).toList());
+            return new com.jeepclub.backend.vehicles.core.domain.model.VehicleGallerySnapshot(h.getId(),h.getVehicleId(),h.getOwnerId(),h.getDeletedByUserId(),h.getDeletedAt(),h.getGalleryRevision(),gallery);
+        });
     }
 }

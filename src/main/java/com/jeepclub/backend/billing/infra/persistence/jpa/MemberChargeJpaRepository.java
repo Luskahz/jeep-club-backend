@@ -17,6 +17,9 @@ public interface MemberChargeJpaRepository extends JpaRepository<MemberChargeEnt
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<MemberChargeEntity> findWithLockingById(Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<MemberChargeEntity> findWithLockingByChargeCycleIdAndUserId(Long chargeCycleId, Long userId);
+
     Optional<MemberChargeEntity> findByChargeCycleIdAndUserId(
             Long chargeCycleId,
             Long userId
@@ -54,4 +57,7 @@ public interface MemberChargeJpaRepository extends JpaRepository<MemberChargeEnt
             Long userId,
             Long chargeCycleId
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    java.util.Optional<MemberChargeEntity> findFirstByChargeDefinitionIdOrderById(Long definitionId);
 }
