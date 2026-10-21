@@ -6,6 +6,7 @@ import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvi
 import com.jeepclub.backend.platform.security.jwt.*;
 import com.jeepclub.backend.platform.storage.image.ImageMediaService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -31,6 +32,12 @@ class EventHttpIntegrationTest {
     @MockitoBean AccessTokenAuthenticationService authenticationService;
     @MockitoBean MembershipAccessQuery membershipAccess;
     @MockitoBean ImageMediaService media;
+    @MockitoBean com.jeepclub.backend.vehicles.api.module.EventVehicleQuery vehicles;
+    @MockitoBean com.jeepclub.backend.vehicles.api.module.VehicleLifecycleLock vehicleLocks;
+    @BeforeEach void guestVehicles() {
+        when(vehicles.findActive(anyLong())).thenAnswer(a -> Optional.of(new com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.VehicleCapacity(a.getArgument(0),10L,3)));
+        when(vehicleLocks.activeById(anyLong())).thenAnswer(a -> vehicles.findActive(a.getArgument(0)));
+    }
     static final String CREATE = """
         {"title":"Trail","content":"Route","startsAt":"%s","images":[{"storageKey":"images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg","position":0,"primary":true}]}
         """;
@@ -41,6 +48,131 @@ class EventHttpIntegrationTest {
     }
     static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder token(org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder r) {
         return r.header("Authorization", "Bearer event-token");
+    }
+    long guestEvent() throws Exception {
+        auth(99L,"PUBLICATIONS_EVENT_CREATE","PUBLICATIONS_EVENT_PUBLISH");
+        var result=mvc.perform(token(post("/admin/events").contentType("application/json").content(CREATE.formatted(Instant.now(clock).plusSeconds(86400)))))
+            .andExpect(status().isCreated()).andReturn();
+        long id=json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+        mvc.perform(token(post("/admin/events/{id}/publish",id))).andExpect(status().isOk());
+        auth(10L,"PUBLICATIONS_EVENT_REGISTER");
+        mvc.perform(token(post("/events/{id}/registrations",id).contentType("application/json").content("{\"allocations\":[{\"vehicleId\":101,\"member\":true,\"dependentIds\":[]}]}"))).andExpect(status().isCreated());
+        return id;
+    }
+    @Test @Transactional void administrativeGuestHttpLifecycleAndTypedHistory() throws Exception {
+        long event=guestEvent();auth(99L,"PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
+        var created=mvc.perform(token(post("/admin/events/{id}/guest-requests",event).contentType("application/json")
+                .content("{\"cpf\":\"12345678901\",\"guestName\":\"Synthetic guest\"}")))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.origin").value("ADMIN")).andExpect(jsonPath("$.status").value("APPROVED"))
+            .andExpect(jsonPath("$.transportStatus").value("STANDBY")).andExpect(jsonPath("$.originRegistrationId").isEmpty()).andReturn();
+        long guest=json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_ALLOCATE");
+        mvc.perform(token(put("/admin/events/{id}/guest-requests/{guest}/allocation",event,guest).contentType("application/json")
+                .content("{\"vehicleId\":101,\"reason\":\"Direct allocation\"}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.vehicleId").value(101)).andExpect(jsonPath("$.responsibleUserId").value(10)).andExpect(jsonPath("$.transportStatus").value("ALLOCATED"));
+        for(String action:List.of("unassign","cancel","reactivate")) {
+            auth(99L,"PUBLICATIONS_EVENT_GUEST_"+(action.equals("unassign")?"UNASSIGN":action.equals("cancel")?"CANCEL":"REACTIVATE"));
+            mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/{action}",event,guest,action).contentType("application/json").content("{\"reason\":\"Human decision\"}")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.vehicleId").isEmpty())
+                .andExpect(jsonPath("$.transportStatus").value(action.equals("cancel")?"NONE":"STANDBY"));
+        }
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_HISTORY_READ");
+        mvc.perform(token(get("/admin/events/{id}/guest-requests/{guest}/history",event,guest)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].action").value("CREATED"))
+            .andExpect(jsonPath("$.content[4].action").value("REACTIVATED")).andExpect(jsonPath("$.content[4].nextVehicleId").isEmpty());
+    }
+    @Test @Transactional void memberGuestCancellationOwnershipAndDuplicateCpfContract() throws Exception {
+        long event=guestEvent();auth(10L,"PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE");
+        var ids=new ArrayList<Long>();
+        for(int i=0;i<2;i++) {
+            var response=mvc.perform(token(post("/events/{id}/guest-requests",event).contentType("application/json")
+                    .content("{\"cpf\":\"12345678901\",\"vehicleId\":101,\"guestName\":\"Personal guest\"}")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.origin").value("MEMBER"))
+                .andExpect(jsonPath("$.vehicleId").isEmpty()).andExpect(jsonPath("$.requestedVehicleId").value(101)).andReturn();
+            ids.add(json.readTree(response.getResponse().getContentAsString()).get("id").asLong());
+        }
+        assertThat(ids.get(0)).isNotEqualTo(ids.get(1));
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_APPROVE");
+        for(long guest:ids) mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,guest))).andExpect(status().isOk()).andExpect(jsonPath("$.transportStatus").value("ALLOCATED"));
+        auth(20L,"PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL");
+        mvc.perform(token(post("/events/{id}/guest-requests/{guest}/cancel",event,ids.get(0)).contentType("application/json").content("{\"reason\":\"Not owner\"}")))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("EVENT_GUEST_ACCESS_DENIED"));
+        auth(10L,"PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL","PUBLICATIONS_EVENT_REGISTRATION_READ");
+        mvc.perform(token(post("/events/{id}/guest-requests/{guest}/cancel",event,ids.get(0)).contentType("application/json").content("{\"reason\":\"Own guest withdrew\"}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
+        mvc.perform(token(get("/events/{id}/registrations/me",event))).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CONFIRMED"));
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_REACTIVATE");
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/reactivate",event,ids.get(0)).contentType("application/json").content("{\"reason\":\"Invalid personal reactivation\"}")))
+            .andExpect(status().isConflict()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
+    }
+    @Test @Transactional void pendingRequestsDoNotReserveAndApprovalReturnsCapacityConflict() throws Exception {
+        long event=guestEvent();
+        when(vehicles.findActive(anyLong())).thenAnswer(a -> Optional.of(new com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.VehicleCapacity(a.getArgument(0),10L,2)));
+        when(vehicles.findActiveBatch(anyCollection())).thenAnswer(a -> ((Collection<Long>)a.getArgument(0)).stream()
+            .map(id -> new com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.VehicleCapacity(id,10L,2)).toList());
+        var ids=new ArrayList<Long>();
+        for(int i=0;i<3;i++) {
+            auth(10L,"PUBLICATIONS_EVENT_GUEST_REQUEST_CREATE");
+            var result=mvc.perform(token(post("/events/{id}/guest-requests",event).contentType("application/json")
+                .content("{\"cpf\":\"12345678901\",\"vehicleId\":101,\"guestName\":\"Pending guest\"}")))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.vehicleId").isEmpty()).andReturn();
+            ids.add(json.readTree(result.getResponse().getContentAsString()).get("id").asLong());
+        }
+        auth(99L,"PUBLICATIONS_EVENT_ADMIN_DASHBOARD_READ","PUBLICATIONS_EVENT_GUEST_APPROVE","PUBLICATIONS_EVENT_GUEST_REJECT","PUBLICATIONS_EVENT_GUEST_CANCEL");
+        mvc.perform(token(get("/admin/events/{id}/dashboard",event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.guestsPending").value(3)).andExpect(jsonPath("$.guestsAllocated").value(0)).andExpect(jsonPath("$.availableSeats").value(1));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,ids.get(0)))).andExpect(status().isOk());
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,ids.get(1)))).andExpect(status().isConflict())
+            .andExpect(content().contentTypeCompatibleWith("application/problem+json")).andExpect(jsonPath("$.code").value("EVENT_VEHICLE_CAPACITY_EXCEEDED"));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/reject",event,ids.get(2)).contentType("application/json").content("{\"reason\":\"Manual decision\"}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REJECTED"));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/cancel",event,ids.get(0)).contentType("application/json").content("{\"reason\":\"Guest withdrew\"}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELLED"));
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/approve",event,ids.get(1)))).andExpect(status().isOk());
+        auth(10L,"PUBLICATIONS_EVENT_GUEST_REQUEST_READ");
+        mvc.perform(token(post("/events/{id}/guest-requests",event).contentType("application/json").content("{\"cpf\":\"12345678901\",\"vehicleId\":101,\"guestName\":\"Forbidden\"}")))
+            .andExpect(status().isForbidden());
+    }
+    @Test @Transactional void guestCountHasExplicitCurrentStateMeaningAndDeprecatedAlias() throws Exception {
+        long event=guestEvent();
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE","PUBLICATIONS_EVENT_GUEST_ADMIN_READ","PUBLICATIONS_EVENT_GUEST_CANCEL","PUBLICATIONS_EVENT_GUEST_REACTIVATE");
+        var result=mvc.perform(token(post("/admin/events/{id}/guest-requests",event).contentType("application/json")
+            .content("{\"cpf\":\"12345678901\",\"guestName\":\"Standby guest\"}")))
+            .andExpect(status().isCreated()).andReturn();
+        long guest=json.readTree(result.getResponse().getContentAsString()).get("id").asLong();
+        for(String action:List.of("initial","cancel","reactivate","cancel","reactivate")) {
+            if(!action.equals("initial"))mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/{action}",event,guest,action)
+                .contentType("application/json").content("{\"reason\":\"Administrative decision\"}"))).andExpect(status().isOk());
+            int expected=action.equals("cancel")?0:1;
+            mvc.perform(token(get("/admin/events/{id}/guest-requests",event))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].currentApprovedGuestCount").value(expected))
+                .andExpect(jsonPath("$.content[0].approvedHistoricalVisits").value(expected));
+        }
+    }
+    @Test void guestLifecyclePermissionsAreIndependentAndAllNewRoutesAreAuthenticated() throws Exception {
+        var routes=List.of(
+            put("/admin/events/1/guest-requests/1/allocation").contentType("application/json").content("{\"vehicleId\":101,\"reason\":\"Decision\"}"),
+            get("/admin/events/1/guest-requests/1/history"),
+            post("/admin/events/1/guest-requests/1/unassign").contentType("application/json").content("{\"reason\":\"Decision\"}"),
+            post("/admin/events/1/guest-requests/1/cancel").contentType("application/json").content("{\"reason\":\"Decision\"}"),
+            post("/admin/events/1/guest-requests/1/reactivate").contentType("application/json").content("{\"reason\":\"Decision\"}"),
+            post("/events/1/guest-requests/1/cancel").contentType("application/json").content("{\"reason\":\"Decision\"}"));
+        for(var route:routes)mvc.perform(route).andExpect(status().isUnauthorized());
+        auth(99L,"PUBLICATIONS_EVENT_GUEST_ADMIN_READ","PUBLICATIONS_EVENT_GUEST_APPROVE");
+        for(var route:routes)mvc.perform(token(route)).andExpect(status().isForbidden());
+    }
+    @Test void openApiExposesGuestOriginTransportAndDedicatedPermissions() throws Exception {
+        var result=mvc.perform(get("/v3/api-docs")).andExpect(status().isOk()).andReturn();
+        var doc=json.readTree(result.getResponse().getContentAsString());
+        var schema=doc.get("components").get("schemas").get("EventGuestResponseDTO").get("properties");
+        for(String field:List.of("origin","transportStatus","originRegistrationId","requestedVehicleId","allocatedRegistrationId","responsibleUserId","selectedOfferId"))assertThat(schema.has(field)).isTrue();
+        var counts=doc.get("components").get("schemas").get("GuestReview").get("properties");
+        assertThat(counts.get("approvedHistoricalVisits").get("deprecated").asBoolean()).isTrue();
+        assertThat(counts.get("currentApprovedGuestCount").get("description").asString()).contains("currently APPROVED","ADMIN standby","Not attendance");
+        assertThat(doc.get("paths").get("/events/{id}/guest-requests").get("post").get("description").asString()).contains("without reserving a seat");
+        assertThat(doc.get("paths").get("/events/{id}/guest-requests/{guestId}/cancel").get("post").get("x-required-permissions").get(0).asString()).isEqualTo("PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL");
+        assertThat(doc.get("paths").get("/admin/events/{id}/guest-requests/{guestId}/allocation").get("put").get("x-required-permissions").get(0).asString()).isEqualTo("PUBLICATIONS_EVENT_GUEST_ALLOCATE");
     }
     @Test @Transactional void fullHttpCreationPatchRegistrationAndControlledErrors() throws Exception {
         auth(99L, "PUBLICATIONS_EVENT_CREATE");

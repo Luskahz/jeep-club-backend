@@ -30,11 +30,14 @@ class VehicleMediaMultipartHttpIntegrationTest {
     @LocalServerPort int port;
     @Autowired Clock clock;
     @MockitoBean FileStorage storage;
+    @MockitoBean com.jeepclub.backend.vehicles.core.port.UserPort owners;
     @MockitoBean JwtTokenParser parser;
     @MockitoBean UserAuthoritiesProvider authorities;
     @MockitoBean AccessTokenAuthenticationService authentication;
 
     @Test void realServletAcceptsFiveMbImageAndRejectsOneExtraByte() throws Exception {
+        when(owners.existsById(10L)).thenReturn(true);
+        when(owners.existsActiveById(10L)).thenReturn(true);
         when(parser.parseAndValidate("owner")).thenReturn(new JwtAuthenticatedUser(10L, 110L,
             "Synthetic HTTP actor", Instant.now(clock).plusSeconds(3600)));
         when(authorities.findAuthorityCodesByUserId(10L)).thenReturn(List.of());
@@ -57,5 +60,25 @@ class VehicleMediaMultipartHttpIntegrationTest {
                 .isEqualTo(size == ImageUpload.MAX_BYTES ? 201 : 400);
         }
         verify(storage, times(1)).store(any(), eq("images"));
+    }
+
+    @Test void realServletAcceptsFiveImagesAtTheIndividualLimitInOneRequest() throws Exception {
+        when(owners.existsById(10L)).thenReturn(true);when(owners.existsActiveById(10L)).thenReturn(true);
+        when(parser.parseAndValidate("gallery-http-owner")).thenReturn(new JwtAuthenticatedUser(10L,110L,"Synthetic HTTP gallery actor",Instant.now(clock).plusSeconds(3600)));
+        when(authorities.findAuthorityCodesByUserId(10L)).thenReturn(List.of());
+        when(storage.store(any(),eq("images"))).thenAnswer(a->new StoredFile("images/2026/10/19/"+UUID.randomUUID()+".png"));
+        String data=VehicleMediaOrchestrationIntegrationTest.DATA.replace("MED1D23",VehicleGalleryIntegrationTest.plate()).replace("38249206428",VehicleGalleryIntegrationTest.renavam());
+        String boundary="GalleryBoundary"+UUID.randomUUID().toString().replace("-","");var body=new ByteArrayOutputStream();
+        body.writeBytes(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"vehicle\"\r\nContent-Type: application/json\r\n\r\n"+data+"\r\n").getBytes(StandardCharsets.UTF_8));
+        byte[] image=new byte[ImageUpload.MAX_BYTES];System.arraycopy(VehicleMediaOrchestrationIntegrationTest.PNG,0,image,0,VehicleMediaOrchestrationIntegrationTest.PNG.length);
+        for(int i=0;i<5;i++) {
+            body.writeBytes(("--"+boundary+"\r\nContent-Disposition: form-data; name=\"photos\"; filename=\"photo.png\"\r\nContent-Type: image/png\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+            body.writeBytes(image);body.writeBytes("\r\n".getBytes(StandardCharsets.UTF_8));
+        }
+        body.writeBytes(("--"+boundary+"--\r\n").getBytes(StandardCharsets.UTF_8));
+        var request=HttpRequest.newBuilder(URI.create("http://127.0.0.1:"+port+"/vehicles/include/member")).header("Authorization","Bearer gallery-http-owner")
+                .header("Content-Type","multipart/form-data; boundary="+boundary).POST(HttpRequest.BodyPublishers.ofByteArray(body.toByteArray())).build();
+        var client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();var response=client.send(request,HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).as("Five files at 5 MiB; response %s",response.body()).isEqualTo(201);verify(storage,times(5)).store(any(),eq("images"));
     }
 }

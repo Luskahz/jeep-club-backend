@@ -19,11 +19,18 @@ public class VehicleMapper {
      * Utiliza o método estático 'reconstitute' do Core para manter a integridade sem alterar regras
      */
     public static Vehicle toDomain(VehicleEntity entity) {
+        if(entity==null) return null;
+        var gallery=entity.getImages().isEmpty()?com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery.legacy(entity.getPhoto()):
+                com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery.of(entity.getImages().stream().map(i -> new com.jeepclub.backend.vehicles.core.domain.model.VehicleImage(i.getStorageKey(),i.getPosition(),i.isPrimary())).toList());
+        return toDomain(entity,gallery);
+    }
+
+    public static Vehicle toDomain(VehicleEntity entity,com.jeepclub.backend.vehicles.core.domain.model.VehicleGallery gallery) {
         if (entity == null) {
             return null;
         }
 
-        return Vehicle.reconstitute(
+        Vehicle vehicle = Vehicle.reconstitute(
                 entity.getId(),
                 entity.getNickname(),
                 entity.getPhoto(),
@@ -45,6 +52,7 @@ public class VehicleMapper {
                 entity.getArchivedAt(),
                 entity.isLegacyDeleted()
         );
+        return Vehicle.restoreGallery(vehicle,gallery,entity.getGalleryRevision());
     }
 
     /**
@@ -59,6 +67,8 @@ public class VehicleMapper {
         entity.setId(domain.getId());
         entity.setNickname(domain.getNickname());
         entity.setPhoto(domain.getPhoto());
+        entity.setGalleryRevision(domain.getGalleryRevision());
+        entity.setImages(domain.getImages().stream().map(i -> new com.jeepclub.backend.vehicles.infra.persistence.entity.VehicleImageEntity(i.storageKey(),i.position(),i.primary())).collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new)));
         entity.setPlate(domain.getPlate());
         entity.setRenavam(domain.getRenavam());
         entity.setBrand(domain.getBrand());

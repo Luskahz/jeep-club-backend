@@ -19,8 +19,13 @@ public class DetailResponseDTO {
         @Schema(description = "Apelido informal do veículo", example = "Jipe do João", nullable = true)
         private String nickname;
 
-        @Schema(description = "Chave da imagem no storage global (GET /media/images?key=...)", example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg", nullable = true)
+        @Schema(deprecated=true, description = "Alias de compatibilidade derivado exclusivamente da imagem principal; use images como galeria canônica", example = "images/2026/09/24/550e8400-e29b-41d4-a716-446655440000.jpg", nullable = true)
         private String photo;
+
+        @Schema(description="Galeria canônica ordenada, zero a cinco imagens.")
+        private java.util.List<com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleImageResponseDTO> images;
+        @Schema(description="Revisão esperada para manutenção integral da galeria.")
+        private long galleryRevision;
 
         @Schema(description = "Placa no formato Mercosul (ABC1D23) ou antigo (ABC1234)", example = "ABC1D23")
         private String plate;
@@ -80,6 +85,8 @@ public class DetailResponseDTO {
                         .id(vehicle.getId())
                         .nickname(vehicle.getNickname())
                         .photo(vehicle.getPhoto())
+                        .images(vehicle.getImages().stream().map(com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleImageResponseDTO::from).toList())
+                        .galleryRevision(vehicle.getGalleryRevision())
                         .plate(vehicle.getPlate())
                         .renavam(vehicle.getRenavam())
                         .brand(vehicle.getBrand())

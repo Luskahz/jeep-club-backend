@@ -241,21 +241,109 @@ class EventOperationsIntegrationTest {
         assertThatThrownBy(() -> member.register(e.getId(), 10L, List.of(new EventRegistration.Allocation(101L, true, List.of(1L,2L,3L)))))
             .hasMessageContaining("capacity exceeded");
     }
-    @Test void guestApprovalUsesLastSeatAndHistoryWarnsWithoutBlocking() {
+    @Test void guestApprovalUsesLastSeatAndCurrentApprovalCountDoesNotBlockRequests() {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
         var guest = member.requestGuest(e.getId(), 10L, 101L, "123.456.789-01");
         assertThat(admin.dashboard(e.getId()).totalPeople()).isEqualTo(2);
         admin.reviewGuest(e.getId(), guest.id(), 99L, true, null);
         var d = admin.dashboard(e.getId());
         assertThat(d.totalPeople()).isEqualTo(3); assertThat(d.availableSeats()).isZero();
-        assertThat(admin.visits(guest.cpf())).isGreaterThanOrEqualTo(1);
+        assertThat(admin.currentApprovedGuestCount(guest.cpf())).isGreaterThanOrEqualTo(1);
         assertThatThrownBy(() -> admin.reviewGuest(e.getId(), guest.id(), 99L, true, null)).hasMessageContaining("processed");
-        assertThatThrownBy(() -> member.requestGuest(e.getId(), 10L, 101L, "23456789012")).hasMessageContaining("limit reached");
+        var pending = member.requestGuest(e.getId(), 10L, 101L, "23456789012");
+        assertThat(pending.status()).isEqualTo(EventGuestRequest.Status.PENDING);
+        assertThatThrownBy(() -> admin.reviewGuest(e.getId(), pending.id(), 99L, true, null)).hasMessageContaining("capacity exceeded");
     }
-    @Test void guestCpfCannotDuplicateAndRejectedGuestDoesNotOccupySeat() {
+    @Test void fullVehicleAcceptsMultiplePendingRequestsWithoutReservingSeats() {
+        var e = freeEvent();
+        member.register(e.getId(),10L,List.of(new EventRegistration.Allocation(101L,true,List.of(201L,202L))));
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        for (int i=0;i<3;i++) {
+            var g=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+            assertThat(g.status()).isEqualTo(EventGuestRequest.Status.PENDING);
+            assertThat(g.vehicleId()).isNull();
+            assertThat(g.requestedVehicleId()).isEqualTo(101L);
+        }
+        var d=admin.dashboard(e.getId());
+        assertThat(d.guestsPending()).isEqualTo(3);
+        assertThat(d.guestsAllocated()).isZero();
+        assertThat(d.availableSeats()).isZero();
+        assertThat(d.totalPeople()).isEqualTo(3);
+        assertThat(admin.currentApprovedGuestCount(guestCpf(e))).isZero();
+    }
+    @Test void pendingRequestsExceedAvailableSeatsButApprovalAndCancellationControlCapacity() {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());
+        var a=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var b=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var c=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        assertThat(admin.dashboard(e.getId()).guestsPending()).isEqualTo(3);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isZero();
+        admin.reviewGuest(e.getId(),a.id(),99L,true,null);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        assertThatThrownBy(() -> admin.reviewGuest(e.getId(),b.id(),99L,true,null))
+            .isInstanceOf(EventOperationException.class).hasMessageContaining("capacity exceeded");
+        assertThat(guestState(e.getId(),b.id()).status()).isEqualTo(EventGuestRequest.Status.PENDING);
+        assertThat(admin.guestHistory(e.getId(),b.id())).extracting(EventGuestTransition::action).containsExactly("CREATED");
+        admin.reviewGuest(e.getId(),c.id(),99L,false,"Administrative rejection remains possible");
+        member.cancelGuest(e.getId(),a.id(),10L,"Personal guest withdrew");
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
+        admin.reviewGuest(e.getId(),b.id(),99L,true,null);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        assertThat(guestState(e.getId(),c.id()).status()).isEqualTo(EventGuestRequest.Status.REJECTED);
+    }
+    @Test void pendingRequestStillRequiresEligibleOwnedActiveVehicleAndValidGuest() {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),20L,101L,guestCpf(e))).hasMessageContaining("registration not found");
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,102L,guestCpf(e))).hasMessageContaining("not owned");
+        when(vehicles.findActive(101L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e))).hasMessageContaining("vehicle not found");
+        when(vehicles.findActive(101L)).thenReturn(Optional.of(new EventVehicleQuery.VehicleCapacity(101L,20L,3)));
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e))).hasMessageContaining("not owned");
+        when(vehicles.findActive(101L)).thenReturn(Optional.of(new EventVehicleQuery.VehicleCapacity(101L,10L,3)));
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,"invalid")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e)," ")).isInstanceOf(IllegalArgumentException.class);
+        member.cancel(e.getId(),10L);
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,101L,guestCpf(e))).hasMessageContaining("not owned");
+        assertThat(admin.guests(e.getId())).isEmpty();
+    }
+    @Test void currentApprovedCountsAreRecordsNotAttendanceOrHistoricalDecisions() {
+        var e=freeEvent();var another=freeEvent();String cpf=guestCpf(e);
+        member.register(e.getId(),10L,memberOnly());
+        var personal=member.requestGuest(e.getId(),10L,101L,cpf);
+        var administrative=admin.createGuest(e.getId(),99L,cpf);
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        admin.allocateGuest(e.getId(),administrative.id(),101L,null,99L,"Direct allocation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        admin.cancelGuest(e.getId(),administrative.id(),99L,"Cancelled");
+        admin.cancelGuest(e.getId(),administrative.id(),99L,"Repeated cancellation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isZero();
+        admin.reactivateGuest(e.getId(),administrative.id(),99L,"Return to standby");
+        admin.reactivateGuest(e.getId(),administrative.id(),99L,"Repeated reactivation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        admin.reviewGuest(e.getId(),personal.id(),99L,true,null);
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(2);
+        member.cancelGuest(e.getId(),personal.id(),10L,"Personal cancellation");
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(1);
+        var sameEvent=admin.createGuest(e.getId(),99L,cpf);
+        var otherEvent=admin.createGuest(another.getId(),99L,cpf);
+        assertThat(sameEvent.id()).isNotEqualTo(otherEvent.id()).isNotEqualTo(administrative.id());
+        assertThat(admin.currentApprovedGuestCount(cpf)).isEqualTo(3);
+        assertThat(admin.currentApprovedGuestCounts(List.of(cpf,cpf))).containsEntry(cpf,3L).hasSize(1);
+        assertThat(admin.currentApprovedGuestCounts(List.of())).isEmpty();
+        assertThat(admin.guestHistory(e.getId(),personal.id())).extracting(EventGuestTransition::action)
+            .containsExactly("CREATED","APPROVED","CANCELLED");
+        assertThat(admin.guestHistory(e.getId(),administrative.id())).extracting(EventGuestTransition::action)
+            .containsExactly("CREATED","ALLOCATED","CANCELLED","REACTIVATED");
+        assertThat(guestState(e.getId(),personal.id()).reviewerId()).isEqualTo(99L);
+    }
+    @Test void guestCpfMayRepeatAndRejectedGuestDoesNotOccupySeat() {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
         var g = member.requestGuest(e.getId(), 10L, 101L, "34567890123");
-        assertThatThrownBy(() -> admin.createGuest(e.getId(), 99L, g.cpf())).hasMessageContaining("already exists");
+        var repeated = admin.createGuest(e.getId(), 99L, g.cpf());
+        assertThat(repeated.id()).isNotEqualTo(g.id());
+        assertThat(repeated.transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
         admin.reviewGuest(e.getId(), g.id(), 99L, false, "Declined");
         assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
     }
@@ -379,9 +467,9 @@ class EventOperationsIntegrationTest {
         var canceled = member.cancel(e.getId(), 10L);
         assertThat(member.cancel(e.getId(), 10L)).isEqualTo(canceled);
         assertThat(member.guests(e.getId(), 10L)).filteredOn(g -> g.id().equals(pending.id()))
-            .singleElement().satisfies(g -> assertThat(g.status()).isEqualTo(EventGuestRequest.Status.REJECTED));
+            .singleElement().satisfies(g -> assertThat(g.status()).isEqualTo(EventGuestRequest.Status.CANCELLED));
         assertThat(admin.offers(e.getId())).filteredOn(o -> o.id().equals(offer.id()))
-            .singleElement().satisfies(o -> assertThat(o.status()).isEqualTo(EventRideOffer.Status.DECLINED));
+            .singleElement().satisfies(o -> assertThat(o.status()).isEqualTo(EventRideOffer.Status.WITHDRAWN));
         assertThatThrownBy(() -> admin.select(e.getId(), offer.id(), 99L)).hasMessageContaining("invalid");
         assertThat(financial.findByEvent(e.getId()).get(0).effectiveStatus()).isEqualTo("PENDING");
         paymentAdmin.confirm(payment, 99L);
@@ -390,13 +478,16 @@ class EventOperationsIntegrationTest {
             com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus.REQUESTED);
     }
 
-    @Test void approvedGuestPreventsPartialIndividualCancellation() {
+    @Test void approvedGuestEndsAtomicallyWithIndividualCancellation() {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
         var guest = member.requestGuest(e.getId(), 10L, 101L, "11223344556");
         admin.reviewGuest(e.getId(), guest.id(), 99L, true, null);
-        assertThatThrownBy(() -> member.cancel(e.getId(), 10L)).isInstanceOf(EventOperationException.class);
-        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
-        assertThat(admin.guests(e.getId())).singleElement().satisfies(g -> assertThat(g.status()).isEqualTo(EventGuestRequest.Status.APPROVED));
+        member.cancel(e.getId(), 10L);
+        assertThat(member.mine(e.getId(), 10L).status()).isEqualTo(EventRegistration.Status.CANCELLED);
+        assertThat(admin.guests(e.getId())).singleElement().satisfies(g -> {
+            assertThat(g.status()).isEqualTo(EventGuestRequest.Status.CANCELLED);
+            assertThat(g.vehicleId()).isNull();
+        });
     }
 
     @Test void enclosingFailureRollsBackEventChargeAndRefundTogether() {
@@ -574,7 +665,9 @@ class EventOperationsIntegrationTest {
     @Test void concurrentEventsSharingDefinitionRemainIsolated() throws Exception {
         var a = event(false); var definition = admin.rules(a.getId()).get(0).chargeDefinitionId(); var b = freeEvent();
         admin.update(b.getId(),null,null,null,null,false,null,List.of(new AdminEventService.ChargeConfiguration(definition,null,null,null,false,false,null)));
-        assertThat(race(List.of(() -> member.register(a.getId(),10L,List.of()), () -> member.register(b.getId(),20L,List.of())))).allMatch(EventRegistration.class::isInstance);
+        var outcomes=race(List.of(() -> member.register(a.getId(),10L,List.of()), () -> member.register(b.getId(),20L,List.of())));
+        for(var outcome:outcomes) if(outcome instanceof RuntimeException ex) throw new AssertionError("Concurrent Event operation failed",ex);
+        assertThat(outcomes).allMatch(EventRegistration.class::isInstance);
         assertThat(financial.findByEvent(a.getId())).extracting(EventFinancialQuery.State::userId).containsExactly(10L);
         assertThat(financial.findByEvent(b.getId())).extracting(EventFinancialQuery.State::userId).containsExactly(20L);
     }
@@ -625,7 +718,11 @@ class EventOperationsIntegrationTest {
         var b = member.requestGuest(e.getId(), 10L, 101L, "89012345678");
         var outcomes = race(List.of(() -> admin.reviewGuest(e.getId(), a.id(), 99L, true, null), () -> admin.reviewGuest(e.getId(), b.id(), 99L, true, null)));
         assertThat(outcomes.stream().filter(EventGuestRequest.class::isInstance)).hasSize(1);
+        assertThat(outcomes.stream().filter(EventOperationException.class::isInstance).map(EventOperationException.class::cast))
+            .extracting(EventOperationException::getCode).containsExactly("EVENT_VEHICLE_CAPACITY_EXCEEDED");
         assertThat(admin.dashboard(e.getId()).guestsApproved()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).guestsPending()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
     }
     @Test void concurrentRideSelectionAndRepeatedApprovalAreSerialized() throws Exception {
         var e = freeEvent(); member.register(e.getId(), 10L, allocation());
@@ -634,6 +731,223 @@ class EventOperationsIntegrationTest {
         var outcomes = race(() -> admin.select(e.getId(), offer.id(), 99L));
         assertThat(outcomes.stream().filter(EventRideOffer.class::isInstance)).hasSize(1);
         assertThat(admin.dashboard(e.getId()).guestsApproved()).isEqualTo(1);
+    }
+    List<EventRegistration.Allocation> memberOnly() { return List.of(new EventRegistration.Allocation(101L,true,List.of())); }
+    String guestCpf(Event event) { return String.format("%011d",event.getId()); }
+    EventGuestRequest guestState(Long event,Long guest) { return admin.guests(event).stream().filter(g -> g.id().equals(guest)).findFirst().orElseThrow(); }
+    void secondDriver(Long vehicle,Long owner) {
+        when(vehicles.findActive(vehicle)).thenReturn(Optional.of(new EventVehicleQuery.VehicleCapacity(vehicle,owner,3)));
+        when(vehicles.findActiveBatch(anyCollection())).thenAnswer(a -> ((Collection<Long>)a.getArgument(0)).stream().map(v -> vehicles.findActive(v).orElseThrow()).toList());
+    }
+    @Test void twoPersonalGuestsWithSameCpfCanBothBeApprovedInOneVehicle() {
+        var e=freeEvent();var r=member.register(e.getId(),10L,memberOnly());
+        var a=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var b=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        assertThat(a.originRegistrationId()).isEqualTo(r.id());assertThat(a.vehicleId()).isNull();
+        assertThat(a.requestedVehicleId()).isEqualTo(101L);
+        admin.reviewGuest(e.getId(),a.id(),99L,true,null);admin.reviewGuest(e.getId(),b.id(),99L,true,null);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(2);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+        assertThat(admin.currentApprovedGuestCount(guestCpf(e))).isEqualTo(2);
+        assertThat(admin.guests(e.getId())).extracting(EventGuestRequest::id).containsExactly(a.id(),b.id());
+    }
+    @Test void personalDecisionsRemainIndependentAndRejectedHistoryIsNotCancellation() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());
+        var a=member.requestGuest(e.getId(),10L,101L,guestCpf(e));var b=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        admin.reviewGuest(e.getId(),a.id(),99L,false,"Individual decision");admin.reviewGuest(e.getId(),b.id(),99L,true,null);
+        assertThat(guestState(e.getId(),a.id()).status()).isEqualTo(EventGuestRequest.Status.REJECTED);
+        assertThat(guestState(e.getId(),b.id()).status()).isEqualTo(EventGuestRequest.Status.APPROVED);
+        assertThatThrownBy(() -> admin.cancelGuest(e.getId(),a.id(),99L,"No reinterpretation")).isInstanceOf(EventOperationException.class);
+        assertThat(admin.guestHistory(e.getId(),a.id())).extracting(EventGuestTransition::action).containsExactly("CREATED","REJECTED");
+    }
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void personalCancellationIsTerminalOwnedAndIndependentOfRegistration(boolean approved) {
+        var e=event(false);member.register(e.getId(),10L,memberOnly());
+        var g=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        if(approved)admin.reviewGuest(e.getId(),g.id(),99L,true,null);
+        var before=financial.findByEvent(e.getId());
+        assertThatThrownBy(() -> member.cancelGuest(e.getId(),g.id(),20L,"Other household")).isInstanceOf(EventOperationException.class);
+        var cancelled=member.cancelGuest(e.getId(),g.id(),10L,"Guest withdrew");
+        assertThat(member.cancelGuest(e.getId(),g.id(),10L,"Retry")).isEqualTo(cancelled);
+        assertThat(cancelled.status()).isEqualTo(EventGuestRequest.Status.CANCELLED);assertThat(cancelled.vehicleId()).isNull();
+        assertThat(member.mine(e.getId(),10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);
+        assertThat(financial.findByEvent(e.getId())).isEqualTo(before);
+        assertThatThrownBy(() -> admin.reactivateGuest(e.getId(),g.id(),99L,"Return")).isInstanceOf(EventOperationException.class);
+        var replacement=member.requestGuest(e.getId(),10L,101L,g.cpf());
+        assertThat(replacement.id()).isNotEqualTo(g.id());assertThat(replacement.originRegistrationId()).isEqualTo(g.originRegistrationId());
+        assertThat(admin.guestHistory(e.getId(),g.id())).filteredOn(t -> t.action().equals("CANCELLED")).singleElement().satisfies(t -> {
+            assertThat(t.actorUserId()).isEqualTo(10L);assertThat(t.reason()).isEqualTo("Guest withdrew");
+            assertThat(t.nextStatus()).isEqualTo("CANCELLED");assertThat(t.nextVehicleId()).isNull();
+        });
+    }
+    @Test void cancellingOnePersonalGuestFreesOnlyItsSeatAndKeepsOtherGuest() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());
+        var a=member.requestGuest(e.getId(),10L,101L,guestCpf(e));var b=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        admin.reviewGuest(e.getId(),a.id(),99L,true,null);admin.reviewGuest(e.getId(),b.id(),99L,true,null);
+        admin.cancelGuest(e.getId(),a.id(),99L,"Guest withdrew");
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
+        assertThat(guestState(e.getId(),b.id()).status()).isEqualTo(EventGuestRequest.Status.APPROVED);
+    }
+    @Test void registrationCancellationEndsAllPersonalPendingAndApprovedGuests() {
+        var e=freeEvent();var r=member.register(e.getId(),10L,memberOnly());
+        var a=member.requestGuest(e.getId(),10L,101L,guestCpf(e));var b=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var pending=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        admin.reviewGuest(e.getId(),a.id(),99L,true,null);admin.reviewGuest(e.getId(),b.id(),99L,true,null);
+        member.cancel(e.getId(),10L);member.cancel(e.getId(),10L);
+        assertThat(admin.guests(e.getId())).hasSize(3).allSatisfy(g -> {
+            assertThat(g.originRegistrationId()).isEqualTo(r.id());assertThat(g.status()).isEqualTo(EventGuestRequest.Status.CANCELLED);
+            assertThat(g.vehicleId()).isNull();assertThat(g.allocatedRegistrationId()).isNull();
+            assertThat(admin.guestHistory(e.getId(),g.id())).filteredOn(t -> t.action().equals("CANCELLED")).hasSize(1);
+        });
+        assertThat(guestState(e.getId(),pending.id()).reviewedAt()).isNull();
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isZero();
+    }
+    @org.junit.jupiter.params.ParameterizedTest @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void administrativeCancellationAndReactivationAlwaysReturnToStandby(boolean allocated) {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());var g=admin.createGuest(e.getId(),99L,guestCpf(e));
+        assertThat(g.origin()).isEqualTo(EventGuestRequest.Origin.ADMIN);assertThat(g.originRegistrationId()).isNull();
+        assertThat(g.responsibleUserId()).isNull();assertThat(g.transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(2);assertThat(admin.dashboard(e.getId()).guestsStandby()).isEqualTo(1);
+        if(allocated)admin.allocateGuest(e.getId(),g.id(),101L,null,99L,"Direct allocation");
+        var cancelled=admin.cancelGuest(e.getId(),g.id(),99L,"Participation ended");
+        assertThat(cancelled.status()).isEqualTo(EventGuestRequest.Status.CANCELLED);assertThat(cancelled.vehicleId()).isNull();
+        assertThat(admin.cancelGuest(e.getId(),g.id(),99L,"Retry")).isEqualTo(cancelled);
+        assertThatThrownBy(() -> admin.allocateGuest(e.getId(),g.id(),101L,null,99L,"Invalid")).isInstanceOf(EventOperationException.class);
+        var active=admin.reactivateGuest(e.getId(),g.id(),99L,"New decision");
+        assertThat(active.transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
+        assertThat(active.responsibleUserId()).isNull();assertThat(active.allocatedRegistrationId()).isNull();assertThat(active.selectedOfferId()).isNull();
+        int transitions=admin.guestHistory(e.getId(),g.id()).size();
+        assertThat(admin.reactivateGuest(e.getId(),g.id(),99L,"Retry")).isEqualTo(active);
+        assertThat(admin.guestHistory(e.getId(),g.id())).hasSize(transitions);
+    }
+    @Test void directRelocationAndUnassignmentPreserveSelectedOfferHistory() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());secondDriver(102L,20L);
+        var destination=member.register(e.getId(),20L,List.of(new EventRegistration.Allocation(102L,true,List.of())));
+        var g=admin.createGuest(e.getId(),99L,guestCpf(e));var offered=member.respond(e.getId(),g.id(),10L,101L,true);
+        var selected=admin.select(e.getId(),offered.id(),99L);
+        clock.now=NOW.plusSeconds(1);
+        var moved=admin.allocateGuest(e.getId(),g.id(),102L,destination.id(),99L,"Administrative relocation");
+        assertThat(moved.responsibleUserId()).isEqualTo(20L);assertThat(moved.allocatedRegistrationId()).isEqualTo(destination.id());
+        assertThat(moved.origin()).isEqualTo(EventGuestRequest.Origin.ADMIN);assertThat(moved.selectedOfferId()).isNull();
+        assertThat(admin.offers(e.getId())).filteredOn(o -> o.id().equals(selected.id())).singleElement().satisfies(o -> {
+            assertThat(o.status()).isEqualTo(EventRideOffer.Status.WITHDRAWN);assertThat(o.selectedAt()).isEqualTo(selected.selectedAt());assertThat(o.withdrawnAt()).isEqualTo(clock.now);
+        });
+        admin.unassignGuest(e.getId(),g.id(),99L,"No transport");
+        int size=admin.guestHistory(e.getId(),g.id()).size();admin.unassignGuest(e.getId(),g.id(),99L,"Retry");
+        assertThat(admin.guestHistory(e.getId(),g.id())).hasSize(size).extracting(EventGuestTransition::action).contains("REALLOCATED","UNASSIGNED");
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(4);
+    }
+    @Test void driverWithdrawalReturnsAdministrativeGuestToStandbyAndAllowsNewDriver() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());secondDriver(102L,20L);
+        member.register(e.getId(),20L,List.of(new EventRegistration.Allocation(102L,true,List.of())));
+        var g=admin.createGuest(e.getId(),99L,guestCpf(e));var offer=member.respond(e.getId(),g.id(),10L,101L,true);admin.select(e.getId(),offer.id(),99L);
+        member.cancel(e.getId(),10L);
+        var standby=guestState(e.getId(),g.id());assertThat(standby.status()).isEqualTo(EventGuestRequest.Status.APPROVED);
+        assertThat(standby.transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);assertThat(standby.selectedOfferId()).isNull();
+        var next=member.respond(e.getId(),g.id(),20L,102L,true);admin.select(e.getId(),next.id(),99L);
+        assertThat(guestState(e.getId(),g.id()).responsibleUserId()).isEqualTo(20L);
+        assertThat(admin.offers(e.getId())).filteredOn(o -> o.id().equals(offer.id())).singleElement().satisfies(o -> assertThat(o.status()).isEqualTo(EventRideOffer.Status.WITHDRAWN));
+    }
+    @Test void reactivationRequiresNewOfferAndNeverResurrectsOldAcceptedOrSelectedOffer() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());var g=admin.createGuest(e.getId(),99L,guestCpf(e));
+        var first=member.respond(e.getId(),g.id(),10L,101L,true);admin.select(e.getId(),first.id(),99L);
+        admin.cancelGuest(e.getId(),g.id(),99L,"Cancelled");
+        assertThatThrownBy(() -> admin.select(e.getId(),first.id(),99L)).isInstanceOf(EventOperationException.class);
+        admin.reactivateGuest(e.getId(),g.id(),99L,"Returned");
+        assertThatThrownBy(() -> admin.select(e.getId(),first.id(),99L)).isInstanceOf(EventOperationException.class);
+        var second=member.respond(e.getId(),g.id(),10L,101L,true);assertThat(second.id()).isNotEqualTo(first.id());
+        admin.select(e.getId(),second.id(),99L);assertThat(guestState(e.getId(),g.id()).selectedOfferId()).isEqualTo(second.id());
+    }
+    @Test void administrativeAllocationRevalidatesOwnershipEventAndConfirmedRegistration() {
+        var e=freeEvent();var r=member.register(e.getId(),10L,memberOnly());var g=admin.createGuest(e.getId(),99L,guestCpf(e));
+        assertThatThrownBy(() -> admin.allocateGuest(e.getId(),g.id(),102L,null,99L,"Not registered vehicle")).isInstanceOf(EventOperationException.class);
+        var other=freeEvent();var foreign=member.register(other.getId(),10L,memberOnly());
+        assertThatThrownBy(() -> admin.allocateGuest(e.getId(),g.id(),101L,foreign.id(),99L,"Other Event registration")).isInstanceOf(EventOperationException.class);
+        assertThatThrownBy(() -> admin.cancelGuest(other.getId(),g.id(),99L,"Other Event guest")).isInstanceOf(EventOperationException.class);
+        var allocated=admin.allocateGuest(e.getId(),g.id(),101L,r.id(),99L,"Correct allocation");
+        int size=admin.guestHistory(e.getId(),g.id()).size();assertThat(admin.allocateGuest(e.getId(),g.id(),101L,r.id(),99L,"Retry")).isEqualTo(allocated);
+        assertThat(admin.guestHistory(e.getId(),g.id())).hasSize(size);
+        var unpaid=event(true);member.register(unpaid.getId(),10L,memberOnly());var pending=admin.createGuest(unpaid.getId(),99L,guestCpf(unpaid));
+        assertThatThrownBy(() -> admin.allocateGuest(unpaid.getId(),pending.id(),101L,null,99L,"Payment not satisfied")).isInstanceOf(EventOperationException.class);
+    }
+    @Test void twoDirectAllocationsCannotTakeTheSameLastSeat() throws Exception {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());var a=admin.createGuest(e.getId(),99L,guestCpf(e));var b=admin.createGuest(e.getId(),99L,guestCpf(e));
+        var results=race(List.of(() -> admin.allocateGuest(e.getId(),a.id(),101L,null,99L,"Last seat"),() -> admin.allocateGuest(e.getId(),b.id(),101L,null,99L,"Last seat")));
+        assertThat(results.stream().filter(EventGuestRequest.class::isInstance)).hasSize(1);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(1);assertThat(admin.dashboard(e.getId()).guestsStandby()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+    }
+    @Test void guestCancellationRacingRideSelectionAlwaysEndsWithoutSeat() throws Exception {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());var g=admin.createGuest(e.getId(),99L,guestCpf(e));var o=member.respond(e.getId(),g.id(),10L,101L,true);
+        race(List.of(() -> admin.select(e.getId(),o.id(),99L),() -> admin.cancelGuest(e.getId(),g.id(),99L,"Withdrawn")));
+        assertThat(guestState(e.getId(),g.id()).status()).isEqualTo(EventGuestRequest.Status.CANCELLED);assertThat(guestState(e.getId(),g.id()).vehicleId()).isNull();
+        assertThat(admin.offers(e.getId())).singleElement().satisfies(v -> assertThat(v.status()).isEqualTo(EventRideOffer.Status.WITHDRAWN));
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(1);
+    }
+    @Test void driverCancellationRacingDirectAllocationAlwaysLeavesGuestInStandby() throws Exception {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());var g=admin.createGuest(e.getId(),99L,guestCpf(e));
+        var results=race(List.of(() -> admin.allocateGuest(e.getId(),g.id(),101L,null,99L,"Allocate"),() -> member.cancel(e.getId(),10L)));
+        assertThat(results.stream().filter(EventRegistration.class::isInstance)).hasSize(1);
+        assertThat(guestState(e.getId(),g.id()).transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
+        assertThat(member.mine(e.getId(),10L).status()).isEqualTo(EventRegistration.Status.CANCELLED);
+    }
+    @Test void personalApprovalRacingMemberCancellationCannotResurrectParticipation() throws Exception {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());var g=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        race(List.of(() -> admin.reviewGuest(e.getId(),g.id(),99L,true,null),() -> member.cancel(e.getId(),10L)));
+        assertThat(guestState(e.getId(),g.id()).status()).isEqualTo(EventGuestRequest.Status.CANCELLED);assertThat(guestState(e.getId(),g.id()).vehicleId()).isNull();
+    }
+    @Test void auditFailureRollsBackGuestOfferAndSeatTogether() {
+        var e=freeEvent();member.register(e.getId(),10L,allocation());var g=admin.createGuest(e.getId(),99L,guestCpf(e));var o=member.respond(e.getId(),g.id(),10L,101L,true);admin.select(e.getId(),o.id(),99L);
+        var before=admin.guestHistory(e.getId(),g.id());
+        assertThatThrownBy(() -> admin.cancelGuest(e.getId(),g.id(),99L,"x".repeat(1001))).isInstanceOf(IllegalArgumentException.class);
+        assertThat(guestState(e.getId(),g.id()).vehicleId()).isEqualTo(101L);
+        assertThat(admin.offers(e.getId())).singleElement().satisfies(v -> assertThat(v.status()).isEqualTo(EventRideOffer.Status.SELECTED));
+        assertThat(admin.guestHistory(e.getId(),g.id())).isEqualTo(before);assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+    }
+    @Test void registrationRollbackRestoresAllPersonalGuestsAndAdministrativeTransport() {
+        var e=event(false);member.register(e.getId(),10L,memberOnly());var personal=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var g=admin.createGuest(e.getId(),99L,guestCpf(e));var o=member.respond(e.getId(),g.id(),10L,101L,true);admin.select(e.getId(),o.id(),99L);
+        var guestBefore=admin.guests(e.getId());var moneyBefore=financial.findByEvent(e.getId());var historyBefore=admin.guestHistory(e.getId(),personal.id());
+        assertThatThrownBy(() -> tx(() -> {member.cancel(e.getId(),10L);throw new IllegalStateException("Failure after operational changes");})).isInstanceOf(IllegalStateException.class);
+        assertThat(member.mine(e.getId(),10L).status()).isEqualTo(EventRegistration.Status.CONFIRMED);assertThat(admin.guests(e.getId())).isEqualTo(guestBefore);
+        assertThat(financial.findByEvent(e.getId())).isEqualTo(moneyBefore);assertThat(admin.guestHistory(e.getId(),personal.id())).isEqualTo(historyBefore);
+        assertThat(admin.offers(e.getId())).singleElement().satisfies(v -> assertThat(v.status()).isEqualTo(EventRideOffer.Status.SELECTED));
+    }
+    @Test void guestTransitionHistorySurvivesEventDeletionAndContainsOriginalReview() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());var g=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var reviewed=admin.reviewGuest(e.getId(),g.id(),99L,true,null);clock.now=NOW.plusSeconds(2);admin.cancelGuest(e.getId(),g.id(),98L,"Guest withdrew");
+        assertThat(guestState(e.getId(),g.id()).reviewedAt()).isEqualTo(reviewed.reviewedAt());
+        var before=admin.guestHistory(e.getId(),g.id());clock.now=START;admin.finish(e.getId());admin.delete(e.getId(),99L);
+        assertThat(admin.guestHistory(e.getId(),g.id())).isEqualTo(before).extracting(EventGuestTransition::action).containsExactly("CREATED","APPROVED","CANCELLED");
+        assertThat(before.get(2).previousVehicleId()).isEqualTo(101L);assertThat(before.get(2).actorUserId()).isEqualTo(98L);
+        assertThat(before.get(2).occurredAt()).isEqualTo(NOW.plusSeconds(2));
+    }
+    @Test void twoAdministrativeGuestsShareVehicleAndThirdAllocationCannotExceedPhysicalCapacity() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());
+        var a=admin.createGuest(e.getId(),99L,guestCpf(e));var b=admin.createGuest(e.getId(),99L,guestCpf(e));var c=admin.createGuest(e.getId(),99L,guestCpf(e));
+        admin.allocateGuest(e.getId(),a.id(),101L,null,99L,"First guest");admin.allocateGuest(e.getId(),b.id(),101L,null,99L,"Second guest");
+        assertThatThrownBy(() -> admin.allocateGuest(e.getId(),c.id(),101L,null,99L,"Third guest")).isInstanceOf(EventOperationException.class);
+        assertThat(admin.dashboard(e.getId()).guestsAllocated()).isEqualTo(2);assertThat(admin.dashboard(e.getId()).guestsStandby()).isEqualTo(1);
+        assertThat(admin.dashboard(e.getId()).totalPeople()).isEqualTo(4);assertThat(admin.dashboard(e.getId()).availableSeats()).isZero();
+    }
+    @Test void cancellationOfStandbyGuestWithdrawsUnselectedOfferWithoutInventingSelection() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());var g=admin.createGuest(e.getId(),99L,guestCpf(e));
+        var offer=member.respond(e.getId(),g.id(),10L,101L,true);admin.cancelGuest(e.getId(),g.id(),99L,"Standby withdrawal");
+        assertThat(admin.offers(e.getId())).singleElement().satisfies(o -> {
+            assertThat(o.status()).isEqualTo(EventRideOffer.Status.WITHDRAWN);assertThat(o.respondedAt()).isEqualTo(offer.respondedAt());assertThat(o.selectedAt()).isNull();
+        });
+        admin.reactivateGuest(e.getId(),g.id(),99L,"Returned");assertThat(guestState(e.getId(),g.id()).selectedOfferId()).isNull();
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(2);
+    }
+    @Test void guestAllocationRejectsInactiveVehicleAndClosedEventWithoutPartialAudit() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());var g=admin.createGuest(e.getId(),99L,guestCpf(e));
+        var before=admin.guestHistory(e.getId(),g.id());when(vehicles.findActive(101L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> admin.allocateGuest(e.getId(),g.id(),101L,null,99L,"Inactive vehicle")).isInstanceOf(EventOperationException.class);
+        assertThat(admin.guestHistory(e.getId(),g.id())).isEqualTo(before);
+        when(vehicles.findActive(101L)).thenReturn(Optional.of(new EventVehicleQuery.VehicleCapacity(101L,10L,3)));
+        clock.now=START;
+        assertThatThrownBy(() -> admin.allocateGuest(e.getId(),g.id(),101L,null,99L,"Event already started")).isInstanceOf(EventOperationException.class);
+        assertThat(admin.guestHistory(e.getId(),g.id())).isEqualTo(before);
     }
     List<Object> race(Supplier<?> action) throws Exception { return race(List.of(action, action)); }
     List<Object> race(List<Supplier<?>> actions) throws Exception {

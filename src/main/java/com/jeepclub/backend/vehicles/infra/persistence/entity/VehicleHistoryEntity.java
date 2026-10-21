@@ -2,7 +2,7 @@ package com.jeepclub.backend.vehicles.infra.persistence.entity;
 
 import com.jeepclub.backend.vehicles.core.domain.enums.FuelType;
 import com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -123,4 +123,16 @@ public class VehicleHistoryEntity {
     @org.hibernate.annotations.ColumnDefault("0")
     @Column(name = "legacy_deleted", nullable = false)
     private boolean legacyDeleted;
+
+    @org.hibernate.annotations.ColumnDefault("0")
+    @Column(name="gallery_revision",nullable=false)
+    private long galleryRevision;
+
+    @ElementCollection
+    @CollectionTable(name="vehicle_image_history",joinColumns=@JoinColumn(name="history_id",foreignKey=@ForeignKey(name="fk_vehicle_image_history_history")),
+        uniqueConstraints={@UniqueConstraint(name="uk_vehicle_history_image_position",columnNames={"history_id","position"}),
+            @UniqueConstraint(name="uk_vehicle_history_image_key",columnNames={"history_id","storage_key"})})
+    @OrderBy("position ASC")
+    @org.hibernate.annotations.BatchSize(size=100)
+    private java.util.List<VehicleImageEntity> images=new java.util.ArrayList<>();
 }

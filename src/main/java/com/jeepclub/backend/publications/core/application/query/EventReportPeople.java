@@ -19,8 +19,10 @@ public final class EventReportPeople {
             for(Long id:r.unallocatedDependentIds())result.add(dependent(r,id,null,name,dependents));
         }
         for(var g:guests) {
-            var u=users.get(g.requesterUserId());
-            result.add(new Person("GUEST",g.id(),g.guestName()==null?"Nome não informado (cadastro legado)":g.guestName(),g.cpf(),g.requesterUserId(),u==null?"Cadastro indisponível":u.name(),null,
+            var holderId=g.responsibleUserId()==null?g.requesterUserId():g.responsibleUserId();
+            var u=users.get(holderId);
+            var holder=g.administrative() && g.responsibleUserId()==null?"Convidado administrativo sem transporte":u==null?"Cadastro indisponível":u.name();
+            result.add(new Person("GUEST",g.id(),g.guestName()==null?"Nome não informado (cadastro legado)":g.guestName(),g.cpf(),holderId,holder,g.allocatedRegistrationId(),
                 g.status()==EventGuestRequest.Status.APPROVED?"CONFIRMED":g.status().name(),g.status()==EventGuestRequest.Status.APPROVED?g.vehicleId():null,g.status().name()));
         }
         return List.copyOf(result);

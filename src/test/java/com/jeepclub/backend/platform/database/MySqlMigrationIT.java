@@ -50,12 +50,55 @@ class MySqlMigrationIT {
         assertThat(flyway(db).migrate().migrationsExecuted).isZero();
     }
 
+    @Test void vehicleGalleryMigrationPreservesLegacyLiveAndHistoricalPhotosAndControlledReplay() throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration")
+                .target("7").cleanDisabled(true).load().migrate();
+        var photos=java.util.Arrays.asList("images/2026/10/19/00000000-0000-0000-0000-000000000001.png","https://legacy.invalid/Photo.PNG?old=1",null,"");
+        try(var c=connection(db);var st=c.createStatement()) {
+            for(int i=0;i<4;i++) {
+                String value=photos.get(i)==null?"NULL":"'"+photos.get(i)+"'";
+                st.executeUpdate("INSERT INTO vehicles_vehicle(id,photo,plate,renavam,brand,model,manufacturing_year,model_year,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at) VALUES("+(900+i)+","+value+",'MIG000"+i+"','0000000090"+i+"','Jeep','Legacy',2020,2021,5,'DIESEL',2,'ACTIVE',0,800,UTC_TIMESTAMP(6))");
+                st.executeUpdate("INSERT INTO vehicles_vehicle_history(id,vehicle_id,photo,plate,renavam,brand,model,manufacturing_year,model_year,seating_capacity,fuel_type,engine_displacement,status,towing,owner_id,created_at,deleted_by_user_id,deleted_at) VALUES("+(950+i)+","+(900+i)+","+value+",'MIG000"+i+"','0000000090"+i+"','Jeep','Legacy',2020,2021,5,'DIESEL',2,'ACTIVE',0,800,UTC_TIMESTAMP(6),800,UTC_TIMESTAMP(6))");
+            }
+        }
+        var liveColumns=fixtureColumns(db,"vehicles_vehicle");var historyColumns=fixtureColumns(db,"vehicles_vehicle_history");
+        var liveBefore=fixtureRows(db,"vehicles_vehicle",liveColumns);var historyBefore=fixtureRows(db,"vehicles_vehicle_history",historyColumns);
+        flyway(db).migrate();validateJpa(db);
+        assertThat(fixtureRows(db,"vehicles_vehicle",liveColumns)).isEqualTo(liveBefore);
+        assertThat(fixtureRows(db,"vehicles_vehicle_history",historyColumns)).isEqualTo(historyBefore);
+        var liveImages=rows(db,"SELECT vehicle_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_images ORDER BY vehicle_id");
+        var historyImages=rows(db,"SELECT history_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_image_history ORDER BY history_id");
+        assertThat(liveImages).containsExactly("[900, "+photos.get(0)+", 0, 1]","[901, "+photos.get(1)+", 0, 1]","[903, , 0, 1]");
+        assertThat(historyImages).containsExactly("[950, "+photos.get(0)+", 0, 1]","[951, "+photos.get(1)+", 0, 1]","[953, , 0, 1]");
+        try(var c=connection(db);var st=c.createStatement()) {
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V8__vehicle_gallery.sql"));
+            assertThat(rows(db,"SELECT vehicle_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_images ORDER BY vehicle_id")).isEqualTo(liveImages);
+            st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'images/2026/10/19/00000000-0000-0000-0000-000000000002.png',1,b'0')");
+            assertThatThrownBy(()->st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'new-reference',5,b'0')")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(()->st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'new-reference',0,b'0')")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(()->st.executeUpdate("INSERT INTO vehicle_images(vehicle_id,storage_key,position,is_primary) VALUES(901,'https://legacy.invalid/Photo.PNG?old=1',2,b'0')")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(()->st.executeUpdate("DELETE FROM vehicles_vehicle WHERE id=901")).isInstanceOf(java.sql.SQLException.class);
+            st.executeUpdate("DELETE FROM vehicle_images WHERE vehicle_id=900");st.executeUpdate("UPDATE vehicles_vehicle SET photo=NULL,gallery_revision=1 WHERE id=900");
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V8__vehicle_gallery.sql"));
+            assertThat(rows(db,"SELECT COUNT(*) FROM vehicle_images WHERE vehicle_id=900")).containsExactly("[0]");
+            assertThat(rows(db,"SELECT COUNT(*) FROM vehicle_images WHERE vehicle_id=901")).containsExactly("[2]");
+            st.executeUpdate("DELETE FROM vehicles_vehicle WHERE id=900");
+        }
+        assertThat(rows(db,"SELECT history_id,storage_key,position,CAST(is_primary AS UNSIGNED) FROM vehicle_image_history ORDER BY history_id")).isEqualTo(historyImages);
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+    }
+
     @Test void historicalMigrationSourcesAreImmutable() throws Exception {
         var expected=Map.ofEntries(
             Map.entry("V1__initial_deploy_schema.sql","c879a5bc14ec020fa8971c1ebc89589c18b87058b21e08d57fc24fc0d2322d7e"),
             Map.entry("V2__identity_user_profiles.sql","c82bc02dea548d93c127ddd565df1ca05fcd6eaf58f2b2b500becdcdd8196963"),
             Map.entry("V3__account_activation_invitations.sql","b2c5f25872d3e407401fc8efa1c1ccd0bf5fa5637c691973f5fcb7f8bd5a1887"),
-            Map.entry("V4__membership_member_registry.sql","1f53bd3dfe2636613bc8c8907aada143a3cbcbbddda77c7eadbcb10951b3c6ce"));
+            Map.entry("V4__membership_member_registry.sql","1f53bd3dfe2636613bc8c8907aada143a3cbcbbddda77c7eadbcb10951b3c6ce"),
+            Map.entry("V5__principal_entity_lifecycle.sql","629cdcb878771a197a9d702561709e8c704f2018a7a034c49a447a1d5a9697d0"),
+            Map.entry("V6__membership_onboarding_review_history.sql","2e38ea4b13a317d3d4752abc833e8d677557e963177201cb921061b64318b3a2"),
+            Map.entry("V7__dependent_private_photo.sql","34d3f0bbc373e85f867162bddf30a92c21f32c7dc8a55e99c71874fc85fc1f3a"),
+            Map.entry("V8__vehicle_gallery.sql","3d094e56e057f50e55fd15e8d9c2f08a2e94162dac5f1d7120247827371c4c07"));
         for(var entry:expected.entrySet()) {
             String text=java.nio.file.Files.readString(java.nio.file.Path.of("src/main/resources/db/migration",entry.getKey())).replace("\r\n","\n");
             var digest=java.security.MessageDigest.getInstance("SHA-256").digest(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -71,6 +114,8 @@ class MySqlMigrationIT {
         registryPhysicalConstraints(expected);
         lifecyclePhysicalConstraints(expected);
         dependentPhotoPhysicalConstraints(expected);
+        vehicleGalleryPhysicalConstraints(expected);
+        eventGuestPhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -349,6 +394,93 @@ class MySqlMigrationIT {
             st.execute("alter table authorization_user_role_deletion_history add constraint fk_user_role_deletion_history foreign key (role_id) references authorization_role_deletion_history(original_id)");
         }
     }
+    // Flyway-only binary collation and bounded position checks supplement the JPA fixture.
+    private static void vehicleGalleryPhysicalConstraints(String name) throws Exception {
+        try(var c=connection(name);var st=c.createStatement()) {
+            for(var table:List.of("vehicle_images","vehicle_image_history"))
+                st.execute("ALTER TABLE "+table+" MODIFY storage_key VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL");
+            st.execute("ALTER TABLE vehicle_images ADD CONSTRAINT ck_vehicle_image_position CHECK(position BETWEEN 0 AND 4)");
+            st.execute("ALTER TABLE vehicle_image_history ADD CONSTRAINT ck_vehicle_history_image_position CHECK(position BETWEEN 0 AND 4)");
+        }
+    }
+
+    private static void eventGuestPhysicalConstraints(String name) throws Exception {
+        try(var c=connection(name);var st=c.createStatement()) {
+            st.execute("ALTER TABLE event_registrations ADD CONSTRAINT uk_event_registration_identity UNIQUE(id,event_id,user_id)");
+            st.execute("ALTER TABLE event_guest_requests ADD INDEX idx_event_guest_cpf(event_id,cpf), ADD INDEX idx_event_guest_capacity(event_id,status,vehicle_id)");
+            st.execute("ALTER TABLE event_ride_offers ADD INDEX idx_event_ride_response(guest_request_id,vehicle_id,status)");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT fk_event_guest_origin FOREIGN KEY(origin_registration_id,event_id,requester_user_id) REFERENCES event_registrations(id,event_id,user_id)");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT fk_event_guest_transport FOREIGN KEY(allocated_registration_id,event_id,responsible_user_id) REFERENCES event_registrations(id,event_id,user_id)");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT fk_event_guest_selected_offer FOREIGN KEY(selected_offer_id) REFERENCES event_ride_offers(id)");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT ck_event_guest_origin CHECK ((administrative=b'1' AND origin_registration_id IS NULL AND requested_vehicle_id IS NULL AND status<>'PENDING') OR (administrative=b'0' AND origin_registration_id IS NOT NULL AND requested_vehicle_id IS NOT NULL))");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT ck_event_guest_transport CHECK ((status='APPROVED' AND vehicle_id IS NOT NULL AND allocated_registration_id IS NOT NULL AND responsible_user_id IS NOT NULL) OR (vehicle_id IS NULL AND allocated_registration_id IS NULL AND responsible_user_id IS NULL AND selected_offer_id IS NULL AND (status<>'APPROVED' OR administrative=b'1')))");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT ck_event_guest_status CHECK(status IN ('PENDING','APPROVED','REJECTED','CANCELLED'))");
+            st.execute("ALTER TABLE event_guest_requests ADD CONSTRAINT ck_event_guest_legacy_projection CHECK(approved_vehicle_id <=> IF(status='APPROVED',vehicle_id,NULL))");
+            st.execute("ALTER TABLE event_ride_offers ADD CONSTRAINT ck_event_ride_withdrawal CHECK ((status='WITHDRAWN' AND withdrawn_at IS NOT NULL AND withdrawn_at>=COALESCE(selected_at,responded_at)) OR (status IN ('ACCEPTED','DECLINED','SELECTED') AND withdrawn_at IS NULL))");
+            String old;
+            try(var result=st.executeQuery("SELECT column_type FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='authorization_permissions' AND column_name='code'")) { assertThat(result.next()).isTrue();old=result.getString(1); }
+            st.execute("ALTER TABLE authorization_permissions MODIFY code "+old.substring(0,old.length()-1)+",'PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL','PUBLICATIONS_EVENT_GUEST_ALLOCATE','PUBLICATIONS_EVENT_GUEST_UNASSIGN','PUBLICATIONS_EVENT_GUEST_CANCEL','PUBLICATIONS_EVENT_GUEST_REACTIVATE','PUBLICATIONS_EVENT_GUEST_HISTORY_READ') NOT NULL");
+        }
+    }
+
+    @Test void guestLifecycleMigrationPreservesLegacyFactsAndReconcilesOriginsAndTransport() throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration").target("8").cleanDisabled(true).load().migrate();
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("INSERT INTO authorization_roles(id,name,kind,status,created_at) VALUES(990,'Synthetic CUSTOM','CUSTOM','ACTIVE','2026-10-01 12:00:00')");
+            st.executeUpdate("INSERT INTO event_registrations(id,event_id,user_id,status,created_at,confirmed_at,version) VALUES(700,9000,800,'CONFIRMED','2026-10-01 12:00:00','2026-10-01 12:00:00',0),(701,9001,801,'CONFIRMED','2026-10-01 12:00:00','2026-10-01 12:00:00',0)");
+            st.executeUpdate("INSERT INTO event_registration_vehicles(registration_id,vehicle_id) VALUES(700,111),(701,112)");
+            st.executeUpdate("""
+                INSERT INTO event_guest_requests(id,event_id,requester_user_id,vehicle_id,approved_vehicle_id,cpf,status,administrative,created_at,reviewer_id,reviewed_at,rejection_reason,guest_name,version) VALUES
+                (1000,9000,800,111,NULL,'12345678901','PENDING',b'0','2026-10-01 12:00:00.123456',NULL,NULL,NULL,'Personal pending',0),
+                (1001,9000,800,111,111,'12345678902','APPROVED',b'0','2026-10-01 12:00:00.123456',999,'2026-10-01 12:02:00.123456',NULL,'Personal approved',0),
+                (1002,9000,800,111,NULL,'12345678903','REJECTED',b'0','2026-10-01 12:00:00.123456',999,'2026-10-01 12:02:00.123456','Original rejection','Personal rejected',0),
+                (1003,9000,999,NULL,NULL,'12345678904','PENDING',b'1','2026-10-01 12:00:00.123456',NULL,NULL,NULL,'Admin pending',0),
+                (1004,9001,999,112,112,'12345678905','APPROVED',b'1','2026-10-01 12:00:00.123456',998,'2026-10-01 12:02:00.123456',NULL,'Admin allocated',0),
+                (1005,9001,999,NULL,NULL,'12345678906','REJECTED',b'1','2026-10-01 12:00:00.123456',997,'2026-10-01 12:02:00.123456','Original admin rejection','Admin rejected',0)
+                """);
+            st.executeUpdate("INSERT INTO event_ride_offers(id,event_id,guest_request_id,registration_id,user_id,vehicle_id,status,responded_at,selected_at,selected_guest_id,version) VALUES(2000,9001,1004,701,801,112,'SELECTED','2026-10-01 12:01:00.123456','2026-10-01 12:02:00.123456',1004,0),(2001,9000,1003,700,800,111,'ACCEPTED','2026-10-01 12:01:00.123456',NULL,NULL,0)");
+        }
+        var immutable=List.of("id","event_id","requester_user_id","cpf","administrative","created_at","reviewer_id","reviewed_at","rejection_reason","guest_name");
+        var before=fixtureRows(db,"event_guest_requests",immutable);var offerColumns=fixtureColumns(db,"event_ride_offers");
+        var offersBefore=fixtureRows(db,"event_ride_offers",offerColumns);
+        flyway(db).migrate();validateJpa(db);
+        assertThat(fixtureRows(db,"event_guest_requests",immutable)).isEqualTo(before);
+        assertThat(fixtureRows(db,"event_ride_offers",offerColumns)).isEqualTo(offersBefore);
+        assertThat(rows(db,"SELECT id,status,vehicle_id,origin_registration_id,requested_vehicle_id,allocated_registration_id,responsible_user_id,selected_offer_id FROM event_guest_requests ORDER BY id")).containsExactly(
+            "[1000, PENDING, null, 700, 111, null, null, null]","[1001, APPROVED, 111, 700, 111, 700, 800, null]",
+            "[1002, REJECTED, null, 700, 111, null, null, null]","[1003, APPROVED, null, null, null, null, null, null]",
+            "[1004, APPROVED, 112, null, null, 701, 801, 2000]","[1005, REJECTED, null, null, null, null, null, null]");
+        assertThat(rows(db,"SELECT previous_status,next_status,previous_vehicle_id,next_vehicle_id,actor_user_id FROM event_guest_transitions WHERE guest_request_id=1003")).containsExactly("[PENDING, APPROVED, null, null, null]");
+        assertThat(rows(db,"SELECT previous_status,next_status FROM event_guest_transitions WHERE guest_request_id=1002")).containsExactly("[REJECTED, REJECTED]");
+        assertThat(count(db,"event_guest_transitions")).isEqualTo(6);
+        assertThat(rows(db,"SELECT COUNT(*) FROM authorization_role_permissions WHERE role_id=990")).containsExactly("[0]");
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("INSERT INTO event_guest_requests(event_id,requester_user_id,cpf,status,administrative,created_at,origin_registration_id,requested_vehicle_id) VALUES(9000,800,'12345678901','PENDING',b'0',UTC_TIMESTAMP(6),700,111)");
+            st.executeUpdate("INSERT INTO event_guest_requests(event_id,requester_user_id,cpf,status,administrative,created_at,vehicle_id,approved_vehicle_id,allocated_registration_id,responsible_user_id) VALUES(9001,999,'12345678905','APPROVED',b'1',UTC_TIMESTAMP(6),112,112,701,801)");
+            assertThatThrownBy(() -> st.executeUpdate("INSERT INTO event_guest_requests(event_id,requester_user_id,cpf,status,administrative,created_at,origin_registration_id,requested_vehicle_id) VALUES(9001,800,'12345678901','PENDING',b'0',UTC_TIMESTAMP(6),700,111)" )).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> st.executeUpdate("UPDATE event_guest_requests SET status='CANCELLED' WHERE id=1004")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> st.executeUpdate("DELETE FROM event_registrations WHERE id=700")).isInstanceOf(java.sql.SQLException.class);
+            st.executeUpdate("INSERT INTO authorization_permissions(code,module,description,created_at) VALUES('PUBLICATIONS_EVENT_GUEST_ALLOCATE','PUBLICATIONS','Synthetic new capability',UTC_TIMESTAMP(6))");
+        }
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();assertThat(count(db,"event_guest_transitions")).isEqualTo(6);
+        assertThat(count(db,"event_guest_requests")).isEqualTo(8);
+    }
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void guestLifecyclePreflightRejectsUnresolvableLegacyWithoutChangingGuestData(boolean missingOrigin) throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration").target("8").cleanDisabled(true).load().migrate();
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("INSERT INTO event_guest_requests(id,event_id,requester_user_id,vehicle_id,approved_vehicle_id,cpf,status,administrative,created_at,version) VALUES(1000,9000,800,111,"+(missingOrigin?"NULL":"111")+",'12345678901','"+(missingOrigin?"PENDING":"APPROVED")+"',b'0',UTC_TIMESTAMP(6),0)");
+            if(!missingOrigin) st.executeUpdate("INSERT INTO event_registrations(id,event_id,user_id,status,created_at,version) VALUES(700,9000,800,'CONFIRMED',UTC_TIMESTAMP(6),0)");
+        }
+        var before=fixtureRows(db,"event_guest_requests");
+        assertThatThrownBy(() -> flyway(db).migrate()).isInstanceOf(FlywayException.class).hasStackTraceContaining("BACK-537:");
+        assertThat(fixtureRows(db,"event_guest_requests")).isEqualTo(before);
+        assertThat(fixtureColumns(db,"event_guest_requests")).doesNotContain("origin_registration_id");
+        assertThat(rows(db,"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='event_guest_transitions'")).containsExactly("[0]");
+    }
+
     private static void validateJpa(String name) throws Exception { jpa(name, Integer.MAX_VALUE, "validate"); }
     private static void dependentPhotoPhysicalConstraints(String name) throws Exception {
         try (var c=connection(name);var st=c.createStatement();var row=st.executeQuery("select column_type from information_schema.columns where table_schema=database() and table_name='authorization_permissions' and column_name='code'")) {

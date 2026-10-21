@@ -26,8 +26,15 @@ public class EventOperations {
     private final com.jeepclub.backend.vehicles.api.module.VehicleLifecycleLock vehicleLocks;
 
     public Event locked(Long id) {
-        var publication = publications.findByIdForUpdate(id).orElse(null);
-        if (!(publication instanceof Event event)) throw error("EVENT_NOT_FOUND");
+        return locked(id,List.of(),List.of());
+    }
+    public Event locked(Long id,Collection<Long> addedVehicles,Collection<Long> addedDependents) {
+        var event = publications.findEventByIdForUpdate(id).orElseThrow(() -> error("EVENT_NOT_FOUND"));
+        var references = operations.currentReferences(id);
+        java.util.stream.Stream.concat(references.vehicleIds().stream(),addedVehicles.stream()).distinct().sorted()
+            .forEach(vehicleLocks::activeById);
+        java.util.stream.Stream.concat(references.dependentIds().stream(),addedDependents.stream()).distinct().sorted()
+            .forEach(dependentLocks::byId);
         return event;
     }
     public Instant now() { return Instant.now(clock); }
@@ -95,7 +102,6 @@ public class EventOperations {
     }
     public void guestSpace(Long eventId, Long vehicleId) {
         vehicleLocks.activeById(vehicleId).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
-        if (operations.guests(eventId).stream().anyMatch(g -> g.status() == EventGuestRequest.Status.APPROVED && vehicleId.equals(g.vehicleId()))) throw error("EVENT_GUEST_LIMIT_REACHED");
         if (spare(eventId, vehicleId) < 1) throw error("EVENT_VEHICLE_CAPACITY_EXCEEDED");
     }
     public EventGuestRequest guest(Long event, Long id) {
@@ -106,31 +112,119 @@ public class EventOperations {
     }
     public EventGuestRequest requestGuest(Event event, Long actor, Long vehicle, String cpf, boolean administrative, String guestName) {
         requireOpen(event);
+        EventGuestRequest guest;
         if (!administrative) {
             var registration = registration(event.getId(), actor);
             if (registration.status() == EventRegistration.Status.CANCELLED || vehicle == null || registration.allocations().stream().noneMatch(a -> a.vehicleId().equals(vehicle)))
                 throw error("EVENT_VEHICLE_NOT_OWNED");
-            guestSpace(event.getId(), vehicle);
+            // A request is a preference, never a seat reservation. Capacity is
+            // checked only when approval actually allocates the guest.
+            var requestedVehicle = vehicleLocks.activeById(vehicle).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
+            if (!requestedVehicle.ownerId().equals(actor)) throw error("EVENT_VEHICLE_NOT_OWNED");
+            guest = EventGuestRequest.requested(event.getId(),actor,registration.id(),vehicle,cpf,guestName,now());
+        } else {
+            if (vehicle != null) throw error("EVENT_RIDE_OFFER_INVALID");
+            guest = EventGuestRequest.standby(event.getId(),actor,cpf,guestName,now());
         }
-        if(vehicle!=null) vehicleLocks.activeById(vehicle).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
-        var guest = new EventGuestRequest(null, event.getId(), actor, vehicle, cpf, EventGuestRequest.Status.PENDING, administrative, null, now(), null, null, guestName);
-        if (operations.guests(event.getId()).stream().anyMatch(g -> g.cpf().equals(guest.cpf()))) throw error("EVENT_GUEST_ALREADY_EXISTS");
-        return operations.save(guest);
+        var saved = operations.save(guest);
+        record(null,saved,"CREATED",actor,"GUEST_CREATED",null);
+        return saved;
     }
     public EventGuestRequest reviewGuest(Event event, Long guestId, boolean approve, Long vehicle, Long actor, String reason) {
         requireOpen(event);
         var guest = guest(event.getId(), guestId);
-        if (guest.status() != EventGuestRequest.Status.PENDING) throw error("EVENT_GUEST_REQUEST_PROCESSED");
-        Long chosen = vehicle == null ? guest.vehicleId() : vehicle;
+        if (guest.administrative() || guest.status() != EventGuestRequest.Status.PENDING) throw error("EVENT_GUEST_REQUEST_PROCESSED");
+        if (vehicle != null && !vehicle.equals(guest.requestedVehicleId())) throw error("EVENT_RIDE_OFFER_INVALID");
+        EventRegistration target = null;
         if (approve) {
-            if (chosen == null) throw error("EVENT_RIDE_OFFER_INVALID");
-            var registrations = refreshed(event.getId());
-            Long targetVehicle = chosen;
-            if (registrations.stream().noneMatch(r -> r.status() == EventRegistration.Status.CONFIRMED
-                    && r.allocations().stream().anyMatch(a -> a.vehicleId().equals(targetVehicle)))) throw error("EVENT_PAYMENT_REQUIRED");
-            guestSpace(event.getId(), chosen);
+            target = destination(event.getId(),guest.requestedVehicleId(),guest.originRegistrationId());
+            guestSpace(event.getId(),guest.requestedVehicleId());
         }
-        return operations.save(guest.review(approve, chosen, actor, reason, now()));
+        return change(guest,guest.review(approve,target == null ? null : target.id(),target == null ? null : target.userId(),actor,reason,now()),
+            approve ? "APPROVED" : "REJECTED",actor,approve ? "ADMIN_APPROVED" : reason,null);
+    }
+    public EventRegistration destination(Long eventId,Long vehicleId,Long registrationId) {
+        var vehicle = vehicleLocks.activeById(vehicleId).orElseThrow(() -> error("EVENT_VEHICLE_NOT_FOUND"));
+        return refreshed(eventId).stream().filter(r -> r.status() == EventRegistration.Status.CONFIRMED
+            && r.userId().equals(vehicle.ownerId()) && (registrationId == null || r.id().equals(registrationId))
+            && r.allocations().stream().anyMatch(a -> a.vehicleId().equals(vehicleId)))
+            .findFirst().orElseThrow(() -> error("EVENT_PAYMENT_REQUIRED"));
+    }
+    public EventGuestRequest assign(Event event,Long guestId,Long vehicle,Long registration,Long offerId,Long actor,String reason) {
+        requireOpen(event);
+        var guest = guest(event.getId(),guestId);
+        if (!guest.administrative() || guest.status() != EventGuestRequest.Status.APPROVED) throw error("EVENT_GUEST_TRANSITION_INVALID");
+        var target = destination(event.getId(),vehicle,registration);
+        if (Objects.equals(guest.vehicleId(),vehicle) && (offerId == null || offerId.equals(guest.selectedOfferId()))) return guest;
+        if (!Objects.equals(guest.vehicleId(),vehicle)) guestSpace(event.getId(),vehicle);
+        withdrawOffers(guest,offerId,actor,reason);
+        return change(guest,guest.allocate(vehicle,target.id(),target.userId(),offerId),
+            guest.vehicleId() == null ? "ALLOCATED" : "REALLOCATED",actor,reason,offerId);
+    }
+    public EventGuestRequest unassign(Event event,Long guestId,Long actor,String reason) {
+        var guest = guest(event.getId(),guestId);
+        if (!guest.administrative() || guest.status() != EventGuestRequest.Status.APPROVED) throw error("EVENT_GUEST_TRANSITION_INVALID");
+        if (guest.vehicleId() == null) return guest;
+        requireOpen(event);
+        withdrawOffers(guest,null,actor,reason);
+        return change(guest,guest.unassign(),"UNASSIGNED",actor,reason,guest.selectedOfferId());
+    }
+    public EventGuestRequest cancelGuest(Event event,Long guestId,Long actor,String reason,boolean administrator) {
+        var guest = guest(event.getId(),guestId);
+        if (!administrator && (guest.administrative() || !guest.requesterUserId().equals(actor))) throw error("EVENT_GUEST_ACCESS_DENIED");
+        if (guest.status() == EventGuestRequest.Status.CANCELLED) return guest;
+        requireOpen(event);
+        if (guest.status() == EventGuestRequest.Status.REJECTED) throw error("EVENT_GUEST_TRANSITION_INVALID");
+        withdrawOffers(guest,null,actor,reason);
+        return change(guest,guest.cancel(),"CANCELLED",actor,reason,guest.selectedOfferId());
+    }
+    public EventGuestRequest reactivate(Event event,Long guestId,Long actor,String reason) {
+        var guest = guest(event.getId(),guestId);
+        if (!guest.administrative()) throw error("EVENT_GUEST_TRANSITION_INVALID");
+        if (guest.status() == EventGuestRequest.Status.APPROVED && guest.vehicleId() == null) return guest;
+        requireOpen(event);
+        if (guest.status() != EventGuestRequest.Status.CANCELLED) throw error("EVENT_GUEST_TRANSITION_INVALID");
+        return change(guest,guest.reactivate(),"REACTIVATED",actor,reason,null);
+    }
+    public EventRegistration cancelRegistration(Event event,EventRegistration registration,Long actor) {
+        if (registration.status() == EventRegistration.Status.CANCELLED) return registration;
+        requireOpen(event);
+        for (var guest : operations.guests(event.getId())) {
+            if (!guest.administrative() && Objects.equals(guest.originRegistrationId(),registration.id())
+                    && (guest.status() == EventGuestRequest.Status.PENDING || guest.status() == EventGuestRequest.Status.APPROVED)) {
+                cancelGuest(event,guest.id(),actor,"REGISTRATION_CANCELLED",true);
+            } else if (guest.administrative() && Objects.equals(guest.allocatedRegistrationId(),registration.id())) {
+                unassign(event,guest.id(),actor,"DRIVER_REGISTRATION_CANCELLED");
+            }
+        }
+        for (var offer : operations.offers(event.getId())) {
+            if (offer.registrationId().equals(registration.id()) && (offer.status() == EventRideOffer.Status.ACCEPTED || offer.status() == EventRideOffer.Status.SELECTED)) {
+                operations.save(offer.withdraw(now()));
+                var guest = guest(event.getId(),offer.guestRequestId());
+                record(guest,guest,"OFFER_WITHDRAWN",actor,"DRIVER_REGISTRATION_CANCELLED",offer.id());
+            }
+        }
+        return operations.save(registration.cancel(now()));
+    }
+    private void withdrawOffers(EventGuestRequest guest,Long keepOffer,Long actor,String reason) {
+        for (var offer : operations.offers(guest.eventId())) {
+            if (offer.guestRequestId().equals(guest.id()) && !Objects.equals(offer.id(),keepOffer)
+                    && (offer.status() == EventRideOffer.Status.ACCEPTED || offer.status() == EventRideOffer.Status.SELECTED)) {
+                operations.save(offer.withdraw(now()));
+                record(guest,guest,"OFFER_WITHDRAWN",actor,reason,offer.id());
+            }
+        }
+    }
+    private EventGuestRequest change(EventGuestRequest before,EventGuestRequest after,String action,Long actor,String reason,Long offer) {
+        var saved = operations.save(after);
+        record(before,saved,action,actor,reason,offer);
+        return saved;
+    }
+    public void record(EventGuestRequest before,EventGuestRequest after,String action,Long actor,String reason,Long offer) {
+        operations.record(new EventGuestTransition(null,after.eventId(),after.id(),action,actor,reason,now(),
+            before == null ? null : before.status().name(),after.status().name(),
+            before == null ? null : before.vehicleId(),after.vehicleId(),
+            before == null ? null : before.allocatedRegistrationId(),after.allocatedRegistrationId(),offer));
     }
     public static EventOperationException error(String code) { return new EventOperationException(code); }
 
