@@ -67,5 +67,32 @@ migration foi criada ou alterada, inclusive V10; nenhum dado/flag produtivo é t
 A fixture sintética Registry agora cria Authentication permanente junto da Identity;
 antes criava só Identity. A primeira execução focal identificou que o repository de
 Authentication exige transação; a fixture foi corrigida para criá-la em
-TransactionTemplate, mantendo a cobertura existente. Resultados finais, SHAs e CI
-serão registrados na evidência específica desta correção e no PR #114.
+TransactionTemplate, mantendo a cobertura existente.
+
+## Validação do código corrigido
+
+Código/testes: `07601103f98456012e64de933de4754e68684da3`.
+[CI 40408479741](https://github.com/Luskahz/jeep-club-backend/actions/runs/40408479741)
+concluído com sucesso nesse SHA; deploy skipped. Não se utiliza a execução antiga
+do HEAD 8d9ee711 como aprovação da correção.
+
+| Gate do código corrigido | Testes | Falhas / erros / skips |
+| --- | ---: | --- |
+| CI Maven verify | 2180 | 0 / 0 / 0 |
+| CI MySQL/Flyway | 293 | 0 / 0 / 0 |
+| CI migration futura | 293 | 0 / 0 / 0 |
+| Focal ampliado local | 133 | 0 / 0 / 0 |
+| Maven verify local | 2180 | 0 / 0 / 1 |
+
+O skip local é o teste preexistente de symlink no Windows. Focal inclui Identity,
+Authentication, Registry API/policy/persistência e onboarding. O verify completo
+revalidou também a versão final da sincronização dos testes concorrentes e OpenAPI.
+Os totais dos gates se sobrepõem. MySQL 8.0.46 usa somente fixtures sintéticas;
+V11 existe apenas como probe efêmero da migration futura, sem alterar V10.
+
+Esta evidência congela os resultados acima; os gates MySQL locais complementares
+e os checks do HEAD documental posterior são registrados no
+[PR #114](https://github.com/Luskahz/jeep-club-backend/pull/114), que é a referência
+final de entrega. Commits posteriores de evidência não alteram Java, testes, SQL,
+POM nem a política de elegibilidade. Ver detalhes na
+[evidência estruturada](back-526-authentication-eligibility-evidence.json).

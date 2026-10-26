@@ -1,5 +1,11 @@
 # BACK-526 — política numérica homologada em 26/10/2026
 
+Correção posterior de elegibilidade no mesmo PR #114: consultar o
+[relatório de Authentication](back-526-authentication-eligibility.md) e sua
+[evidência específica](back-526-authentication-eligibility-evidence.json).
+A validação de Identity ACTIVE isoladamente era insuficiente para novos Members;
+os resultados anteriores abaixo são o registro histórico da política numérica.
+
 ## Auditoria anterior à implementação
 
 Base: develop `236c6715c8dbefe262a60d1b927dad26e0ba2909`, incluindo #113.

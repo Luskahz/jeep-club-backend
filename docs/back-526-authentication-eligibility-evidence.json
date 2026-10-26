@@ -1,0 +1,106 @@
+{
+  "baselineCommit": "8d9ee7110fc812678a7d66532d4344a34453304c",
+  "codeCommit": "07601103f98456012e64de933de4754e68684da3",
+  "pullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/114",
+  "branch": "feat/back-526-canonical-current-number",
+  "rootCause": "Identity ACTIVE did not prove Authentication first-access completion",
+  "eligibility": {
+    "port": "MemberAuthenticationEligibility",
+    "provider": "Authentication integration adapter",
+    "eligibleCredential": "PERMANENT",
+    "rejected": [
+      "PENDING_FIRST_ACCESS",
+      "CHANGE_REQUIRED",
+      "missing account"
+    ],
+    "lockingOrder": [
+      "Identity",
+      "Authentication current FOR UPDATE",
+      "Registry mutex"
+    ],
+    "onboardingBypass": false,
+    "existingMembershipIdempotencyAndCorrectionPreserved": true
+  },
+  "reproduction": {
+    "tests": 2,
+    "failures": 2,
+    "errors": 0,
+    "expectedHttp": 409,
+    "actualHttp": 200,
+    "log": "target/back526-eligibility-reproduction.log",
+    "sha256": "7f2df7ff00c1087f0bc488b14b172d0c0774938cd5d1f23ef9f062d6f1b05de9"
+  },
+  "completedLocalGates": [
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Dtest=MembershipActivationFlowIntegrationTest,MemberRegistryIntegrationTest,MemberRegistryApiIntegrationTest,MemberRegistryPolicyTest,MemberAuthenticationEligibilityAdapterTest,AuthenticationAccountTest,UserRegistrationTransactionTest test",
+      "tests": 133,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "01:35",
+      "log": "target/back526-eligibility-focal-final.log",
+      "sha256": "71043fa5d57b2b62425e0846edbe5ca0d35d8fb82c53013b744bac3a872b13eb",
+      "note": "Full verify validates final test latch and OpenAPI edits too"
+    },
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "sourceCommit": "07601103f98456012e64de933de4754e68684da3",
+      "tests": 2180,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "duration": "06:26",
+      "log": "target/back526-eligibility-verify.log",
+      "sha256": "a0178df6d71906c55ed5bc8d9d37f7f26f69588a37f9a43e593b61a29268b3ec",
+      "skip": "Pre-existing Windows symlink test"
+    }
+  ],
+  "codeCommitCi": {
+    "run": 40408479741,
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/40408479741",
+    "conclusion": "success",
+    "verify": {
+      "tests": 2180,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "jobId": 121872280778
+    },
+    "mysql": {
+      "tests": 293,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "jobId": 121872280307
+    },
+    "futureMigration": {
+      "tests": 293,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "jobId": 121872280307
+    },
+    "deploy": "skipped"
+  },
+  "regressionSuites": {
+    "authenticationEligibilityUnit": 4,
+    "authenticationDomain": 7,
+    "identityRegistration": 3,
+    "registryH2": 41,
+    "registryHttp": 29,
+    "registryPolicy": 10,
+    "onboardingH2AndMySqlEach": 39,
+    "registryMySql": 46,
+    "migrationMySql": 33
+  },
+  "preservation": {
+    "migrationsV1ToV10Unchanged": true,
+    "productionFlagsChanged": false,
+    "productionAccess": false,
+    "merge": false,
+    "deploy": false,
+    "realImports": false
+  },
+  "finalLocalMySqlAndPublishedHeadChecks": "See final PR body and current checks; frozen CI evidence here applies to codeCommit",
+  "totalsOverlap": true
+}
