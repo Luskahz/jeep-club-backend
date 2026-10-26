@@ -1,5 +1,10 @@
 # Registro de associados — BACK-526
 
+Estado revisado em 25/10/2026 após release #112 (V1–V9). Decisões e transições
+consolidadas na [ADR](../../../../../../../../docs/adr/back-526-member-registry.md),
+e gates atuais no [runbook](../../../../../../../../docs/back-526-runbook.md).
+Homologação de negócio continua pendente; flags de emissão/import apply false.
+
 ## Decisão técnica (BACK-527)
 
 Member pertence a Memberships. User.id e Member.id são chaves técnicas imutáveis.
@@ -11,7 +16,8 @@ O registro de números retém permanentemente números atribuídos e reservas.
 Retificação muda somente a matrícula vigente e acrescenta um evento de auditoria
 na mesma transação. Números anteriores não podem ser transferidos nem reutilizados,
 inclusive pelo mesmo associado. Uma correção de correção usa um número livre.
-Não há operação de exclusão ou transferência nesta entrega (BACK-512 pendente).
+Não há operação de exclusão ou transferência de Member. BACK-512 já integrado
+protege a exclusão de Identity pelos guards de retenção e pela FK restritiva.
 
 Valores são preservados literalmente (1–64 caracteres, sem whitespace externo
 ou controles). Não fazemos trim, case folding, padding ou conversão para número
@@ -37,7 +43,8 @@ na mesma transação. Reenvio, expiração, rejeição e cadastro técnico não 
 matrícula. Com emissão desabilitada, o onboarding termina normalmente e a
 solicitação COMPLETED sem Member representa pendência para conciliação explícita.
 Não há runner para retroativamente emitir matrículas nem backfill no Flyway.
-BACK-523 pode cancelar uma aprovação pendente sem haver número consumido.
+BACK-523 já integrado cancela uma aprovação pendente elegível sem número consumido,
+serializando rejeição e primeiro acesso no lock de Identity.
 
 O contador persistido é independente de AUTO_INCREMENT. A configuração exige
 habilitação, confirmação explícita de homologação, número inicial, largura e
@@ -124,9 +131,10 @@ A listagem própria de associados permite essa ordenação global no banco.
 
 CSV/PDF padrão usam `layout=MEMBER`: Matrícula primeiro, Nome e cadastro em seguida,
 ID técnico na última coluna para operações administrativas. `layout=TECHNICAL`
-preserva exatamente os cabeçalhos e a ordem anteriores (`ID;Matrícula;Nome;...`);
-nesse contrato explícito de integração, ID significa chave técnica. Consumidores
-que dependem do CSV anterior devem solicitar TECHNICAL. Ambos resolvem matrícula
+coloca ID e Matrícula nas primeiras colunas (`ID;Matrícula;Nome;...`);
+nesse contrato explícito de integração, ID significa chave técnica. Não é cópia
+byte a byte do CSV histórico anterior ao Registry; o contrato de layout foi aceito
+no PR #104, que registra ausência de consumidores posicionais existentes. Ambos resolvem matrícula
 vigente dinamicamente; ausência é coluna vazia. Não são reemitidos documentos antigos.
 Os exports usam lotes de 200. Registros financeiros e documentos históricos não
 são reescritos. Requests e IDs de Billing/Authentication/Authorization permanecem
@@ -229,9 +237,11 @@ habilita importação nem executa dados no startup.
 Disable/enable e mudanças de nome/e-mail/CPF preservam Member, matrícula, claims e
 auditoria. Reativação não emite outro número. A FK não possui ON DELETE CASCADE;
 MySQL recusa exclusão física de Identity vinculada e mantém registros intactos.
-No código atual não há endpoint de exclusão física de Identity, portanto não há
-rota pública nova convertendo uma falha SQL em 500. BACK-512 deverá definir
-arquivamento/exclusão e tradução controlada para 409 antes de expor essa operação.
+BACK-512 já expõe arquivamento e exclusão restrita de Identity. O guard público
+UserDeletionGuard implementado em Memberships recusa remoção de identidade com
+Member, referências como ator de claims/audits ou aplicações retidas; retorna
+conflito de lifecycle 409, sem remoção parcial. ARCHIVED/INACTIVE preservam o vínculo;
+desarquivar/reativar não libera claims nem emite segundo número.
 Não há exclusão de Member, transferência de número ou nova exceção de autorização
 por ser associado. Claims antigos/reservas não são liberados por lifecycle.
 
@@ -260,13 +270,14 @@ ocupado ou houver overflow de long. Não há reutilização nem inferência MAX+
 
 ## Rollout e dependências — BACK-536
 
-1. Revisão humana e CI do PR para develop, sem merge nesta tarefa. Schema e código
-   podem ser integrados em develop sem deploy. O merge futuro em master é outra
-   autorização e executará o pipeline produtivo.
-2. O agente DevOps deve conferir SHA/release exatos, baseline V3, V1–V3 imutáveis,
-   ausência de V4 concorrente, backup SQL/uploads e restauração isolada comprovada.
-   Deve ensaiar a V4 sobre cópia autorizada equivalente à base ativa, conferir
-   dados de Identity e MembershipApplication antes/depois e manter emissão false e imports.apply-enabled false.
+1. PR #104 já integrado e release #112 publicada com V1–V9. Esta revisão segue
+   por PR para develop, sem merge/deploy. Publicação em master exige autorização
+   específica e executa o pipeline produtivo.
+2. Conferir SHA instalado, history/checksums reais, V1–V9 imutáveis, backup
+   SQL/uploads/configuração e restauração isolada comprovada. Não reaplicar V4,
+   alterar baseline ou supor banco ainda em V3. Validar a versão candidata sobre
+   cópia autorizada, preservando Identity/MembershipApplication e mantendo emissão
+   false e imports.apply-enabled false. Esta revisão não precisa de schema novo.
 3. Após futura instalação: Flyway history sem falhas, Hibernate validate, health,
    dados antigos preservados, zero backfill e APIs de autenticação/Billing normais.
    Verificar o ENUM de permissions e a concessão por role, sem exceções pessoais.
@@ -284,8 +295,8 @@ ou prometer rollback ACID do schema. Não reativar imagem antiga sobre schema
 incompatível automaticamente. A restauração real da VPS e autorização de release
 pertencem ao futuro agente DevOps, não foram executadas aqui.
 
-BACK-512 deverá definir lifecycle/arquivamento e políticas de retenção antes de
-liberar remoção de identidades vinculadas. BACK-523 poderá evoluir rejeição após
-aprovação enquanto primeiro acesso estiver pendente; como este momento ainda não
-emite matrícula, a correção não libera nem consome número indevidamente. O
-registry não introduz novo gate de membritude, autenticação ou Billing.
+BACK-512 e BACK-523 estão integradas e cobertas por testes de lifecycle,
+rejeição/primeiro acesso, retenção e rollback. Não se apaga Member/claim para
+permitir reversão de admissão. O registry não introduz novo gate de membritude,
+autenticação ou Billing. A matriz corrente separa comprovação técnica de fonte
+oficial, homologação e autorização operacional ainda pendentes.
