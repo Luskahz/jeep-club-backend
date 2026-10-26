@@ -46,6 +46,7 @@ class RefreshTokenTransactionIntegrationTest {
     @Autowired SessionJpaRepository sessionRows;
     @Autowired RefreshTokenHashService hashes;
     @Autowired MockMvc mvc;
+    @Autowired java.time.Clock clock;
     @MockitoSpyBean JwtService jwt;
 
     @Test
@@ -158,7 +159,7 @@ class RefreshTokenTransactionIntegrationTest {
     private UserAuthenticationTokens register(String cpf) {
         return registration.registerAndAuthenticate(new UserRegistrationData(
                 "Refresh Audit", null, null, cpf, null, null, null,
-                Instant.parse("2026-10-15T12:00:00Z")), "AuditPassword@123");
+                Instant.now(clock)), "AuditPassword@123");
     }
 
     private RefreshTokenEntity token(String raw) {

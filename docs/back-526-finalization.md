@@ -64,6 +64,64 @@ Não se interpreta a existência de um teste como execução aprovada nesta revi
 Nenhum componente de produção ausente foi demonstrado (**NI**). A revisão
 acrescenta provas e corrige documentação, preservando implementação e políticas.
 
+## Alterações e rastreabilidade do aceite técnico
+
+Não foi reproduzido defeito de produção que justificasse alterar serviços ou
+contratos. Mantidos o monólito modular, JPA, locks existentes, RBAC explícito,
+projeção dinâmica e default false das flags. Nenhum endpoint/entity/repository,
+abstração, campo de schema ou migration adicional foi criado.
+
+| Lacuna inicial | Complemento nesta revisão | Verificação |
+| --- | --- | --- |
+| Governança dispersa | ADR com identificadores, transições, política conservadora, permissions e decisões externas | docs/adr/back-526-member-registry.md |
+| Corrida retificação × geração | Disputa por variantes numéricas com zeros, preservando PK e claim retirada | generationAndCorrectionSerializeNumericVariantsWithoutReusingClaims, H2 e MySQL |
+| Número retirado equivalente ao próximo | Gerador pula claim histórica mesmo após retificação | generatorSkipsRetiredNumericVariantWithoutChangingIdentity, H2 e MySQL |
+| Falha de retificação | Snapshot de Member/versão/claims/audit permanece íntegro | correctionAuditFailurePreservesCurrentNumberVersionClaimsAndHistory, H2 e MySQL |
+| Falha de emissão | Assertions adicionais de assinatura do contador, Member/claims/audit | issuanceFailureRollsBackCounterMemberClaimAndAudit, H2 e MySQL |
+| Falha de uma unidade de importação | Audit falha na primeira linha; próxima confirma; retry não duplica | failedImportUnitRollsBackAndDoesNotPreventNextUnitOrSafeRetry, H2 e MySQL |
+| Senha temporária e falha tardia de Registry | Credencial, sessão, aplicação e sequência revertem; mesmo challenge permite retry e depois é recusado | temporaryPasswordRegistryFailureRollsBackCredentialsSessionChallengeAndSequenceThenRetries, H2 e MySQL |
+| Emissão false nos dois métodos | COMPLETED e login real sem Member nem consumo; usuário administrativo legado preservado | disabledIssuanceAllowsBothFirstAccessMethodsAndLegacyLoginWithoutRegistryWrites, duas variantes H2 e MySQL |
+| Reenvio/expiração sem consumo | Snapshot de Member/claims/audit/contador antes/depois | Assertions nos dois cenários HTTP existentes, H2 e MySQL |
+| Procedimento antigo de implantação | Runbook em três fases com backup/restore, GO/NO-GO e recuperação; docs de V4 e lifecycle atualizadas | docs/back-526-runbook.md e documento do módulo |
+| Gate completo dependia de data de calendário | Fixture preexistente de RefreshTokenTransactionIntegrationTest criava sessão/token em 15/10/2026 com TTL 7d; agora usa Instant.now(clock) | Duas falhas reproduzidas isoladamente antes da correção; sem alterar expiração, assertions ou código de produção |
+
+As novas provas reutilizam MemberRegistryScenarios e
+MembershipActivationFlowIntegrationTest, herdados pelas suítes MySQL existentes.
+São sete casos adicionais por banco (a variante enabled=false conta duas vezes),
+sem criar uma segunda implementação dos fluxos. As suítes existentes continuam
+cobrindo 400/401/403/404/409, OpenAPI/permissions, ROOT/CUSTOM, lote/exports sem N+1,
+Billing, access link, rejeição e lifecycle. A recusa de challenge consumido é 401
+conforme contrato de Authentication; não foi alterada para atender uma expectativa
+errada do novo teste.
+
+A correção da fixture de Authentication é separada das novas provas do Registry.
+A primeira execução completa encontrou 2.149 testes, duas falhas nessa fixture,
+zero erros e um skip de symlink Windows. A reprodução isolada repetiu duas falhas
+em três casos, confirmando que os tokens já expirados impediam alcançar os passos
+de rotação/rollback. Nenhuma validação de validade/expiração foi relaxada.
+
+## Estado das dez subtarefas e bloqueios preservados
+
+| Subtask | Entrega técnica auditada | Aceite externo / estado Jira |
+| --- | --- | --- |
+| BACK-527 | Regras, ADR e conflitos consolidados | Permanece pendente: aprovação da ADR, formato/equivalência/reservas/faixa e marco formal |
+| BACK-528 | JPA/V4/constraints existentes preservados | Já Concluído; sem alteração de status |
+| BACK-529 | Queries atuais/reversas/lote existentes preservadas | Já Concluído; sem alteração de status |
+| BACK-530 | Administração/audit/RBAC/HTTP existentes preservados | Já Concluído; sem alteração de status |
+| BACK-531 | Projeções/pesquisa/exports existentes preservados | Já Concluído; homologação visual do frontend não presumida |
+| BACK-532 | Alocador existente auditado e provas complementadas | Permanece pendente: homologação da política/faixa e reconciliação histórica antes de ativação |
+| BACK-533 | Ambos primeiros acessos, rollback, flags e compatibilidade BACK-512/523 | Permanece pendente: aprovação do marco formal e homologação funcional do clube |
+| BACK-534 | Importador existente, dry-run/proof, partial/rollback/retry comprováveis | Permanece pendente: fonte oficial, inventário e conferência/autorização real |
+| BACK-535 | Suítes existentes reutilizadas e complementadas | Já Concluído; resultados atuais devem ser lidos abaixo |
+| BACK-536 | Runbook atual com três fases independentes e critérios de recuperação | Permanece pendente: backup real/restauração isolada representativa e assinatura das fases |
+
+Nenhuma aprovação externa foi inferida do CI. Story e cinco subtarefas pendentes
+não devem ser encerradas nesta entrega. Emissão exige configuração explicitamente
+homologada, legado/reservas revisados e autorização de ativação. Importação exige
+fonte oficial conferida, permissão, autorização de janela, dry-run exato/proof
+válido, confirmação humana e apply habilitado só durante a janela. Ambas flags
+permanecem false até essas decisões, sem catch-up automático para contas antigas.
+
 ## Referências atuais
 
 - [ADR e matriz de transições](adr/back-526-member-registry.md).
