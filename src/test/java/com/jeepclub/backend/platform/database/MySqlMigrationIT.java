@@ -50,7 +50,7 @@ class MySqlMigrationIT {
         assertThat(flyway(db).migrate().migrationsExecuted).isZero();
     }
 
-    @ParameterizedTest @ValueSource(strings={"OPAQUE_CURRENT","ZERO_CURRENT","OPAQUE_RESERVATION","CANONICAL_MEMBERS_COLLISION","CURRENT_RESERVATION_COLLISION","MISSING_CLAIM","CLAIM_LITERAL_MISMATCH"})
+    @ParameterizedTest @ValueSource(strings={"OPAQUE_CURRENT","ZERO_CURRENT","OPAQUE_RESERVATION","CANONICAL_MEMBERS_COLLISION","CURRENT_RESERVATION_COLLISION","MISSING_CLAIM","CLAIM_LITERAL_MISMATCH","CONTROL_CURRENT","CONTROL_RESERVATION"})
     void numericRegistryPreflightRejectsIncompatibleDataWithoutBusinessMutations(String defect) throws Exception {
         String db=legacyRegistryDatabase();
         try(var c=connection(db);var st=c.createStatement()) {
@@ -62,6 +62,11 @@ class MySqlMigrationIT {
                 case "CURRENT_RESERVATION_COLLISION" -> st.executeUpdate("update membership_number_claims set membership_number='27' where member_id is null");
                 case "MISSING_CLAIM" -> st.executeUpdate("delete from membership_number_claims where membership_number='027'");
                 case "CLAIM_LITERAL_MISMATCH" -> st.executeUpdate("update membership_number_claims set membership_number='027 ' where membership_number='027'");
+                case "CONTROL_CURRENT" -> {
+                    st.executeUpdate("update membership_members set membership_number=CONCAT('027',CHAR(10)) where id=800");
+                    st.executeUpdate("update membership_number_claims set membership_number=CONCAT('027',CHAR(10)) where membership_number='027'");
+                }
+                case "CONTROL_RESERVATION" -> st.executeUpdate("update membership_number_claims set membership_number=CONCAT('28',CHAR(13)) where member_id is null");
                 default -> throw new IllegalArgumentException(defect);
             }
         }
@@ -70,7 +75,8 @@ class MySqlMigrationIT {
         var auditsBefore=rows(db,"select * from membership_member_audits order by id");
         var identitiesBefore=rows(db,"select * from identity_users order by id");
         var sequenceBefore=rows(db,"select * from membership_registry_sequence");
-        assertThatThrownBy(() -> flyway(db).migrate()).isInstanceOf(FlywayException.class).hasStackTraceContaining("BACK-526 preflight");
+        var failure=assertThatThrownBy(() -> flyway(db).migrate()).isInstanceOf(FlywayException.class).hasStackTraceContaining("BACK-526 preflight");
+        if(defect.startsWith("CONTROL_")) failure.hasStackTraceContaining("nonpositive or nonnumeric");
         assertThat(rows(db,"select * from membership_members order by id")).isEqualTo(membersBefore);
         assertThat(rows(db,"select * from membership_number_claims order by claim_key")).isEqualTo(claimsBefore);
         assertThat(rows(db,"select * from membership_member_audits order by id")).isEqualTo(auditsBefore);

@@ -14,9 +14,10 @@ BEGIN
     IF coordinator IS NULL THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BACK-526 preflight: registry coordinator missing';
     END IF;
-    IF EXISTS (SELECT 1 FROM membership_members WHERE NOT REGEXP_LIKE(membership_number,'^[0-9]+$','c') OR REGEXP_LIKE(membership_number,'^0+$','c'))
+    -- MySQL/ICU $ also matches before a final line terminator. Reject every nondigit.
+    IF EXISTS (SELECT 1 FROM membership_members WHERE REGEXP_LIKE(membership_number,'[^0-9]','c') OR NOT REGEXP_LIKE(membership_number,'[1-9]','c'))
        OR EXISTS (SELECT 1 FROM membership_number_claims WHERE member_id IS NULL AND
-           (NOT REGEXP_LIKE(membership_number,'^[0-9]+$','c') OR REGEXP_LIKE(membership_number,'^0+$','c'))) THEN
+           (REGEXP_LIKE(membership_number,'[^0-9]','c') OR NOT REGEXP_LIKE(membership_number,'[1-9]','c'))) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BACK-526 preflight: nonpositive or nonnumeric current number/reservation';
     END IF;
     IF EXISTS (

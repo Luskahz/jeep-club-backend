@@ -51,7 +51,7 @@ class MemberRegistryPolicyTest {
         assertThatThrownBy(() -> new MembershipNumber("9".repeat(65))).isInstanceOf(RuntimeException.class);
     }
     @Test void invalidControlsAndDestructiveWhitespaceAreRejected() {
-        for(String value:new String[]{"", " ","027 "," 027","A\nB","x".repeat(65)}) assertThatThrownBy(() -> new MembershipNumber(value)).isInstanceOf(RuntimeException.class);
+        for(String value:new String[]{"", " ","027 "," 027","027\n","027\r","A\nB","x".repeat(65)}) assertThatThrownBy(() -> new MembershipNumber(value)).isInstanceOf(RuntimeException.class);
     }
     @Test void previewProofExpiresAndCannotBeReusedAcrossProcesses() {
         var now=Instant.parse("2026-10-17T00:00:00Z");var clock=org.mockito.Mockito.mock(Clock.class);org.mockito.Mockito.when(clock.instant()).thenReturn(now);var proof=new MemberImportProof(clock);

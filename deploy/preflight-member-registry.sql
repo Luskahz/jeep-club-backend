@@ -3,11 +3,11 @@
 -- Blocking counts must all be zero. No rows, identifiers or personal data are returned.
 SELECT 'BLOCK_INVALID_CURRENT' AS check_name, COUNT(*) AS invalid_count
 FROM membership_members
-WHERE NOT REGEXP_LIKE(membership_number,'^[0-9]+$','c') OR REGEXP_LIKE(membership_number,'^0+$','c');
+WHERE REGEXP_LIKE(membership_number,'[^0-9]','c') OR NOT REGEXP_LIKE(membership_number,'[1-9]','c');
 
 SELECT 'BLOCK_INVALID_RESERVATION' AS check_name, COUNT(*) AS invalid_count
 FROM membership_number_claims WHERE member_id IS NULL AND
-    (NOT REGEXP_LIKE(membership_number,'^[0-9]+$','c') OR REGEXP_LIKE(membership_number,'^0+$','c'));
+    (REGEXP_LIKE(membership_number,'[^0-9]','c') OR NOT REGEXP_LIKE(membership_number,'[1-9]','c'));
 
 SELECT 'BLOCK_CANONICAL_COLLISION' AS check_name, COUNT(*) AS invalid_count
 FROM (
