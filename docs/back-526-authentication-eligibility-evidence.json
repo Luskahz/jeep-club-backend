@@ -102,5 +102,16 @@
     "realImports": false
   },
   "finalLocalMySqlAndPublishedHeadChecks": "See final PR body and current checks; frozen CI evidence here applies to codeCommit",
-  "totalsOverlap": true
+  "totalsOverlap": true,
+  "followUp": {
+    "failedHead": "ddaf6d2b045606ceb5dab283a22e8b594dc40526",
+    "failedCiRun": 40410277078,
+    "verifyTests": 2180,
+    "failures": 1,
+    "failingTest": "concurrentImportsOfSameBindingAreIdempotentAndAuditedOnce",
+    "cause": "Concurrent commit between Member and claim preview reads returned NUMBER_UNAVAILABLE for the same binding",
+    "correction": "Reread current binding after an occupied claim; preserve strict concurrent assert and add deterministic regression",
+    "initialLocalMysqlAndFutureRuns": "Interrupted; not final approval",
+    "finalValidation": "Final PR body and current checks"
+  }
 }

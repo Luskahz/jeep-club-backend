@@ -104,6 +104,19 @@ public abstract class MemberRegistryScenarios {
         assertThat(admin.byNumber("28").id()).isEqualTo(original.id());
         assertThat(admin.history(first,PageRequest.of(0,20)).getTotalElements()).isEqualTo(2);
     }
+    @Test void importRecognizesBindingCommittedBetweenMemberAndClaimPreviewReads() {
+        var rows=List.of(row(first,"27"));String reason="Synthetic concurrent preview";
+        var plan=importer.dryRun(rows,first,reason);
+        doAnswer(invocation -> {
+            var concurrentCommit=new TransactionTemplate(transactionManager);
+            concurrentCommit.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            concurrentCommit.executeWithoutResult(status -> admin.assign(first,"27",first,"Concurrent verified assignment"));
+            return invocation.callRealMethod();
+        }).when(authenticationEligibility).hasCompletedFirstAccess(first);
+        assertThat(importer.apply(rows,first,reason,plan.dryRunToken()).rows())
+                .extracting(MemberImportReport.Row::outcome).containsExactly("ALREADY_LINKED");
+        assertThat(members.count()).isEqualTo(1);assertThat(claims.count()).isEqualTo(1);assertThat(audits.count()).isEqualTo(1);
+    }
     @Test void dynamicCorrectionPreservesBothIdsIdentityAndAudit() {
         var before=identities.findById(first).orElseThrow();
         var member=admin.assign(first,"027",first,"Synthetic verified source");

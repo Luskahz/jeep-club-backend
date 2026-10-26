@@ -69,7 +69,7 @@ antes criava só Identity. A primeira execução focal identificou que o reposit
 Authentication exige transação; a fixture foi corrigida para criá-la em
 TransactionTemplate, mantendo a cobertura existente.
 
-## Validação do código corrigido
+## Validação inicial e corrida adicional encontrada no CI
 
 Código/testes: `07601103f98456012e64de933de4754e68684da3`.
 [CI 40408479741](https://github.com/Luskahz/jeep-club-backend/actions/runs/40408479741)
@@ -93,6 +93,21 @@ V11 existe apenas como probe efêmero da migration futura, sem alterar V10.
 Esta evidência congela os resultados acima; os gates MySQL locais complementares
 e os checks do HEAD documental posterior são registrados no
 [PR #114](https://github.com/Luskahz/jeep-club-backend/pull/114), que é a referência
-final de entrega. Commits posteriores de evidência não alteram Java, testes, SQL,
-POM nem a política de elegibilidade. Ver detalhes na
+final de entrega. O commit ddaf6d2b altera somente evidências; a correção adicional
+descrita abaixo altera o importador e seus testes. Ver detalhes na
 [evidência estruturada](back-526-authentication-eligibility-evidence.json).
+
+O CI seguinte do HEAD documental ddaf6d2b (run 40410277078) expôs uma corrida
+em `concurrentImportsOfSameBindingAreIdempotentAndAuditedOnce`: Member ausente na
+primeira leitura, mas claim já confirmada na leitura seguinte, gerando falsamente
+NUMBER_UNAVAILABLE. O verify executou 2180 testes com uma falha. Esses resultados
+iniciais não certificam a correção adicional descrita a seguir.
+
+A prévia passa a reler o titular quando encontra a claim ocupada. Se o vínculo
+vigente já é exatamente o solicitado, informa ALREADY_LINKED; reservas e outros
+titulares continuam NUMBER_UNAVAILABLE. Assign mantém a última revalidação
+bloqueante, inclusive de Authentication. Novo cenário determinístico confirma uma
+atribuição concorrente entre as duas leituras e exige um único Member/claim/audit.
+O assert concorrente anterior permanece inalterado; os gates são repetidos.
+Execuções locais MySQL/futura do código inicial foram interrompidas para essa
+correção e não contam como aprovação da versão final.
