@@ -29,7 +29,7 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BACK-526 preflight: canonical number collision';
     END IF;
     IF EXISTS (SELECT 1 FROM membership_members m LEFT JOIN membership_number_claims c
-               ON c.member_id=m.id AND c.membership_number=m.membership_number WHERE c.claim_key IS NULL) THEN
+               ON c.member_id=m.id AND BINARY c.membership_number=BINARY m.membership_number WHERE c.claim_key IS NULL) THEN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='BACK-526 preflight: current Member claim missing';
     END IF;
     -- Archive all claim metadata verbatim. Historical opaque literals are never converted.
@@ -37,7 +37,7 @@ BEGIN
     SELECT member_id,NULL,membership_number,actor_user_id,claimed_at,reason,'LEGACY_CLAIM_SNAPSHOT','SUCCESS'
     FROM membership_number_claims;
     DELETE c FROM membership_number_claims c LEFT JOIN membership_members m
-        ON c.member_id=m.id AND c.membership_number=m.membership_number
+        ON c.member_id=m.id AND BINARY c.membership_number=BINARY m.membership_number
     WHERE c.member_id IS NOT NULL AND m.id IS NULL;
     UPDATE membership_members SET membership_number=TRIM(LEADING '0' FROM membership_number),
         version=version+1,updated_at=UTC_TIMESTAMP(6)

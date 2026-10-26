@@ -50,7 +50,7 @@ class MySqlMigrationIT {
         assertThat(flyway(db).migrate().migrationsExecuted).isZero();
     }
 
-    @ParameterizedTest @ValueSource(strings={"OPAQUE_CURRENT","ZERO_CURRENT","OPAQUE_RESERVATION","CANONICAL_MEMBERS_COLLISION","CURRENT_RESERVATION_COLLISION","MISSING_CLAIM"})
+    @ParameterizedTest @ValueSource(strings={"OPAQUE_CURRENT","ZERO_CURRENT","OPAQUE_RESERVATION","CANONICAL_MEMBERS_COLLISION","CURRENT_RESERVATION_COLLISION","MISSING_CLAIM","CLAIM_LITERAL_MISMATCH"})
     void numericRegistryPreflightRejectsIncompatibleDataWithoutBusinessMutations(String defect) throws Exception {
         String db=legacyRegistryDatabase();
         try(var c=connection(db);var st=c.createStatement()) {
@@ -61,6 +61,7 @@ class MySqlMigrationIT {
                 case "CANONICAL_MEMBERS_COLLISION" -> st.executeUpdate("insert into membership_members values(801,701,'27',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
                 case "CURRENT_RESERVATION_COLLISION" -> st.executeUpdate("update membership_number_claims set membership_number='27' where member_id is null");
                 case "MISSING_CLAIM" -> st.executeUpdate("delete from membership_number_claims where membership_number='027'");
+                case "CLAIM_LITERAL_MISMATCH" -> st.executeUpdate("update membership_number_claims set membership_number='027 ' where membership_number='027'");
                 default -> throw new IllegalArgumentException(defect);
             }
         }
