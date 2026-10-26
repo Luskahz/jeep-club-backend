@@ -122,7 +122,66 @@ fonte oficial conferida, permissão, autorização de janela, dry-run exato/proo
 válido, confirmação humana e apply habilitado só durante a janela. Ambas flags
 permanecem false até essas decisões, sem catch-up automático para contas antigas.
 
-## Referências atuais
+## Resultados executados — 25/10/2026
+
+Código testado: `36c70e13a1d2cd874e4772a1e0b7d752ed18a09e`. Commits posteriores
+acrescentam somente documentação/evidência; não alteram fonte Java/testes ou SQL.
+Java Microsoft OpenJDK 17.0.18+8-LTS e Testcontainers MySQL 8.0.46.
+
+| Comando solicitado | Testes | Falhas | Erros | Skips | Tempo Maven |
+| --- | ---: | ---: | ---: | ---: | --- |
+| ./mvnw --batch-mode --no-transfer-progress verify | 2149 | 0 | 0 | 1 | 05:34 |
+| ./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify | 261 | 0 | 0 | 0 | 18:55 |
+| bash deploy/test-future-migration.sh | 261 | 0 | 0 | 0 | 19:20 |
+
+No Windows, os dois primeiros comandos foram executados por `mvnw.cmd`, com
+JAVA_HOME do Java 17 somente no processo. O terceiro usou Git Bash e Git archive
+do mesmo código: V10 temporária apenas no arquivo isolado, nunca na release.
+MySQL e arquivo isolado usaram builds e bancos distintos em paralelo; ambos
+terminaram com exit code 0. Os resultados de gates sobrepostos não são casos únicos.
+
+O único skip é preexistente: LocalFileStorageTest.
+shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot, cujo teste faz assumption
+quando o ambiente não permite criar symlink. Nenhum teste foi desabilitado nesta
+revisão. A correção de fixture de refresh e a expectativa 401 do novo teste estão
+descritas acima, incluindo as execuções intermediárias que falharam.
+
+As oito suítes MySQL, tanto na release V9 quanto no arquivo com V10, passaram:
+DependentPhotoMySqlIT (20), PrincipalLifecycleMySqlIT (30),
+MembershipRegistryOnboardingMySqlIT (31), MemberRegistryMySqlIT (32),
+MySqlMigrationIT (23), EventOperationsMySqlIT (81), VehicleGalleryMySqlIT (28)
+e VehicleMediaOrchestrationMySqlIT (16). A evidência estruturada inclui totais,
+comandos, casos intermediários, suítes pertinentes e blobs Git das nove migrations
+em [back-526-finalization-evidence.json](back-526-finalization-evidence.json).
+Os logs brutos ficam fora do versionamento; resultados de CI devem ser conferidos
+no HEAD publicado do PR, inclusive mergeability e job de deploy skipped.
+
+## Matriz final de critérios
+
+| Critérios | Estado técnico após os gates locais | Pendência de aceite |
+| --- | --- | --- |
+| Identificadores, PK/FK/JWT/contratos financeiros preservados | Implementado e comprovado | Nenhuma mudança de produção nesta revisão |
+| JPA, constraints, Flyway e Hibernate validate | Implementado e comprovado | Comprovação operacional na instância real é independente |
+| Política conservadora de zeros, colisões, claims/reservas e não reutilização | Implementado e comprovado | Regra oficial alternativa depende do clube |
+| Administração, audit, HTTP e RBAC sem privilégios CUSTOM implícitos | Implementado e comprovado | Designação/grants operacionais pelo responsável |
+| Queries, projeções, pesquisa/exports e ausência de N+1/fallback | Implementado e comprovado | Homologação visual da UI externa a este repo |
+| Emissão concorrente, idempotência e rollback completo | Implementado e comprovado | Formato/faixa/reservas/legado aprovados antes de habilitar |
+| Primeiro acesso nos dois métodos, disabled, retries e BACK-512/523 | Implementado e comprovado | Aprovação formal do marco e homologação funcional |
+| Dry-run/proof, confirmação, partial/rollback e retry da importação | Implementado e comprovado | Fonte oficial e conferência humana/autorização real |
+| ADR, transições e runbook em três fases | Implementado e comprovado como documentação | Aprovação da ADR e assinatura das fases |
+| Backup real, restauração representativa e liberação operacional | Bloqueado por decisão/evidência externa | Não executados nem autorizados nesta tarefa |
+
+As lacunas técnicas IL da matriz inicial foram complementadas pelas provas e
+documentos identificados acima. Não há componente funcional novo NI demonstrado.
+Os itens BE continuam bloqueados; CI verde não os converte em aceite.
+
+**Parecer técnico: READY WITH BUSINESS BLOCKERS.** Os gates locais estão aprovados;
+a implementação pode seguir revisão do PR para develop, com flags false e sem
+schema novo. A Story e BACK-527/532/533/534/536 permanecem abertas por homologação,
+fonte oficial e evidências operacionais indispensáveis. Não houve merge, deploy,
+acesso à VPS, importação real, concessão de grants ou ativação de flags.
+
+## Referências
 
 - [ADR e matriz de transições](adr/back-526-member-registry.md).
 - [Runbook de três fases](back-526-runbook.md).

@@ -85,6 +85,22 @@ NO-GO: drift/checksum inesperado, migration falha, integridade divergente,
 falha de login/Billing, flag inesperada ou ausência de backup restaurável.
 Não executar mutações sintéticas no banco real sem autorização específica.
 
+Script de smoke técnico reutilizando a suíte existente, para um checkout local
+isolado com Java 17 e Docker (somente bancos Testcontainers sintéticos):
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+./mvnw --batch-mode --no-transfer-progress \
+  -Dtest=MemberRegistryIntegrationTest,MemberRegistryApiIntegrationTest,MemberRegistryImportDisabledIntegrationTest,MemberRegistryPolicyTest,MembershipActivationFlowIntegrationTest,PaidMembershipFlowIntegrationTest,PrincipalLifecycleIntegrationTest test
+./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true \
+  -Dit.test=MemberRegistryMySqlIT,MembershipRegistryOnboardingMySqlIT,PrincipalLifecycleMySqlIT verify
+```
+
+Esse roteiro seleciona cenários já incluídos nos gates completos desta revisão;
+não é um cliente de produção e não requer credenciais reais. Para smoke operacional,
+usar a tabela anterior na cópia isolada autorizada e registrar resultado próprio.
+
 ## Fase 2 — matrículas históricas
 
 Pré-condições: fase 1 aceita; fonte oficial versionada e conferida por responsável

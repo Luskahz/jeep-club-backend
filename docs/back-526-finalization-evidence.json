@@ -1,0 +1,314 @@
+{
+  "auditDate": "2026-10-25",
+  "jira": "BACK-526",
+  "baseCommit": "9ad04a71e50917e0a53c1c4855ea6770730bd8b9",
+  "testedCodeCommit": "36c70e13a1d2cd874e4772a1e0b7d752ed18a09e",
+  "java": "Microsoft OpenJDK 17.0.18+8-LTS",
+  "mysql": "8.0.46",
+  "productionAccess": false,
+  "productionMutations": false,
+  "schemaChanges": false,
+  "appliedMigrationsChanged": false,
+  "attempts": [
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Dtest=MemberRegistryIntegrationTest,MembershipActivationFlowIntegrationTest test",
+      "tests": 61,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "note": "New replay assertion expected 409; existing Authentication contract returned 401. Test expectation corrected, security behavior unchanged."
+    },
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "tests": 2149,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 1,
+      "note": "Pre-existing refresh transaction fixture used 2026-10-15 with 7d TTL; expired tokens prevented reaching rollback/concurrency assertions."
+    },
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Dtest=RefreshTokenTransactionIntegrationTest test",
+      "tests": 3,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "note": "Reproduced same failures in isolation before fixture correction to Instant.now(application Clock)."
+    }
+  ],
+  "gates": [
+    {
+      "requestedCommand": "./mvnw --batch-mode --no-transfer-progress verify",
+      "executedCommand": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "exitCode": 0,
+      "tests": 2149,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "duration": "05:34",
+      "suiteCount": 228,
+      "selectedSuites": [
+        {
+          "name": "com.jeepclub.backend.authentication.core.application.service.RefreshTokenTransactionIntegrationTest",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.PaidMembershipFlowIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryImportDisabledIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "skippedSuites": [
+        {
+          "name": "com.jeepclub.backend.platform.storage.local.LocalFileStorageTest",
+          "tests": 57,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        }
+      ]
+    },
+    {
+      "requestedCommand": "./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "executedCommand": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "exitCode": 0,
+      "tests": 261,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "18:55",
+      "suites": [
+        {
+          "name": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 81,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    {
+      "requestedCommand": "bash deploy/test-future-migration.sh",
+      "executedCommand": "Git Bash deploy/test-future-migration.sh",
+      "exitCode": 0,
+      "tests": 261,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "duration": "19:20",
+      "ephemeralMigration": "V10__ci_forward_compatibility_probe.sql",
+      "archiveCommit": "36c70e13a1d2cd874e4772a1e0b7d752ed18a09e",
+      "suites": [
+        {
+          "name": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 32,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 81,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    }
+  ],
+  "externalBlockers": [
+    "Club approval of ADR, official format/equivalence/reservations/gaps/initial range and association milestone",
+    "Official historical source, authorized human reconciliation and import window",
+    "Representative authorized backup restore and signed phase approvals",
+    "Frontend visual homologation"
+  ],
+  "flagsDefaults": {
+    "issuanceEnabled": false,
+    "issuanceApproved": false,
+    "importsApplyEnabled": false
+  },
+  "migrationGitBlobs": [
+    {
+      "gitBlob": "b5a51e37439e8a4e7e4f7bc9a202aff8b1fcefc9",
+      "path": "src/main/resources/db/migration/V1__initial_deploy_schema.sql"
+    },
+    {
+      "gitBlob": "fbad0b475a496337d842fcc94b0228a051b66f26",
+      "path": "src/main/resources/db/migration/V2__identity_user_profiles.sql"
+    },
+    {
+      "gitBlob": "fba4cbf057455eec02898a8588cb5f3044020c27",
+      "path": "src/main/resources/db/migration/V3__account_activation_invitations.sql"
+    },
+    {
+      "gitBlob": "144abe32a66d5884a3d7da606c0bfb648fe45eb8",
+      "path": "src/main/resources/db/migration/V4__membership_member_registry.sql"
+    },
+    {
+      "gitBlob": "5b062975a09aa699d3ff8f83863da444e5558563",
+      "path": "src/main/resources/db/migration/V5__principal_entity_lifecycle.sql"
+    },
+    {
+      "gitBlob": "6c74bd40c0a1409d4ba4cdb0737729b61add9863",
+      "path": "src/main/resources/db/migration/V6__membership_onboarding_review_history.sql"
+    },
+    {
+      "gitBlob": "cafecbd66fede482bc246828e6a21b7005248c49",
+      "path": "src/main/resources/db/migration/V7__dependent_private_photo.sql"
+    },
+    {
+      "gitBlob": "816d003bd900ac3fd5fb76bce2de1b3016071f56",
+      "path": "src/main/resources/db/migration/V8__vehicle_gallery.sql"
+    },
+    {
+      "gitBlob": "4b9a43d709b660bdc2ad1a90b3d4faaa8f2aeb6f",
+      "path": "src/main/resources/db/migration/V9__event_guest_lifecycle.sql"
+    }
+  ],
+  "finalTechnicalAssessment": "READY WITH BUSINESS BLOCKERS",
+  "note": "Totals overlap across gates and are not unique cases. Raw logs, process-local preview proofs and personal data are not versioned. Production backup restore was not executed. CI result must be checked on the delivered PR."
+}
