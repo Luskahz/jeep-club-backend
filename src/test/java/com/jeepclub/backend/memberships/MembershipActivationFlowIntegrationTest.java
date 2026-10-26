@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /** Committed HTTP transactions with real Identity/Authentication and H2 persistence. */
-@SpringBootTest(properties={"memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true"})
+@SpringBootTest(properties={"memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.imports.apply-enabled=true"})
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -58,6 +58,7 @@ class MembershipActivationFlowIntegrationTest {
     @Autowired com.jeepclub.backend.memberships.infra.persistence.jpa.MemberRegistrySequenceJpaRepository registrySequence;
     @Autowired com.jeepclub.backend.memberships.infra.config.MemberIssuanceProperties issuance;
     @Autowired com.jeepclub.backend.memberships.core.application.service.member.AdminMemberService registryAdmin;
+    @Autowired com.jeepclub.backend.memberships.core.application.service.member.MemberRegistryImportService registryImporter;
     @MockitoSpyBean com.jeepclub.backend.memberships.infra.persistence.jpa.MemberRegistryAuditJpaRepository registryAudits;
     @MockitoSpyBean MembershipApplicationRepository applications;
     @MockitoBean MemberActivationMailSender mail;
@@ -88,6 +89,8 @@ class MembershipActivationFlowIntegrationTest {
             Role role = roles.save(Role.create("onboarding-audit", "Audit", Instant.now(clock)));
             userRoles.save(UserRole.create(id, role.getId(), Instant.now(clock)));
             for (var code : java.util.List.of(
+                    com.jeepclub.backend.shared.authorization.PermissionCode.MEMBERSHIP_MEMBER_REGISTRATION_MANAGE,
+                    com.jeepclub.backend.shared.authorization.PermissionCode.MEMBERSHIP_MEMBER_NUMBER_ISSUE,
                     com.jeepclub.backend.shared.authorization.PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_APPROVE,
                     com.jeepclub.backend.shared.authorization.PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_READ,
                     com.jeepclub.backend.shared.authorization.PermissionCode.MEMBERSHIP_MEMBERSHIP_REQUEST_REJECT,
@@ -98,6 +101,35 @@ class MembershipActivationFlowIntegrationTest {
         }
         adminId = identities.findByCpf(cpf).orElseThrow().id();
         admin = "Bearer " + json(login(cpf, PASSWORD).andExpect(status().isOk()), "$.accessToken");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void pendingFirstAccessRejectsAllRegistryCreationAndStillAllowsReversal(boolean temporary) throws Exception {
+        Long application=submit(nextCpf());
+        if(temporary) mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password",application)
+                .header("Authorization",admin)).andExpect(status().isOk());
+        else approve(application).andExpect(status().isOk());
+        Long user=applications.findById(application).orElseThrow().getCreatedUserId();
+        assertThat(identities.findById(user).orElseThrow().administrativelyActive()).isTrue();
+        assertThat(accounts.findById(user).orElseThrow().getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        var before=registrySnapshot();
+        mvc.perform(put("/admin/members/by-identity/{id}",user).header("Authorization",admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"membershipNumber\":\"526900\",\"reason\":\"Verified historical number\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(post("/admin/members/by-identity/{id}/generate",user).header("Authorization",admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"ONBOARDING_COMPLETED\"}"))
+                .andExpect(status().isConflict());
+        var rows=java.util.List.of(new com.jeepclub.backend.memberships.core.application.result.MemberImportRow(user,"526900",true,"synthetic-eligibility"));
+        var preview=registryImporter.dryRun(rows,adminId,"Synthetic eligibility");
+        assertThat(preview.rows()).extracting(r -> r.outcome()).doesNotContain("READY");
+        registryImporter.apply(rows,adminId,"Synthetic eligibility",preview.dryRunToken());
+        assertThat(registryQuery.byIdentityUserId(user)).isEmpty();
+        assertThat(registrySnapshot()).isEqualTo(before);
+        reject(application,false).andExpect(status().isNoContent());
+        assertThat(identities.findById(user)).isEmpty();
+        assertThat(accounts.existsById(user)).isFalse();
+        assertThat(registrySnapshot()).isEqualTo(before);
     }
 
     @Test
@@ -599,6 +631,51 @@ class MembershipActivationFlowIntegrationTest {
             assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.REJECTED);
             assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM membership_activation_tokens WHERE application_id=? AND used_at IS NULL",Long.class,id)).isZero();
             assertThat(identities.findById(user)).isEmpty();
+        } finally { release.countDown();executor.shutdownNow(); }
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"false,false","true,false","false,true","true,true"})
+    void registryGenerationWaitsForActivationCommitOrRejectsAfterActivationRollback(boolean temporary,boolean rollback) throws Exception {
+        String cpf=nextCpf();Long application=submit(cpf);String credential;
+        if(temporary) {
+            String password=json(mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password",application)
+                    .header("Authorization",admin)).andExpect(status().isOk()),"$.temporaryPassword");
+            credential=json(login(cpf,password).andExpect(status().isOk()),"$.passwordChangeToken");
+        } else { approve(application).andExpect(status().isOk());credential=deliveredToken(1); }
+        Long user=applications.findById(application).orElseThrow().getCreatedUserId();
+        var before=registrySnapshot();var applied=new java.util.concurrent.CountDownLatch(1);var release=new java.util.concurrent.CountDownLatch(1);
+        var generationStarted=new java.util.concurrent.CountDownLatch(1);
+        var executor=java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var completion=executor.submit(() -> new org.springframework.transaction.support.TransactionTemplate(transactionManager).execute(status -> {
+                if(temporary) authentication.completeRequiredPasswordChange(credential,PASSWORD);else activation.complete(credential,PASSWORD);
+                applied.countDown();await(release);if(rollback)status.setRollbackOnly();return true;
+            }));
+            assertThat(applied.await(20,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            var generation=executor.submit(() -> {
+                generationStarted.countDown();
+                try { return registryAdmin.generate(user,adminId,"Administrative generation"); }
+                catch(com.jeepclub.backend.memberships.core.domain.exception.MemberRegistryException conflict) { return conflict.getKind(); }
+            });
+            assertThat(generationStarted.await(10,java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> generation.get(200,java.util.concurrent.TimeUnit.MILLISECONDS)).isInstanceOf(java.util.concurrent.TimeoutException.class);
+            assertThat(registryQuery.byIdentityUserId(user)).isEmpty();
+            release.countDown();completion.get(20,java.util.concurrent.TimeUnit.SECONDS);
+            Object result=generation.get(20,java.util.concurrent.TimeUnit.SECONDS);
+            if(rollback) {
+                assertThat(result).isEqualTo(com.jeepclub.backend.memberships.core.domain.exception.MemberRegistryException.Kind.CONFLICT);
+                assertThat(registrySnapshot()).isEqualTo(before);
+                assertThat(accounts.findById(user).orElseThrow().getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+                reject(application,false).andExpect(status().isNoContent());
+            } else {
+                assertThat(result).isInstanceOf(com.jeepclub.backend.memberships.core.domain.model.Member.class);
+                assertThat(jdbc.queryForObject("select count(*) from membership_members where identity_user_id=?",Long.class,user)).isEqualTo(1);
+                var member=registryQuery.byIdentityUserId(user).orElseThrow();
+                assertThat(jdbc.queryForObject("select count(*) from membership_number_claims where member_id=?",Long.class,member.memberId())).isEqualTo(1);
+                assertThat(jdbc.queryForObject("select count(*) from membership_member_audits where member_id=?",Long.class,member.memberId())).isEqualTo(1);
+                reject(application,false).andExpect(status().isConflict());
+            }
         } finally { release.countDown();executor.shutdownNow(); }
     }
 

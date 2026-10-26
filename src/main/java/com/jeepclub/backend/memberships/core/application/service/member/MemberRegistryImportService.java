@@ -12,6 +12,7 @@ import java.util.*;
 public class MemberRegistryImportService {
     private final MemberRepository members;
     private final MemberIdentityPort identities;
+    private final MemberAuthenticationEligibility authentication;
     private final MemberImportProofPort proof;
     private final AdminMemberService admin;
     private final MemberImportApplicationPolicy policy;
@@ -53,6 +54,7 @@ public class MemberRegistryImportService {
             else {
                 var current=members.byIdentity(r.identityUserId());
                 outcome=current.isPresent() ? (current.get().membershipNumber().equals(new MembershipNumber(r.membershipNumber()).value())?"ALREADY_LINKED":"IDENTITY_ALREADY_LINKED")
+                        : !authentication.hasCompletedFirstAccess(r.identityUserId())?"FIRST_ACCESS_INCOMPLETE"
                         : members.claimed(key)?"NUMBER_UNAVAILABLE":"READY";
             }
             result.add(new MemberImportReport.Row(i,outcome));

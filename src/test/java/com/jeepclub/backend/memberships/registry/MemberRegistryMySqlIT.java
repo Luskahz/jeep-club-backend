@@ -37,6 +37,32 @@ class MemberRegistryMySqlIT extends MemberRegistryScenarios {
         assertThatThrownBy(() -> jdbc.update("delete from identity_users where id=?",first)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(admin.byIdentity(first)).isEqualTo(before);assertThat(audits.count()).isEqualTo(auditCount);assertThat(claims.count()).isEqualTo(claimCount);
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void authenticationEligibilityUsesCurrentLockingStateAfterEarlierRepeatableReadSnapshot(boolean activated) throws Exception {
+        jdbc.update("update authentication_accounts set credential_status=? where identity_id=?",activated?"PENDING_FIRST_ACCESS":"PERMANENT",first);
+        var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            tx.executeWithoutResult(status -> {
+                assertThat(authenticationEligibility.hasCompletedFirstAccess(first)).isEqualTo(!activated);
+                try {
+                    executor.submit(() -> new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(other -> {
+                        jdbc.queryForList("select id from identity_users where id=? for update",first);
+                        jdbc.update("update authentication_accounts set credential_status=? where identity_id=?",activated?"PERMANENT":"PENDING_FIRST_ACCESS",first);
+                    })).get(30,java.util.concurrent.TimeUnit.SECONDS);
+                } catch(Exception failure) { throw new IllegalStateException(failure); }
+                if(activated) assertThat(admin.generate(first,first,"Current authentication read").membershipNumber()).isEqualTo("1");
+                else assertThatThrownBy(() -> admin.generate(first,first,"Stale eligibility must not pass"))
+                        .isInstanceOf(com.jeepclub.backend.memberships.core.domain.exception.MemberRegistryException.class);
+                if(!activated) status.setRollbackOnly(); // joined service deliberately rejected this transaction
+            });
+            assertThat(members.count()).isEqualTo(activated?1:0);
+            assertThat(claims.count()).isEqualTo(activated?1:0);
+            assertThat(audits.count()).isEqualTo(activated?1:0);
+        } finally { executor.shutdownNow(); }
+    }
     @Test void allSixRegistryPermissionsArePersistedByNormalCatalogSynchronization() {
         assertThat(jdbc.queryForObject("select count(*) from authorization_permissions where code in ('MEMBERSHIP_MEMBER_READ','MEMBERSHIP_MEMBER_REGISTRATION_MANAGE','MEMBERSHIP_MEMBER_AUDIT_READ','MEMBERSHIP_MEMBER_NUMBER_RESERVE','MEMBERSHIP_MEMBER_NUMBER_ISSUE','MEMBERSHIP_MEMBER_IMPORT')",Long.class)).isEqualTo(6);
     }

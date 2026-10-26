@@ -15,19 +15,21 @@ import java.util.*;
 public class AdminMemberService {
     private final MemberRepository members;
     private final MemberIdentityPort identities;
+    private final MemberAuthenticationEligibility authentication;
     private final MemberIssuancePolicy policy;
     private final Clock clock;
 
     @Transactional public Member assign(Long userId, String number, Long actor, String reason) {
         validateActorReason(actor,reason); var n=new MembershipNumber(number);
         boolean active=identities.lockAndIsActive(userId);
+        boolean completed=authentication.lockAndHasCompletedFirstAccess(userId);
         members.lockRegistry();
         var existing=members.lockedByIdentity(userId);
         if(existing.isPresent()) {
             if(existing.get().membershipNumber().equals(n.value())) return existing.get();
             throw conflict();
         }
-        if(!active || members.claimedForUpdate(n.claimKey())) throw conflict();
+        if(!active || !completed || members.claimedForUpdate(n.claimKey())) throw conflict();
         return create(userId,n,actor,reason,"ASSIGN");
     }
     @Transactional public Member correct(Long userId, String number, long expectedVersion, Long actor, String reason) {
@@ -56,9 +58,11 @@ public class AdminMemberService {
     @Transactional public Member generate(Long userId, Long actor, String reason) {
         validateActorReason(actor,reason);
         if(!policy.enabled()) throw new MemberRegistryException(MemberRegistryException.Kind.DISABLED);
-        boolean active=identities.lockAndIsActive(userId); members.lockRegistry();
+        boolean active=identities.lockAndIsActive(userId);
+        boolean completed=authentication.lockAndHasCompletedFirstAccess(userId);
+        members.lockRegistry();
         var existing=members.lockedByIdentity(userId); if(existing.isPresent()) return existing.get();
-        if(!active) throw conflict();
+        if(!active || !completed) throw conflict();
         var next=members.greatestCurrentNumberForUpdate().map(java.math.BigInteger::new)
                 .orElse(java.math.BigInteger.ZERO).add(java.math.BigInteger.ONE);
         while(next.compareTo(MembershipNumber.MAX_VALUE)<=0) {

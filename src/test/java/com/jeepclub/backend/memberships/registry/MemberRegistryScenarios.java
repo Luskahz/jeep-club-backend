@@ -38,6 +38,8 @@ public abstract class MemberRegistryScenarios {
     @Autowired protected JdbcTemplate jdbc;
     @Autowired protected org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired protected UserQuery identities;
+    @Autowired protected com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository authenticationAccounts;
+    @MockitoSpyBean protected com.jeepclub.backend.memberships.core.port.MemberAuthenticationEligibility authenticationEligibility;
     @MockitoSpyBean protected UserMembershipNumberProjection projection;
     @Autowired protected EntityManagerFactory emf;
     private static final AtomicInteger SOURCE=new AtomicInteger(910000000);
@@ -49,14 +51,17 @@ public abstract class MemberRegistryScenarios {
         jdbc.update("delete from membership_member_audits");jdbc.update("delete from membership_number_claims");jdbc.update("delete from membership_members");
         first=identity();second=identity();
     }
-    @AfterEach void resetFaults() { reset(audits); }
+    @AfterEach void resetFaults() { reset(audits,authenticationEligibility); }
     protected Long identity() {
         var key=new GeneratedKeyHolder();String cpf=cpf(SOURCE.incrementAndGet());
         jdbc.update(connection -> {
             var statement=connection.prepareStatement("insert into identity_users(name,cpf,status,created_at) values(?,?,'ACTIVE',?)",Statement.RETURN_GENERATED_KEYS);
             statement.setString(1,"Synthetic registry fixture");statement.setString(2,cpf);statement.setTimestamp(3,java.sql.Timestamp.from(Instant.now()));return statement;
         },key);
-        return key.getKey().longValue();
+        Long id=key.getKey().longValue();
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                authenticationAccounts.create(com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount.create(id,"synthetic-test-hash",Instant.now())));
+        return id;
     }
     protected static String cpf(int value) {
         String digits=String.format("%09d",value);
@@ -64,6 +69,41 @@ public abstract class MemberRegistryScenarios {
         return digits;
     }
     private String number() { return "7"+first+"00"; }
+    @Test void missingAuthenticationAndPendingCredentialCannotCreateRegistryArtifacts() {
+        jdbc.update("delete from authentication_accounts where identity_id=?",first);
+        jdbc.update("update authentication_accounts set credential_status='PENDING_FIRST_ACCESS' where identity_id=?",second);
+        var sequence=jdbc.queryForList("select * from membership_registry_sequence");
+        for(Long user:List.of(first,second)) {
+            assertThat(attempt(() -> admin.assign(user,"27",first,"ONBOARDING_COMPLETED"))).isEqualTo("CONFLICT");
+            assertThat(attempt(() -> admin.generate(user,user,"ONBOARDING_COMPLETED"))).isEqualTo("CONFLICT");
+            assertThat(attempt(() -> admin.issueOnCompletion(user))).isEqualTo("CONFLICT");
+            var plan=importer.dryRun(List.of(row(user,"27")),first,"Synthetic source");
+            assertThat(plan.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("FIRST_ACCESS_INCOMPLETE");
+            assertThat(importer.apply(List.of(row(user,"27")),first,"Synthetic source",plan.dryRunToken()).rows())
+                    .extracting(MemberImportReport.Row::outcome).containsExactly("FIRST_ACCESS_INCOMPLETE");
+        }
+        assertThat(members.count()).isZero();assertThat(claims.count()).isZero();assertThat(audits.count()).isZero();
+        assertThat(jdbc.queryForList("select * from membership_registry_sequence")).isEqualTo(sequence);
+    }
+    @Test void importRevalidatesAuthenticationAtWriteEvenWhenPreviewIsStale() {
+        var rows=List.of(row(first,"27"));var plan=importer.dryRun(rows,first,"Synthetic source");
+        assertThat(plan.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("READY");
+        jdbc.update("update authentication_accounts set credential_status='PENDING_FIRST_ACCESS' where identity_id=?",first);
+        // Reproduce a stale nonlocking snapshot in both dry-run and apply preview.
+        doReturn(true).when(authenticationEligibility).hasCompletedFirstAccess(first);
+        assertThat(importer.apply(rows,first,"Synthetic source",plan.dryRunToken()).rows())
+                .extracting(MemberImportReport.Row::outcome).containsExactly("CONFLICT");
+        assertThat(members.count()).isZero();assertThat(claims.count()).isZero();assertThat(audits.count()).isZero();
+    }
+    @Test void existingMembershipRemainsIdempotentAndCorrectableWithoutAuthenticationEligibility() {
+        var original=admin.assign(first,"27",first,"Verified source");
+        jdbc.update("delete from authentication_accounts where identity_id=?",first);
+        assertThat(admin.assign(first,"027",first,"Retry")).isEqualTo(original);
+        assertThat(admin.generate(first,first,"Retry")).isEqualTo(original);
+        assertThat(admin.correct(first,"28",original.version(),first,"Historical correction").membershipNumber()).isEqualTo("28");
+        assertThat(admin.byNumber("28").id()).isEqualTo(original.id());
+        assertThat(admin.history(first,PageRequest.of(0,20)).getTotalElements()).isEqualTo(2);
+    }
     @Test void dynamicCorrectionPreservesBothIdsIdentityAndAudit() {
         var before=identities.findById(first).orElseThrow();
         var member=admin.assign(first,"027",first,"Synthetic verified source");

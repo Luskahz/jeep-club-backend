@@ -99,6 +99,24 @@ BACK-523 conserva rejeição PENDING e reversão APPROVED somente antes do prime
 acesso; COMPLETED é recusado. BACK-512 mantém os guards de lifecycle e retenção.
 Authentication, Authorization e Billing não ganham dependência obrigatória de Member.
 
+Criação de Member por PUT, geração administrativa ou importação exige também
+Authentication com credencial `PERMANENT`, além de Identity administrativamente
+ativa. `PENDING_FIRST_ACCESS`, conta ausente e `CHANGE_REQUIRED` não comprovam a
+efetivação e recusam nova atribuição com 409; nenhum Member, claim, número ou audit
+de sucesso é gravado. `CHANGE_REQUIRED` também pode resultar de recuperação de
+uma conta ainda pendente; concluir a troca antes de criar Member. Provisionamento
+legítimo com credencial permanente fora de MembershipApplication é elegível,
+sem exigir aplicação COMPLETED nem login anterior.
+
+O port `MemberAuthenticationEligibility` é implementado dentro de Authentication,
+sem expor entidades/tabelas ao Memberships. Comandos mantêm locks na ordem Identity
+→ Authentication → mutex Registry; a leitura corrente da conta revalida a situação
+após esperas e snapshots MySQL RR. Nos dois primeiros acessos Authentication salva
+`PERMANENT` antes da emissão, na mesma transação: a consulta bloqueante faz flush
+e vê essa alteração. Não existe bypass por reason, ator ou endpoint interno.
+Idempotência de vínculo vigente, consultas e correções históricas não exigem nova
+elegibilidade. A mudança não altera a política numérica nem a migration V10.
+
 Legado: cadastrar normalmente, concluir primeiro acesso, consultar o registro
 histórico e corrigir administrativamente com versão/motivo. A matrícula automática
 anterior fica livre. Não há necessidade de planilha, importação operacional ou backfill.
@@ -109,6 +127,11 @@ ator/payload de 15 minutos e local ao processo. Apply revalida cada unidade em s
 transação; conflitos não sobrescrevem titulares. 027/27 são duplicidade canônica.
 Reprocessamento é idempotente; payload alterado exige novo dry-run. Reports por
 índice/outcome não ecoam linhas pessoais. Apply continua false por padrão.
+
+Para nova associação, dry-run informa `FIRST_ACCESS_INCOMPLETE` quando a conta
+Authentication não comprova efetivação (inclusive ausente), sem classificar READY.
+Apply refaz a prévia e `assign` repete a verificação sob lock na escrita; uma prévia
+desatualizada não autoriza a atribuição e resulta em conflito sem resíduos.
 
 ## Configuração e banco
 

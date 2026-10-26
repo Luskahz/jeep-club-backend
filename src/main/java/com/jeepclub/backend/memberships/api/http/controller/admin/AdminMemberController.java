@@ -29,7 +29,7 @@ import org.springframework.data.web.SortDefault;
     @ApiResponse(responseCode="401",description="Não autenticado.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
     @ApiResponse(responseCode="403",description="Permission ausente.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
     @ApiResponse(responseCode="404",description="Registro ou Identity não encontrado.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class))),
-    @ApiResponse(responseCode="409",description="Matrícula ocupada/reservada, vínculo, versão ou intervalo esgotado.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class)))
+    @ApiResponse(responseCode="409",description="Matrícula ocupada/reservada, vínculo, versão, intervalo esgotado ou Authentication ainda sem credencial definitiva para novo Member.",content=@Content(mediaType="application/problem+json",schema=@Schema(implementation=ApiErrorResponse.class)))
 })
 public class AdminMemberController {
     @ModelAttribute
@@ -52,7 +52,7 @@ public class AdminMemberController {
     @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_READ')")
     @RequiredPermission("MEMBERSHIP_MEMBER_READ")
     public MemberResponseDTO get(@PathVariable @Positive Long userId) { return MemberResponseDTO.from(service.byIdentity(userId)); }
-    @PutMapping("/by-identity/{userId}") @Operation(summary="Vincular Identity a matrícula histórica",description="Atribuição explícita. Repetir a mesma matrícula vigente é idempotente. Identity desativada não recebe novo vínculo.")
+    @PutMapping("/by-identity/{userId}") @Operation(summary="Vincular Identity a matrícula histórica",description="Atribuição explícita exige Identity ativa e Authentication com credencial definitiva, após primeiro acesso ou provisionamento permanente legítimo. Aprovação pendente não basta. Repetir a mesma matrícula vigente é idempotente.")
     @ApiResponse(responseCode="200",description="Registro criado ou vínculo idêntico preservado.")
     @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_REGISTRATION_MANAGE')")
     @RequiredPermission("MEMBERSHIP_MEMBER_REGISTRATION_MANAGE")
@@ -74,7 +74,7 @@ public class AdminMemberController {
         if(page.getPageSize()>50 || page.getOffset()>Integer.MAX_VALUE || page.getSort().stream().anyMatch(o -> !o.getProperty().equals("id"))) throw new MemberRegistryException(MemberRegistryException.Kind.INVALID);
         return PageResponse.from(service.history(userId,PageRequest.of(page.getPageNumber(),page.getPageSize())).map(MemberAuditResponseDTO::from));
     }
-    @PostMapping("/by-identity/{userId}/generate") @Operation(summary="Emitir matrícula a partir do maior número vigente",description="Exige emissão habilitada e autorização operacional. Usa maior matrícula vigente + 1, ou 1 sem Members, sob lock central e leitura numérica corrente; pula reservas explícitas. Repetição retorna vínculo vigente.")
+    @PostMapping("/by-identity/{userId}/generate") @Operation(summary="Emitir matrícula a partir do maior número vigente",description="Exige emissão habilitada, autorização operacional e Authentication com credencial definitiva para novo Member. Usa maior matrícula vigente + 1, ou 1 sem Members, sob lock central e leitura numérica corrente; pula reservas explícitas. Repetição retorna vínculo vigente.")
     @ApiResponse(responseCode="200",description="Matrícula emitida ou existente.")
     @PreAuthorize("hasAuthority('MEMBERSHIP_MEMBER_NUMBER_ISSUE')")
     @RequiredPermission("MEMBERSHIP_MEMBER_NUMBER_ISSUE")
