@@ -1,5 +1,9 @@
 # BACK-526 — auditoria de finalização
 
+> Registro histórico anterior à homologação de 26/10/2026. As regras antigas
+> de claims permanentes, formato opaco e contador crescente foram substituídas.
+> Política e resultados atuais: [BACK-526 numérica](back-526-numeric-policy.md).
+
 ## Baseline e método
 
 Auditoria de 25/10/2026, antes de alterações de código: `origin/master` e

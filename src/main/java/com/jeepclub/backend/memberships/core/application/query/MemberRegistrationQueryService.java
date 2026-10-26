@@ -18,7 +18,6 @@ public class MemberRegistrationQueryService implements MemberRegistrationQuery {
         return members.byIdentities(new HashSet<>(ids)).stream().collect(Collectors.toUnmodifiableMap(m -> m.identityUserId(), m -> m.membershipNumber()));
     }
     public Optional<MemberRegistration> byCurrentMembershipNumber(String number) {
-        new MembershipNumber(number);
-        return members.byNumber(number).map(m -> new MemberRegistration(m.id(),m.identityUserId(),m.membershipNumber()));
+        return members.byNumber(new MembershipNumber(number).value()).map(m -> new MemberRegistration(m.id(),m.identityUserId(),m.membershipNumber()));
     }
 }

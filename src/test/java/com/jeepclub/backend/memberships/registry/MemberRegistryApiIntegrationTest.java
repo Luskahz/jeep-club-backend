@@ -51,6 +51,29 @@ class MemberRegistryApiIntegrationTest {
     }
     private Actor admin() { return actor(PermissionCode.MEMBERSHIP_MEMBER_REGISTRATION_MANAGE,PermissionCode.MEMBERSHIP_MEMBER_READ,PermissionCode.MEMBERSHIP_MEMBER_AUDIT_READ,PermissionCode.MEMBERSHIP_MEMBER_NUMBER_RESERVE,PermissionCode.MEMBERSHIP_MEMBER_NUMBER_ISSUE,PermissionCode.MEMBERSHIP_MEMBER_IMPORT,PermissionCode.IDENTITY_USER_READ,PermissionCode.IDENTITY_USER_EXPORT); }
     private String assignment(String number) { return "{\"membershipNumber\":\""+number+"\",\"reason\":\"Synthetic verified source\"}"; }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"0","000","-1","+1","A27","27.0","1e3"})
+    void invalidNumericNumbersAre400ForAssignmentAndLookup(String value) throws Exception {
+        var a=admin();var target=actor();
+        mvc.perform(put("/admin/members/by-identity/{id}",target.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON)
+                .content(assignment(value))).andExpect(status().isBadRequest());
+        mvc.perform(get("/admin/members/by-number").param("membershipNumber",value).header("Authorization",a.token())).andExpect(status().isBadRequest());
+        assertThat(query.byIdentityUserId(target.id())).isEmpty();
+    }
+    @Test void numericAliasIsCanonicalIdempotentAndVersionConflictRemains409() throws Exception {
+        var a=admin();var target=actor();String number="55"+target.id();
+        mvc.perform(put("/admin/members/by-identity/{id}",target.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON)
+                .content(assignment("000"+number))).andExpect(status().isOk()).andExpect(jsonPath("$.membershipNumber").value(number));
+        mvc.perform(put("/admin/members/by-identity/{id}",target.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON)
+                .content(assignment(number))).andExpect(status().isOk());
+        mvc.perform(get("/admin/members/by-number").param("membershipNumber","00"+number).header("Authorization",a.token()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.identityUserId").value(target.id()));
+        var before=registry.byIdentity(target.id());registry.correct(target.id(),number+"1",before.version(),a.id(),"Synthetic correction");
+        mvc.perform(patch("/admin/members/by-identity/{id}/membership-number",target.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"membershipNumber\":\""+number+"2\",\"expectedVersion\":"+before.version()+",\"reason\":\"Stale\"}"))
+                .andExpect(status().isConflict());
+        assertThat(registry.history(target.id(),org.springframework.data.domain.PageRequest.of(0,20)).getTotalElements()).isEqualTo(2);
+    }
     @Test void authenticationAndPermissionAreEnforcedByRealSecurity() throws Exception {
         mvc.perform(get("/admin/members")).andExpect(status().isUnauthorized());
         var ordinary=actor();mvc.perform(get("/admin/members").header("Authorization",ordinary.token())).andExpect(status().isForbidden());
@@ -58,7 +81,7 @@ class MemberRegistryApiIntegrationTest {
         mvc.perform(get("/admin/members/by-identity/{id}/history",ordinary.id()).header("Authorization",ordinary.token())).andExpect(status().isForbidden());
     }
     @Test void assignmentCorrectionAndAllIdentityReadsResolveCurrentNumber() throws Exception {
-        var a=admin();var member=actor();String old="API-"+member.id()+"-027",updated="API-"+member.id()+"-037";
+        var a=admin();var member=actor();String old="31"+member.id(),updated="32"+member.id();
         var before=users.findById(member.id()).orElseThrow();
         String response=mvc.perform(put("/admin/members/by-identity/{id}",member.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(old)))
             .andExpect(status().isOk()).andExpect(jsonPath("$.identityUserId").value(member.id())).andReturn().getResponse().getContentAsString();
@@ -81,8 +104,8 @@ class MemberRegistryApiIntegrationTest {
     @Test void invalidNotFoundAndUniquenessErrorsAreSanitized() throws Exception {
         var a=admin();var target=actor();
         mvc.perform(put("/admin/members/by-identity/{id}",target.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(" "))).andExpect(status().isBadRequest());
-        mvc.perform(put("/admin/members/by-identity/{id}",Long.MAX_VALUE).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment("UNKNOWN"))).andExpect(status().isNotFound());
-        String number="CONF-"+target.id();registry.assign(target.id(),number,a.id(),"Synthetic source");
+        mvc.perform(put("/admin/members/by-identity/{id}",Long.MAX_VALUE).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment("999999999999999999999"))).andExpect(status().isNotFound());
+        String number="33"+target.id();registry.assign(target.id(),number,a.id(),"Synthetic source");
         mvc.perform(put("/admin/members/by-identity/{id}",a.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(number)))
             .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBER_REGISTRY_CONFLICT"))
             .andExpect(content().string(org.hamcrest.Matchers.not(containsString("insert into"))));
@@ -90,14 +113,14 @@ class MemberRegistryApiIntegrationTest {
             .andExpect(status().isBadRequest());
     }
     @Test void reservedNumberCannotBeAssignedAndGenerationIsDisabledByDefault() throws Exception {
-        var a=admin();String number="RES-"+a.id();
+        var a=admin();String number="34"+a.id();
         mvc.perform(post("/admin/members/reservations").header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(number))).andExpect(status().isCreated());
         mvc.perform(put("/admin/members/by-identity/{id}",a.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(number))).andExpect(status().isConflict());
         mvc.perform(post("/admin/members/by-identity/{id}/generate",a.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Test\"}")).andExpect(status().isConflict());
         assertThat(query.byIdentityUserId(a.id())).isEmpty();
     }
     @Test void importRequiresPreviewAndReusesRealAdministrativeTransactions() throws Exception {
-        var a=admin();var target=actor();String rows="\"rows\":[{\"identityUserId\":"+target.id()+",\"membershipNumber\":\"IMP-"+target.id()+"\",\"administrativelyConfirmed\":true,\"sourceReference\":\"synthetic-verified-reference\"}],\"reason\":\"Synthetic source\"";
+        var a=admin();var target=actor();String rows="\"rows\":[{\"identityUserId\":"+target.id()+",\"membershipNumber\":\"35"+target.id()+"\",\"administrativelyConfirmed\":true,\"sourceReference\":\"synthetic-verified-reference\"}],\"reason\":\"Synthetic source\"";
         mvc.perform(post("/admin/members/imports/apply").header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content("{"+rows+"}" )).andExpect(status().isBadRequest());
         var result=mvc.perform(post("/admin/members/imports/dry-run").header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content("{"+rows+"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.rows[0].outcome").value("READY")).andReturn().getResponse().getContentAsString();
@@ -119,7 +142,7 @@ class MemberRegistryApiIntegrationTest {
     }
 
     @Test void fieldsSelectMembershipWithoutExposingAuxiliaryId() throws Exception {
-        var a=admin(); var target=actor(); String number="FIELDS-"+target.id()+"-027";
+        var a=admin(); var target=actor(); String number="36"+target.id();
         var member=registry.assign(target.id(),number,a.id(),"Synthetic source");
         for(String fields:java.util.List.of("MEMBERSHIP_NUMBER","NAME,MEMBERSHIP_NUMBER")) {
             var response=mvc.perform(get("/identity/admin/users").param("id",target.id().toString()).param("fields",fields)
@@ -135,12 +158,12 @@ class MemberRegistryApiIntegrationTest {
         mvc.perform(get("/identity/admin/users").param("id",a.id().toString()).param("fields","MEMBERSHIP_NUMBER")
                 .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").doesNotExist())
                 .andExpect(jsonPath("$.content[0].membershipNumber").doesNotExist());
-        registry.correct(target.id(),number+"X",member.version(),a.id(),"Synthetic correction");
+        registry.correct(target.id(),number+"1",member.version(),a.id(),"Synthetic correction");
         mvc.perform(get("/identity/admin/users").param("id",target.id().toString()).param("fields","MEMBERSHIP_NUMBER")
-                .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].membershipNumber").value(number+"X"));
+                .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].membershipNumber").value(number+"1"));
     }
     @Test void membershipSearchComposesFiltersAndUsesOnlyCurrentNumber() throws Exception {
-        var a=admin();var target=actor();String number="LOOKUP-"+target.id()+"-027";
+        var a=admin();var target=actor();String number="37"+target.id();
         var member=registry.assign(target.id(),number,a.id(),"Synthetic source");
         for(String key:java.util.List.of("membershipNumber","q")) {
             mvc.perform(get("/identity/admin/users").param(key,number).param("name","Synthetic").param("status","ACTIVE")
@@ -156,22 +179,22 @@ class MemberRegistryApiIntegrationTest {
                 .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1)).andExpect(jsonPath("$.empty").value(true));
         mvc.perform(get("/identity/admin/users").param("membershipNumber",number).param("id",a.id().toString())
                 .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
-        registry.correct(target.id(),number+"X",member.version(),a.id(),"Synthetic correction");
+        registry.correct(target.id(),number+"1",member.version(),a.id(),"Synthetic correction");
         for(String key:java.util.List.of("membershipNumber","q")) {
             mvc.perform(get("/identity/admin/users").param(key,number).header("Authorization",a.token()))
                     .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
-            mvc.perform(get("/identity/admin/users").param(key,number+"X").header("Authorization",a.token()))
-                    .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].membershipNumber").value(number+"X"));
+            mvc.perform(get("/identity/admin/users").param(key,number+"1").header("Authorization",a.token()))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].membershipNumber").value(number+"1"));
         }
-        mvc.perform(get("/identity/admin/users").param("membershipNumber","UNKNOWN-SYNTHETIC")
+        mvc.perform(get("/identity/admin/users").param("membershipNumber","999999999999999999999")
                 .header("Authorization",a.token())).andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
         mvc.perform(get("/identity/admin/users").param("sort","membershipNumber,asc").header("Authorization",a.token())).andExpect(status().isBadRequest());
-        mvc.perform(get("/identity/admin/users").param("membershipNumber",number+"X").header("Authorization",actor().token())).andExpect(status().isForbidden());
+        mvc.perform(get("/identity/admin/users").param("membershipNumber",number+"1").header("Authorization",actor().token())).andExpect(status().isForbidden());
     }
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value=PermissionCode.class,names={"MEMBERSHIP_MEMBER_READ","MEMBERSHIP_MEMBER_REGISTRATION_MANAGE","MEMBERSHIP_MEMBER_AUDIT_READ","MEMBERSHIP_MEMBER_NUMBER_RESERVE","MEMBERSHIP_MEMBER_NUMBER_ISSUE","MEMBERSHIP_MEMBER_IMPORT"})
     void isolatedRegistryPermissionsDoNotGrantOtherOperations(PermissionCode code) throws Exception {
-        var a=actor(code);String number="RBAC-"+a.id();registry.assign(a.id(),number,a.id(),"Synthetic source");
+        var a=actor(code);String number="38"+a.id();registry.assign(a.id(),number,a.id(),"Synthetic source");
         mvc.perform(get("/admin/members").header("Authorization",a.token())).andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_READ?200:403));
         mvc.perform(put("/admin/members/by-identity/{id}",a.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(number)))
                 .andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_REGISTRATION_MANAGE?200:403));
@@ -180,7 +203,7 @@ class MemberRegistryApiIntegrationTest {
                 .andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_REGISTRATION_MANAGE?200:403));
         mvc.perform(get("/admin/members/by-identity/{id}/history",a.id()).header("Authorization",a.token()))
                 .andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_AUDIT_READ?200:403));
-        mvc.perform(post("/admin/members/reservations").header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(number+"R")))
+        mvc.perform(post("/admin/members/reservations").header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(assignment(number+"2")))
                 .andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_NUMBER_RESERVE?201:403));
         mvc.perform(post("/admin/members/by-identity/{id}/generate",a.id()).header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Synthetic\"}"))
                 .andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_NUMBER_ISSUE?409:403));
@@ -191,13 +214,13 @@ class MemberRegistryApiIntegrationTest {
                 .andExpect(status().is(code==PermissionCode.MEMBERSHIP_MEMBER_IMPORT?400:403));
     }
     @Test void exportPrioritizesCurrentBusinessNumberAndOffersTechnicalCompatibility() throws Exception {
-        var a=admin();var target=actor();String number="EXPORT-"+target.id()+"-027";
+        var a=admin();var target=actor();String number="39"+target.id();
         var member=registry.assign(target.id(),number,a.id(),"Synthetic source");
-        registry.correct(target.id(),number+"X",member.version(),a.id(),"Synthetic correction");
+        registry.correct(target.id(),number+"1",member.version(),a.id(),"Synthetic correction");
         for(String layout:java.util.List.of("MEMBER","TECHNICAL")) {
             var csv=mvc.perform(get("/identity/admin/users/export").param("id",target.id().toString()).param("layout",layout)
                     .header("Authorization",a.token())).andExpect(status().isOk()).andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
-            assertThat(csv).contains(number+"X");
+            assertThat(csv).contains(number+"1");
             String header=csv.lines().findFirst().orElseThrow().replace("\uFEFF","").replace("\"","");
             if(layout.equals("MEMBER"))assertThat(header).startsWith("Matrícula;").endsWith("ID técnico");
             else assertThat(header).startsWith("ID;Matrícula;Nome;");
@@ -205,7 +228,7 @@ class MemberRegistryApiIntegrationTest {
                     .header("Authorization",a.token())).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
             try(var pdf=org.apache.pdfbox.Loader.loadPDF(bytes)) {
                 String text=new org.apache.pdfbox.text.PDFTextStripper().getText(pdf);
-                assertThat(text).contains(number+"X","Matrícula");
+                assertThat(text).contains(number+"1","Matrícula");
                 if(layout.equals("MEMBER"))assertThat(text.indexOf("Matrícula")).isLessThan(text.lastIndexOf("ID técnico"));
             }
         }
@@ -215,7 +238,7 @@ class MemberRegistryApiIntegrationTest {
     }
     @Test void lifecycleAndRegistrationChangesPreserveRegistryAndClaims() throws Exception {
         var a=actor(PermissionCode.IDENTITY_USER_UPDATE,PermissionCode.IDENTITY_USER_DISABLE,PermissionCode.IDENTITY_USER_ENABLE);
-        var target=actor();String number="LIFE-"+target.id();registry.assign(target.id(),number,a.id(),"Synthetic source");var before=registry.byIdentity(target.id());
+        var target=actor();String number="40"+target.id();registry.assign(target.id(),number,a.id(),"Synthetic source");var before=registry.byIdentity(target.id());
         mvc.perform(patch("/identity/admin/users/{id}/disable",target.id()).header("Authorization",a.token())).andExpect(status().isOk());
         assertThat(registry.byIdentity(target.id())).isEqualTo(before);
         mvc.perform(patch("/identity/admin/users/{id}/enable",target.id()).header("Authorization",a.token())).andExpect(status().isOk());
@@ -234,7 +257,7 @@ class MemberRegistryApiIntegrationTest {
             assertThat(rolePermissions.existsByRoleIdAndPermissionId(root,permissions.findByCode(code).orElseThrow().getId())).isTrue();
         var custom=actor(PermissionCode.MEMBERSHIP_MEMBER_REGISTRATION_MANAGE);
         rootBootstrap.ensureRootRole();
-        mvc.perform(post("/admin/members/reservations").header("Authorization",custom.token()).contentType(MediaType.APPLICATION_JSON).content(assignment("ROOT-CHECK-"+custom.id())))
+        mvc.perform(post("/admin/members/reservations").header("Authorization",custom.token()).contentType(MediaType.APPLICATION_JSON).content(assignment("41"+custom.id())))
                 .andExpect(status().isForbidden());
     }
     @Test void openApiDocumentsEveryOperationPermissionAndFieldSelection() throws Exception {
@@ -257,7 +280,7 @@ class MemberRegistryApiIntegrationTest {
     }
     @Test void importOnlyPermissionAppliesConfirmedRowsButNotMissingDeclaration() throws Exception {
         var a=actor(PermissionCode.MEMBERSHIP_MEMBER_IMPORT);var target=actor();
-        String row="{\"identityUserId\":"+target.id()+",\"membershipNumber\":\"IMPORT-ONLY-"+target.id()+"\",\"sourceReference\":\"synthetic/v1/line-1\"}";
+        String row="{\"identityUserId\":"+target.id()+",\"membershipNumber\":\"42"+target.id()+"\",\"sourceReference\":\"synthetic/v1/line-1\"}";
         String missing="{\"rows\":["+row+"],\"reason\":\"Synthetic source\"}";
         mvc.perform(post("/admin/members/imports/dry-run").header("Authorization",a.token()).contentType(MediaType.APPLICATION_JSON).content(missing))
                 .andExpect(status().isBadRequest());

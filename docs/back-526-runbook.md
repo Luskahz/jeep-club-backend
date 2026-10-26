@@ -1,59 +1,38 @@
-# BACK-526 — runbook após release #112
+# BACK-526 — runbook da política numérica (26/10/2026)
 
-Referência de código auditada em 25/10/2026: master/develop
-`9ad04a71e50917e0a53c1c4855ea6770730bd8b9`. A release já inclui V1–V9, inclusive
-V4 Registry, V5 lifecycle (BACK-512) e V6 onboarding (BACK-523). Reconfirmar o SHA
-efetivamente instalado e a history real na janela autorizada. Não tratar baseline
-V3 e aplicação inicial de V4 como estado corrente presumido da VPS.
+Base auditada: develop 236c6715, com #104/#108/#113 integrados. V10 é a reconciliação
+incremental desta política; V1–V9 permanecem imutáveis. A solicitação homologa as
+regras, não autoriza merge, deploy, acesso à VPS, dados reais ou flags.
 
-Este runbook prepara operações futuras. Não houve deploy, leitura da VPS,
-importação real nem ativação de flags nesta missão. As três fases têm aprovação
-e evidências independentes. Merge para master dispara pipeline de produção e
-exige autorização específica; este PR para develop não a concede.
+## Fase 1 — preflight, backup e compatibilidade
 
-## Preparação e registro de evidências
+Responsável operacional registra janela, aprovador, SHA/imagem atual/candidata,
+configuração sanitizada, history/checksums Flyway e plano de recuperação. Parar
+todos os escritores antigos: as políticas antiga/nova não podem operar juntas.
+Obter backup consistente de SQL, uploads e configuração protegida, manifesto de
+hashes, cópia externa e retenção. Definir RTO/RPO com a operação, sem valores inventados.
 
-O responsável registra ticket/janela, operador e aprovador, SHA/imagem instalada
-e candidata, timestamps, configuração efetiva sanitizada, versões/checksums Flyway,
-resultado de backup/restore, gates e decisão GO/NO-GO. Não anexar dados de
-associados, env completo, credenciais, cookies ou tokens a GitHub/Jira.
+Restaurar backup autorizado em MySQL 8.0.46 isolado, com rede/portas/volumes próprios
+e sem SMTP/rotinas reais. Conferir fingerprints privados, contagens por categoria,
+history/checksums e integridade antes/depois. Testcontainers sintético não comprova
+restaurabilidade de backup produtivo; essa evidência continua operacional pendente.
 
-Antes de mutação autorizada: coordenar suspensão de escritores; obter backup
-consistente de MySQL, uploads e configuração protegida, com manifesto de hashes,
-local externo seguro, retenção, responsável e procedimento de recuperação.
-Dimensionar espaço, duração e RTO/RPO com a operação; esta entrega não inventa
-limites aceitáveis. A fonte histórica e os backups ficam fora do repositório.
+Antes de executar Flyway, obter **somente contagens sanitizadas** de:
 
-Ensaio obrigatório em ambiente isolado autorizado:
+- Members e reservas com literal fora de dígitos ASCII positivos (zero também inválido).
+- Colisões após remover zeros iniciais, entre Members e reservas explícitas.
+- Members sem claim correspondente ao mesmo memberId e número atual.
+- Claims retiradas e auditorias existentes, para conferência de preservação.
 
-1. Restaurar o backup em MySQL 8.0.46 com volumes, portas, rede e credenciais de
-   laboratório, sem ligação com produção, SMTP real ou rotinas externas.
-2. Conferir hashes do material restaurado e comparar schema, history/checksums,
-   contagens por tabela/categoria, fingerprints privados e invariantes relacionais
-   com o ponto do backup. Totais agregados não comprovam igualdade de registros.
-3. Subir a imagem do SHA candidato com Hibernate validate, sem emissão/import apply.
-   Executar Flyway normal somente para migrations realmente pendentes. Nesta revisão
-   não há migration nova; não recriar V4 nem editar V1–V9.
-4. Ensaiar interrupção e retomada no laboratório, preservar diagnóstico e medir
-   recuperação. Conferir que backup + uploads + configuração restauram juntos.
-5. Registrar resultados sanitizados, duração, divergências, limitações e aceite
-   operacional. Destruir cópias conforme política autorizada de retenção.
+Usar os mesmos predicados da V10 em consultas de leitura autorizadas. Não expor
+linhas/CPF/e-mail em Jira/logs. Qualquer incompatibilidade é NO-GO; não remover
+cadastros, inventar número ou converter texto alfanumérico por aproximação.
+Dados vigentes/reservas incompatíveis exigem plano de saneamento autorizado antes
+da migration; não se permite repair/clean/reset de baseline como recuperação.
 
-Os Testcontainers desta entrega usam apenas fixtures sintéticas. Não constituem
-restauração comprovada do backup ativo. Essa evidência permanece pendente.
-
-## Fase 1 — estrutura e compatibilidade
-
-Pré-condições: revisão/CI do SHA exato, configuração e catálogo de permissions
-conferidos, backup/restauração comprovados e autorização de publicação separada.
-
-Conferir history sem versões failed/pending inesperadas e checksums coerentes,
-schema das quatro tabelas Registry, UNIQUE de identity/number/claim, @Version,
-FKs restritivas e índice de audit. Validar via Hibernate `ddl-auto=validate`.
-Não usar update, clean, repair, alteração de baseline nem recriação de banco.
-V10 ou posterior só se uma mudança real de schema for demonstrada em outro PR.
-
-Manter ambas flags efetivas false:
+Remover configurações aposentadas INITIAL_NUMBER/WIDTH/PREFIX. O aplicativo
+recusa valores antigos explícitos, mesmo com emissão false; prefixo vazio é neutro.
+Manter as três flags efetivas false durante implantação:
 
 ```text
 MEMBERSHIPS_REGISTRY_ISSUANCE_ENABLED=false
@@ -61,143 +40,92 @@ MEMBERSHIPS_REGISTRY_ISSUANCE_APPROVED=false
 MEMBERSHIPS_REGISTRY_IMPORTS_APPLY_ENABLED=false
 ```
 
-Comparar Identity IDs, campos e referências de Authentication, Authorization,
-MembershipApplication e Billing antes/depois. Nenhum backfill, User novo ou
-renumeração deve ocorrer por startup. Members já existentes devem permanecer;
-não exigir tabelas vazias num ambiente que já tenha uso autorizado do Registry.
+Conferir que o usuário de migration possui CREATE ROUTINE, EXECUTE e ALTER ROUTINE
+para o procedimento auxiliar da V10, além das permissões DML/DDL usuais; não
+confundir com grants RBAC administrativos da aplicação.
 
-Smoke autorizado com contas/dados sintéticos de laboratório:
+Ensaiar Flyway normal da versão realmente instalada até V10, depois Hibernate
+ddl-auto=validate. A V10 não altera tipos, PK/FKs ou sequências técnicas. Sob lock,
+preflight precede DML; copia metadata de todas as claims para LEGACY_CLAIM_SNAPSHOT,
+remove apenas claims retiradas, canonicaliza Members/reservas e limpa contador
+legado. Se literal de Member mudar (027→27), version avança; clientes devem reler.
+Audits antigos, inclusive literais opacos históricos, permanecem intactos.
 
-| Verificação | Resultado esperado |
-| --- | --- |
-| Login e /authentication/me de legado sem Member | Acesso normal por userId; nenhuma matrícula artificial |
-| Perfil/detalhe/lista/export com e sem Member | Número vigente ou null/ausente/vazio conforme contrato |
-| Retificação sintética seguida de GET/lista/CSV/PDF | Número novo, IDs/relações financeiros intactos |
-| Sem autenticação / sem permission | 401 / 403 |
-| Entrada inválida / inexistente / colisão-versão-reserva | 400 / 404 / 409 |
-| CUSTOM sem grants de Registry | Nenhuma autoridade implícita |
-| Primeiro acesso nos dois métodos com emissão false | COMPLETED, sem consumo do contador nem Member automático |
-| Rejeição pendente e Member retido | BACK-523 reverte somente provisioning elegível; BACK-512 bloqueia DELETE de Member |
-| Apply com IMPORT mas flag false | 409 MEMBER_REGISTRY_IMPORT_DISABLED, sem escrita |
+Conferir Identity/Authentication/Authorization/Billing byte a byte nos campos
+anteriores; Members mantêm id/identityUserId, reservas seguem bloqueantes e audit
+contém todos os snapshots com ator/data/motivo originais. Não há criação de Member
+por startup. Reaplicar Flyway normal não duplica a migration.
 
-GO: integridade/validate/health/smokes aprovados e nenhuma diferença indevida.
-NO-GO: drift/checksum inesperado, migration falha, integridade divergente,
-falha de login/Billing, flag inesperada ou ausência de backup restaurável.
-Não executar mutações sintéticas no banco real sem autorização específica.
+GO técnico: CI do SHA correto, preflight compatível, backup/restore comprovados,
+validate/health e integridade aprovados. NO-GO: inconsistência, checksum/drift,
+backup não restaurável, versão/configuração errada, falha de login/Billing ou autorização ausente.
 
-Script de smoke técnico reutilizando a suíte existente, para um checkout local
-isolado com Java 17 e Docker (somente bancos Testcontainers sintéticos):
+## Fase 2 — matrículas históricas por correção manual
+
+Este é o fluxo homologado; não exige planilha nem importação em lote:
+
+1. Cadastrar usuário e concluir primeiro acesso normalmente.
+2. Quando emissão estiver habilitada, receber matrícula automática.
+3. Administrador com MEMBERSHIP_MEMBER_REGISTRATION_MANAGE consulta matrícula histórica.
+4. GET /admin/members/by-identity/{userId}; obter a versão atual.
+5. PATCH /admin/members/by-identity/{userId}/membership-number com número, expectedVersion e reason.
+6. Conferir novo número nas próximas consultas/listas/exports e histórico do Member.
+
+Exemplo sintético de payload: `{"membershipNumber":"150","expectedVersion":0,"reason":"Histórico conferido"}`.
+Anterior fica livre para outro associado. Não apagar audit nem usar User.id/CPF
+isolado/ordem para inferir matrícula. 409 por destino ocupado/reservado/versão pede
+releitura e revisão; não sobrescrever titular. Contas antigas sem Member seguem
+autenticando e podem receber associação explícita pelo PUT existente.
+
+Importador existente é opcional, não gate da funcionalidade manual. Se futuramente
+autorizado, exige fonte conferida, permission IMPORT, administrativelyConfirmed,
+sourceReference opaca, dry-run exato/proof válido e apply em janela própria.
+027/27 colidem; destino vigente/reservado não pode ser tomado. Falha de uma unidade
+não desfaz unidades já confirmadas. Repetir lote é idempotente; subconjunto exige
+novo preview. Proof dura 15 minutos, é por processo/ator/payload; não registrar tokens.
+Manter apply false ao fim da janela. Nenhuma importação real é autorizada aqui.
+
+## Fase 3 — ativação operacional de novas matrículas
+
+Formato, início 1, reutilização e primeiro acesso já estão homologados. Não
+exigir aprovação de faixa inicial fixa: ela não existe na nova política.
+Ativação produtiva continua dependendo de release/janela autorizada e preflight.
+Somente nessa decisão habilitar ENABLED/APPROVED; não habilitar importação junto.
+
+Gerador lê maior matrícula vigente + 1 sob mutex/current read numérico, ou 1 sem
+Members, pulando reservas explícitas. Correção de 9999→150 com máximo restante
+200 faz próximo 201; se 10000 já foi emitida, permanece e o próximo é 10001.
+next_value/format_signature nunca determinam o candidato; não reinicializar PKs.
+
+Homologar os dois primeiros acessos, aprovação/reenvio/expiração sem emissão,
+retry sem duplicação, rollback tardio e rejeição concorrente. Não permitir
+reversão de COMPLETED. ROOT/técnicos não recebem número por login ou mera criação.
+Contas COMPLETED com flag false não têm emissão retroativa automática.
+
+## Smoke técnico e recuperação
+
+Em checkout isolado, Java 17/Docker, somente fixtures sintéticas:
 
 ```bash
-#!/usr/bin/env bash
-set -euo pipefail
-./mvnw --batch-mode --no-transfer-progress \
-  -Dtest=MemberRegistryIntegrationTest,MemberRegistryApiIntegrationTest,MemberRegistryImportDisabledIntegrationTest,MemberRegistryPolicyTest,MembershipActivationFlowIntegrationTest,PaidMembershipFlowIntegrationTest,PrincipalLifecycleIntegrationTest test
-./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true \
-  -Dit.test=MemberRegistryMySqlIT,MembershipRegistryOnboardingMySqlIT,PrincipalLifecycleMySqlIT verify
+./mvnw --batch-mode --no-transfer-progress verify
+./mvnw --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify
+bash deploy/test-future-migration.sh
 ```
 
-Esse roteiro seleciona cenários já incluídos nos gates completos desta revisão;
-não é um cliente de produção e não requer credenciais reais. Para smoke operacional,
-usar a tabela anterior na cópia isolada autorizada e registrar resultado próprio.
+API: 400 inválido; 401 sem autenticação; 403 sem permission; 404 ausente; 409
+ocupado/reservado/versão. Conferir reuso 20→150→20 em outro Member com histórico
+preservado; perfis/listas/CSV/PDF atuais, null sem Member e ausência de N+1.
 
-## Fase 2 — matrículas históricas
+Falha exige suspender escritores/flags, preservar volume/history/logs privados e
+snapshot, identificar unidades confirmadas e ensaiar recuperação isolada. DML da
+V10 reverte em erro, mas DDL de procedure e history MySQL não são ACID. Preflight
+em Flyway pode deixar registro failed/procedure auxiliar; evitar isso com leitura
+prévia e resolver por restauração/plano versionado aprovado, não repair/clean.
+Não prometer downgrade automático: código antigo pode recriar bloqueios permanentes
+ou numeração antiga. Restauração SQL/uploads/configuração deve ser coordenada e
+avaliar fatos posteriores conforme RPO/RTO aprovados.
 
-Pré-condições: fase 1 aceita; fonte oficial versionada e conferida por responsável
-autorizado; grants mínimos; janela e importação real especificamente autorizadas;
-backup atualizado e restauração testada. Manter emissão automática false.
-
-Inventariar em leitura autorizada: total de Identity, ROOT/técnicos, pendentes de
-primeiro acesso, vínculos APPROVED/COMPLETED e sem aplicação, com/sem Member.
-Categorias podem sobrepor: não somar contagens como total sem definir interseções.
-Não inferir quantidade de usuários do antigo agregado de 712 linhas/61 tabelas.
-
-Conciliar explicitamente cada identityUserId existente contra fonte oficial.
-CPF isolado, ordem de linhas, User.id e created_user_id não revelam matrícula.
-Não recriar User nem criar aplicação fictícia. Divergências e múltiplas
-correspondências voltam à conferência; sem confirmação ficam UNVERIFIED.
-
-Contrato HTTP (exemplo **sintético**, IDs não são números de produção):
-
-```http
-POST /admin/members/imports/dry-run
-Content-Type: application/json
-Authorization: Bearer <sessao-administrativa>
-
-{"rows":[{"identityUserId":108,"membershipNumber":"027","administrativelyConfirmed":true,"sourceReference":"cadastro-v1/linha-12"}],"reason":"Lote conferido; referencia opaca"}
-```
-
-Revisar índices/outcomes do relatório: READY, ALREADY_LINKED, UNVERIFIED,
-DUPLICATE_SOURCE, IDENTITY_NOT_FOUND, IDENTITY_INACTIVE, IDENTITY_ALREADY_LINKED
-e NUMBER_UNAVAILABLE. Este último cobre reserva, claim antiga e colisão numérica;
-não é autorização para liberar claim. Divergência cadastral é conferência humana,
-não matching automático. Dry-run não modifica Member, claims, audit nem contador.
-
-Guardar o relatório sanitizado e a aprovação do lote fora dos logs públicos.
-`administrativelyConfirmed` declara conferência humana; não prova que o backend
-consultou a fonte oficial. `sourceReference` é opaca e sem dados pessoais.
-
-Somente na janela autorizada habilitar apply; repetir o payload **exato** em
-`POST /admin/members/imports/apply`, acrescentando `dryRunToken` do preview.
-Proof expira em 15 minutos e depende do processo/ator/payload; restart, outra
-instância, fonte/motivo/linhas alteradas exigem novo dry-run. Não registrar proof.
-Cada unidade confirma ou reverte isoladamente e revalida locks/claims; a ausência
-de conflito no preview não garante aplicação futura. HTTP 200 contém resultados
-parciais, incluindo FAILED/CONFLICT/NOT_FOUND; examinar todas as linhas.
-
-Reprocessar o lote é idempotente; subconjunto de pendências requer novo preview.
-Falha intermediária não desfaz unidades já confirmadas. Nunca corrigir por SQL
-direto, trocar identidade ou apagar audit. Retificação autorizada usa PATCH
-`/admin/members/by-identity/{userId}/membership-number` com membershipNumber,
-expectedVersion e reason. Um número retirado permanece indisponível.
-
-Verificar vínculos/projeções, contagens READY/aplicadas/já vinculadas/pendentes,
-auditoria e integridade de Identity/credenciais/Billing. Desabilitar apply ao
-encerrar a janela, conferir configuração efetiva e registrar aceite.
-
-GO: fonte/conferência/autorização válidas, conflitos entendidos, dry-run revisado,
-integridade e auditoria corretas. NO-GO: dúvida na identidade/fonte, alteração
-concorrente não resolvida, reserva inesperada, falha sem diagnóstico, backup
-inválido ou autorização ausente. Não forçar linhas conflituosas.
-
-## Fase 3 — novas matrículas
-
-Pré-condições: homologação registrada de formato, zeros/case, reservas/lacunas,
-faixa inicial e marco formal de associação; reconciliação histórica revisada;
-responsáveis/grants e janela de ativação aprovados. Fase 2 e fase 3 são decisões
-separadas. Não inferir início de MAX, PK ou último cadastro observado.
-
-Configurar explicitamente INITIAL_NUMBER, WIDTH e PREFIX (pode ser vazio),
-APPROVED=true e ENABLED=true apenas no ambiente autorizado. Sem homologação,
-manter defaults; exemplos de testes não são configuração oficial. A assinatura
-persistida fixa início/formato após uso. Divergência exige revisão e conflito,
-nunca reset do contador. Claims antigas/reservas são puladas; falha desfaz avanço.
-
-Homologar access link e senha temporária: aprovação sem emissão; conclusão
-formal de primeiro acesso emite uma vez; retries/reenvio/expiração/rejeição não
-consomem números. ROOT/técnicos sem admissão não recebem matrícula por login ou
-criação de User. Contas COMPLETED enquanto flag false não têm catch-up automático:
-tratamento posterior é explícito e autorizado.
-
-GO: decisões assinadas, configuração exata válida, smokes dos dois métodos e
-concorrência aprovados, observabilidade e suporte preparados. NO-GO: qualquer
-decisão pendente, colisão inexplicada, configuração incompleta, duplicidade,
-emissão prematura ou regressão nos contratos existentes.
-
-## Interrupção, recuperação e pós-publicação
-
-Se houver erro, suspender a operação e escritores afetados, manter flags false e
-preservar volume, history, logs privados, SHA, backup e relatório de unidades.
-Não liberar claims nem renumerar para esconder lacunas. Em falha de lote, levantar
-unidades já confirmadas antes de repetir; correção de dado exige decisão rastreável.
-
-DDL MySQL pode confirmar parcialmente. Ensaiar correção para frente ou restauração
-coordenada de SQL/uploads/configuração em instância isolada, comparar integridade
-e decidir com a operação. Não executar imagem antiga sobre schema incompatível
-nem prometer rollback ACID de DDL. Uma restauração pode perder fatos posteriores:
-RPO/RTO e reconciliação precisam ser aprovados antes do retorno.
-
-Após publicação autorizada: confirmar SHA/imagem, Flyway/validate, health, catálogo,
-flags efetivas, login/refresh/perfil/exports/Billing e métricas sanitizadas de 409,
-FAILED e latência/locks. Registrar duração, resultado e aceite de cada fase.
-CI verde é evidência de laboratório; não encerra BACK-526 sem decisões externas.
+Depois de publicação autorizada, confirmar SHA/imagem, history/validate/health,
+flags efetivas, login/refresh, Registry/Billing e métricas sanitizadas de conflitos,
+FAILED, latência/locks. Registrar aceite operacional. Não executar nada disso na VPS
+nesta rodada; BACK-536 mantém pendências que exigem evidência operacional real.

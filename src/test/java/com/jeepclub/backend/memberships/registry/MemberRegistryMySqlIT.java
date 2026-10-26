@@ -8,7 +8,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
-@SpringBootTest(properties={"memberships.registry.imports.apply-enabled=true","memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.issuance.initial-number=100","memberships.registry.issuance.width=3","memberships.registry.issuance.prefix=","spring.jpa.hibernate.ddl-auto=validate","spring.flyway.enabled=true","spring.sql.init.mode=never"})
+@SpringBootTest(properties={"memberships.registry.imports.apply-enabled=true","memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","spring.jpa.hibernate.ddl-auto=validate","spring.flyway.enabled=true","spring.sql.init.mode=never"})
 @ActiveProfiles("test") @Testcontainers
 @org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class MemberRegistryMySqlIT extends MemberRegistryScenarios {
@@ -18,8 +18,21 @@ class MemberRegistryMySqlIT extends MemberRegistryScenarios {
         registry.add("spring.datasource.password",MYSQL::getPassword);registry.add("spring.datasource.driver-class-name",() -> "com.mysql.cj.jdbc.Driver");
         registry.add("spring.jpa.database-platform",() -> "org.hibernate.dialect.MySQLDialect");
     }
+    @Test void currentLockingMaximumSeesCommitAfterEarlierRepeatableReadSnapshot() throws Exception {
+        var tx=new org.springframework.transaction.support.TransactionTemplate(transactionManager);tx.setIsolationLevel(org.springframework.transaction.TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        var executor=java.util.concurrent.Executors.newSingleThreadExecutor();
+        try {
+            var result=tx.execute(status -> {
+                assertThat(query.byIdentityUserId(first)).isEmpty(); // establish an earlier snapshot
+                try { executor.submit(() -> admin.assign(second,"9999",second,"Committed after snapshot")).get(30,java.util.concurrent.TimeUnit.SECONDS); }
+                catch(Exception e) { throw new IllegalStateException(e); }
+                return admin.generate(first,first,"Current read after mutex");
+            });
+            assertThat(result.membershipNumber()).isEqualTo("10000");
+        } finally { executor.shutdownNow(); }
+    }
     @Test void physicalForeignKeyPreventsSilentlyDeletingLinkedIdentity() {
-        admin.assign(first,"FK-"+first,first,"Verified");
+        admin.assign(first,"84"+first,first,"Verified");
         var before=admin.byIdentity(first);long auditCount=audits.count(),claimCount=claims.count();
         assertThatThrownBy(() -> jdbc.update("delete from identity_users where id=?",first)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(admin.byIdentity(first)).isEqualTo(before);assertThat(audits.count()).isEqualTo(auditCount);assertThat(claims.count()).isEqualTo(claimCount);

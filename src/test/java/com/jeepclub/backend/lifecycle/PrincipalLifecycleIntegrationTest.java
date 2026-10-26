@@ -156,7 +156,7 @@ class PrincipalLifecycleIntegrationTest {
 
     @Test void registeredMemberIsNeverPhysicallyDeleted() {
         Long id=user(true);
-        jdbc.update("INSERT INTO membership_members(identity_user_id,membership_number,created_at,updated_at,version) VALUES(?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0)",id,"SYNTHETIC-"+id);
+        jdbc.update("INSERT INTO membership_members(identity_user_id,membership_number,created_at,updated_at,version) VALUES(?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0)",id,"91"+id);
         assertThatThrownBy(() -> identity.delete(id,id,CREATED.plusSeconds(60)))
                 .isInstanceOf(com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException.class);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM membership_members WHERE identity_user_id=?",Long.class,id)).isEqualTo(1);

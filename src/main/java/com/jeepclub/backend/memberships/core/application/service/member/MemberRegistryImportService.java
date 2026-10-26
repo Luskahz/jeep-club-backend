@@ -52,7 +52,7 @@ public class MemberRegistryImportService {
             else if(!identities.isActive(r.identityUserId())) outcome="IDENTITY_INACTIVE";
             else {
                 var current=members.byIdentity(r.identityUserId());
-                outcome=current.isPresent() ? (current.get().membershipNumber().equals(r.membershipNumber())?"ALREADY_LINKED":"IDENTITY_ALREADY_LINKED")
+                outcome=current.isPresent() ? (current.get().membershipNumber().equals(new MembershipNumber(r.membershipNumber()).value())?"ALREADY_LINKED":"IDENTITY_ALREADY_LINKED")
                         : members.claimed(key)?"NUMBER_UNAVAILABLE":"READY";
             }
             result.add(new MemberImportReport.Row(i,outcome));

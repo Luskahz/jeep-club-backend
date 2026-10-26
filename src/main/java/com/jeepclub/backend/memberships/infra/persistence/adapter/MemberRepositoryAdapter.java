@@ -26,8 +26,11 @@ public class MemberRepositoryAdapter implements MemberRepository {
         entityManager.refresh(s,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         return new MemberRegistrySequence(s.getNextValue(),s.getFormatSignature());
     }
-    public void advanceSequence(long next, String signature) {
-        var s=sequences.findById(1L).orElseThrow(); s.setNextValue(next); s.setFormatSignature(signature); sequences.saveAndFlush(s);
+    public Optional<String> greatestCurrentNumberForUpdate() { return members.greatestCurrentNumberForUpdate(); }
+    public void releaseClaim(MembershipNumber number, Long memberId) {
+        var claim=claims.lockByKey(number.claimKey()).orElseThrow(() -> new MemberRegistryException(MemberRegistryException.Kind.CONFLICT));
+        if (!Objects.equals(claim.getMemberId(),memberId)) throw new MemberRegistryException(MemberRegistryException.Kind.CONFLICT);
+        entityManager.remove(claim); entityManager.flush();
     }
     public Optional<Member> byId(Long id) { return members.findById(id).map(MemberMapper::toDomain); }
     public Optional<Member> byIdentity(Long id) { return members.findByIdentityUserId(id).map(MemberMapper::toDomain); }

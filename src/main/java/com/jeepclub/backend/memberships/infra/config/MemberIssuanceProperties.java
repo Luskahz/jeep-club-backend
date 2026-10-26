@@ -1,6 +1,5 @@
 package com.jeepclub.backend.memberships.infra.config;
 import com.jeepclub.backend.memberships.core.port.MemberIssuancePolicy;
-import com.jeepclub.backend.memberships.core.domain.model.MembershipNumber;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
@@ -14,14 +13,11 @@ public class MemberIssuanceProperties implements MemberIssuancePolicy {
     private Integer width;
     private String prefix;
     @PostConstruct public void validate() {
-        if (enabled && (!approved || initialNumber==null || initialNumber<=0 || initialNumber==Long.MAX_VALUE
-                || width==null || width<1 || width>64 || prefix==null || prefix.length()+Math.max(width,19)>64)) {
-            throw new IllegalStateException("Membership issuance requires approved range and explicit format.");
+        // Retain binding of retired settings to reject stale deployments explicitly.
+        if (initialNumber != null || width != null || (prefix != null && !prefix.isEmpty())) {
+            throw new IllegalStateException("Membership issuance initial-number, width and prefix are retired; remove legacy format configuration.");
         }
-        if(enabled) { new MembershipNumber(format(initialNumber)); new MembershipNumber(format(Long.MAX_VALUE)); }
+        if (enabled && !approved) throw new IllegalStateException("Membership issuance requires explicit operational approval.");
     }
     public boolean enabled() { return enabled; }
-    public long initialNumber() { if (!enabled) throw new IllegalStateException("Membership issuance disabled."); return initialNumber; }
-    public String format(long n) { return prefix + "0".repeat(Math.max(0,width-Long.toString(n).length())) + n; }
-    public String signature() { return "v1:"+initialNumber+":"+width+":"+prefix; }
 }

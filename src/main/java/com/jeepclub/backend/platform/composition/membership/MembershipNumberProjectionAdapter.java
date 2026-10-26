@@ -8,7 +8,7 @@ import java.util.*;
 public class MembershipNumberProjectionAdapter implements UserMembershipNumberProjection {
     private final MemberRegistrationQuery members;
     public Optional<Long> identityIdByCurrentNumber(String number) {
-        if (number == null || number.isBlank() || number.length() > 64
+        if (number == null || !number.matches("[0-9]+") || number.matches("0+") || number.length() > 64
                 || Character.isWhitespace(number.codePointAt(0)) || Character.isWhitespace(number.codePointBefore(number.length()))
                 || number.codePoints().anyMatch(c -> Character.isISOControl(c) || Character.getType(c) == Character.FORMAT || Character.getType(c) == Character.SURROGATE)) return Optional.empty();
         return members.byCurrentMembershipNumber(number).map(r -> r.identityUserId());

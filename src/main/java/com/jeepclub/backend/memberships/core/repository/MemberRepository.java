@@ -5,7 +5,8 @@ import java.time.Instant;
 import java.util.*;
 public interface MemberRepository {
     MemberRegistrySequence lockRegistry();
-    void advanceSequence(long next, String signature);
+    Optional<String> greatestCurrentNumberForUpdate();
+    void releaseClaim(MembershipNumber number, Long memberId);
     Optional<Member> byId(Long id);
     Optional<Member> byIdentity(Long identityId);
     Optional<Member> lockedByIdentity(Long identityId);
