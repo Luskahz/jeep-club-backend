@@ -666,10 +666,10 @@ class MySqlMigrationIT {
             st.executeUpdate("insert into authorization_permissions(id,code,module,description,created_at) values(760,'IDENTITY_USER_READ','IDENTITY','Synthetic permission',UTC_TIMESTAMP(6))");
             st.executeUpdate("insert into authorization_user_roles(id,user_id,role_id,created_at) values(770,700,750,UTC_TIMESTAMP(6)-interval 1 day)");
             st.executeUpdate("insert into authorization_role_permissions(id,role_id,permission_id,created_at) values(780,750,760,UTC_TIMESTAMP(6)-interval 1 day)");
-            st.executeUpdate("insert into membership_members(id,identity_user_id,membership_number,created_at,updated_at,version) values(790,700,'B512-700',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
-            var claimKey=new com.jeepclub.backend.memberships.core.domain.model.MembershipNumber("B512-700").claimKey();
-            st.executeUpdate("insert into membership_number_claims(claim_key,membership_number,member_id,actor_user_id,claimed_at,reason) values('"+claimKey+"','B512-700',790,700,UTC_TIMESTAMP(6),'Synthetic migration fixture')");
-            st.executeUpdate("insert into membership_member_audits(member_id,new_number,actor_user_id,occurred_at,reason,operation,outcome) values(790,'B512-700',700,UTC_TIMESTAMP(6),'Synthetic migration fixture','ASSIGN','SUCCESS')");
+            st.executeUpdate("insert into membership_members(id,identity_user_id,membership_number,created_at,updated_at,version) values(790,700,'512700',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+            var claimKey=new com.jeepclub.backend.memberships.core.domain.model.MembershipNumber("512700").claimKey();
+            st.executeUpdate("insert into membership_number_claims(claim_key,membership_number,member_id,actor_user_id,claimed_at,reason) values('"+claimKey+"','512700',790,700,UTC_TIMESTAMP(6),'Synthetic migration fixture')");
+            st.executeUpdate("insert into membership_member_audits(member_id,new_number,actor_user_id,occurred_at,reason,operation,outcome) values(790,'512700',700,UTC_TIMESTAMP(6),'Synthetic migration fixture','ASSIGN','SUCCESS')");
         }
         var unchanged=new java.util.LinkedHashMap<String,List<String>>();
         var columns=new java.util.LinkedHashMap<String,List<String>>();
@@ -700,7 +700,9 @@ class MySqlMigrationIT {
         assertThat(rows(db,"select original_id,role_id,user_id from authorization_user_role_deletion_history")).containsExactly("[770, 750, 700]");
         assertThat(rows(db,"select * from membership_members order by id")).isEqualTo(registryBefore);
         assertThat(rows(db,"select * from membership_number_claims order by claim_key")).isEqualTo(claimsBefore);
-        assertThat(rows(db,"select * from membership_member_audits order by id")).isEqualTo(auditBefore);
+        assertThat(rows(db,"select * from membership_member_audits where operation<>'LEGACY_CLAIM_SNAPSHOT' order by id")).isEqualTo(auditBefore);
+        assertThat(rows(db,"select member_id,new_number,actor_user_id,reason,outcome from membership_member_audits where operation='LEGACY_CLAIM_SNAPSHOT'"))
+                .containsExactly("[790, 512700, 700, Synthetic migration fixture, SUCCESS]");
         assertThat(rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions order by id")).isEqualTo(permissionsBefore);
         assertThat(rows(db,"select table_name,column_name,column_type from information_schema.columns where table_schema=database() and data_type='enum' and table_name not in ('identity_users','dependents_dependent','dependents_dependent_history','vehicles_vehicle','vehicles_vehicle_history','tools','tools_tool_history','authorization_roles','authorization_permissions') order by table_name,column_name")).isEqualTo(processStatesBefore);
         var historyBefore=rows(db,"select * from authorization_role_deletion_history order by original_id");

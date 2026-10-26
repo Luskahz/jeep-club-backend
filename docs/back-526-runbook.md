@@ -24,6 +24,10 @@ Antes de executar Flyway, obter **somente contagens sanitizadas** de:
 - Members sem claim correspondente ao mesmo memberId e número atual.
 - Claims retiradas e auditorias existentes, para conferência de preservação.
 
+O roteiro [preflight-member-registry.sql](../deploy/preflight-member-registry.sql)
+prepara essas consultas somente leitura para Registry já existente (V4–V9).
+Todos os BLOCK_* devem ser zero; INFO_RETIRED_CLAIMS é informativo. O script não
+foi executado na VPS e não é disparado automaticamente por deploy ou startup.
 Usar os mesmos predicados da V10 em consultas de leitura autorizadas. Não expor
 linhas/CPF/e-mail em Jira/logs. Qualquer incompatibilidade é NO-GO; não remover
 cadastros, inventar número ou converter texto alfanumérico por aproximação.
