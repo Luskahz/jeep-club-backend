@@ -56,6 +56,7 @@ class MembershipActivationFlowIntegrationTest {
     @Autowired Clock clock;
     @Autowired com.jeepclub.backend.memberships.api.module.MemberRegistrationQuery registryQuery;
     @Autowired com.jeepclub.backend.memberships.infra.persistence.jpa.MemberRegistrySequenceJpaRepository registrySequence;
+    @Autowired com.jeepclub.backend.memberships.infra.config.MemberIssuanceProperties issuance;
     @MockitoSpyBean com.jeepclub.backend.memberships.infra.persistence.jpa.MemberRegistryAuditJpaRepository registryAudits;
     @MockitoSpyBean MembershipApplicationRepository applications;
     @MockitoBean MemberActivationMailSender mail;
@@ -143,6 +144,7 @@ class MembershipActivationFlowIntegrationTest {
 
     @Test
     void resendInvalidatesPreviousPersistedTokenAndLeavesFirstAccessPending() throws Exception {
+        var registryBefore=registrySnapshot();
         Long id = submit("16899535009");
         approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
         String old = deliveredToken(1);
@@ -156,10 +158,12 @@ class MembershipActivationFlowIntegrationTest {
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         assertThat(accounts.findById(applications.findById(id).orElseThrow().getCreatedUserId()).orElseThrow()
                 .getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        assertThat(registrySnapshot()).isEqualTo(registryBefore);
     }
 
     @Test
     void expiredAndUnknownTokensDoNotChangeCredentialsOrMembership() throws Exception {
+        var registryBefore=registrySnapshot();
         Long id = submit("11144477735");
         approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
         String raw = deliveredToken(1);
@@ -177,6 +181,7 @@ class MembershipActivationFlowIntegrationTest {
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         assertThat(accounts.findById(applications.findById(id).orElseThrow().getCreatedUserId()).orElseThrow()
                 .getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        assertThat(registrySnapshot()).isEqualTo(registryBefore);
     }
 
     @Test
@@ -232,6 +237,54 @@ class MembershipActivationFlowIntegrationTest {
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.COMPLETED);
         assertThat(applications.findById(id).orElseThrow().getFinishedAt()).isNotNull();
         assertThat(registryQuery.byIdentityUserId(applications.findById(id).orElseThrow().getCreatedUserId())).isPresent();
+    }
+
+    @Test
+    void temporaryPasswordRegistryFailureRollsBackCredentialsSessionChallengeAndSequenceThenRetries() throws Exception {
+        String cpf=nextCpf();Long id=submit(cpf);
+        String temporary=json(mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password",id)
+                .header("Authorization",admin)).andExpect(status().isOk()),"$.temporaryPassword");
+        Long user=applications.findById(id).orElseThrow().getCreatedUserId();
+        String challenge=json(login(cpf,temporary).andExpect(status().isOk()),"$.passwordChangeToken");
+        String oldHash=accounts.findById(user).orElseThrow().getPasswordHash();
+        var before=registrySnapshot();
+        long sessions=jdbc.queryForObject("select count(*) from authentication_sessions where user_id=?",Long.class,user);
+        doThrow(new IllegalStateException("synthetic temporary-password registry failure")).when(registryAudits).saveAndFlush(any());
+        try { changePassword(challenge).andExpect(status().isInternalServerError()); }
+        finally { reset(registryAudits); }
+        assertThat(registrySnapshot()).isEqualTo(before);assertThat(registryQuery.byIdentityUserId(user)).isEmpty();
+        assertThat(accounts.findById(user).orElseThrow().getPasswordHash()).isEqualTo(oldHash);
+        assertThat(accounts.findById(user).orElseThrow().getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+        assertThat(jdbc.queryForObject("select count(*) from authentication_sessions where user_id=?",Long.class,user)).isEqualTo(sessions);
+        changePassword(challenge).andExpect(status().isOk());
+        var assigned=registryQuery.byIdentityUserId(user).orElseThrow();var after=registrySnapshot();
+        changePassword(challenge).andExpect(status().isUnauthorized());
+        assertThat(registryQuery.byIdentityUserId(user)).contains(assigned);assertThat(registrySnapshot()).isEqualTo(after);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={false,true})
+    void disabledIssuanceAllowsBothFirstAccessMethodsAndLegacyLoginWithoutRegistryWrites(boolean temporary) throws Exception {
+        boolean wasEnabled=issuance.enabled();issuance.setEnabled(false);
+        try {
+            var before=registrySnapshot();String cpf=nextCpf();Long id=submit(cpf);
+            if(temporary) {
+                String password=json(mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password",id)
+                        .header("Authorization",admin)).andExpect(status().isOk()),"$.temporaryPassword");
+                String challenge=json(login(cpf,password).andExpect(status().isOk()),"$.passwordChangeToken");
+                changePassword(challenge).andExpect(status().isOk());
+            } else {
+                approve(id).andExpect(status().isOk());complete(deliveredToken(1)).andExpect(status().isNoContent());
+            }
+            Long user=applications.findById(id).orElseThrow().getCreatedUserId();
+            assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.COMPLETED);
+            assertThat(registryQuery.byIdentityUserId(user)).isEmpty();assertThat(registryQuery.byIdentityUserId(adminId)).isEmpty();
+            String access=json(login(cpf,PASSWORD).andExpect(status().isOk()),"$.accessToken");
+            mvc.perform(get("/authentication/me").header("Authorization","Bearer "+access)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.userId").value(user));
+            assertThat(registrySnapshot()).isEqualTo(before);
+        } finally { issuance.setEnabled(wasEnabled); }
     }
 
     @Test
@@ -582,6 +635,20 @@ class MembershipActivationFlowIntegrationTest {
     private ResultActions login(String cpf, String password) throws Exception {
         return mvc.perform(post("/authentication/login").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cpf\":\"" + cpf + "\",\"senha\":\"" + password + "\"}"));
+    }
+
+    private ResultActions changePassword(String challenge) throws Exception {
+        return mvc.perform(post("/authentication/login/password-change").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"passwordChangeToken\":\""+challenge+"\",\"newPassword\":\""+PASSWORD+"\"}"));
+    }
+
+    private java.util.Map<String,Object> registrySnapshot() {
+        var snapshot=new java.util.LinkedHashMap<String,Object>();
+        for(String table:java.util.List.of("membership_members","membership_number_claims","membership_member_audits")) {
+            snapshot.put(table,jdbc.queryForObject("select count(*) from "+table,Long.class));
+        }
+        snapshot.put("sequence",jdbc.queryForList("select next_value,format_signature,version from membership_registry_sequence where id=1"));
+        return snapshot;
     }
 
     private String json(ResultActions result, String path) throws Exception {

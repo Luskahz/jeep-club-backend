@@ -116,9 +116,23 @@ public abstract class MemberRegistryScenarios {
     }
     @Test void issuanceFailureRollsBackCounterMemberClaimAndAudit() {
         var before=sequences.findById(1L).orElseThrow().getNextValue();
+        long memberCount=members.count(),claimCount=claims.count(),auditCount=audits.count();
+        var signature=sequences.findById(1L).orElseThrow().getFormatSignature();
         doThrow(new IllegalStateException("injected audit failure")).when(audits).saveAndFlush(any());
         assertThatThrownBy(() -> admin.generate(first,first,"Synthetic approved issuance")).isInstanceOf(RuntimeException.class).hasStackTraceContaining("injected");
         assertThat(query.byIdentityUserId(first)).isEmpty();assertThat(sequences.findById(1L).orElseThrow().getNextValue()).isEqualTo(before);
+        assertThat(sequences.findById(1L).orElseThrow().getFormatSignature()).isEqualTo(signature);
+        assertThat(members.count()).isEqualTo(memberCount);assertThat(claims.count()).isEqualTo(claimCount);assertThat(audits.count()).isEqualTo(auditCount);
+    }
+    @Test void correctionAuditFailurePreservesCurrentNumberVersionClaimsAndHistory() {
+        var original=admin.assign(first,number(),first,"Synthetic source");
+        long claimCount=claims.count(),auditCount=audits.count();
+        doThrow(new IllegalStateException("injected correction audit failure")).when(audits).saveAndFlush(any());
+        assertThatThrownBy(() -> admin.correct(first,number()+"C",original.version(),first,"Synthetic correction"))
+                .isInstanceOf(RuntimeException.class).hasStackTraceContaining("injected correction audit failure");
+        assertThat(admin.byIdentity(first)).isEqualTo(original);
+        assertThat(claims.count()).isEqualTo(claimCount);assertThat(audits.count()).isEqualTo(auditCount);
+        assertThat(claims.existsById(new MembershipNumber(number()+"C").claimKey())).isFalse();
     }
     @Test void staleCorrectionFailsWithoutPartialAudit() {
         var a=admin.assign(first,number(),first,"Verified");admin.correct(first,number()+"A",a.version(),first,"Correction");long count=audits.count();
@@ -200,6 +214,43 @@ public abstract class MemberRegistryScenarios {
         assertThat(outcomes.get(0)).isIn("SUCCESS","CONFLICT");
         var generated=query.byIdentityUserId(second).orElseThrow();
         query.byIdentityUserId(first).ifPresent(manual -> assertThat(manual.membershipNumber()).isNotEqualTo(generated.membershipNumber()));
+    }
+    @Test void generationAndCorrectionSerializeNumericVariantsWithoutReusingClaims() throws Exception {
+        var original=admin.assign(first,number(),first,"Synthetic source");
+        Long next=sequences.findById(1L).orElseThrow().getNextValue();if(next==null)next=100L;
+        String candidate="000"+next;
+        var outcomes=race(() -> attempt(() -> admin.correct(first,candidate,original.version(),first,"Synthetic correction race")),
+                () -> attempt(() -> admin.generate(second,second,"Synthetic generation race")));
+        assertThat(outcomes.get(1)).isEqualTo("SUCCESS");assertThat(outcomes.get(0)).isIn("SUCCESS","CONFLICT");
+        var corrected=admin.byIdentity(first);var generated=admin.byIdentity(second);
+        assertThat(new MembershipNumber(corrected.membershipNumber()).claimKey())
+                .isNotEqualTo(new MembershipNumber(generated.membershipNumber()).claimKey());
+        assertThat(corrected.id()).isEqualTo(original.id());
+        assertThat(claims.existsById(new MembershipNumber(number()).claimKey())).isTrue();
+        assertThat(admin.history(first,PageRequest.of(0,10)).getTotalElements()).isEqualTo(outcomes.get(0).equals("SUCCESS")?2:1);
+    }
+    @Test void generatorSkipsRetiredNumericVariantWithoutChangingIdentity() {
+        Long next=sequences.findById(1L).orElseThrow().getNextValue();if(next==null)next=100L;
+        var before=identities.findById(second).orElseThrow();
+        var original=admin.assign(first,"000"+next,first,"Synthetic historic source");
+        admin.correct(first,number(),original.version(),first,"Synthetic correction");
+        assertThat(Long.parseLong(admin.generate(second,second,"Synthetic issue").membershipNumber())).isEqualTo(next+1);
+        assertThat(identities.findById(second)).contains(before);
+    }
+    @Test void failedImportUnitRollsBackAndDoesNotPreventNextUnitOrSafeRetry() {
+        var rows=List.of(row(first,number()),row(second,number()+"NEXT"));String reason="Synthetic partial import";
+        var preview=importer.dryRun(rows,first,reason);long count=audits.count(),claimCount=claims.count();
+        doThrow(new IllegalStateException("injected unit audit failure")).when(audits)
+                .saveAndFlush(argThat(event -> event!=null && event.getNewNumber().equals(number())));
+        var applied=importer.apply(rows,first,reason,preview.dryRunToken());
+        assertThat(applied.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("FAILED","APPLIED");
+        assertThat(query.byIdentityUserId(first)).isEmpty();assertThat(query.byIdentityUserId(second)).isPresent();
+        assertThat(claims.existsById(new MembershipNumber(number()).claimKey())).isFalse();
+        assertThat(audits.count()).isEqualTo(count+1);assertThat(claims.count()).isEqualTo(claimCount+1);
+        reset(audits);
+        var retry=importer.apply(rows,first,reason,preview.dryRunToken());
+        assertThat(retry.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("APPLIED","ALREADY_LINKED");
+        assertThat(audits.count()).isEqualTo(count+2);assertThat(claims.count()).isEqualTo(claimCount+2);
     }
     @Test void auditColumnsCannotBeRewrittenThroughJpa() {
         var member=admin.assign(first,number(),first,"Original audit reason");

@@ -1,5 +1,12 @@
 # BACK-526 — implementação e evidência para revisão
 
+> Registro histórico da implementação e revisão de 17–18/10/2026. PR #104 já
+> integrado e release #112 publicada. Referências abaixo a V4 futura, PR aberto,
+> baseline V3 e BACK-512/523 pendentes descrevem aquela data, não o estado atual.
+> A auditoria corrente, matriz de requisitos e novos resultados estão em
+> [back-526-finalization.md](back-526-finalization.md); operação atual em
+> [back-526-runbook.md](back-526-runbook.md). V1–V9 permanecem imutáveis.
+
 ## Identificação e escopo
 
 - Base remota verificada: `ccca1f48126ef5bbdd8aacbc38cca8503a101feb` (`origin/develop`).
