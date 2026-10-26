@@ -1,6 +1,6 @@
 {
   "baselineCommit": "8d9ee7110fc812678a7d66532d4344a34453304c",
-  "codeCommit": "07601103f98456012e64de933de4754e68684da3",
+  "codeCommit": "e80d543fd296a854d09c837fc8e24634ce00aeea",
   "pullRequest": "https://github.com/Luskahz/jeep-club-backend/pull/114",
   "branch": "feat/back-526-canonical-current-number",
   "rootCause": "Identity ACTIVE did not prove Authentication first-access completion",
@@ -33,52 +33,52 @@
   "completedLocalGates": [
     {
       "command": "mvnw.cmd --batch-mode --no-transfer-progress -Dtest=MembershipActivationFlowIntegrationTest,MemberRegistryIntegrationTest,MemberRegistryApiIntegrationTest,MemberRegistryPolicyTest,MemberAuthenticationEligibilityAdapterTest,AuthenticationAccountTest,UserRegistrationTransactionTest test",
-      "tests": 133,
+      "tests": 134,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "duration": "01:35",
-      "log": "target/back526-eligibility-focal-final.log",
-      "sha256": "71043fa5d57b2b62425e0846edbe5ca0d35d8fb82c53013b744bac3a872b13eb",
+      "duration": "01:45",
+      "log": "target/back526-eligibility-focal-import-race.log",
+      "sha256": "cd5f18049adbfe6b5324c3b4cafe115d328524ba478a7d3609c47119fa184ffe",
       "note": "Full verify validates final test latch and OpenAPI edits too"
     },
     {
       "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
-      "sourceCommit": "07601103f98456012e64de933de4754e68684da3",
-      "tests": 2180,
+      "sourceCommit": "e80d543fd296a854d09c837fc8e24634ce00aeea",
+      "tests": 2181,
       "failures": 0,
       "errors": 0,
       "skipped": 1,
-      "duration": "06:26",
-      "log": "target/back526-eligibility-verify.log",
-      "sha256": "a0178df6d71906c55ed5bc8d9d37f7f26f69588a37f9a43e593b61a29268b3ec",
+      "duration": "06:12",
+      "log": "target/back526-eligibility-verify-final.log",
+      "sha256": "1d50b2d8b3df04d14425d949a7edacd1f9e3bfe55718ed1677825e7f1aeea79a",
       "skip": "Pre-existing Windows symlink test"
     }
   ],
   "codeCommitCi": {
-    "run": 40408479741,
-    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/40408479741",
+    "run": 40411327180,
+    "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/40411327180",
     "conclusion": "success",
     "verify": {
-      "tests": 2180,
+      "tests": 2181,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "jobId": 121872280778
+      "jobId": 121882977302
     },
     "mysql": {
-      "tests": 293,
+      "tests": 294,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "jobId": 121872280307
+      "jobId": 121882976890
     },
     "futureMigration": {
-      "tests": 293,
+      "tests": 294,
       "failures": 0,
       "errors": 0,
       "skipped": 0,
-      "jobId": 121872280307
+      "jobId": 121882976890
     },
     "deploy": "skipped"
   },
@@ -86,11 +86,11 @@
     "authenticationEligibilityUnit": 4,
     "authenticationDomain": 7,
     "identityRegistration": 3,
-    "registryH2": 41,
+    "registryH2": 42,
     "registryHttp": 29,
     "registryPolicy": 10,
     "onboardingH2AndMySqlEach": 39,
-    "registryMySql": 46,
+    "registryMySql": 47,
     "migrationMySql": 33
   },
   "preservation": {
@@ -113,5 +113,20 @@
     "correction": "Reread current binding after an occupied claim; preserve strict concurrent assert and add deterministic regression",
     "initialLocalMysqlAndFutureRuns": "Interrupted; not final approval",
     "finalValidation": "Final PR body and current checks"
-  }
+  },
+  "affectedFiles": [
+    "docs/back-526-authentication-eligibility-evidence.json",
+    "docs/back-526-authentication-eligibility.md",
+    "docs/back-526-numeric-policy.md",
+    "src/main/java/com/jeepclub/backend/iam/authentication/infra/integration/memberships/MemberAuthenticationEligibilityAdapter.java",
+    "src/main/java/com/jeepclub/backend/memberships/api/http/controller/admin/AdminMemberController.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/application/service/member/AdminMemberService.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/application/service/member/MemberRegistryImportService.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/port/MemberAuthenticationEligibility.java",
+    "src/main/java/com/jeepclub/backend/memberships/docs/member-registry.md",
+    "src/test/java/com/jeepclub/backend/authentication/infra/integration/memberships/MemberAuthenticationEligibilityAdapterTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/MembershipActivationFlowIntegrationTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryMySqlIT.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryScenarios.java"
+  ]
 }

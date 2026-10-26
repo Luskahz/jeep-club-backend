@@ -69,45 +69,53 @@ antes criava só Identity. A primeira execução focal identificou que o reposit
 Authentication exige transação; a fixture foi corrigida para criá-la em
 TransactionTemplate, mantendo a cobertura existente.
 
-## Validação inicial e corrida adicional encontrada no CI
+## Corrida adicional de importação corrigida
 
-Código/testes: `07601103f98456012e64de933de4754e68684da3`.
-[CI 40408479741](https://github.com/Luskahz/jeep-club-backend/actions/runs/40408479741)
-concluído com sucesso nesse SHA; deploy skipped. Não se utiliza a execução antiga
-do HEAD 8d9ee711 como aprovação da correção.
+O CI do HEAD documental ddaf6d2b (run 40410277078) expôs uma corrida em
+`concurrentImportsOfSameBindingAreIdempotentAndAuditedOnce`: Member ausente na
+primeira leitura, mas claim já confirmada na seguinte, gerando falsamente
+NUMBER_UNAVAILABLE. A prévia agora relê o titular quando a claim está ocupada.
+Se o vínculo vigente já é exatamente o solicitado, retorna ALREADY_LINKED;
+reservas/outros titulares continuam bloqueados. Assign mantém a revalidação
+bloqueante de Authentication e unicidade antes de qualquer escrita.
 
-| Gate do código corrigido | Testes | Falhas / erros / skips |
+O cenário determinístico `importRecognizesBindingCommittedBetweenMemberAndClaimPreviewReads`
+intercala o commit concorrente e exige exatamente um Member, uma claim e um audit.
+O assert concorrente original foi preservado. Os gates foram repetidos após o ajuste.
+
+## Validação do código final
+
+Código/testes: `e80d543fd296a854d09c837fc8e24634ce00aeea`.
+[CI 40411327180](https://github.com/Luskahz/jeep-club-backend/actions/runs/40411327180)
+concluído com sucesso nesse SHA; deploy skipped. O commit inicial 07601103 contém
+os guards de elegibilidade e e80d543f também corrige a corrida de prévia.
+Nenhuma execução do antigo HEAD 8d9ee711 é usada para aprovar esta correção.
+
+| Gate validado | Testes | Falhas / erros / skips |
 | --- | ---: | --- |
-| CI Maven verify | 2180 | 0 / 0 / 0 |
-| CI MySQL/Flyway | 293 | 0 / 0 / 0 |
-| CI migration futura | 293 | 0 / 0 / 0 |
-| Focal ampliado local | 133 | 0 / 0 / 0 |
-| Maven verify local | 2180 | 0 / 0 / 1 |
+| CI Maven verify | 2181 | 0 / 0 / 0 |
+| CI MySQL/Flyway | 294 | 0 / 0 / 0 |
+| CI migration futura | 294 | 0 / 0 / 0 |
+| Focal ampliado local | 134 | 0 / 0 / 0 |
+| Maven verify local | 2181 | 0 / 0 / 1 |
 
-O skip local é o teste preexistente de symlink no Windows. Focal inclui Identity,
-Authentication, Registry API/policy/persistência e onboarding. O verify completo
-revalidou também a versão final da sincronização dos testes concorrentes e OpenAPI.
-Os totais dos gates se sobrepõem. MySQL 8.0.46 usa somente fixtures sintéticas;
-V11 existe apenas como probe efêmero da migration futura, sem alterar V10.
+Verify local: 06:12; focal: 01:45. O skip local é o teste preexistente de symlink
+no Windows. O focal inclui Identity, Authentication, Registry API/policy/JPA e
+onboarding. Os totais se sobrepõem. Registry H2 tem 42 casos; HTTP 29; policy 10;
+Registry MySQL 47; onboarding H2/MySQL 39 em cada; migrations MySQL 33.
+MySQL 8.0.46 usa somente fixtures sintéticas; V11 existe apenas como probe efêmero
+da migration futura, sem modificar as migrations V1–V10 da entrega.
 
-Esta evidência congela os resultados acima; os gates MySQL locais complementares
-e os checks do HEAD documental posterior são registrados no
-[PR #114](https://github.com/Luskahz/jeep-club-backend/pull/114), que é a referência
-final de entrega. O commit ddaf6d2b altera somente evidências; a correção adicional
-descrita abaixo altera o importador e seus testes. Ver detalhes na
+A evidência congela esses resultados do código final. Os gates MySQL locais
+complementares e os checks do HEAD documental posterior são registrados no
+[PR #114](https://github.com/Luskahz/jeep-club-backend/pull/114), referência final
+de entrega. O último commit documental não altera Java, testes, SQL ou POM.
+Detalhes, hashes e inventário de arquivos:
 [evidência estruturada](back-526-authentication-eligibility-evidence.json).
 
-O CI seguinte do HEAD documental ddaf6d2b (run 40410277078) expôs uma corrida
-em `concurrentImportsOfSameBindingAreIdempotentAndAuditedOnce`: Member ausente na
-primeira leitura, mas claim já confirmada na leitura seguinte, gerando falsamente
-NUMBER_UNAVAILABLE. O verify executou 2180 testes com uma falha. Esses resultados
-iniciais não certificam a correção adicional descrita a seguir.
-
-A prévia passa a reler o titular quando encontra a claim ocupada. Se o vínculo
-vigente já é exatamente o solicitado, informa ALREADY_LINKED; reservas e outros
-titulares continuam NUMBER_UNAVAILABLE. Assign mantém a última revalidação
-bloqueante, inclusive de Authentication. Novo cenário determinístico confirma uma
-atribuição concorrente entre as duas leituras e exige um único Member/claim/audit.
-O assert concorrente anterior permanece inalterado; os gates são repetidos.
-Execuções locais MySQL/futura do código inicial foram interrompidas para essa
-correção e não contam como aprovação da versão final.
+Histórico de validação preservado: reprodução inicial 2 falhas HTTP; erro inicial
+de compilação do accessor de dry-run corrigido antes da reprodução; primeira
+fixture focal sem transação produziu 41 erros e foi corrigida; CI 07601103 passou,
+mas o seguinte ddaf6d2b executou 2180 testes com 1 falha de idempotência. Os gates
+MySQL locais dessa primeira versão foram interrompidos e não aprovam o código
+final. Após corrigir a corrida, o verify local e todos os gates CI acima passaram.
