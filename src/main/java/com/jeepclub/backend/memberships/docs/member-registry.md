@@ -75,6 +75,21 @@ Sort por matrícula em Identity continua 400; não se ordena página em memória
 Export padrão MEMBER prioriza matrícula; TECHNICAL põe ID/Matrícula nas primeiras
 colunas e não promete cópia byte a byte do CSV anterior ao Registry.
 
+Inventário dos contratos HTTP consumidos pelas interfaces:
+
+| Superfície GET | Projeção vigente |
+| --- | --- |
+| /identity/me | CurrentUserResponseDTO.membershipNumber; id continua técnico |
+| /identity/me/profile | UserProfileResponseDTO.membershipNumber |
+| /identity/admin/users/{userId}/profile | Mesmo contrato de perfil, com permission administrativa |
+| /identity/admin/users/{userId} | AdminUserResponseDTO.membershipNumber; id preservado |
+| /identity/admin/users | Composição em lote, filtros numéricos canônicos e fields explícitos |
+| /identity/admin/users/export | CSV/PDF com consulta em chunks e número corrente |
+
+Os testes HTTP/serialização/exportação comprovam esses contratos. A inspeção de
+telas e o smoke visual do frontend em ambiente publicado permanecem operacionais;
+esta rodada não modifica nem declara testar um repositório frontend.
+
 ## Onboarding e reconciliação manual
 
 Aprovação não emite. Primeiro acesso efetivo por link ou senha temporária emite
