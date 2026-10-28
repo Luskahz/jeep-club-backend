@@ -1,27 +1,28 @@
-# Membership Registry após release #112 — BACK-528 / BACK-536
+# Membership Registry — V10 numérica
 
-Estado revisado em 25/10/2026. V4 faz parte da release #112, cujo código contém
-migrations V1–V9. V4 criou quatro tabelas do Registry e ampliou o catálogo de
-permissions. Não recriar nem alterar V4 ou qualquer migration aplicada. A revisão
-de finalização não muda schema; V10 ou posterior só se uma necessidade real surgir.
+Política homologada em 26/10/2026; V4 criou o Registry, V5/V6 integraram lifecycle
+e reversão, e V10 reconcilia a nova política sobre V1–V9 imutáveis.
 
-Apenas a linha de coordenação começa sem próximo número; não há backfill ou
-alteração das PKs de Identity. Members existentes, se houver uso autorizado,
-continuam válidos. A emissão e o apply da importação são false por padrão.
+Não há conversão de tipo/PK/FK: membershipNumber continua VARCHAR(64) e string HTTP,
+decimal canônico positivo de 1 a 10^64−1. Dados são pré-validados antes de DML:
+Members e reservas devem ser numéricos/positivos, sem colisão canônica; cada Member
+precisa de claim atual correspondente. Falha recusa sem modificar dados de negócio.
 
-Memberships usa JPA, locks, claims permanentes e @Version. Flyway versiona DDL;
-Hibernate valida o schema. FKs não fazem cascade. BACK-512 já protege DELETE de
-Identity com Member/referências retidas via guard e conflito 409. BACK-523 já
-serializa reversão pendente e primeiro acesso sem apagar matrícula existente.
+V10 copia todas as claims, com metadados originais, para LEGACY_CLAIM_SNAPSHOT no
+audit existente, antes de remover claims retiradas. Canonicaliza vigente/reservas
+e suas chaves SHA-256 numeric:, avança version dos Members cujo literal mudou e
+zera campos legados next_value/format_signature. Singleton permanece como mutex.
+Auditorias anteriores e evidências históricas opacas não são alteradas ou apagadas.
 
-- [Contrato do módulo](../../src/main/java/com/jeepclub/backend/memberships/docs/member-registry.md).
-- [ADR e conflitos](../adr/back-526-member-registry.md).
-- [Auditoria e evidências atuais](../back-526-finalization.md).
-- [Runbook de três fases e recuperação](../back-526-runbook.md).
-- [Evidências históricas de #104](../back-526-validation.md).
+Retificação futura libera a claim antiga na mesma transação de Member + audit.
+O máximo é determinado somente por Members vigentes via CAST DECIMAL(65,0) e
+FOR UPDATE; cálculo BigInteger. Não usar MAX lexicográfico ou histórico/contador.
+Claims sem Member são reservas explícitas. Identity/Authentication/Authorization/
+Billing não recebem backfill nem alterações de identificadores.
 
-Na janela autorizada, reconfirmar deployed SHA, history/checksums e schema reais;
-não assumir baseline V3 a partir de documentação antiga. Validar backup e
-restauração isolada representativa antes de mutação. Testcontainers MySQL 8.0.46
-com fixtures sintéticas prova comportamento técnico, não restaurabilidade da VPS.
-Nenhuma operação produtiva é autorizada ou executada por esta revisão.
+Teste deve cobrir banco vazio, upgrade V9→V10 com claims antigas e rejeição segura
+de dados incompatíveis, além de Hibernate validate. Não editar migrations aplicadas,
+não usar clean/repair/baseline reset, nem executar dados reais nesta missão.
+
+[ADR](../adr/back-526-member-registry.md) · [contrato](../../src/main/java/com/jeepclub/backend/memberships/docs/member-registry.md) ·
+[auditoria e evidências atuais](../back-526-numeric-policy.md) · [runbook](../back-526-runbook.md).

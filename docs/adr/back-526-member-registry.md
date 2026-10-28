@@ -1,120 +1,95 @@
-# ADR BACK-526 — matrícula independente e governança
+# ADR BACK-526 — matrícula numérica vigente
 
-Data: 25/10/2026. Estado: decisões técnicas implementadas; homologação de negócio
-pendente. Este documento não representa aprovação do clube nem autoriza ativação.
+Decisão de negócio homologada pela solicitação de 26/10/2026. Substitui a política
+conservadora de #104/#113. Aprovação da regra não autoriza implantação nem flags.
 
-## Identificadores e fonte de verdade
+## Identificadores e representação
 
-| Identificador | Proprietário | Semântica |
-| --- | --- | --- |
-| Identity.User.id | Identity | PK técnica imutável; autenticação, JWT, referências e contratos existentes |
-| Membership.Member.id | Memberships | PK técnica imutável do cadastro de associado |
-| Member.identityUserId | Memberships → contrato público Identity | Vínculo único, escalar, com identidade existente |
-| Member.membershipNumber | Memberships | String de negócio vigente, exibida como matrícula |
-| MembershipApplication.id | Memberships | Processo de admissão; não é matrícula |
+Memberships é proprietário de Member e membershipNumber. Identity conserva User
+e sua PK. Member.id, User.id e identityUserId não mudam por retificação; JWT,
+credenciais, roles e referências financeiras continuam usando os contratos atuais.
+Uma Identity pode não ter Member; não há gate novo de login ou fallback para ID.
 
-Uma Identity pode não ter Member. Nenhum ID técnico serve como fallback visual,
-fonte de numeração ou critério isolado de reconciliação. Não se muda PK, FK,
-AUTO_INCREMENT de Identity, JWT, credencial, role ou cobrança para corrigir matrícula.
+membershipNumber continua String no Java/JSON e VARCHAR(64) no MySQL. Representa
+decimal ASCII positivo canônico, de 1 a 10^64−1: `027` é normalizado para `27`.
+Zero, sinais, prefixos, espaços, frações, expoentes, dígitos Unicode e entradas
+maiores que 64 caracteres são 400. A capacidade vem da coluna existente, sem
+limite baseado no número de associados e sem perda de precisão em JavaScript.
 
-## Política conservadora vigente
+## Alocação e concorrência
 
-Armazenar literalmente 1–64 caracteres, sem espaços externos nem controles.
-Não aplicar trim, case folding, padding ou conversão numérica ao valor recebido.
-MySQL usa collation binária. A pesquisa encontra apenas a matrícula vigente exata.
+Sob Identity → singleton do Registry, a consulta nativa ordena
+`CAST(membership_number AS DECIMAL(65,0)) DESC LIMIT 1 FOR UPDATE`. Ela lê o maior
+número **vigente**; BigInteger calcula +1, ou 1 sem Members. Não lê audit, IDs,
+claims históricas, next_value ou format_signature. Não usa comparação lexicográfica.
+Reservas explícitas a partir do candidato são puladas sem liberar reservas.
 
-Para colisões, strings compostas exclusivamente por dígitos ASCII têm uma claim
-canônica sem zeros iniciais: `027` e `27` não coexistem. O valor exibido continua
-`027`. Isso é uma proteção contra ambiguidade, não uma homologação de equivalência.
-Valores `A-027` e `a-027` são distintos na regra técnica atual; sua aceitação como
-formato oficial permanece pendente. A chave de claim é SHA-256 do literal ou dos
-dígitos canônicos. Alterar equivalência exige análise das claims existentes e,
-se necessária, evolução versionada do schema; nunca editar V4 aplicada.
+FOR UPDATE é leitura corrente no REPEATABLE READ do MySQL, inclusive após esperar
+o mutex com snapshot anterior. Todas as escritas existentes continuam usando esse
+coordenador; UNIQUE de número/Identity/claim e @Version complementam o lock.
+Nenhuma outra matrícula é renumerada. H2 não substitui a prova MySQL de snapshot.
 
-Claims atribuídas, retiradas e reservadas são permanentes. Reserva não cria Member
-e não pode ser convertida em atribuição pela API atual. Não há transferência,
-liberação ou reutilização, nem para o mesmo associado. Uma retificação errada
-exige novo número livre e justificativa; não se apaga histórico para desfazê-la.
+Exemplo: 200 e 9999 vigentes → próximo 10000. Corrigir 9999 para 150 antes da
+emissão → próximo 201. Se 10000 já pertence a outro Member, permanece intacto e
+o próximo é 10001. Não há contador crescente independente do estado atual.
 
-## Transições e conflitos
+## Ocupação, reserva e histórico
 
-| Origem / comando | Resultado técnico | Número e auditoria |
-| --- | --- | --- |
-| Identity ativa sem Member + atribuição explícita | Cria Member com identidade existente | Claim + ASSIGN na mesma transação |
-| Mesmo vínculo e número + atribuição repetida | Retorna Member atual | Sem novo audit/consumo |
-| Mesmo vínculo + outro número em atribuição | 409 | Usar retificação, não sobrescrever |
-| Member + retificação, versão atual e número livre | Mantém ambas PKs; troca matrícula vigente | Claim anterior mantida, claim nova + CORRECT |
-| Retificação com versão antiga | 409 | Nenhuma alteração parcial |
-| Número vigente/retirado/reservado/variante numérica ocupada | 409 | Nunca toma número de outra pessoa |
-| Reserva de número livre | Sem Member | Claim sem memberId + RESERVE |
-| Identity inexistente | 404 | Sem criação de Identity ou claim |
-| Nova atribuição/emissão para Identity inativa/arquivada | 409 | Sem novo vínculo |
-| Retificação de Member já existente e Identity retida | Permitida com permission/versão/motivo | Não reativa Identity; conserva histórico |
-| Disable/archive de Identity com Member | Preserva Member e claims | Revogação/estado seguem BACK-512 |
-| Unarchive/enable | Preserva matrícula atual | Não emite segundo número |
-| DELETE de Identity vinculada ou ator com referências retidas | 409 pelo guard de lifecycle | FK restritiva como última defesa; sem cascade |
-| Aprovação temporária ou access link | APPROVED, Identity/Authentication pendentes | Sem Member automático |
-| Primeiro acesso de aplicação aprovada, emissão habilitada | COMPLETED + Member | GENERATE atômico com credencial/processo |
-| Primeiro acesso com emissão false | COMPLETED sem Member | Pendência de conciliação explícita; login permitido |
-| Reenvio/expiração/rejeição antes do primeiro acesso | Mantém pendência ou reverte provisioning conforme BACK-523 | Sem emissão/consumo |
-| Primeiro acesso e rejeição concorrentes | Serialização por Identity; um desfecho válido | Se acesso vence, rejeição não apaga Member; se rejeição vence, sem emissão |
-| ROOT/técnico/legado criado fora de aplicação aprovada | Sem emissão automática por existir User ou fazer login | Sem Member obrigatório para acessar contratos atuais |
+Claim com memberId é ocupação atual; claim sem memberId é reserva explícita.
+Retificação exige Identity/Member, permission REGISTRATION_MANAGE, justificativa
+e versão. Reivindica destino livre, atualiza Member, remove somente a claim
+anterior do mesmo Member e acrescenta CORRECT, em uma transação. Falha reverte
+tudo. Exemplo: 20→150 libera 20 para outro associado; o histórico do primeiro
+continua com ASSIGN 20 e CORRECT 20→150. Não existe edição/exclusão de auditoria.
 
-Cadastro administrativo histórico é uma decisão explícita de um operador com
-permission; o backend não consegue reconhecer sozinho se uma conta técnica
-também representa associado antigo. O gerador administrativo permanece uma
-operação explícita com NUMBER_ISSUE, reason, faixa homologada e flag; não é um
-classificador automático de elegibilidade por role/CPF. Não se inventa privilégio
-ou proibição por nome de pessoa. Qualquer regra adicional exige decisão do clube.
-
-## Coordenação e fronteiras
-
-Todas as escritas de Registry usam Identity → mutex singleton do Registry;
-reserva só precisa do mutex. Leituras bloqueadas renovam snapshots JPA. Counter,
-Member, claim e audit confirmam juntos; falha desfaz todos. UNIQUE e @Version
-complementam os locks. O contador não consulta MAX e não deriva de PKs.
-Retries do mesmo vínculo retornam o Member existente sem segunda emissão.
-
-Memberships consome UserIdentityLock/UserQuery por MemberIdentityAdapter.
-Authentication chama MembershipOnboardingCompletion, contrato público; access
-link e senha temporária participam da transação de primeiro acesso. Authorization
-continua proprietário de roles/permissions. Identity compõe a matrícula via
-UserMembershipNumberProjection e adapter Platform da MemberRegistrationQuery,
-sem importar entity/repository privado. Billing mantém referências por userId.
-
-Queries seguintes ao commit leem a matrícula atual; lote até 500 IDs sem cache.
-Perfis, detalhe administrativo, fields, pesquisa e CSV/PDF são as superfícies de
-apresentação do backend. Listagens e exports usam lote; IDs técnicos permanecem
-nos contratos. A homologação de telas do frontend é evidência externa a este repo.
-
-## Autoridade administrativa
-
-| Permission explícita | Operação |
+| Situação | Resultado |
 | --- | --- |
-| MEMBERSHIP_MEMBER_READ | Consulta/lista/pesquisa vigente |
-| MEMBERSHIP_MEMBER_REGISTRATION_MANAGE | Atribuição histórica e retificação |
-| MEMBERSHIP_MEMBER_AUDIT_READ | Histórico |
-| MEMBERSHIP_MEMBER_NUMBER_RESERVE | Reserva permanente |
-| MEMBERSHIP_MEMBER_NUMBER_ISSUE | Geração administrativa configurada |
-| MEMBERSHIP_MEMBER_IMPORT | Dry-run/apply, condicionado também à flag de apply |
+| Atribuição repetida da mesma matrícula canônica | Idempotente, sem novo audit |
+| Outra matrícula em PUT para identidade já vinculada | 409; usar PATCH |
+| Destino vigente ou reservado | 409 |
+| Destino usado apenas no passado e livre agora | Permitido |
+| Versão antiga | 409, inclusive na correção repetida |
+| Identity/Member ausente | 404 |
+| Nova atribuição a Identity inativa/arquivada | 409 |
+| Intervalo automático esgotado | 409, sem escrita |
+| Entrada inválida / ausência de autenticação / permission ausente | 400 / 401 / 403 |
 
-ROOT recebe o catálogo estrutural existente. Roles CUSTOM não recebem grants
-implícitos. O clube deve designar responsáveis e conceder permissões explícitas;
-nenhuma exceção pelo nome Matheus ou por identidade pessoal. Motivos e referências
-devem ser opacos, sem CPF/e-mail/nome de associado. O sistema persiste ator, instante,
-operação, valores anterior/novo e motivo; não registra senha/token no audit.
+Permissions existentes permanecem separadas: READ, REGISTRATION_MANAGE,
+AUDIT_READ, NUMBER_RESERVE, NUMBER_ISSUE e IMPORT, sob MEMBERSHIP_MEMBER_.
+CUSTOM não recebe grants implícitos. Não há privilégio por nome de pessoa.
 
-## Decisões externas bloqueantes
+## Onboarding, legado e lifecycle
 
-| Decisão / evidência | Responsável pela aprovação | Impacto enquanto pendente |
-| --- | --- | --- |
-| Formato oficial, zeros/case e variantes históricas | Responsável formal do clube | Manter guard conservador; não normalizar legado automaticamente |
-| Faixa inicial, prefixo/largura, reservas, saltos e lacunas | Clube com operação responsável | Emissão false e approved false; nenhum início presumido |
-| Marco formal de associação, inclusive ambos primeiros acessos | Clube | Ponto técnico implementado é primeiro acesso; ativação depende de homologação |
-| Fonte histórica versionada, conferência e divergências resolvidas | Responsável autorizado pelo clube | Imports apply false; dry-run sintético não comprova fonte real |
-| Administradores/grants e autorização de janela | Clube e operação | Permission técnica não substitui autorização operacional |
-| UI, ausência de fallback e apresentação pós-retificação | Responsável pelo frontend/clube | Contrato backend disponível; homologação visual não presumida |
-| Backup, restauração representativa e assinatura das fases | Operação autorizada | NO-GO operacional até comprovação |
+Aprovação cria Identity/Authentication pendente, sem Member automático. Primeiro
+acesso por link ou senha temporária conclui a aplicação e emite na mesma transação
+somente quando habilitado. Reenvio/expiração/retry não duplicam Member. Com flag
+false, primeiro acesso e login continuam funcionando sem matrícula.
 
-Não há aprovação desses itens anexada à auditoria. BACK-527 e a Story permanecem
-abertas. A aprovação técnica de um PR ou CI verde não substitui homologação.
+BACK-523 permanece: PENDING pode ser rejeitado; APPROVED somente pode ser revertido
+antes do primeiro acesso e se todos os guards permitirem. COMPLETED não é reversível.
+BACK-512 continua responsável por inativação/arquivamento/exclusão segura. Member,
+audit e referências como ator impedem exclusão incompatível; números vigentes de
+identidades inativas/arquivadas continuam atribuídos e participam do máximo.
+
+O fluxo histórico homologado é cadastro → primeiro acesso → número automático →
+consulta humana da matrícula histórica → PATCH administrativo. Importação em lote,
+planilha e backfill não são pré-requisitos de aceite dessa funcionalidade manual.
+O importador existente continua opcional, com dry-run/proof e apply false por padrão.
+
+## Upgrade e configuração
+
+V10 preserva V1–V9 e as PK/FKs. Preflight recusa Members/reservas inválidos,
+colisões canônicas e Member sem claim atual. Copia toda metadata das claims para
+LEGACY_CLAIM_SNAPSHOT no audit existente, libera claims retiradas, canonicaliza
+vigentes/reservas e invalida versões de Members cujo literal mudou. Auditorias
+anteriores e literais históricos opacos são preservados verbatim.
+
+Singleton permanece como mutex; next_value/format_signature legados são limpos,
+mas suas colunas ficam para compatibilidade de schema. enabled/approved continuam
+false. initial-number/width/prefix foram aposentados: configuração explícita
+antiga falha no startup, mesmo disabled (prefixo vazio é neutro). Não há faixa
+inicial para configurar. Ver runbook para preflight/backup/recuperação.
+
+Pendências externas são operacionais: release autorizada, backup/restauração
+representativa, preflight da base real e ativação de flags. Formato, início,
+reutilização e marco formal foram homologados; não permanecem bloqueios de negócio.

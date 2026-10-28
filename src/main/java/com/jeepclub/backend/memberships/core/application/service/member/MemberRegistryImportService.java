@@ -12,6 +12,7 @@ import java.util.*;
 public class MemberRegistryImportService {
     private final MemberRepository members;
     private final MemberIdentityPort identities;
+    private final MemberAuthenticationEligibility authentication;
     private final MemberImportProofPort proof;
     private final AdminMemberService admin;
     private final MemberImportApplicationPolicy policy;
@@ -52,12 +53,22 @@ public class MemberRegistryImportService {
             else if(!identities.isActive(r.identityUserId())) outcome="IDENTITY_INACTIVE";
             else {
                 var current=members.byIdentity(r.identityUserId());
-                outcome=current.isPresent() ? (current.get().membershipNumber().equals(r.membershipNumber())?"ALREADY_LINKED":"IDENTITY_ALREADY_LINKED")
-                        : members.claimed(key)?"NUMBER_UNAVAILABLE":"READY";
+                outcome=current.isPresent() ? (current.get().membershipNumber().equals(new MembershipNumber(r.membershipNumber()).value())?"ALREADY_LINKED":"IDENTITY_ALREADY_LINKED")
+                        : !authentication.hasCompletedFirstAccess(r.identityUserId())?"FIRST_ACCESS_INCOMPLETE"
+                        : availability(r,key);
             }
             result.add(new MemberImportReport.Row(i,outcome));
         }
         return List.copyOf(result);
+    }
+    private String availability(MemberImportRow row,String key) {
+        if(!members.claimed(key)) return "READY";
+        // Apply preview is nontransactional: a concurrent assign may commit between the
+        // first Member read and the claim read. Recognize that same binding as idempotent;
+        // assign still revalidates under Identity/account/Registry locks before any write.
+        return members.byIdentity(row.identityUserId())
+                .filter(member -> member.membershipNumber().equals(new MembershipNumber(row.membershipNumber()).value()))
+                .map(member -> "ALREADY_LINKED").orElse("NUMBER_UNAVAILABLE");
     }
     private void validate(List<MemberImportRow> rows,Long actor,String reason) {
         AdminMemberService.validateActorReason(actor,reason);

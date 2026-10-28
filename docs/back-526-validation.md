@@ -1,5 +1,9 @@
 # BACK-526 — implementação e evidência para revisão
 
+> Registro histórico anterior à homologação de 26/10/2026. As regras antigas
+> de claims permanentes, formato opaco e contador crescente foram substituídas.
+> Política e resultados atuais: [BACK-526 numérica](back-526-numeric-policy.md).
+
 > Registro histórico da implementação e revisão de 17–18/10/2026. PR #104 já
 > integrado e release #112 publicada. Referências abaixo a V4 futura, PR aberto,
 > baseline V3 e BACK-512/523 pendentes descrevem aquela data, não o estado atual.

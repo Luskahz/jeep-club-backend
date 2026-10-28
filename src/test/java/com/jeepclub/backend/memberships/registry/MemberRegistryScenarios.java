@@ -38,6 +38,8 @@ public abstract class MemberRegistryScenarios {
     @Autowired protected JdbcTemplate jdbc;
     @Autowired protected org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired protected UserQuery identities;
+    @Autowired protected com.jeepclub.backend.iam.authentication.core.repository.AuthenticationAccountRepository authenticationAccounts;
+    @MockitoSpyBean protected com.jeepclub.backend.memberships.core.port.MemberAuthenticationEligibility authenticationEligibility;
     @MockitoSpyBean protected UserMembershipNumberProjection projection;
     @Autowired protected EntityManagerFactory emf;
     private static final AtomicInteger SOURCE=new AtomicInteger(910000000);
@@ -46,34 +48,86 @@ public abstract class MemberRegistryScenarios {
         if(!sequences.existsById(1L)) {
             var row=new com.jeepclub.backend.memberships.infra.persistence.entity.MemberRegistrySequenceEntity();row.setId(1L);sequences.saveAndFlush(row);
         }
+        jdbc.update("delete from membership_member_audits");jdbc.update("delete from membership_number_claims");jdbc.update("delete from membership_members");
         first=identity();second=identity();
     }
-    @AfterEach void resetFaults() { reset(audits); }
+    @AfterEach void resetFaults() { reset(audits,authenticationEligibility); }
     protected Long identity() {
         var key=new GeneratedKeyHolder();String cpf=cpf(SOURCE.incrementAndGet());
         jdbc.update(connection -> {
             var statement=connection.prepareStatement("insert into identity_users(name,cpf,status,created_at) values(?,?,'ACTIVE',?)",Statement.RETURN_GENERATED_KEYS);
             statement.setString(1,"Synthetic registry fixture");statement.setString(2,cpf);statement.setTimestamp(3,java.sql.Timestamp.from(Instant.now()));return statement;
         },key);
-        return key.getKey().longValue();
+        Long id=key.getKey().longValue();
+        new TransactionTemplate(transactionManager).executeWithoutResult(status ->
+                authenticationAccounts.create(com.jeepclub.backend.iam.authentication.core.domain.model.AuthenticationAccount.create(id,"synthetic-test-hash",Instant.now())));
+        return id;
     }
     protected static String cpf(int value) {
         String digits=String.format("%09d",value);
         for(int count=9;count<=10;count++) { int sum=0;for(int i=0;i<count;i++)sum+=(digits.charAt(i)-'0')*(count+1-i);int check=11-sum%11;digits+=check>=10?0:check; }
         return digits;
     }
-    private String number() { return "H-"+first+"-027"; }
+    private String number() { return "7"+first+"00"; }
+    @Test void missingAuthenticationAndPendingCredentialCannotCreateRegistryArtifacts() {
+        jdbc.update("delete from authentication_accounts where identity_id=?",first);
+        jdbc.update("update authentication_accounts set credential_status='PENDING_FIRST_ACCESS' where identity_id=?",second);
+        var sequence=jdbc.queryForList("select * from membership_registry_sequence");
+        for(Long user:List.of(first,second)) {
+            assertThat(attempt(() -> admin.assign(user,"27",first,"ONBOARDING_COMPLETED"))).isEqualTo("CONFLICT");
+            assertThat(attempt(() -> admin.generate(user,user,"ONBOARDING_COMPLETED"))).isEqualTo("CONFLICT");
+            assertThat(attempt(() -> admin.issueOnCompletion(user))).isEqualTo("CONFLICT");
+            var plan=importer.dryRun(List.of(row(user,"27")),first,"Synthetic source");
+            assertThat(plan.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("FIRST_ACCESS_INCOMPLETE");
+            assertThat(importer.apply(List.of(row(user,"27")),first,"Synthetic source",plan.dryRunToken()).rows())
+                    .extracting(MemberImportReport.Row::outcome).containsExactly("FIRST_ACCESS_INCOMPLETE");
+        }
+        assertThat(members.count()).isZero();assertThat(claims.count()).isZero();assertThat(audits.count()).isZero();
+        assertThat(jdbc.queryForList("select * from membership_registry_sequence")).isEqualTo(sequence);
+    }
+    @Test void importRevalidatesAuthenticationAtWriteEvenWhenPreviewIsStale() {
+        var rows=List.of(row(first,"27"));var plan=importer.dryRun(rows,first,"Synthetic source");
+        assertThat(plan.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("READY");
+        jdbc.update("update authentication_accounts set credential_status='PENDING_FIRST_ACCESS' where identity_id=?",first);
+        // Reproduce a stale nonlocking snapshot in both dry-run and apply preview.
+        doReturn(true).when(authenticationEligibility).hasCompletedFirstAccess(first);
+        assertThat(importer.apply(rows,first,"Synthetic source",plan.dryRunToken()).rows())
+                .extracting(MemberImportReport.Row::outcome).containsExactly("CONFLICT");
+        assertThat(members.count()).isZero();assertThat(claims.count()).isZero();assertThat(audits.count()).isZero();
+    }
+    @Test void existingMembershipRemainsIdempotentAndCorrectableWithoutAuthenticationEligibility() {
+        var original=admin.assign(first,"27",first,"Verified source");
+        jdbc.update("delete from authentication_accounts where identity_id=?",first);
+        assertThat(admin.assign(first,"027",first,"Retry")).isEqualTo(original);
+        assertThat(admin.generate(first,first,"Retry")).isEqualTo(original);
+        assertThat(admin.correct(first,"28",original.version(),first,"Historical correction").membershipNumber()).isEqualTo("28");
+        assertThat(admin.byNumber("28").id()).isEqualTo(original.id());
+        assertThat(admin.history(first,PageRequest.of(0,20)).getTotalElements()).isEqualTo(2);
+    }
+    @Test void importRecognizesBindingCommittedBetweenMemberAndClaimPreviewReads() {
+        var rows=List.of(row(first,"27"));String reason="Synthetic concurrent preview";
+        var plan=importer.dryRun(rows,first,reason);
+        doAnswer(invocation -> {
+            var concurrentCommit=new TransactionTemplate(transactionManager);
+            concurrentCommit.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            concurrentCommit.executeWithoutResult(status -> admin.assign(first,"27",first,"Concurrent verified assignment"));
+            return invocation.callRealMethod();
+        }).when(authenticationEligibility).hasCompletedFirstAccess(first);
+        assertThat(importer.apply(rows,first,reason,plan.dryRunToken()).rows())
+                .extracting(MemberImportReport.Row::outcome).containsExactly("ALREADY_LINKED");
+        assertThat(members.count()).isEqualTo(1);assertThat(claims.count()).isEqualTo(1);assertThat(audits.count()).isEqualTo(1);
+    }
     @Test void dynamicCorrectionPreservesBothIdsIdentityAndAudit() {
         var before=identities.findById(first).orElseThrow();
         var member=admin.assign(first,"027",first,"Synthetic verified source");
         var changed=admin.correct(first,"037",member.version(),first,"Synthetic correction");
         assertThat(changed.id()).isEqualTo(member.id());assertThat(changed.identityUserId()).isEqualTo(first);
         assertThat(identities.findById(first)).contains(before);
-        assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).isEqualTo("037");
-        assertThat(projection.currentNumber(first)).isEqualTo("037");
+        assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).isEqualTo("37");
+        assertThat(projection.currentNumber(first)).isEqualTo("37");
         assertThat(query.byCurrentMembershipNumber("027")).isEmpty();
         var history=admin.history(first,PageRequest.of(0,20)).getContent();assertThat(history).hasSize(2);
-        assertThat(history.get(0).previousNumber()).isEqualTo("027");assertThat(history.get(0).outcome()).isEqualTo("SUCCESS");
+        assertThat(history.get(0).previousNumber()).isEqualTo("27");assertThat(history.get(0).outcome()).isEqualTo("SUCCESS");
         assertThat(history.get(0).actorUserId()).isEqualTo(first);
     }
     @Test void userWithoutMembershipStaysValidAndHasNoFallback() {
@@ -84,21 +138,23 @@ public abstract class MemberRegistryScenarios {
         var a=admin.assign(first,number(),first,"Verified");long count=audits.count();
         assertThat(admin.assign(first,number(),first,"Repeated verified request").id()).isEqualTo(a.id());
         assertThat(audits.count()).isEqualTo(count);
-        assertThatThrownBy(() -> admin.assign(first,number()+"X",first,"Another number")).isInstanceOf(MemberRegistryException.class);
+        assertThatThrownBy(() -> admin.assign(first,number()+"1",first,"Another number")).isInstanceOf(MemberRegistryException.class);
         assertThatThrownBy(() -> admin.assign(second,number(),first,"Collision")).isInstanceOf(MemberRegistryException.class);
     }
-    @Test void historicNumbersAndReservationsCannotBeReused() {
-        var a=admin.assign(first,number(),first,"Verified");admin.correct(first,number()+"X",a.version(),first,"Correction");
-        assertThatThrownBy(() -> admin.assign(second,number(),first,"Reuse")).isInstanceOf(MemberRegistryException.class);
-        assertThatThrownBy(() -> admin.correct(first,number(),1,first,"Reuse")).isInstanceOf(MemberRegistryException.class);
-        admin.reserve(number()+"R",first,"Synthetic reservation");
-        assertThatThrownBy(() -> admin.assign(second,number()+"R",first,"Reserved")).isInstanceOf(MemberRegistryException.class);
+    @Test void correctedNumberIsReusableAndReservationsStillBlock() {
+        var a=admin.assign(first,number(),first,"Verified");admin.correct(first,number()+"1",a.version(),first,"Correction");
+        admin.assign(second,number(),first,"Reuse released number");
+        assertThat(query.byCurrentMembershipNumber(number()).orElseThrow().identityUserId()).isEqualTo(second);
+        assertThat(admin.history(first,PageRequest.of(0,10)).getContent()).extracting(MemberRegistryAudit::newNumber).contains(number(),number()+"1");
+        admin.reserve(number()+"4",first,"Synthetic reservation");
+        assertThatThrownBy(() -> admin.correct(first,number()+"4",1,first,"Reserved")).isInstanceOf(MemberRegistryException.class);
     }
-    @Test void leadingZerosArePreservedAndAmbiguousVariantsAreRejected() {
-        String legacy="000000"+(500000+first);admin.assign(first,legacy,first,"Verified");
-        assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).isEqualTo(legacy);
-        assertThat(query.byCurrentMembershipNumber(Long.toString(500000+first))).isEmpty();
-        assertThatThrownBy(() -> admin.assign(second,Long.toString(500000+first),first,"Ambiguous")).isInstanceOf(MemberRegistryException.class);
+    @Test void leadingZerosAreCanonicalAndCannotCreateASeparateNumber() {
+        admin.assign(first,"00027",first,"Verified");
+        assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).isEqualTo("27");
+        assertThat(query.byCurrentMembershipNumber("027").orElseThrow().identityUserId()).isEqualTo(first);
+        assertThat(admin.assign(first,"27",first,"Idempotent").membershipNumber()).isEqualTo("27");
+        assertThatThrownBy(() -> admin.assign(second,"27",first,"Collision")).isInstanceOf(MemberRegistryException.class);
     }
     @Test void nonexistentInactiveAndInvalidInputsDoNotWrite() {
         long before=members.count();
@@ -128,20 +184,20 @@ public abstract class MemberRegistryScenarios {
         var original=admin.assign(first,number(),first,"Synthetic source");
         long claimCount=claims.count(),auditCount=audits.count();
         doThrow(new IllegalStateException("injected correction audit failure")).when(audits).saveAndFlush(any());
-        assertThatThrownBy(() -> admin.correct(first,number()+"C",original.version(),first,"Synthetic correction"))
+        assertThatThrownBy(() -> admin.correct(first,number()+"8",original.version(),first,"Synthetic correction"))
                 .isInstanceOf(RuntimeException.class).hasStackTraceContaining("injected correction audit failure");
         assertThat(admin.byIdentity(first)).isEqualTo(original);
         assertThat(claims.count()).isEqualTo(claimCount);assertThat(audits.count()).isEqualTo(auditCount);
-        assertThat(claims.existsById(new MembershipNumber(number()+"C").claimKey())).isFalse();
+        assertThat(claims.existsById(new MembershipNumber(number()+"8").claimKey())).isFalse();
     }
     @Test void staleCorrectionFailsWithoutPartialAudit() {
-        var a=admin.assign(first,number(),first,"Verified");admin.correct(first,number()+"A",a.version(),first,"Correction");long count=audits.count();
-        assertThatThrownBy(() -> admin.correct(first,number()+"B",a.version(),first,"Stale")).isInstanceOf(MemberRegistryException.class);
-        assertThat(audits.count()).isEqualTo(count);assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).endsWith("A");
+        var a=admin.assign(first,number(),first,"Verified");admin.correct(first,number()+"2",a.version(),first,"Correction");long count=audits.count();
+        assertThatThrownBy(() -> admin.correct(first,number()+"3",a.version(),first,"Stale")).isInstanceOf(MemberRegistryException.class);
+        assertThat(audits.count()).isEqualTo(count);assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).endsWith("2");
     }
     @Test void generatorSkipsReservedNumbersAndIsIndependentOfIds() {
-        Long next=sequences.findById(1L).orElseThrow().getNextValue();if(next==null)next=100L;
-        String reserved=String.format("%03d",next);admin.reserve(reserved,first,"Synthetic reservation");
+        Long next=nextNumber();
+        String reserved=next.toString();admin.reserve(reserved,first,"Synthetic reservation");
         var a=admin.generate(first,first,"Synthetic issue");assertThat(Long.parseLong(a.membershipNumber())).isEqualTo(next+1);
         assertThat(admin.generate(first,first,"Retry").id()).isEqualTo(a.id());
     }
@@ -160,25 +216,25 @@ public abstract class MemberRegistryScenarios {
     }
     @Test void competingCorrectionsHaveOneWinner() throws Exception {
         var a=admin.assign(first,number(),first,"Verified");
-        var values=race(() -> attempt(() -> admin.correct(first,number()+"A",a.version(),first,"Concurrent correction")),() -> attempt(() -> admin.correct(first,number()+"B",a.version(),first,"Concurrent correction")));
+        var values=race(() -> attempt(() -> admin.correct(first,number()+"2",a.version(),first,"Concurrent correction")),() -> attempt(() -> admin.correct(first,number()+"3",a.version(),first,"Concurrent correction")));
         assertThat(values).containsExactlyInAnyOrder("SUCCESS","CONFLICT");assertThat(admin.history(first,PageRequest.of(0,10)).getTotalElements()).isEqualTo(2);
     }
     @Test void realDatabaseRejectsDuplicateIdentityAndNumberOutsideApplication() {
         admin.assign(first,number(),first,"Verified");
-        assertThatThrownBy(() -> new TransactionTemplate(transactionManager).execute(status -> members.saveAndFlush(MemberMapper.toEntity(Member.create(first,number()+"X",Instant.now())))))
+        assertThatThrownBy(() -> new TransactionTemplate(transactionManager).execute(status -> members.saveAndFlush(MemberMapper.toEntity(Member.create(first,number()+"1",Instant.now())))))
             .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThatThrownBy(() -> new TransactionTemplate(transactionManager).execute(status -> members.saveAndFlush(MemberMapper.toEntity(Member.create(second,number(),Instant.now())))))
             .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
     @Test void batchOfOneHundredUsesOneQuery() {
         var ids=new ArrayList<Long>();
-        for(int i=0;i<100;i++) { Long id=identity();ids.add(id);admin.assign(id,"B-"+id,id,"Synthetic batch fixture"); }
+        for(int i=0;i<100;i++) { Long id=identity();ids.add(id);admin.assign(id,"81"+id,id,"Synthetic batch fixture"); }
         var stats=emf.unwrap(org.hibernate.SessionFactory.class).getStatistics();stats.setStatisticsEnabled(true);stats.clear();
         assertThat(query.currentNumbers(ids)).hasSize(100);assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
         stats.setStatisticsEnabled(false);
     }
     @Test void dryRunNeverWritesAndReportsMissingAndUnverifiedIdentities() {
-        var rows=List.of(row(first,number()),row(Long.MAX_VALUE,number()+"M"),new MemberImportRow(second,number()+"U",false,"synthetic-source"));
+        var rows=List.of(row(first,number()),row(Long.MAX_VALUE,number()+"5"),new MemberImportRow(second,number()+"6",false,"synthetic-source"));
         long before=members.count(),auditCount=audits.count(),claimCount=claims.count();
         var report=importer.dryRun(rows,first,"Verified source");
         assertThat(report.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("READY","IDENTITY_NOT_FOUND","UNVERIFIED");
@@ -190,7 +246,7 @@ public abstract class MemberRegistryScenarios {
         assertThat(query.byIdentityUserId(first)).isEmpty();
     }
     @Test void importAppliesPerUnitAndRetriesIdempotently() {
-        var rows=List.of(row(first,number()),row(second,number()+"Z"));var plan=importer.dryRun(rows,first,"Verified source");
+        var rows=List.of(row(first,number()),row(second,number()+"7"));var plan=importer.dryRun(rows,first,"Verified source");
         Long other=identity();admin.assign(other,number(),other,"Concurrent conflict after preview");
         var applied=importer.apply(rows,first,"Verified source",plan.dryRunToken());
         assertThat(applied.rows()).extracting(MemberImportReport.Row::outcome).containsExactly("NUMBER_UNAVAILABLE","APPLIED");
@@ -206,8 +262,8 @@ public abstract class MemberRegistryScenarios {
         assertThat(query.byIdentityUserId(first)).isEmpty();
     }
     @Test void generationAndHistoricalAssignmentCompeteWithoutDuplicatingNumber() throws Exception {
-        Long next=sequences.findById(1L).orElseThrow().getNextValue();if(next==null)next=100L;
-        String candidate=String.format("%03d",next);
+        Long next=nextNumber();
+        String candidate=next.toString();
         var outcomes=race(() -> attempt(() -> admin.assign(first,candidate,first,"Synthetic race")),
                 () -> attempt(() -> admin.generate(second,second,"Synthetic race")));
         assertThat(outcomes.get(1)).isEqualTo("SUCCESS");
@@ -215,9 +271,9 @@ public abstract class MemberRegistryScenarios {
         var generated=query.byIdentityUserId(second).orElseThrow();
         query.byIdentityUserId(first).ifPresent(manual -> assertThat(manual.membershipNumber()).isNotEqualTo(generated.membershipNumber()));
     }
-    @Test void generationAndCorrectionSerializeNumericVariantsWithoutReusingClaims() throws Exception {
+    @Test void generationAndCorrectionSerializeNumericVariantsAndReleaseOldOccupancy() throws Exception {
         var original=admin.assign(first,number(),first,"Synthetic source");
-        Long next=sequences.findById(1L).orElseThrow().getNextValue();if(next==null)next=100L;
+        Long next=nextNumber();
         String candidate="000"+next;
         var outcomes=race(() -> attempt(() -> admin.correct(first,candidate,original.version(),first,"Synthetic correction race")),
                 () -> attempt(() -> admin.generate(second,second,"Synthetic generation race")));
@@ -226,19 +282,16 @@ public abstract class MemberRegistryScenarios {
         assertThat(new MembershipNumber(corrected.membershipNumber()).claimKey())
                 .isNotEqualTo(new MembershipNumber(generated.membershipNumber()).claimKey());
         assertThat(corrected.id()).isEqualTo(original.id());
-        assertThat(claims.existsById(new MembershipNumber(number()).claimKey())).isTrue();
+        assertThat(claims.existsById(new MembershipNumber(number()).claimKey())).isEqualTo(!outcomes.get(0).equals("SUCCESS"));
         assertThat(admin.history(first,PageRequest.of(0,10)).getTotalElements()).isEqualTo(outcomes.get(0).equals("SUCCESS")?2:1);
     }
-    @Test void generatorSkipsRetiredNumericVariantWithoutChangingIdentity() {
-        Long next=sequences.findById(1L).orElseThrow().getNextValue();if(next==null)next=100L;
-        var before=identities.findById(second).orElseThrow();
-        var original=admin.assign(first,"000"+next,first,"Synthetic historic source");
-        admin.correct(first,number(),original.version(),first,"Synthetic correction");
-        assertThat(Long.parseLong(admin.generate(second,second,"Synthetic issue").membershipNumber())).isEqualTo(next+1);
-        assertThat(identities.findById(second)).contains(before);
+    @Test void generatorReusesReleasedNumberAboveCurrentMaximum() {
+        var a=admin.assign(first,"9999",first,"Synthetic mistaken number");
+        admin.correct(first,"150",a.version(),first,"Corrected source");
+        assertThat(admin.generate(second,second,"Synthetic issue").membershipNumber()).isEqualTo("151");
     }
     @Test void failedImportUnitRollsBackAndDoesNotPreventNextUnitOrSafeRetry() {
-        var rows=List.of(row(first,number()),row(second,number()+"NEXT"));String reason="Synthetic partial import";
+        var rows=List.of(row(first,number()),row(second,number()+"9"));String reason="Synthetic partial import";
         var preview=importer.dryRun(rows,first,reason);long count=audits.count(),claimCount=claims.count();
         doThrow(new IllegalStateException("injected unit audit failure")).when(audits)
                 .saveAndFlush(argThat(event -> event!=null && event.getNewNumber().equals(number())));
@@ -260,7 +313,7 @@ public abstract class MemberRegistryScenarios {
     }
     @Autowired protected com.jeepclub.backend.iam.identity.core.application.service.user.AdminUserService adminUsers;
     @Test void hundredUserProjectionUsesOnlyAuxiliaryIdsAndOneMembershipLookup() {
-        for(int i=0;i<100;i++) { Long id=identity();admin.assign(id,"PAGE-"+id,id,"Synthetic batch fixture"); }
+        for(int i=0;i<100;i++) { Long id=identity();admin.assign(id,"82"+id,id,"Synthetic batch fixture"); }
         var stats=emf.unwrap(org.hibernate.SessionFactory.class).getStatistics();stats.setStatisticsEnabled(true);stats.clear();
         try {
             var filter=new com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserFilter(null,null,null,null,null,null,null,null,null,null,null,null,null);
@@ -291,7 +344,7 @@ public abstract class MemberRegistryScenarios {
     @Autowired protected com.jeepclub.backend.iam.identity.core.application.service.user.UserExportService userExport;
     @Test void hundredMemberExportResolvesBusinessNumbersOncePerChunk() {
         String name="Synthetic export fixture "+first;
-        for(int i=0;i<100;i++) {Long id=identity();jdbc.update("update identity_users set name=? where id=?",name,id);admin.assign(id,"EXPORT-BATCH-"+id,id,"Synthetic source");}
+        for(int i=0;i<100;i++) {Long id=identity();jdbc.update("update identity_users set name=? where id=?",name,id);admin.assign(id,"83"+id,id,"Synthetic source");}
         var filter=new com.jeepclub.backend.iam.identity.core.application.query.user.AdminUserFilter(null,name,null,null,null,null,null,null,null,null,null,null,null);
         var context=org.springframework.security.core.context.SecurityContextHolder.getContext();var previous=context.getAuthentication();
         context.setAuthentication(org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(
@@ -304,6 +357,63 @@ public abstract class MemberRegistryScenarios {
             verify(projection,never()).currentNumber(any());
         } finally {context.setAuthentication(previous);}
     }
+    @Test void emptyRegistryStartsAtOneAndIgnoresStaleCounterAndSignature() {
+        jdbc.update("update membership_registry_sequence set next_value=99999,format_signature='v1:99999:6:OLD' where id=1");
+        assertThat(admin.generate(first,first,"Synthetic first issue").membershipNumber()).isEqualTo("1");
+        assertThat(sequences.findById(1L).orElseThrow().getNextValue()).isEqualTo(99999L);
+    }
+    @Test void maximumIsNumericAndNotLexicographic() {
+        admin.assign(first,"9",first,"Synthetic source");admin.assign(second,"200",first,"Synthetic source");
+        Long third=identity();assertThat(admin.generate(third,first,"Synthetic issue").membershipNumber()).isEqualTo("201");
+    }
+    @Test void correctingHighest9999To150MakesNext201Again() {
+        admin.assign(first,"200",first,"Synthetic source");var mistaken=admin.assign(second,"9999",first,"Mistyped source");
+        admin.correct(second,"150",mistaken.version(),first,"Manual historical correction");
+        Long third=identity();assertThat(admin.generate(third,first,"Synthetic issue").membershipNumber()).isEqualTo("201");
+        assertThat(query.byIdentityUserId(first).orElseThrow().membershipNumber()).isEqualTo("200");
+    }
+    @Test void active9999Generates10000AndOnlyCorrectingItDoesNotChange10000() {
+        admin.assign(first,"200",first,"Synthetic source");var mistaken=admin.assign(second,"9999",first,"Mistyped source");
+        Long third=identity();var issued=admin.generate(third,first,"Synthetic issue");assertThat(issued.membershipNumber()).isEqualTo("10000");
+        admin.correct(second,"150",mistaken.version(),first,"Manual correction");
+        Long fourth=identity();assertThat(admin.generate(fourth,first,"Synthetic issue").membershipNumber()).isEqualTo("10001");
+        assertThat(admin.byIdentity(third)).isEqualTo(issued);
+    }
+    @Test void released20CanBelongToAnotherIdentityWithoutRewritingFirstHistory() {
+        var a=admin.assign(first,"20",first,"Historical source");
+        admin.correct(first,"150",a.version(),first,"Historical correction");
+        var history=admin.history(first,PageRequest.of(0,10)).getContent();
+        admin.assign(second,"020",first,"Reassignment of free number");
+        assertThat(query.byCurrentMembershipNumber("00020").orElseThrow().identityUserId()).isEqualTo(second);
+        assertThat(admin.history(first,PageRequest.of(0,10)).getContent()).isEqualTo(history);
+        assertThat(history).extracting(MemberRegistryAudit::newNumber).containsExactly("150","20");
+    }
+    @Test void reservationAndAssignmentForSameNumberHaveOneWinner() throws Exception {
+        var result=race(() -> attempt(() -> admin.reserve("27",first,"Synthetic reservation")),
+                () -> attempt(() -> admin.assign(second,"027",first,"Synthetic source")));
+        assertThat(result).containsExactlyInAnyOrder("SUCCESS","CONFLICT");assertThat(claims.count()).isEqualTo(1);
+        assertThat(audits.count()).isEqualTo(1);
+    }
+    @Test void importCannotBypassCanonicalUniquenessAndCanReuseReleasedNumber() {
+        var original=admin.assign(first,"27",first,"Historical source");
+        var rows=List.of(row(second,"027"));var plan=importer.dryRun(rows,first,"Synthetic source");
+        assertThat(importer.apply(rows,first,"Synthetic source",plan.dryRunToken()).rows().get(0).outcome()).isEqualTo("NUMBER_UNAVAILABLE");
+        admin.correct(first,"150",original.version(),first,"Historical correction");
+        var next=importer.dryRun(rows,first,"Synthetic source");
+        assertThat(importer.apply(rows,first,"Synthetic source",next.dryRunToken()).rows().get(0).outcome()).isEqualTo("APPLIED");
+        assertThat(admin.byIdentity(second).membershipNumber()).isEqualTo("27");
+        var duplicate=importer.dryRun(List.of(row(first,"28"),row(second,"028")),first,"Synthetic source");
+        assertThat(duplicate.rows()).extracting(MemberImportReport.Row::outcome).containsOnly("DUPLICATE_SOURCE");
+    }
+    @Test void supportedRangeIsNotLimitedByLongOrMemberCountAndOverflowDoesNotWrite() {
+        admin.assign(first,"9223372036854775808",first,"Synthetic numeric source");
+        assertThat(admin.generate(second,first,"Synthetic issue").membershipNumber()).isEqualTo("9223372036854775809");
+        var current=admin.byIdentity(first);admin.correct(first,"9".repeat(64),current.version(),first,"Synthetic boundary");
+        long count=audits.count();Long third=identity();
+        assertThatThrownBy(() -> admin.generate(third,first,"Exhausted interval")).isInstanceOf(MemberRegistryException.class);
+        assertThat(audits.count()).isEqualTo(count);assertThat(query.byIdentityUserId(third)).isEmpty();
+    }
+    private long nextNumber() { return jdbc.queryForObject("select coalesce(max(cast(membership_number as decimal(65,0))),0)+1 from membership_members",Long.class); }
     private MemberImportRow row(Long id,String number) { return new MemberImportRow(id,number,true,"synthetic-source-verified"); }
     private String attempt(Runnable action) { try { action.run();return "SUCCESS"; } catch(MemberRegistryException conflict) { return conflict.getKind().name(); } }
     private <T> List<T> race(Callable<T> a,Callable<T> b) throws Exception {

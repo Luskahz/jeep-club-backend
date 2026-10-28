@@ -11,14 +11,14 @@ class MemberRegistryPolicyTest {
     @Test void defaultConfigurationIsDisabledAndDoesNotInventInitialNumber() {
         var p=new MemberIssuanceProperties();p.validate();assertThat(p.enabled()).isFalse();assertThat(p.getInitialNumber()).isNull();
     }
-    @Test void enabledConfigurationRequiresBusinessApprovalAndEveryFormatParameter() {
+    @Test void enabledConfigurationRequiresApprovalButNoLegacyFormat() {
         var p=new MemberIssuanceProperties();p.setEnabled(true);assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);
-        p.setApproved(true);p.setInitialNumber(100L);p.setWidth(3);assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);
-        p.setPrefix("");p.validate();assertThat(p.format(100)).isEqualTo("100");assertThat(p.format(7)).isEqualTo("007");
+        p.setApproved(true);p.validate();assertThat(p.enabled()).isTrue();
     }
-    @Test void invalidRangesAndOverflowAreRejected() {
-        var p=new MemberIssuanceProperties();p.setEnabled(true);p.setApproved(true);p.setInitialNumber(0L);p.setWidth(3);p.setPrefix("");
-        assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);p.setInitialNumber(Long.MAX_VALUE);assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);
+    @Test void legacyConfigurationIsRejectedEvenWhenDisabled() {
+        var p=new MemberIssuanceProperties();p.setInitialNumber(1L);assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class).hasMessageContaining("retired");
+        p.setInitialNumber(null);p.setWidth(1);assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);
+        p.setWidth(null);p.setPrefix("A");assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);
     }
     @Test void composeEnvironmentBindsTheApprovedRange() {
         var env=new org.springframework.core.env.StandardEnvironment();
@@ -27,7 +27,7 @@ class MemberRegistryPolicyTest {
             "MEMBERSHIPS_REGISTRY_ISSUANCE_INITIAL_NUMBER","100","MEMBERSHIPS_REGISTRY_ISSUANCE_WIDTH","3","MEMBERSHIPS_REGISTRY_ISSUANCE_PREFIX","")));
         var p=org.springframework.boot.context.properties.bind.Binder.get(env).bind("memberships.registry.issuance",
                 org.springframework.boot.context.properties.bind.Bindable.of(MemberIssuanceProperties.class)).get();
-        assertThat(p.getInitialNumber()).isEqualTo(100L);p.validate();assertThat(p.format(100)).isEqualTo("100");
+        assertThat(p.getInitialNumber()).isEqualTo(100L);assertThatThrownBy(p::validate).isInstanceOf(IllegalStateException.class);
     }
     @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods=false)
     @org.springframework.boot.context.properties.EnableConfigurationProperties(MemberIssuanceProperties.class)
@@ -38,14 +38,20 @@ class MemberRegistryPolicyTest {
                 .run(context -> assertThat(context).hasFailed());
         new org.springframework.boot.test.context.runner.ApplicationContextRunner().withUserConfiguration(PolicyConfiguration.class)
                 .run(context -> { assertThat(context).hasNotFailed();assertThat(context.getBean(MemberIssuanceProperties.class).enabled()).isFalse(); });
+        new org.springframework.boot.test.context.runner.ApplicationContextRunner().withUserConfiguration(PolicyConfiguration.class)
+                .withPropertyValues("memberships.registry.issuance.enabled=false","memberships.registry.issuance.initial-number=1")
+                .run(context -> assertThat(context).hasFailed());
     }
-    @Test void opaqueFormatsArePreservedAndAmbiguityGuardDoesNotRewriteThem() {
-        assertThat(new MembershipNumber("027").value()).isEqualTo("027");
+    @Test void decimalsAreCanonicalAndOpaqueFormatsAreRejected() {
+        assertThat(new MembershipNumber("027").value()).isEqualTo("27");
         assertThat(new MembershipNumber("027").claimKey()).isEqualTo(new MembershipNumber("27").claimKey());
-        assertThat(new MembershipNumber("A-027").claimKey()).isNotEqualTo(new MembershipNumber("a-027").claimKey());
+        for(String s:List.of("A-027","a-027","0","000","-1","+1","1.0","1e2","１"))
+            assertThatThrownBy(() -> new MembershipNumber(s)).isInstanceOf(RuntimeException.class);
+        assertThat(new MembershipNumber("9".repeat(64)).value()).hasSize(64);
+        assertThatThrownBy(() -> new MembershipNumber("9".repeat(65))).isInstanceOf(RuntimeException.class);
     }
     @Test void invalidControlsAndDestructiveWhitespaceAreRejected() {
-        for(String value:new String[]{"", " ","027 "," 027","A\nB","x".repeat(65)}) assertThatThrownBy(() -> new MembershipNumber(value)).isInstanceOf(RuntimeException.class);
+        for(String value:new String[]{"", " ","027 "," 027","027\n","027\r","A\nB","x".repeat(65)}) assertThatThrownBy(() -> new MembershipNumber(value)).isInstanceOf(RuntimeException.class);
     }
     @Test void previewProofExpiresAndCannotBeReusedAcrossProcesses() {
         var now=Instant.parse("2026-10-17T00:00:00Z");var clock=org.mockito.Mockito.mock(Clock.class);org.mockito.Mockito.when(clock.instant()).thenReturn(now);var proof=new MemberImportProof(clock);

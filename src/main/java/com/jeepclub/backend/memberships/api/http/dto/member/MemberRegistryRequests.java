@@ -6,8 +6,8 @@ import java.util.List;
 import com.jeepclub.backend.memberships.core.application.result.MemberImportRow;
 public final class MemberRegistryRequests {
     private MemberRegistryRequests() { }
-    public record Assignment(@NotBlank @Size(max=64) @Schema(example="027") String membershipNumber,@NotBlank @Size(max=500) String reason) { }
-    public record Correction(@NotBlank @Size(max=64) @Schema(example="037") String membershipNumber,@NotNull @PositiveOrZero Long expectedVersion,@NotBlank @Size(max=500) String reason) { }
+    public record Assignment(@NotBlank @Size(max=64) @Schema(example="27",description="Decimal positivo até 64 dígitos; zeros iniciais são normalizados. Sem prefixos.") String membershipNumber,@NotBlank @Size(max=500) String reason) { }
+    public record Correction(@NotBlank @Size(max=64) @Schema(example="37",description="Número vigente novo. A correção libera o anterior e preserva auditoria.") String membershipNumber,@NotNull @PositiveOrZero Long expectedVersion,@NotBlank @Size(max=500) String reason) { }
     public record Generation(@NotBlank @Size(max=500) String reason) { }
     public record ImportRow(@NotNull @Positive Long identityUserId,@NotBlank @Size(max=64) String membershipNumber,
             @Schema(requiredMode=Schema.RequiredMode.REQUIRED, description="Declaração explícita de conferência humana com a fonte oficial. O backend só valida integridade técnica; não consulta cadastro externo.")

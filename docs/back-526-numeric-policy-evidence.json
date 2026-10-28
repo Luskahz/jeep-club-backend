@@ -1,0 +1,579 @@
+{
+  "auditDate": "2026-10-26",
+  "story": "BACK-526",
+  "baseCommit": "236c6715c8dbefe262a60d1b927dad26e0ba2909",
+  "applicationJavaCommit": "096813252614f916c98fa4732ef8ab43a66960d3",
+  "migrationCommit": "1717433397d4e334ebfbf2fbf7b2a8726d7da9b6",
+  "applicationJavaIdenticalBetweenCommits": true,
+  "runtime": {
+    "java": "Microsoft OpenJDK 17.0.18+8-LTS",
+    "mysql": "8.0.46"
+  },
+  "homologationComments": {
+    "BACK-526": "10229",
+    "BACK-527": "10230"
+  },
+  "productionAccess": false,
+  "productionMutations": false,
+  "attempts": [
+    {
+      "scope": "initial focused Registry/API/policy/onboarding",
+      "tests": 92,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "expanded H2 focused",
+      "tests": 70,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0,
+      "note": "Repeatable-read current-read proof exposed H2 semantics; moved unchanged assertion to authoritative MySQL suite, no skip."
+    },
+    {
+      "scope": "MySQL Registry and V9-to-V10 preflight focused",
+      "tests": 48,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "note": "41 Registry; 7 upgrade/preflight cases before extra exact-binary mismatch case."
+    },
+    {
+      "scope": "first full verify",
+      "tests": 2167,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "duration": "05:38"
+    },
+    {
+      "scope": "first future archive",
+      "outcome": "cancelled",
+      "note": "Cancelled intentionally to restart on final exact-binary V10 Member/claim matching; not counted as passed or failed test validation."
+    },
+    {
+      "scope": "full MySQL with ephemeral next migration before lifecycle fixture correction",
+      "sourceCommit": "f08632b8d2e97d93f81115951a35bcf6cdaa73e1",
+      "tests": 280,
+      "failures": 0,
+      "errors": 1,
+      "skipped": 0,
+      "duration": "26:56",
+      "exitCode": 1,
+      "note": "Legacy lifecycle upgrade fixture still constructed nonnumeric B512-700; corrected to numeric 512700 and preserved old audit rows plus explicit V10 snapshot assertion. No application Java or migration changes."
+    },
+    {
+      "scope": "full MySQL before lifecycle fixture correction",
+      "sourceCommit": "f08632b8d2e97d93f81115951a35bcf6cdaa73e1",
+      "tests": 280,
+      "failures": 0,
+      "errors": 1,
+      "skipped": 0,
+      "duration": "26:06",
+      "exitCode": 1,
+      "note": "Same pre-existing lifecycle fixture incompatibility; correction in 0573e29f changes tests only."
+    },
+    {
+      "scope": "first revalidation pair",
+      "outcome": "cancelled",
+      "sourceCommit": "0573e29f4ef33710db0a73fde531d1ce59b2cde4",
+      "note": "Stopped both runs after a read-only constant-expression probe on synthetic MySQL 8.0.46 proved that anchored digits+$ accepts final LF/CR. V10 and read-only preflight now reject any nondigit; added two upgrade rejection cases and domain control assertions. No application Java changes."
+    },
+    {
+      "scope": "optional deployment harness on Windows Python 3.13 under Git Bash",
+      "tests": 3,
+      "failures": 0,
+      "errors": 5,
+      "exitCode": 1,
+      "note": "Windows paths passed to Bash did not create temporary trace file. No deployment occurred; test-snapshot and bash syntax checks were not reached in the chained command. Linux CI remains authoritative for these existing scripts."
+    },
+    {
+      "scope": "optional deployment harness first isolated Linux invocation",
+      "tests": 3,
+      "errors": 5,
+      "exitCode": 1,
+      "note": "Docker tmpfs /tmp was mounted noexec, preventing the test's temporary Docker double from executing. Rerun allows exec on synthetic /tmp only; repository read-only, network none, no Docker socket."
+    },
+    {
+      "scope": "optional Linux shell syntax against Windows/default-autocrlf archive",
+      "exitCode": 2,
+      "note": "CRLF checkout/archive produced Bash parse error; index blobs are LF. Repeated successfully with git -c core.autocrlf=false archive. No source change or deploy."
+    },
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "tests": 2167,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "exitCode": 0,
+      "duration": "06:40",
+      "applicationJavaCommit": "096813252614f916c98fa4732ef8ab43a66960d3",
+      "selectedSuites": [
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.PaidMembershipFlowIntegrationTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryImportDisabledIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 38,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ],
+      "scope": "full verify before final control-character assertions"
+    }
+  ],
+  "gates": [
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress verify",
+      "sourceCommit": "1717433397d4e334ebfbf2fbf7b2a8726d7da9b6",
+      "tests": 2167,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1,
+      "exitCode": 0,
+      "duration": "06:45",
+      "skip": "LocalFileStorageTest.shouldRejectSymbolicLinkInsteadOfFollowingItOutsideRoot: symbolic links unavailable in this Windows environment",
+      "selectedSuites": [
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipActivationFlowIntegrationTest",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryApiIntegrationTest",
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryImportDisabledIntegrationTest",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryIntegrationTest",
+          "tests": 38,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryPolicyTest",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      ]
+    },
+    {
+      "command": "mvnw.cmd --batch-mode --no-transfer-progress -Pmysql-migrations -DskipUnitTests=true verify",
+      "sourceCommit": "1717433397d4e334ebfbf2fbf7b2a8726d7da9b6",
+      "tests": 282,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "duration": "23:41",
+      "suites": [
+        {
+          "name": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "b0a8ff8e03a09fe32c5afc3a4aa42ce7f6c51788789ad83c207f3e36a3a99802"
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "25f5f51182d9bab3fd72f476041e8d96878d2421786dc836925d836e16891ea7"
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "0d016edce4633caf9beb0703fe99fe2b7af702bab59413eada9356630f93e6ab"
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "4df991d1839d3387b5a391311109dd05e0e7f0733a4fff25dc3bcfbf19f90451"
+        },
+        {
+          "name": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "6f524d2e030913cf3ce7d804865b1c006594ca6459d9d7e165695947b9aafaec"
+        },
+        {
+          "name": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 81,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "83126739e1a3b0ffc3f1a8a32aa1494aa2d21ce10c5686e904c036c23fa23349"
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "97c404085d6ed1836ef3e5475763d8b6403a1466cb628e267323cfe484ccef80"
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "db07d52df16af6f7a2880f4ec707056c828e953e64e2ba14e2e19af705fff7cb"
+        }
+      ]
+    },
+    {
+      "command": "bash deploy/test-future-migration.sh",
+      "sourceCommit": "1717433397d4e334ebfbf2fbf7b2a8726d7da9b6",
+      "tests": 282,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "exitCode": 0,
+      "duration": "27:23",
+      "note": "V11 ephemeral probe only in Git archive; release remains V10.",
+      "suites": [
+        {
+          "name": "com.jeepclub.backend.dependents.api.controller.DependentPhotoMySqlIT",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "98eb99f98e892d2c10e2778e3fffa3a285e2cfae9f31aac66e98048a7e0928fd"
+        },
+        {
+          "name": "com.jeepclub.backend.lifecycle.PrincipalLifecycleMySqlIT",
+          "tests": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "65b69f6daacb714983cdd99578d4a61ccab5a69a7cdb3e4ddc8fbbe66419a40b"
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.MembershipRegistryOnboardingMySqlIT",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "b6ec2866124054242ba29380b52aa88f92910e6fbb2d9a1cb4d1ab63f540c8e9"
+        },
+        {
+          "name": "com.jeepclub.backend.memberships.registry.MemberRegistryMySqlIT",
+          "tests": 41,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "1d2758d45538a441ad040729d3d63f1fa3cc94fac5dc358892c30f209eec2a96"
+        },
+        {
+          "name": "com.jeepclub.backend.platform.database.MySqlMigrationIT",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "2e43cb0c82379272718e55bcf194efcf0fe8cfd6103c6271053b04cc520021a5"
+        },
+        {
+          "name": "com.jeepclub.backend.publications.EventOperationsMySqlIT",
+          "tests": 81,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "0fa386f53db065c13b5d46c7ab3d731cccb54cd3216486fb38a16f513d29e2d6"
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleGalleryMySqlIT",
+          "tests": 28,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "876e1313bf1dc838c8c0f70667a5bb8a680dd36727f8060aaa54210bead651bc"
+        },
+        {
+          "name": "com.jeepclub.backend.vehicles.api.controller.VehicleMediaOrchestrationMySqlIT",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "reportSha256": "5a0f4b8a5f185a3b85f2eb344070cb6826a73a2d2feb9e79d3db09e4aaea254c"
+        }
+      ]
+    }
+  ],
+  "remainingOperationalEvidence": [
+    "Authorized representative production backup restore",
+    "Read-only preflight of current production data and required routine privileges",
+    "Authorized release and flag activation",
+    "Published frontend visual smoke and post-release operational acceptance"
+  ],
+  "note": "Business numbering/association rules are homologated. Manual historical correction needs no mandatory spreadsheet, bulk import or backfill. Totals overlap across gates.",
+  "migrationBlobs": [
+    {
+      "blob": "fb606d1f45bed523f7121c455cf5ebca1f07e744",
+      "path": "src/main/resources/db/migration/V10__membership_current_numeric_policy.sql"
+    },
+    {
+      "blob": "b5a51e37439e8a4e7e4f7bc9a202aff8b1fcefc9",
+      "path": "src/main/resources/db/migration/V1__initial_deploy_schema.sql"
+    },
+    {
+      "blob": "fbad0b475a496337d842fcc94b0228a051b66f26",
+      "path": "src/main/resources/db/migration/V2__identity_user_profiles.sql"
+    },
+    {
+      "blob": "fba4cbf057455eec02898a8588cb5f3044020c27",
+      "path": "src/main/resources/db/migration/V3__account_activation_invitations.sql"
+    },
+    {
+      "blob": "144abe32a66d5884a3d7da606c0bfb648fe45eb8",
+      "path": "src/main/resources/db/migration/V4__membership_member_registry.sql"
+    },
+    {
+      "blob": "5b062975a09aa699d3ff8f83863da444e5558563",
+      "path": "src/main/resources/db/migration/V5__principal_entity_lifecycle.sql"
+    },
+    {
+      "blob": "6c74bd40c0a1409d4ba4cdb0737729b61add9863",
+      "path": "src/main/resources/db/migration/V6__membership_onboarding_review_history.sql"
+    },
+    {
+      "blob": "cafecbd66fede482bc246828e6a21b7005248c49",
+      "path": "src/main/resources/db/migration/V7__dependent_private_photo.sql"
+    },
+    {
+      "blob": "816d003bd900ac3fd5fb76bce2de1b3016071f56",
+      "path": "src/main/resources/db/migration/V8__vehicle_gallery.sql"
+    },
+    {
+      "blob": "4b9a43d709b660bdc2ad1a90b3d4faaa8f2aeb6f",
+      "path": "src/main/resources/db/migration/V9__event_guest_lifecycle.sql"
+    }
+  ],
+  "priorMigrationsUnchanged": true,
+  "finalValidationSourceCommit": "1717433397d4e334ebfbf2fbf7b2a8726d7da9b6",
+  "additionalChecks": {
+    "deploymentHarnessLinux": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    "snapshotHarnessLinux": {
+      "tests": 3,
+      "failures": 0,
+      "errors": 0
+    },
+    "isolation": "python:3.13-slim; repository read-only; network none; no Docker socket; executable synthetic tmpfs",
+    "sourceCommit": "1717433397d4e334ebfbf2fbf7b2a8726d7da9b6",
+    "shellSyntax": "passed for all deploy/*.sh in git -c core.autocrlf=false archive of 17174333, Linux bash",
+    "compose": "compose.yaml and compose.local.yaml config --quiet passed using .env.example and synthetic CI secrets",
+    "readOnlyPreflight": {
+      "database": "synthetic Testcontainers MySQL 8.0.46 schema, after migration",
+      "queries": 5,
+      "exitCode": 0,
+      "BLOCK_INVALID_CURRENT": 0,
+      "BLOCK_INVALID_RESERVATION": 0,
+      "BLOCK_CANONICAL_COLLISION": 0,
+      "BLOCK_CURRENT_CLAIM_MISSING": 0,
+      "INFO_RETIRED_CLAIMS": 0,
+      "note": "Only SELECTs executed; not a production inventory or authorization."
+    }
+  },
+  "frontendScope": "Backend HTTP/projection/CSV/PDF contracts verified; no frontend repository or published UI smoke was executed.",
+  "subtasks": {
+    "BACK-527": {
+      "technical": "implemented and evidenced",
+      "original": "ADR and conservative policy already existed",
+      "changed": "canonical positive numeric policy, current maximum, reuse, transitions and homologation provenance"
+    },
+    "BACK-532": {
+      "technical": "implemented and evidenced",
+      "original": "transactional allocator, claims and central lock existed",
+      "changed": "current locking numeric maximum with BigInteger, reusable occupancy and explicit legacy configuration refusal"
+    },
+    "BACK-533": {
+      "technical": "existing behavior preserved and regression-tested",
+      "original": "first-access issuance and BACK-523 reversal already existed",
+      "changed": "numeric fixtures and manual correction/reuse after both onboarding methods"
+    },
+    "BACK-534": {
+      "technical": "manual flow implemented; optional import compatible",
+      "status": "operational acceptance pending",
+      "original": "manual assignment/correction, dry-run/proof/apply and projections existed",
+      "changed": "canonical uniqueness, released-number reuse and documented manual historical flow",
+      "pending": "authorized active-database inventory and representative preservation evidence explicitly required by additional Jira acceptance"
+    },
+    "BACK-536": {
+      "technical": "runbook and preflight ready",
+      "status": "operational acceptance pending",
+      "changed": "V10 reconciliation, backup/restore/recovery, separate release and flag gates",
+      "pending": "representative backup restoration, active preflight/privileges, authorized release and post-release acceptance"
+    }
+  },
+  "productionFlagsChanged": false,
+  "productionDefaults": {
+    "issuanceEnabled": false,
+    "issuanceApproved": false,
+    "importsApplyEnabled": false
+  },
+  "syntheticScenariosEnableFeatureFlags": true,
+  "masterCommit": "9ad04a71e50917e0a53c1c4855ea6770730bd8b9",
+  "featureBranch": "feat/back-526-canonical-current-number",
+  "repository": "Luskahz/jeep-club-backend",
+  "referencePullRequests": [
+    {
+      "number": 104,
+      "url": "https://github.com/Luskahz/jeep-club-backend/pull/104",
+      "merged": true
+    },
+    {
+      "number": 108,
+      "url": "https://github.com/Luskahz/jeep-club-backend/pull/108",
+      "merged": true
+    },
+    {
+      "number": 113,
+      "url": "https://github.com/Luskahz/jeep-club-backend/pull/113",
+      "merged": true
+    }
+  ],
+  "untrackedArtifactsPreserved": [
+    "output/",
+    "tmp/"
+  ],
+  "technicalCriteria": {
+    "requestedMinimum": 22,
+    "implementedAndEvidenced": 22,
+    "matrix": "docs/back-526-numeric-policy.md",
+    "unverifiedOperationalAcceptance": "BACK-534 and BACK-536 additional acceptance; Story remains open"
+  },
+  "ciResultsLocation": "Final pull request checks and final Jira delivery comment; this file freezes local validation of source 17174333.",
+  "readiness": "READY for technical review; production rollout NO-GO until operational evidence and authorization",
+  "affectedFiles": [
+    ".env.example",
+    "compose.yaml",
+    "deploy/preflight-member-registry.sql",
+    "docs/adr/back-526-member-registry.md",
+    "docs/back-526-finalization.md",
+    "docs/back-526-numeric-policy-evidence.json",
+    "docs/back-526-numeric-policy.md",
+    "docs/back-526-runbook.md",
+    "docs/back-526-validation.md",
+    "docs/database/09-membership-registry.md",
+    "jeep-club-backend-overview.html",
+    "src/main/java/com/jeepclub/backend/iam/identity/api/http/dto/admin/user/AdminUserFilterDTO.java",
+    "src/main/java/com/jeepclub/backend/iam/identity/api/http/dto/admin/user/AdminUserResponseDTO.java",
+    "src/main/java/com/jeepclub/backend/iam/identity/api/http/dto/user/CurrentUserResponseDTO.java",
+    "src/main/java/com/jeepclub/backend/iam/identity/api/http/dto/user/UserProfileResponseDTO.java",
+    "src/main/java/com/jeepclub/backend/memberships/api/http/controller/admin/AdminMemberController.java",
+    "src/main/java/com/jeepclub/backend/memberships/api/http/dto/member/MemberRegistryRequests.java",
+    "src/main/java/com/jeepclub/backend/memberships/api/http/dto/member/MemberResponseDTO.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/application/query/MemberRegistrationQueryService.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/application/service/member/AdminMemberService.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/application/service/member/MemberRegistryImportService.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/domain/model/Member.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/domain/model/MembershipNumber.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/port/MemberIssuancePolicy.java",
+    "src/main/java/com/jeepclub/backend/memberships/core/repository/MemberRepository.java",
+    "src/main/java/com/jeepclub/backend/memberships/docs/member-registry.md",
+    "src/main/java/com/jeepclub/backend/memberships/infra/config/MemberIssuanceProperties.java",
+    "src/main/java/com/jeepclub/backend/memberships/infra/persistence/adapter/MemberRepositoryAdapter.java",
+    "src/main/java/com/jeepclub/backend/memberships/infra/persistence/jpa/MemberJpaRepository.java",
+    "src/main/java/com/jeepclub/backend/platform/composition/membership/MembershipNumberProjectionAdapter.java",
+    "src/main/resources/db/migration/V10__membership_current_numeric_policy.sql",
+    "src/test/java/com/jeepclub/backend/lifecycle/PrincipalLifecycleIntegrationTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/MembershipActivationFlowIntegrationTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryApiIntegrationTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryIntegrationTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryMySqlIT.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryPolicyTest.java",
+    "src/test/java/com/jeepclub/backend/memberships/registry/MemberRegistryScenarios.java",
+    "src/test/java/com/jeepclub/backend/platform/database/MySqlMigrationIT.java"
+  ]
+}
