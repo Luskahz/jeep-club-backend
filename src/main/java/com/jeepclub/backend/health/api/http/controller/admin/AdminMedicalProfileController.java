@@ -45,6 +45,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminMedicalProfileController {
 
     private final AdminMedicalProfileService adminMedicalProfileService;
+    private final com.jeepclub.backend.iam.identity.api.module.UserQuery userQuery;
+    private final com.jeepclub.backend.dependents.api.module.DependentsQuery dependentsQuery;
+
+    public record OwnerPresentation(String name, String responsibleName) {}
+
+    @GetMapping("/{profileId}/owner")
+    @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
+    @RequiredPermission("HEALTH_MEDICAL_PROFILE_READ")
+    @Operation(summary = "Consultar nomes do titular e do associado responsável pelo perfil médico")
+    public ResponseEntity<OwnerPresentation> getOwnerPresentation(@PathVariable Long profileId) {
+        var profile = adminMedicalProfileService.getById(profileId);
+        if (profile.getOwnerType() == MedicalProfileOwnerType.USER) {
+            var name = userQuery.findById(profile.getOwnerId()).map(user -> user.name()).orElse(null);
+            return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                    .body(new OwnerPresentation(name, null));
+        }
+        var dependent = dependentsQuery.findDetailsByIds(java.util.List.of(profile.getOwnerId()))
+                .stream().findFirst();
+        var name = dependent.map(item -> item.name()).orElse(null);
+        var responsibleName = dependent.flatMap(item -> userQuery.findById(item.userId()))
+                .map(user -> user.name()).orElse(null);
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(new OwnerPresentation(name, responsibleName));
+    }
 
     @GetMapping
     @PreAuthorize("hasAuthority('HEALTH_MEDICAL_PROFILE_READ')")
