@@ -183,6 +183,10 @@ public class MemberPayment {
     public void cancel(Instant now) {
         Objects.requireNonNull(now, "now cannot be null");
 
+        if (status == MemberPaymentStatus.REJECTED) {
+            throw new InvalidMemberPaymentStateException("Rejected payment cannot be canceled.");
+        }
+
         if (status == MemberPaymentStatus.CONFIRMED) {
             throw new InvalidMemberPaymentStateException("Confirmed payment cannot be canceled.");
         }

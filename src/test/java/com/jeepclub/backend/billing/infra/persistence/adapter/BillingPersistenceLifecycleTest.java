@@ -83,6 +83,21 @@ class BillingPersistenceLifecycleTest {
         assertThat(refunds.existsActiveByMemberPaymentId(1L)).isTrue(); assertThat(refunds.existsRefundedByMemberPaymentId(1L)).isTrue();
         assertThat(refunds.findByStatus(MemberRefundStatus.REFUNDED, Pageable.unpaged()).getTotalElements()).isEqualTo(1);
     }
+    @Test void invalidRejectedPaymentCancellationAndValidPendingCancellationPersistWithoutLosingHistory() {
+        var rejected = payments.save(MemberPayment.submitForValidation(2L, AMOUNT, PaymentMethod.PIX,
+                NOW, "private-rejected", "notes", NOW));
+        rejected.reject(99L, "Invalid receipt", NOW.plusSeconds(1));
+        var before = new MemberPaymentMapper().toDomain(new MemberPaymentMapper().toEntity(rejected));
+        assertThatThrownBy(() -> rejected.cancel(NOW.plusSeconds(2)))
+                .isInstanceOf(InvalidMemberPaymentStateException.class);
+        payments.save(rejected); em.flush(); em.clear();
+        assertThat(payments.findById(rejected.getId()).orElseThrow()).usingRecursiveComparison().isEqualTo(before);
+
+        var pending = payments.save(MemberPayment.submitForValidation(2L, AMOUNT, PaymentMethod.PIX,
+                NOW, "private-pending", null, NOW));
+        pending.cancel(NOW.plusSeconds(2)); payments.save(pending); em.flush(); em.clear();
+        assertThat(payments.findById(pending.getId()).orElseThrow()).usingRecursiveComparison().isEqualTo(pending);
+    }
     @Test @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void twoConcurrentConfirmationsSerializeAndOnlyOneCanPayTheDebt() throws Exception {
         var tx = new TransactionTemplate(transactionManager);

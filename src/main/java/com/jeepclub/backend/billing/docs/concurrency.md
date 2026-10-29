@@ -37,6 +37,43 @@ um refund ativo/concluído. Não existe retry invisível de submissão financeir
 Os pagamentos e refunds são verificados por consultas com lock (current reads),
 evitando snapshot obsoleto no MySQL REPEATABLE READ após espera por lock.
 
+## Transições de MemberRefund — BACK-489
+
+`approve`, `reject`, `markAsRefunded`, `expire`, `cancel` e `request(refundId)`
+carregam o refund com `PESSIMISTIC_WRITE` e `jakarta.persistence.lock.timeout=0`
+(`FOR UPDATE NOWAIT` no MySQL 8). O lock dura até o término da transação do
+service. A leitura ocorre antes da validação e da mutação. Leituras de listagem
+e consulta por ID continuam sem lock.
+
+A consulta existente por pagamento também usa NOWAIT, inclusive nos checks de
+refund ativo/concluído. `requestByMemberPaymentId` mantém o lock do pagamento
+antes de consultar ou criar o refund; a reutilização de REQUESTED/APPROVED
+continua idempotente. Criação de elegibilidade permanece protegida pelo pagamento.
+Não há retry automático. Disputa por um refund ocupado é traduzida pelo adapter
+para `InvalidMemberRefundStateException` e pelo handler existente para HTTP 409,
+código `INVALID_MEMBER_REFUND_STATE`, sem expor SQL.
+
+NOWAIT evita que comandos sobrepostos como approve/cancel se tornem duas decisões
+bem-sucedidas após uma espera: cancelar um APPROVED continua válido quando
+solicitado depois do commit da aprovação. Uma nova chamada explícita sempre
+valida o estado vigente. A contenção se limita ao refund consultado, sem locks
+em páginas/listagens e sem versionamento ou migration.
+
+| Fluxo | Ordem de aquisição |
+|---|---|
+| comandos de refund por ID | apenas `MemberRefund`; nunca adquire payment/charge depois |
+| request por pagamento | `MemberPayment` -> `MemberRefund`; charge é somente leitura |
+| confirmação tardia | `ChargeCycle` -> `MemberPayment` -> `MemberCharge` -> `MemberRefund` |
+| cancelamento de ciclo | `ChargeCycle` -> pagamentos por cobrança/ID -> cobranças -> refunds |
+
+O refund é sempre o último nível de lock. Nenhum comando bloqueia refund e
+posteriormente tenta payment/charge/cycle. Os locks existentes nos níveis
+anteriores são mantidos; não há ampliação de lock para operações administrativas
+que só alteram refund. NOWAIT também impede espera circular nesse último nível.
+A falha de aquisição aborta toda a transação, incluindo alterações financeiras
+anteriores no mesmo fluxo. O banco deve suportar NOWAIT (MySQL 8); os cenários
+rodam em H2 e são repetidos em MySQL pelo perfil `mysql-migrations`.
+
 ## Comprovante e transação
 
 `PaymentReceiptLifecycle.register` exige transação e sincronização ativas.

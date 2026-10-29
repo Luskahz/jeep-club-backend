@@ -58,7 +58,7 @@ public class MemberRefundService {
     @Transactional
     public MemberRefundResult request(Long refundId, Long userId) {
         Objects.requireNonNull(userId, "requestedByUserId cannot be null");
-        MemberRefund refund = findMemberRefundOrThrow(refundId);
+        MemberRefund refund = findMemberRefundForUpdateOrThrow(refundId);
         ensureRefundBelongsToUser(refund, userId);
         refund.request(userId, Instant.now(clock));
         return MemberRefundResult.from(memberRefundRepository.save(refund));
@@ -90,9 +90,9 @@ public class MemberRefundService {
         return MemberRefundResult.from(memberRefundRepository.save(refund));
     }
 
-    private MemberRefund findMemberRefundOrThrow(Long id) {
+    private MemberRefund findMemberRefundForUpdateOrThrow(Long id) {
         Objects.requireNonNull(id, "id cannot be null");
-        return memberRefundRepository.findById(id)
+        return memberRefundRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new MemberRefundNotFoundException("Member refund not found."));
     }
 

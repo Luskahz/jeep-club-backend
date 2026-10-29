@@ -11,6 +11,10 @@ import java.util.Optional;
 
 public interface MemberRefundJpaRepository extends JpaRepository<MemberRefundEntity, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.QueryHints(@jakarta.persistence.QueryHint(name = "jakarta.persistence.lock.timeout", value = "0"))
+    Optional<MemberRefundEntity> findWithLockingById(Long id);
+
     Page<MemberRefundEntity> findByStatus(
             MemberRefundStatus status,
             Pageable pageable
@@ -27,6 +31,7 @@ public interface MemberRefundJpaRepository extends JpaRepository<MemberRefundEnt
     );
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.QueryHints(@jakarta.persistence.QueryHint(name = "jakarta.persistence.lock.timeout", value = "0"))
     Optional<MemberRefundEntity> findFirstByMemberPaymentIdAndStatusIn(
             Long memberPaymentId,
             Collection<MemberRefundStatus> statuses

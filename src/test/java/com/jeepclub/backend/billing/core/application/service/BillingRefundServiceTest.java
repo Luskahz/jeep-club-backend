@@ -68,7 +68,7 @@ class BillingRefundServiceTest {
         verify(refunds, never()).save(any());
     }
     @Test void refundOwnershipAndMissingResourcesReturnSpecificErrors() {
-        var r = eligibility(); when(refunds.findById(1L)).thenReturn(Optional.of(r));
+        var r = eligibility(); when(refunds.findByIdForUpdate(1L)).thenReturn(Optional.of(r));
         assertThatThrownBy(() -> member.request(1L, 20L)).isInstanceOf(MemberRefundAccessDeniedException.class);
         when(refunds.save(r)).thenReturn(r); member.request(1L, 10L); assertThat(r.isRequested()).isTrue();
         assertThatThrownBy(() -> member.request(404L, 10L)).isInstanceOf(MemberRefundNotFoundException.class);
@@ -101,12 +101,12 @@ class BillingRefundServiceTest {
         assertThat(admin.createEligibilityForCanceledCycle(4L, 99L, NOW)).isZero(); verify(refunds, times(1)).save(any());
     }
     @Test void administrativeCommandsPersistLifecycleAndUseDeterministicClock() {
-        var r = request(); when(refunds.findById(1L)).thenReturn(Optional.of(r)); when(refunds.save(any())).thenAnswer(i -> i.getArgument(0));
+        var r = request(); when(refunds.findByIdForUpdate(1L)).thenReturn(Optional.of(r)); when(refunds.save(any())).thenAnswer(i -> i.getArgument(0));
         admin.approve(1L, 99L); assertThat(r.isApproved()).isTrue(); admin.markAsRefunded(1L, 98L); assertThat(r.isRefunded()).isTrue();
         assertThat(r.getRefundedAt()).isEqualTo(NOW);
-        var rejected = request(); when(refunds.findById(1L)).thenReturn(Optional.of(rejected)); admin.reject(1L, 99L, "no"); assertThat(rejected.getStatus()).isEqualTo(MemberRefundStatus.REJECTED);
-        var canceled = request(); when(refunds.findById(1L)).thenReturn(Optional.of(canceled)); admin.cancel(1L, 99L); assertThat(canceled.isCanceled()).isTrue();
-        var expired = eligibility(); when(refunds.findById(1L)).thenReturn(Optional.of(expired));
+        var rejected = request(); when(refunds.findByIdForUpdate(1L)).thenReturn(Optional.of(rejected)); admin.reject(1L, 99L, "no"); assertThat(rejected.getStatus()).isEqualTo(MemberRefundStatus.REJECTED);
+        var canceled = request(); when(refunds.findByIdForUpdate(1L)).thenReturn(Optional.of(canceled)); admin.cancel(1L, 99L); assertThat(canceled.isCanceled()).isTrue();
+        var expired = eligibility(); when(refunds.findByIdForUpdate(1L)).thenReturn(Optional.of(expired));
         admin = new AdminMemberRefundService(refunds, charges, payments, Clock.offset(CLOCK, Duration.ofDays(30))); admin.expire(1L); assertThat(expired.isExpired()).isTrue();
         assertThatThrownBy(() -> admin.findById(404L)).isInstanceOf(MemberRefundNotFoundException.class);
     }

@@ -67,12 +67,14 @@ class BillingReconstitutionTest {
         var cycle = cycle(); cycle.finish(99L, NOW); cycle.archive(99L, NOW);
         assertThat(new ChargeCycleMapper().toDomain(new ChargeCycleMapper().toEntity(cycle))).usingRecursiveComparison().isEqualTo(cycle);
     }
-    @Test void unusedRejectedPaymentCancellationCurrentlyCannotBeReconstituted() {
-        // Audit finding: no application service calls cancel; retain current behavior pending a lifecycle decision.
-        var p = payment(); p.reject(99L, "reason", NOW); p.cancel(NOW.plusSeconds(1));
-        assertThat(p.isCanceled()).isTrue(); assertThat(p.getRejectionReason()).isEqualTo("reason");
+    @Test void rejectedPaymentCancellationPreservesTheEntireAggregateAndReconstitutes() {
+        var p = payment(); p.reject(99L, "reason", NOW);
         var mapper = new MemberPaymentMapper();
-        assertThatThrownBy(() -> mapper.toDomain(mapper.toEntity(p))).isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("rejectedAt must be null when payment is not rejected.");
+        var before = mapper.toDomain(mapper.toEntity(p));
+        assertThatThrownBy(() -> p.cancel(NOW.plusSeconds(1)))
+                .isInstanceOf(com.jeepclub.backend.billing.core.domain.exception.payment.InvalidMemberPaymentStateException.class);
+        assertThat(p.isRejected()).isTrue();
+        assertThat(p).usingRecursiveComparison().isEqualTo(before);
+        assertThat(mapper.toDomain(mapper.toEntity(p))).usingRecursiveComparison().isEqualTo(before);
     }
 }
