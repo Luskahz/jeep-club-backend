@@ -13,6 +13,9 @@ public interface MemberRefundRepository {
 
     Optional<MemberRefund> findById(Long id);
 
+    /** Exclusive current read; concurrent ownership fails with a controlled refund conflict. */
+    Optional<MemberRefund> findByIdForUpdate(Long id);
+
     Page<MemberRefund> findAll(Pageable pageable);
 
     Page<MemberRefund> findByStatus(

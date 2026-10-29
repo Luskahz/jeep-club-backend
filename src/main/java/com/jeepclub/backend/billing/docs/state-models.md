@@ -61,11 +61,13 @@ Estados efetivos de leitura:
 ```text
 submit -> PENDING_VALIDATION --confirm--> CONFIRMED
                            \--reject---> REJECTED --resubmit--> PENDING_VALIDATION
-PENDING_VALIDATION ou REJECTED --cancel (interno)--> CANCELED
+PENDING_VALIDATION --cancel (interno)--> CANCELED
 ```
 
 O agregado possui `cancel`, mas nenhum application service ou endpoint o invoca
-no estado atual.
+no estado atual. `REJECTED -> CANCELED` é proibido: a tentativa gera
+`InvalidMemberPaymentStateException` antes de qualquer mutação e preserva
+`rejectedAt`, `rejectedByUserId`, `rejectionReason` e os demais dados do agregado.
 
 ## MemberRefund
 
