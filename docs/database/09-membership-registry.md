@@ -1,29 +1,28 @@
-# Incremento V4 — Membership Registry (BACK-528 / BACK-536)
+# Membership Registry — V10 numérica
 
-A V4 é aditiva e mantém V1–V3 e a baseline intactas. Cria quatro tabelas do
-registry e acrescenta as seis permissions independentes do registry ao ENUM existente, sem alterar o
-valor/posição dos códigos anteriores. Só a linha de coordenação do contador é
-inicializada, com próximo número null. Nenhuma Identity, aplicação ou associação
-é criada/renumerada. A geração e a aplicação real de importação permanecem desabilitadas por padrão.
+Política homologada em 26/10/2026; V4 criou o Registry, V5/V6 integraram lifecycle
+e reversão, e V10 reconcilia a nova política sobre V1–V9 imutáveis.
 
-Modelo, constraints, comportamento, conciliação e gates operacionais estão no
-[documento proprietário de Memberships](../../src/main/java/com/jeepclub/backend/memberships/docs/member-registry.md).
-A evidência local e o estado dos testes ficam em [BACK-526](../back-526-validation.md).
+Não há conversão de tipo/PK/FK: membershipNumber continua VARCHAR(64) e string HTTP,
+decimal canônico positivo de 1 a 10^64−1. Dados são pré-validados antes de DML:
+Members e reservas devem ser numéricos/positivos, sem colisão canônica; cada Member
+precisa de claim atual correspondente. Falha recusa sem modificar dados de negócio.
 
-O ensaio local usa fixtures sintéticas e MySQL 8.0.46. Não equivale à restauração
-de um backup da VPS. O agente de produção deverá ensaiar o incremento sobre cópia
-autorizada, conferir registros/constraints, revalidar os backups e manter emissão
-desabilitada. Nenhuma operação em produção faz parte deste PR.
+V10 copia todas as claims, com metadados originais, para LEGACY_CLAIM_SNAPSHOT no
+audit existente, antes de remover claims retiradas. Canonicaliza vigente/reservas
+e suas chaves SHA-256 numeric:, avança version dos Members cujo literal mudou e
+zera campos legados next_value/format_signature. Singleton permanece como mutex.
+Auditorias anteriores e evidências históricas opacas não são alteradas ou apagadas.
 
+Retificação futura libera a claim antiga na mesma transação de Member + audit.
+O máximo é determinado somente por Members vigentes via CAST DECIMAL(65,0) e
+FOR UPDATE; cálculo BigInteger. Não usar MAX lexicográfico ou histórico/contador.
+Claims sem Member são reservas explícitas. Identity/Authentication/Authorization/
+Billing não recebem backfill nem alterações de identificadores.
 
-Na revisão pré-merge do PR #104, master/develop foram conferidas por fetch e
-continham somente V1–V3. A ampliação do ENUM mantém todos os valores originais
-na ordem e acrescenta READ, AUDIT_READ, NUMBER_RESERVE, NUMBER_ISSUE e IMPORT após
-o MANAGE já proposto no PR. O fixture de comparação JPA acompanha esse contrato.
-Não há CASCADE: o vínculo protege Identity contra exclusão física incompatível.
-O futuro lifecycle BACK-512 precisará preservar os registros e traduzir conflitos.
-A decisão de ajustar a V4 segue a autorização do pedido e o estado remoto
-verificado: PR aberto, master/develop somente V1–V3 e deploy do PR ignorado.
-Nenhum banco compartilhado/VPS foi consultado. Se houve aplicação manual fora
-desse fluxo, interromper o merge e exigir correção incremental posterior, sem
-repair ou alteração silenciosa de checksums. DevOps deve conferir a history real.
+Teste deve cobrir banco vazio, upgrade V9→V10 com claims antigas e rejeição segura
+de dados incompatíveis, além de Hibernate validate. Não editar migrations aplicadas,
+não usar clean/repair/baseline reset, nem executar dados reais nesta missão.
+
+[ADR](../adr/back-526-member-registry.md) · [contrato](../../src/main/java/com/jeepclub/backend/memberships/docs/member-registry.md) ·
+[auditoria e evidências atuais](../back-526-numeric-policy.md) · [runbook](../back-526-runbook.md).

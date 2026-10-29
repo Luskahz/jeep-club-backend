@@ -26,6 +26,77 @@ class MySqlMigrationIT {
             .withUsername("root").withPassword("migration-test-only")
             .withCommand("--character-set-server=utf8mb4", "--collation-server=utf8mb4_0900_ai_ci");
 
+    @Test void numericRegistryUpgradePreservesIdentityAndAllLegacyClaimEvidence() throws Exception {
+        String db=legacyRegistryDatabase();var identitiesBefore=rows(db,"select * from identity_users order by id");
+        var auditBefore=rows(db,"select * from membership_member_audits where id=900");
+        var claimEvidence=rows(db,"select member_id,membership_number,actor_user_id,claimed_at,reason from membership_number_claims order by membership_number");
+        flyway(db).migrate();validateJpa(db);
+        assertThat(rows(db,"select * from identity_users order by id")).isEqualTo(identitiesBefore);
+        assertThat(rows(db,"select * from membership_member_audits where id=900")).isEqualTo(auditBefore);
+        assertThat(rows(db,"select member_id,new_number,actor_user_id,occurred_at,reason from membership_member_audits where operation='LEGACY_CLAIM_SNAPSHOT' order by new_number")).isEqualTo(claimEvidence);
+        assertThat(rows(db,"select id,identity_user_id,membership_number,version from membership_members")).containsExactly("[800, 700, 27, 5]");
+        assertThat(count(db,"membership_number_claims")).isEqualTo(2);
+        assertThat(rows(db,"select membership_number,member_id from membership_number_claims order by membership_number"))
+                .containsExactly("[27, 800]","[28, null]");
+        assertThat(rows(db,"select new_number,reason from membership_member_audits where operation='LEGACY_CLAIM_SNAPSHOT' order by new_number"))
+                .containsExactly("[00028, explicit reservation]","[020, retired numeric]","[027, current number]","[OLD-X, retired opaque]");
+        assertThat(rows(db,"select next_value,format_signature from membership_registry_sequence where id=1")).containsExactly("[null, null]");
+        // An old number can be occupied again without deleting any original audit.
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("INSERT INTO membership_members(id,identity_user_id,membership_number,created_at,updated_at,version) VALUES(801,701,'20',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+            st.executeUpdate("INSERT INTO membership_number_claims VALUES(SHA2('numeric:20',256),'20',801,701,UTC_TIMESTAMP(6),'reused current number')");
+        }
+        assertThat(count(db,"membership_member_audits")).isEqualTo(5);
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+    }
+
+    @ParameterizedTest @ValueSource(strings={"OPAQUE_CURRENT","ZERO_CURRENT","OPAQUE_RESERVATION","CANONICAL_MEMBERS_COLLISION","CURRENT_RESERVATION_COLLISION","MISSING_CLAIM","CLAIM_LITERAL_MISMATCH","CONTROL_CURRENT","CONTROL_RESERVATION"})
+    void numericRegistryPreflightRejectsIncompatibleDataWithoutBusinessMutations(String defect) throws Exception {
+        String db=legacyRegistryDatabase();
+        try(var c=connection(db);var st=c.createStatement()) {
+            switch(defect) {
+                case "OPAQUE_CURRENT" -> st.executeUpdate("update membership_members set membership_number='A-27' where id=800");
+                case "ZERO_CURRENT" -> st.executeUpdate("update membership_members set membership_number='000' where id=800");
+                case "OPAQUE_RESERVATION" -> st.executeUpdate("update membership_number_claims set membership_number='RESERVED' where member_id is null");
+                case "CANONICAL_MEMBERS_COLLISION" -> st.executeUpdate("insert into membership_members values(801,701,'27',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+                case "CURRENT_RESERVATION_COLLISION" -> st.executeUpdate("update membership_number_claims set membership_number='27' where member_id is null");
+                case "MISSING_CLAIM" -> st.executeUpdate("delete from membership_number_claims where membership_number='027'");
+                case "CLAIM_LITERAL_MISMATCH" -> st.executeUpdate("update membership_number_claims set membership_number='027 ' where membership_number='027'");
+                case "CONTROL_CURRENT" -> {
+                    st.executeUpdate("update membership_members set membership_number=CONCAT('027',CHAR(10)) where id=800");
+                    st.executeUpdate("update membership_number_claims set membership_number=CONCAT('027',CHAR(10)) where membership_number='027'");
+                }
+                case "CONTROL_RESERVATION" -> st.executeUpdate("update membership_number_claims set membership_number=CONCAT('28',CHAR(13)) where member_id is null");
+                default -> throw new IllegalArgumentException(defect);
+            }
+        }
+        var membersBefore=rows(db,"select * from membership_members order by id");
+        var claimsBefore=rows(db,"select * from membership_number_claims order by claim_key");
+        var auditsBefore=rows(db,"select * from membership_member_audits order by id");
+        var identitiesBefore=rows(db,"select * from identity_users order by id");
+        var sequenceBefore=rows(db,"select * from membership_registry_sequence");
+        var failure=assertThatThrownBy(() -> flyway(db).migrate()).isInstanceOf(FlywayException.class).hasStackTraceContaining("BACK-526 preflight");
+        if(defect.startsWith("CONTROL_")) failure.hasStackTraceContaining("nonpositive or nonnumeric");
+        assertThat(rows(db,"select * from membership_members order by id")).isEqualTo(membersBefore);
+        assertThat(rows(db,"select * from membership_number_claims order by claim_key")).isEqualTo(claimsBefore);
+        assertThat(rows(db,"select * from membership_member_audits order by id")).isEqualTo(auditsBefore);
+        assertThat(rows(db,"select * from identity_users order by id")).isEqualTo(identitiesBefore);
+        assertThat(rows(db,"select * from membership_registry_sequence")).isEqualTo(sequenceBefore);
+    }
+
+    private static String legacyRegistryDatabase() throws Exception {
+        String db=database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration").target("9").cleanDisabled(true).load().migrate();
+        try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("insert into identity_users(id,name,cpf,status,created_at) values(700,'Synthetic member','00000000000','ACTIVE',UTC_TIMESTAMP(6)),(701,'Synthetic actor','00000000001','ACTIVE',UTC_TIMESTAMP(6))");
+            st.executeUpdate("insert into membership_members values(800,700,'027',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),4)");
+            st.executeUpdate("insert into membership_number_claims values(SHA2('numeric:27',256),'027',800,701,'2026-10-01 00:00:00','current number'),(SHA2('numeric:20',256),'020',800,701,'2026-09-01 00:00:00','retired numeric'),(SHA2('literal:OLD-X',256),'OLD-X',800,701,'2026-08-01 00:00:00','retired opaque'),(SHA2('numeric:28',256),'00028',null,701,'2026-10-01 00:00:00','explicit reservation')");
+            st.executeUpdate("insert into membership_member_audits values(900,800,null,'027',701,'2026-10-01 00:00:00','original immutable audit','ASSIGN','SUCCESS')");
+            st.executeUpdate("update membership_registry_sequence set next_value=99999,format_signature='v1:100:3:' where id=1");
+        }
+        return db;
+    }
+
     @Test void onboardingReviewMigrationPreservesLegacyApprovalAndIndependentEvidenceOnReplay() throws Exception {
         String db = database();
         Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
@@ -601,10 +672,10 @@ class MySqlMigrationIT {
             st.executeUpdate("insert into authorization_permissions(id,code,module,description,created_at) values(760,'IDENTITY_USER_READ','IDENTITY','Synthetic permission',UTC_TIMESTAMP(6))");
             st.executeUpdate("insert into authorization_user_roles(id,user_id,role_id,created_at) values(770,700,750,UTC_TIMESTAMP(6)-interval 1 day)");
             st.executeUpdate("insert into authorization_role_permissions(id,role_id,permission_id,created_at) values(780,750,760,UTC_TIMESTAMP(6)-interval 1 day)");
-            st.executeUpdate("insert into membership_members(id,identity_user_id,membership_number,created_at,updated_at,version) values(790,700,'B512-700',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
-            var claimKey=new com.jeepclub.backend.memberships.core.domain.model.MembershipNumber("B512-700").claimKey();
-            st.executeUpdate("insert into membership_number_claims(claim_key,membership_number,member_id,actor_user_id,claimed_at,reason) values('"+claimKey+"','B512-700',790,700,UTC_TIMESTAMP(6),'Synthetic migration fixture')");
-            st.executeUpdate("insert into membership_member_audits(member_id,new_number,actor_user_id,occurred_at,reason,operation,outcome) values(790,'B512-700',700,UTC_TIMESTAMP(6),'Synthetic migration fixture','ASSIGN','SUCCESS')");
+            st.executeUpdate("insert into membership_members(id,identity_user_id,membership_number,created_at,updated_at,version) values(790,700,'512700',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+            var claimKey=new com.jeepclub.backend.memberships.core.domain.model.MembershipNumber("512700").claimKey();
+            st.executeUpdate("insert into membership_number_claims(claim_key,membership_number,member_id,actor_user_id,claimed_at,reason) values('"+claimKey+"','512700',790,700,UTC_TIMESTAMP(6),'Synthetic migration fixture')");
+            st.executeUpdate("insert into membership_member_audits(member_id,new_number,actor_user_id,occurred_at,reason,operation,outcome) values(790,'512700',700,UTC_TIMESTAMP(6),'Synthetic migration fixture','ASSIGN','SUCCESS')");
         }
         var unchanged=new java.util.LinkedHashMap<String,List<String>>();
         var columns=new java.util.LinkedHashMap<String,List<String>>();
@@ -635,7 +706,9 @@ class MySqlMigrationIT {
         assertThat(rows(db,"select original_id,role_id,user_id from authorization_user_role_deletion_history")).containsExactly("[770, 750, 700]");
         assertThat(rows(db,"select * from membership_members order by id")).isEqualTo(registryBefore);
         assertThat(rows(db,"select * from membership_number_claims order by claim_key")).isEqualTo(claimsBefore);
-        assertThat(rows(db,"select * from membership_member_audits order by id")).isEqualTo(auditBefore);
+        assertThat(rows(db,"select * from membership_member_audits where operation<>'LEGACY_CLAIM_SNAPSHOT' order by id")).isEqualTo(auditBefore);
+        assertThat(rows(db,"select member_id,new_number,actor_user_id,reason,outcome from membership_member_audits where operation='LEGACY_CLAIM_SNAPSHOT'"))
+                .containsExactly("[790, 512700, 700, Synthetic migration fixture, SUCCESS]");
         assertThat(rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions order by id")).isEqualTo(permissionsBefore);
         assertThat(rows(db,"select table_name,column_name,column_type from information_schema.columns where table_schema=database() and data_type='enum' and table_name not in ('identity_users','dependents_dependent','dependents_dependent_history','vehicles_vehicle','vehicles_vehicle_history','tools','tools_tool_history','authorization_roles','authorization_permissions') order by table_name,column_name")).isEqualTo(processStatesBefore);
         var historyBefore=rows(db,"select * from authorization_role_deletion_history order by original_id");

@@ -71,8 +71,8 @@ public record AdminUserFilterDTO(
                 maxLength = 150, nullable = true)
         @Size(max = 150) String q,
 
-        @Schema(description = "Matrícula vigente exata de Membership, preservando zeros. Não busca histórico. Combinável com todos os filtros.", example = "027", maxLength = 64)
-        @Size(min = 1, max = 64) String membershipNumber
+        @Schema(description = "Matrícula decimal vigente de Membership, normalizando zeros iniciais. Não busca histórico. Combinável com todos os filtros.", example = "027", maxLength = 64)
+        @Size(min = 1, max = 64) @Pattern(regexp="0*[1-9][0-9]*") String membershipNumber
 ) {
     public AdminUserFilterDTO(Long id, String name, LocalDate birthDate, String email, String cpf, String rg,
             String phoneNumber, UserStatus status, Instant createdFrom, Instant createdTo,
