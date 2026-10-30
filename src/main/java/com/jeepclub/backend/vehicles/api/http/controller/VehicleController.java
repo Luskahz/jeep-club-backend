@@ -254,7 +254,7 @@ public class VehicleController {
 
     @org.springframework.web.bind.annotation.PatchMapping("/deactivate/member/{vehicleId}")
     @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
-    @Operation(summary="Desativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @Operation(summary="Desativar veículo", description="HTTP 409 VEHICLE_LIFECYCLE_CONFLICT se houver participação operacional em Event não encerrado. Não cancela inscrições nem desassocia participantes. Histórico não impede a transição.")
     @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DetailResponseDTO> deactivate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -263,7 +263,7 @@ public class VehicleController {
 
     @org.springframework.web.bind.annotation.PatchMapping("/archive/member/{vehicleId}")
     @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
-    @Operation(summary="Arquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @Operation(summary="Arquivar veículo", description="HTTP 409 VEHICLE_LIFECYCLE_CONFLICT se houver participação operacional em Event não encerrado. Não cancela inscrições nem desassocia participantes. Histórico não impede a transição.")
     @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DetailResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
             @AuthenticationPrincipal UserPrincipal principal) {
