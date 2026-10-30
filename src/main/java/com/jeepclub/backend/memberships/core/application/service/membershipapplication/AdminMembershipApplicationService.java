@@ -86,11 +86,11 @@ public class AdminMembershipApplicationService {
             application.rejectApproved(actorId, reason, now);
         } else application.reject(actorId, reason, now);
         // The retained-reference guard must observe REJECTED. Failure below rolls this flush back.
-        membershipApplicationRepository.saveAndFlush(application);
+        MembershipApplication persisted = membershipApplicationRepository.saveAndFlush(application);
         if (reverse) identityReversal.delete(application.getCreatedUserId(), actorId, now);
         if (block) adminMembershipApplicantBlockService.block(application.getCpf(), reason, actorId, now);
-        if (application.getEmail() != null && !application.getEmail().isBlank() && reason != null && !reason.isBlank()) {
-            rejectionNotifier.afterCommit(application.getEmail(), application.getName(), reason.trim());
+        if (application.getEmail() != null && !application.getEmail().isBlank()) {
+            rejectionNotifier.enqueue(persisted);
         }
     }
 

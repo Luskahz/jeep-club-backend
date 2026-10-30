@@ -187,6 +187,7 @@ class MySqlMigrationIT {
         dependentPhotoPhysicalConstraints(expected);
         vehicleGalleryPhysicalConstraints(expected);
         eventGuestPhysicalConstraints(expected);
+        rejectionNotificationPhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -472,6 +473,39 @@ class MySqlMigrationIT {
                 st.execute("ALTER TABLE "+table+" MODIFY storage_key VARCHAR(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL");
             st.execute("ALTER TABLE vehicle_images ADD CONSTRAINT ck_vehicle_image_position CHECK(position BETWEEN 0 AND 4)");
             st.execute("ALTER TABLE vehicle_image_history ADD CONSTRAINT ck_vehicle_history_image_position CHECK(position BETWEEN 0 AND 4)");
+        }
+    }
+
+    private static void rejectionNotificationPhysicalConstraints(String name) throws Exception {
+        try (var c = connection(name); var st = c.createStatement()) {
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT fk_membership_rejection_application FOREIGN KEY(application_id) REFERENCES membership_applications(id)");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_type CHECK(type = 'MEMBERSHIP_REJECTED')");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_state CHECK(state IN ('PENDING','PROCESSING','SENT','FAILED'))");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_count CHECK(automatic_attempts BETWEEN 0 AND 3)");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_lease CHECK((state='PROCESSING' AND lease_until IS NOT NULL AND current_attempt_id IS NOT NULL) OR (state<>'PROCESSING' AND lease_until IS NULL AND current_attempt_id IS NULL))");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_pending CHECK(state<>'PENDING' OR next_attempt_at IS NOT NULL)");
+            st.execute("ALTER TABLE membership_rejection_notification_attempts ADD CONSTRAINT fk_membership_rejection_attempt FOREIGN KEY(notification_id) REFERENCES membership_rejection_notifications(id)");
+            st.execute("ALTER TABLE membership_rejection_notification_attempts ADD CONSTRAINT ck_membership_rejection_origin CHECK((origin='AUTOMATIC' AND automatic_number IS NOT NULL AND automatic_number BETWEEN 1 AND 3 AND actor_id IS NULL) OR (origin='MANUAL' AND automatic_number IS NULL AND actor_id IS NOT NULL))");
+            st.execute("ALTER TABLE membership_rejection_notification_attempts ADD CONSTRAINT ck_membership_rejection_result CHECK(result IN ('PROCESSING','SMTP_ACCEPTED','SIMULATED','SMTP_FAILED','UNKNOWN','INELIGIBLE'))");
+        }
+    }
+
+    @Test void rejectionNotificationMigrationPreservesHistoricalDecisionsWithoutBackfillAndEnforcesAttempts() throws Exception {
+        String db = database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("10").cleanDisabled(true).load().migrate();
+        try(var c = connection(db);var st = c.createStatement()) {
+            st.executeUpdate("INSERT INTO membership_applications(id,name,cpf,status,requested_at,version,rejection_reason) VALUES(710,'Synthetic history','00000000710','REJECTED',UTC_TIMESTAMP(6),4,'Original decision')");
+        }
+        var before = rows(db,"select * from membership_applications order by id");
+        flyway(db).migrate(); validateJpa(db);
+        assertThat(rows(db,"select * from membership_applications order by id")).isEqualTo(before);
+        assertThat(count(db,"membership_rejection_notifications")).isZero();
+        try(var c = connection(db);var st = c.createStatement()) {
+            st.executeUpdate("INSERT INTO membership_rejection_notifications(id,application_id,decision_version,type,state,automatic_attempts,next_attempt_at,created_at,updated_at,version) VALUES(1,710,4,'MEMBERSHIP_REJECTED','PENDING',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+            assertThatThrownBy(() -> st.executeUpdate("INSERT INTO membership_rejection_notification_attempts(notification_id,origin,result,started_at) VALUES(1,'AUTOMATIC','PROCESSING',UTC_TIMESTAMP(6))")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> st.executeUpdate("UPDATE membership_rejection_notifications SET automatic_attempts=4 WHERE id=1")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> st.executeUpdate("UPDATE membership_rejection_notifications SET state='PROCESSING' WHERE id=1")).isInstanceOf(java.sql.SQLException.class);
         }
     }
 

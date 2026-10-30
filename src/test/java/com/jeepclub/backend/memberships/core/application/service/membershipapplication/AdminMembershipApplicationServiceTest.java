@@ -42,20 +42,22 @@ class AdminMembershipApplicationServiceTest {
         MembershipApplication application = pendingApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.saveAndFlush(application)).thenReturn(application);
         service.reject(1L, 10L, "  Not eligible  ");
         assertThat(application.getRejectionReason()).isEqualTo("Not eligible");
-        verify(mailSender).afterCommit("candidate@example.com", "Candidate", "Not eligible");
+        verify(mailSender).enqueue(application);
     }
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.NullAndEmptySource
     @org.junit.jupiter.params.provider.ValueSource(strings = {"   "})
-    void rejectionWithAbsentReasonDoesNotSendMail(String reason) {
+    void rejectionWithAbsentReasonStillQueuesGenericNotice(String reason) {
         MembershipApplication application = pendingApplication();
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(application));
         when(applicationRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(application));
+        when(applicationRepository.saveAndFlush(application)).thenReturn(application);
         service.reject(1L, 10L, reason);
-        verifyNoInteractions(mailSender);
+        verify(mailSender).enqueue(application);
     }
 
     @Test

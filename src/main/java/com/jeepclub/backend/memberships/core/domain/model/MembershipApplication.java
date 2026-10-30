@@ -123,7 +123,7 @@ public class MembershipApplication {
 
         this.status = MembershipApplicationStatus.REJECTED;
         this.reviewedByUserId = reviewedByUserId;
-        this.rejectionReason = normalizeNullable(rejectionReason);
+        this.rejectionReason = normalizeRejectionReason(rejectionReason);
         this.reviewedAt = now;
         this.finishedAt = now;
         this.updatedAt = now;
@@ -137,7 +137,7 @@ public class MembershipApplication {
         Objects.requireNonNull(now, "Time is required");
         this.status = MembershipApplicationStatus.REJECTED;
         this.reviewedByUserId = actorId;
-        this.rejectionReason = normalizeNullable(reason);
+        this.rejectionReason = normalizeRejectionReason(reason);
         this.reviewedAt = now;
         this.finishedAt = now;
         this.updatedAt = now;
@@ -175,6 +175,12 @@ public class MembershipApplication {
         return value == null || value.isBlank()
                 ? null
                 : value.trim();
+    }
+
+    private static String normalizeRejectionReason(String value) {
+        if (value == null) return null;
+        if (value.length() > 2000) throw new IllegalArgumentException("Rejection reason must contain at most 2000 characters");
+        return normalizeNullable(value.replaceAll("[\\p{Cntrl}\\p{Cf}]", " "));
     }
 
     private static String normalizeEmail(String value) {

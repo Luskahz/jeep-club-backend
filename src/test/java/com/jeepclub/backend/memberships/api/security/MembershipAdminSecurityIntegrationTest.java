@@ -51,6 +51,7 @@ class MembershipAdminSecurityIntegrationTest {
             "POST, /admin/membership-applications/1/approve/access-link",
             "POST, /admin/membership-applications/1/activation-link/resend",
             "POST, /admin/membership-applications/1/reject",
+            "POST, /admin/membership-applications/1/rejection-notification/resend",
             "POST, /admin/membership-applications/1/reject-and-block",
             "POST, /admin/membership-applications/blocks/52998224725/unblock",
             "GET, /admin/membership-applications/export",

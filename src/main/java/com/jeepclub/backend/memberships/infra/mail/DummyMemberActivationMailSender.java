@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 @Profile({"dev", "test"})
 public class DummyMemberActivationMailSender implements MemberActivationMailSender {
 
+    @Override public boolean isSimulated() { return true; }
+
     @Override
     public void sendActivationLink(String recipientEmail, String recipientName, String activationLink) {
         log.info("Mock membership activation notification requested");
