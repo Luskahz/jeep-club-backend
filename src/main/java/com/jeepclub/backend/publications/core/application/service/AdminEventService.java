@@ -213,9 +213,13 @@ public class AdminEventService {
         var event = events.locked(id);
         // Temporal lifecycle is context only: a real emergency must remain accessible.
         var registrations = events.refreshed(id).stream().filter(r -> r.status() == EventRegistration.Status.CONFIRMED).toList();
-        boolean participant = type == MedicalProfileOwner.USER ? registrations.stream().anyMatch(r -> r.userId().equals(target))
-            : registrations.stream().anyMatch(r -> (r.unallocatedDependentIds().contains(target) || r.allocations().stream().anyMatch(a -> a.dependentIds().contains(target))) && dependents.isActiveDependentOfUser(target, r.userId()));
-        if (!participant) throw error("EVENT_PARTICIPANT_NOT_FOUND");
+        if(type==MedicalProfileOwner.DEPENDENT) {
+            var responsible=registrations.stream().filter(r -> (r.unallocatedDependentIds().contains(target)
+                || r.allocations().stream().anyMatch(a -> a.dependentIds().contains(target))) && dependents.isDependentOfUser(target,r.userId()))
+                .findFirst().orElseThrow(() -> error("EVENT_PARTICIPANT_NOT_FOUND"));
+            return health.findConfirmedDependent(target,responsible.userId()).orElseThrow(() -> error("EVENT_HEALTH_PROFILE_NOT_FOUND"));
+        }
+        if(registrations.stream().noneMatch(r -> r.userId().equals(target)))throw error("EVENT_PARTICIPANT_NOT_FOUND");
         return health.find(type, target).orElseThrow(() -> error("EVENT_HEALTH_PROFILE_NOT_FOUND"));
     }
 }

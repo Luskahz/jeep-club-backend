@@ -46,6 +46,7 @@ class DependentServiceTest {
     private DependentUserPort dependentUserPort;
 
     private DependentService service;
+    @Mock private com.jeepclub.backend.dependents.api.module.spi.DependentLifecycleGuard lifecycleGuard;
 
     @BeforeEach
     void setUp() {
@@ -55,7 +56,16 @@ class DependentServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaCommand.class),
                 org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.PrivateImageMediaQuery.class)
-        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of(),java.util.List.of(lifecycleGuard));
+    }
+    @Test void operationalParticipationBlocksMemberAndAdminBeforeAnyMutation() {
+        var dependent=DependentsFixture.dependent(10L,1L);
+        when(dependentRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(dependent));
+        when(lifecycleGuard.hasOperationalParticipation(10L,NOW)).thenReturn(true);
+        assertThatThrownBy(() -> service.disable(10L,1L)).isInstanceOf(com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException.class);
+        assertThatThrownBy(() -> service.archive(10L,1L,99L)).isInstanceOf(com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException.class);
+        assertThat(dependent.getStatus()).isEqualTo(DependentStatus.ACTIVE);
+        verify(dependentRepository,Mockito.never()).save(any());
     }
 
     @Test

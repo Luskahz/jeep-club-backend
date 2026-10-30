@@ -40,9 +40,26 @@ public class EventLifecycleParticipation {
         return !entityManager.createNativeQuery(sql).setParameter("id",id).setParameter("now",now)
             .setMaxResults(1).getResultList().isEmpty();
     }
+    public boolean dependent(Long id,Instant now) {
+        return current(() -> exists("""
+            select 1 from publication_events e where
+            """+OPERATIONAL_EVENT+"""
+            and exists (select 1 from event_registrations r where r.event_id=e.publication_id
+              and r.status in ('PENDING_PAYMENT','CONFIRMED') and (
+                exists (select 1 from event_registration_occupants o where o.registration_id=r.id and o.dependent_id=:id)
+                or exists (select 1 from event_registration_unallocated_dependents d where d.registration_id=r.id and d.dependent_id=:id)
+              ))
+            """,id,now));
+    }
     private boolean current(Supplier<Boolean> read) {
         // A pre-existing caller may have established an old REPEATABLE_READ snapshot.
-        return Objects.equals(TransactionSynchronizationManager.getCurrentTransactionIsolationLevel(),
-            java.sql.Connection.TRANSACTION_READ_COMMITTED) ? read.get() : committedSnapshots.inCommittedSnapshot(read);
+        entityManager.flush();
+        if(Objects.equals(TransactionSynchronizationManager.getCurrentTransactionIsolationLevel(),
+            java.sql.Connection.TRANSACTION_READ_COMMITTED))return read.get();
+        // The caller's view also contains its own uncommitted registrations. A
+        // separate committed snapshot alone would miss those. A stale positive
+        // is conservatively rejected in enclosing RR transactions; retry in a
+        // fresh transaction. Normal HTTP commands use RC and have no such case.
+        return read.get() || committedSnapshots.inCommittedSnapshot(read);
     }
 }

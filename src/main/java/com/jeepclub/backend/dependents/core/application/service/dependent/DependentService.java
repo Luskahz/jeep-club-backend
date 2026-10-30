@@ -26,6 +26,7 @@ public class DependentService {
     private final com.jeepclub.backend.platform.storage.image.PrivateImageMediaQuery privateImages;
     private final com.jeepclub.backend.platform.logging.SystemLogService audit;
     private final java.util.List<com.jeepclub.backend.dependents.api.module.spi.DependentDeletionGuard> deletionGuards;
+    private final java.util.List<com.jeepclub.backend.dependents.api.module.spi.DependentLifecycleGuard> lifecycleGuards;
 
     @Transactional
     public DependentResult create(String name, String cpf, LocalDate birthDate,
@@ -139,7 +140,7 @@ public class DependentService {
         return toResult(saved);
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public DependentResult disable(Long id, Long requestingUserId) {
         return transition(id, requestingUserId, requestingUserId, "DISABLE");
     }
@@ -295,11 +296,11 @@ public class DependentService {
         return dependentRepository.findAllByUserIdAndStatus(ownerId,status).stream().map(this::toResult).toList();
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public DependentResult archive(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"ARCHIVE"); }
     @Transactional
     public DependentResult unarchive(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"UNARCHIVE"); }
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public DependentResult disable(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"DISABLE"); }
     @Transactional
     public DependentResult enable(Long id,Long ownerId,Long actorId) { return transition(id,ownerId,actorId,"ENABLE"); }
@@ -310,6 +311,10 @@ public class DependentService {
         assertBelongsTo(dependent,owner);
         var before=dependent.getStatus();
         var now=Instant.now(clock);
+        boolean restrictiveChange=(action.equals("DISABLE") && dependent.isActive())
+            || (action.equals("ARCHIVE") && before!=com.jeepclub.backend.dependents.core.domain.enums.DependentStatus.ARCHIVED);
+        if(restrictiveChange && lifecycleGuards.stream().anyMatch(guard -> guard.hasOperationalParticipation(id,now)))
+            throw new com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException("Dependent has operational Event participation.");
         switch(action) {
             case "ARCHIVE" -> dependent.archive(now);
             case "UNARCHIVE" -> dependent.unarchive(now);

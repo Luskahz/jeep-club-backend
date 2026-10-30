@@ -118,7 +118,7 @@ public class AdminDependentController {
     @PatchMapping("/{id}/disable")
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_DEACTIVATE')")
     @RequiredPermission("DEPENDENTS_DEPENDENT_DEACTIVATE")
-    @Operation(summary="disable dependente administrativamente", description="Preserva titular e histórico; unarchive retorna a INACTIVE.")
+    @Operation(summary="disable dependente administrativamente", description="HTTP 409 DEPENDENT_LIFECYCLE_CONFLICT para participacao operacional em Event nao encerrado; sem cancelamento ou desassociacao. Historico e permitido.")
     @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DependentResponseDTO> disable(@PathVariable @jakarta.validation.constraints.Positive Long userId,
             @PathVariable @jakarta.validation.constraints.Positive Long id,
@@ -140,7 +140,7 @@ public class AdminDependentController {
     @PatchMapping("/{id}/archive")
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_ARCHIVE')")
     @RequiredPermission("DEPENDENTS_DEPENDENT_ARCHIVE")
-    @Operation(summary="archive dependente administrativamente", description="Preserva titular e histórico; unarchive retorna a INACTIVE.")
+    @Operation(summary="archive dependente administrativamente", description="HTTP 409 DEPENDENT_LIFECYCLE_CONFLICT para participacao operacional em Event nao encerrado; sem cancelamento ou desassociacao. Historico e permitido.")
     @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DependentResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long userId,
             @PathVariable @jakarta.validation.constraints.Positive Long id,

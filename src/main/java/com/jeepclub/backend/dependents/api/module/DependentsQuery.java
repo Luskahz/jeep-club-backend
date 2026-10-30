@@ -4,6 +4,8 @@ import java.util.Collection;
 import java.util.Set;
 
 public interface DependentsQuery {
+    /** Current ownership, independent of availability. For already-confirmed emergency participants only. */
+    boolean isDependentOfUser(Long dependentId,Long userId);
     record Details(Long id, Long userId, String name, String cpf, String relationshipType, String status) {}
     java.util.List<Details> findDetailsByIds(Collection<Long> ids);
     /** Read-only presentation for completed Event reports; ownership checks remain active-only. */
