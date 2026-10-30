@@ -19,6 +19,11 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
         "com.jeepclub.backend.dependents.api.http.controller"
 })
 public class ImageMediaExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(ImageUploadReadException.class)
+    public ResponseEntity<ApiErrorResponse> readFailure(ImageUploadReadException exception) {
+        return buildErrorResponse("IMAGE_UPLOAD_READ_FAILED", "Could not read the uploaded image.", HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(com.jeepclub.backend.shared.storage.exception.StorageOperationException.class)
     public ResponseEntity<ApiErrorResponse> unavailable(RuntimeException exception) {
         return buildErrorResponse("IMAGE_STORAGE_UNAVAILABLE", "Image storage is unavailable.", HttpStatus.SERVICE_UNAVAILABLE);

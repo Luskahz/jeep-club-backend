@@ -14,6 +14,8 @@ import com.jeepclub.backend.vehicles.core.port.UserPort;
 import com.jeepclub.backend.vehicles.core.repository.VehicleRepository;
 import com.jeepclub.backend.vehicles.infra.persistence.jpa.VehicleJpaRepository;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -78,6 +80,35 @@ class VehicleMediaOrchestrationIntegrationTest {
             "Green", 5, FuelType.DIESEL, 2.0, true, 10L);
     }
     ImageUpload upload() { return new ImageUpload("photo.png", "image/png", PNG); }
+
+    @ParameterizedTest
+    @CsvSource({"false,legacy", "true,legacy", "false,creationGallery", "true,creationGallery", "false,updateGallery", "true,updateGallery"})
+    void requestReadFailureNeverCreatesOrUpdatesVehicleOrUploadsFiles(boolean admin, String route) throws Exception {
+        auth("read-actor", 10L, List.of("VEHICLES_VEHICLE_CREATE", "VEHICLES_VEHICLE_UPDATE"));
+        boolean editing = route.equals("updateGallery");
+        Long id = editing ? create(null, "Jeep").getId() : null;
+        long before = jpa.count();
+        clearInvocations(repository, storage);
+        String path = editing ? "/vehicles/gallery/" + (admin ? "admin/" : "member/") + id
+                : "/vehicles/include/" + (admin ? "admin/10" : "member");
+        var request = multipart(editing ? org.springframework.http.HttpMethod.PUT : org.springframework.http.HttpMethod.POST, path);
+        if (editing) request.file(new MockMultipartFile("gallery", "", "application/json",
+                "{\"expectedRevision\":0,\"images\":[{\"uploadIndex\":0,\"position\":0,\"primary\":true},{\"uploadIndex\":1,\"position\":1,\"primary\":false}]}".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        else request.file(data(DATA));
+        String imagePart = route.equals("legacy") ? "photo" : "photos";
+        if (!route.equals("legacy")) request.file(new MockMultipartFile("photos", "valid.png", "image/png", PNG));
+        var broken = spy(new MockMultipartFile(imagePart, "sensitive-filename.png", "image/png", PNG));
+        doThrow(new java.io.IOException("sensitive-path-storageKey-bytes")).when(broken).getBytes();
+        mvc.perform(request.file(broken).header("Authorization", "Bearer read-actor"))
+                .andExpect(status().isInternalServerError()).andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("IMAGE_UPLOAD_READ_FAILED")).andExpect(jsonPath("$.status").value(500))
+                .andExpect(r -> assertThat(r.getResponse().getContentAsString()).doesNotContain("sensitive-", "IOException", "stackTrace"));
+        assertThat(jpa.count()).isEqualTo(before);
+        if (editing) assertThat(jpa.findById(id).orElseThrow()).satisfies(v -> {
+            assertThat(v.getGalleryRevision()).isZero(); assertThat(v.getPhoto()).isNull(); assertThat(v.getUpdatedAt()).isNull();
+        });
+        verify(repository, never()).save(any()); verifyNoInteractions(storage);
+    }
 
     @Test void multipartUploadCommitsImageReferenceAndPrincipalOwnership() throws Exception {
         mvc.perform(multipart("/vehicles/include/member").file(data(DATA)).file(photo(PNG)).header("Authorization", "Bearer owner"))
@@ -216,6 +247,7 @@ class VehicleMediaOrchestrationIntegrationTest {
             assertThat(operation.path("requestBody").path("content").has("multipart/form-data")).isTrue();
             assertThat(operation.path("requestBody").path("content").has("application/json")).isTrue();
             assertThat(operation.path("responses").has("503")).isTrue();
+            assertThat(operation.path("responses").path("500").path("description").asText()).contains("IMAGE_UPLOAD_READ_FAILED");
             var schema = operation.path("requestBody").path("content").path("multipart/form-data").path("schema");
             if (schema.has("$ref")) {
                 String ref = schema.path("$ref").asText(); schema = document.path("components").path("schemas").path(ref.substring(ref.lastIndexOf('/') + 1));
@@ -227,5 +259,12 @@ class VehicleMediaOrchestrationIntegrationTest {
         }
         var fields = document.path("components").path("schemas").path("IncludeRequestDTO").path("properties");
         assertThat(fields.has("photo")).isFalse(); assertThat(fields.has("storageKey")).isFalse();
+        for (var route : Map.of("/media/images", "post", "/dependents", "post", "/dependents/{id}", "put",
+                "/dependents/{id}/photo", "patch", "/users/{userId}/dependents/{id}/photo", "patch",
+                "/vehicles/gallery/member/{vehicleId}", "put", "/vehicles/gallery/admin/{vehicleId}", "put").entrySet()) {
+            var error = document.path("paths").path(route.getKey()).path(route.getValue()).path("responses").path("500");
+            assertThat(error.path("description").asText()).as(route.getKey()).contains("IMAGE_UPLOAD_READ_FAILED");
+            assertThat(error.path("content").has("application/problem+json")).isTrue();
+        }
     }
 }

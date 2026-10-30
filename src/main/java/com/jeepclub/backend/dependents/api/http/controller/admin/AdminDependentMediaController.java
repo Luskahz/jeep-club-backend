@@ -19,7 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.*;
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/users/{userId}/dependents/{id}/photo")
@@ -46,9 +45,10 @@ public class AdminDependentMediaController {
     @Operation(summary = "Substituir foto de dependente administrativamente", description = "Part photo obrigatória; cadastro e titular elegíveis, par de IDs validado. Mesma compensação transacional do Platform; arquivo anterior preservado.")
     @ApiResponse(responseCode = "200", description = "Foto associada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = DependentResponseDTO.class)))
     @ApiResponse(responseCode = "409", description = "Cadastro ou titular inelegível.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    @ApiResponse(responseCode = "500", description = "IMAGE_UPLOAD_READ_FAILED: falha operacional ao ler a imagem enviada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     public ResponseEntity<DependentResponseDTO> replace(@PathVariable @Positive Long userId,@PathVariable @Positive Long id,
             @RequestPart("photo") MultipartFile photo,MultipartHttpServletRequest multipart,
-            @AuthenticationPrincipal UserPrincipal principal) throws IOException {
+            @AuthenticationPrincipal UserPrincipal principal) {
         DependentPhotoHttp.validateParts(multipart,false);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(DependentResponseDTO.fromAdmin(
                 dependents.replacePhotoForAdmin(id,userId,principal.getUserId(),ImageMultipartAdapter.read(photo))));

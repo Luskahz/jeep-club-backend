@@ -88,6 +88,33 @@ class DependentPhotoIntegrationTest {
         verify(storage,never()).store(any(),anyString());
     }
 
+    @Test void requestReadFailurePreservesPrivatePhotoAndRegistrationOnEveryUploadRoute() throws Exception {
+        String cpf = cpf(); Long id = id(create(ownerToken, cpf, PNG).andExpect(status().isCreated()));
+        String original = key(id); long beforeRows = jpa.count(), beforeFiles = files();
+        var prior = jpa.findById(id).orElseThrow();
+        clearInvocations(storage, repository);
+        var requests = List.of(
+                multipart("/dependents").file(structured(data(cpf(), "Failed creation"))).header("Authorization", ownerToken),
+                multipart(org.springframework.http.HttpMethod.PUT, "/dependents/{id}", id).file(structured(data(cpf, "Failed update"))).header("Authorization", ownerToken),
+                multipart(org.springframework.http.HttpMethod.PATCH, "/dependents/{id}/photo", id).header("Authorization", ownerToken),
+                multipart(org.springframework.http.HttpMethod.PATCH, "/users/{owner}/dependents/{id}/photo", owner, id).header("Authorization", managerToken));
+        for (var request : requests) {
+            var broken = spy(new MockMultipartFile("photo", "sensitive-filename.png", "image/png", PNG));
+            doThrow(new java.io.IOException("sensitive-path-storageKey-bytes")).when(broken).getBytes();
+            mvc.perform(request.file(broken)).andExpect(status().isInternalServerError())
+                    .andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+                    .andExpect(jsonPath("$.code").value("IMAGE_UPLOAD_READ_FAILED")).andExpect(jsonPath("$.status").value(500))
+                    .andExpect(r -> assertThat(r.getResponse().getContentAsString()).doesNotContain("sensitive-", original, "IOException", "stackTrace"));
+            assertThat(jpa.count()).isEqualTo(beforeRows); assertThat(files()).isEqualTo(beforeFiles);
+            assertThat(jpa.findById(id).orElseThrow()).satisfies(d -> {
+                assertThat(d.getName()).isEqualTo(prior.getName()); assertThat(d.getUpdatedAt()).isEqualTo(prior.getUpdatedAt());
+                assertThat(d.getPhotoStorageKey()).isEqualTo(original);
+            });
+            verify(repository, never()).save(any()); verifyNoInteractions(storage);
+        }
+        assertThat(storage.load(original).content()).containsExactly(PNG);
+    }
+
     @Test void creationStoresPrivateReferenceAndOnlyAuthorizedBusinessRoutesResolveIt() throws Exception {
         Long id=id(create(ownerToken,cpf(),PNG).andExpect(status().isCreated()));String key=key(id);
         assertThat(key).startsWith("private-images/");assertThat(storage.load(key).content()).containsExactly(PNG);
