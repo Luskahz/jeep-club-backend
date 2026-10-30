@@ -82,7 +82,7 @@ public class DependentMediaController {
     }
 
     @GetMapping("/{id}/photo")
-    @Operation(summary = "Ler foto do meu dependente", description = "Ownership obrigatório, inclusive em INACTIVE/ARCHIVED. Leitura auditada sem chave interna na URL. Cache-Control: no-store; o endpoint global não resolve estas referências privadas.")
+    @Operation(summary = "Ler foto do meu dependente", description = "Snapshot consistente de ownership, cadastro ACTIVE e acesso do ator. INACTIVE/ARCHIVED e foto removida antes do snapshot retornam 404. Uma leitura já autorizada pode terminar com a foto capturada antes da revogação. Auditoria confirmada antes dos bytes; Cache-Control: no-store; sem chave privada na URL.")
     @ApiResponse(responseCode = "200", description = "Conteúdo da foto privada.", content = @Content(mediaType = "image/*", schema = @Schema(type = "string", format = "binary")))
     @ApiResponse(responseCode = "404", description = "Dependente ou foto não encontrado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     public ResponseEntity<byte[]> read(@PathVariable @Positive Long id,@AuthenticationPrincipal UserPrincipal principal) {

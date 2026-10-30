@@ -56,7 +56,7 @@ class DependentServiceTest {
                 Clock.fixed(NOW, ZoneOffset.UTC),
                 org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.ImageMediaCommand.class),
                 org.mockito.Mockito.mock(com.jeepclub.backend.platform.storage.image.PrivateImageMediaQuery.class)
-        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of(),java.util.List.of(lifecycleGuard));
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of(),java.util.List.of(lifecycleGuard),org.mockito.Mockito.mock(com.jeepclub.backend.dependents.core.application.service.dependent.DependentPhotoAuthorization.class));
     }
     @Test void operationalParticipationBlocksMemberAndAdminBeforeAnyMutation() {
         var dependent=DependentsFixture.dependent(10L,1L);

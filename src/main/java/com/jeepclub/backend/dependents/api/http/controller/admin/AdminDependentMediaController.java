@@ -31,7 +31,7 @@ public class AdminDependentMediaController {
     @GetMapping
     @PreAuthorize("hasAuthority('DEPENDENTS_DEPENDENT_READ')")
     @RequiredPermission("DEPENDENTS_DEPENDENT_READ")
-    @Operation(summary = "Ler foto de dependente administrativamente", description = "Leitura auditada em cadastros operacionais, inclusive arquivados, validando o par titular/dependente. Cache-Control: no-store; sem chave de storage na resposta.")
+    @Operation(summary = "Ler foto de dependente administrativamente", description = "Snapshot consistente do par titular/dependente ACTIVE e permissão DEPENDENTS_DEPENDENT_READ. INACTIVE/ARCHIVED e foto removida antes do snapshot retornam 404. Leitura já autorizada pode terminar com a foto capturada antes da revogação. Auditoria confirmada antes dos bytes; Cache-Control: no-store.")
     @ApiResponse(responseCode = "200", description = "Conteúdo da foto privada.", content = @Content(mediaType = "image/*", schema = @Schema(type = "string", format = "binary")))
     @ApiResponse(responseCode = "404", description = "Cadastro/foto não encontrado para o titular.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     public ResponseEntity<byte[]> read(@PathVariable @Positive Long userId,@PathVariable @Positive Long id,

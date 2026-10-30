@@ -27,6 +27,7 @@ public class DependentService {
     private final com.jeepclub.backend.platform.logging.SystemLogService audit;
     private final java.util.List<com.jeepclub.backend.dependents.api.module.spi.DependentDeletionGuard> deletionGuards;
     private final java.util.List<com.jeepclub.backend.dependents.api.module.spi.DependentLifecycleGuard> lifecycleGuards;
+    private final DependentPhotoAuthorization photoAuthorization;
 
     @Transactional
     public DependentResult create(String name, String cpf, LocalDate birthDate,
@@ -195,24 +196,44 @@ public class DependentService {
         return toResult(saved);
     }
 
-    @Transactional
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public com.jeepclub.backend.platform.storage.image.ImageMediaContent photo(Long id,Long ownerId) {
-        assertUserCanOwnDependent(ownerId);
         return readPhoto(id,ownerId,ownerId,false);
     }
 
-    @Transactional
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
     public com.jeepclub.backend.platform.storage.image.ImageMediaContent photoForAdmin(Long id,Long ownerId,Long actorId) {
         return readPhoto(id,ownerId,actorId,true);
     }
 
     private com.jeepclub.backend.platform.storage.image.ImageMediaContent readPhoto(Long id,Long ownerId,Long actorId,boolean administrative) {
-        Dependent dependent=findDependentForUpdate(id);
-        authorizePhoto(dependent,ownerId,administrative);
-        if(dependent.getPhotoStorageKey()==null) throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException();
-        var content=privateImages.loadPrivate(dependent.getPhotoStorageKey());
-        record(actorId,id,"PHOTO_READ","GET",200,Instant.now(clock));
+        com.jeepclub.backend.platform.storage.image.ImageMediaContent content;
+        try {
+            String authorizedKey=photoAuthorization.authorize(id,ownerId,actorId,administrative);
+            // References are immutable; PATCH/DELETE retain the old object. Never
+            // re-resolve the current association after authorizing this snapshot.
+            content=privateImages.loadPrivate(authorizedKey);
+        } catch(RuntimeException failure) {
+            recordPhotoRead(actorId,id,photoReadFailureStatus(failure));
+            throw failure;
+        }
+        // REQUIRES_NEW audit commits before any bytes leave this service. Do not
+        // turn an audit/commit failure into a successful read or retry as success.
+        recordPhotoRead(actorId,id,200);
         return content;
+    }
+
+    private int photoReadFailureStatus(RuntimeException failure) {
+        if(failure instanceof DependentAccessDeniedException || failure instanceof org.springframework.security.access.AccessDeniedException)return 403;
+        if(failure instanceof DependentNotFoundException || failure instanceof com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException)return 404;
+        if(failure instanceof com.jeepclub.backend.shared.storage.exception.StorageOperationException)return 503;
+        return 500;
+    }
+    private void recordPhotoRead(Long actor,Long id,int status) {
+        audit.recordRequired(new com.jeepclub.backend.platform.logging.SystemLogEvent(actor,"DEPENDENT_PHOTO_READ",
+            "GET","/dependents/"+id,status,status==200?com.jeepclub.backend.platform.logging.SystemLogOutcome.SUCCESS:
+                status<500?com.jeepclub.backend.platform.logging.SystemLogOutcome.CLIENT_ERROR:com.jeepclub.backend.platform.logging.SystemLogOutcome.SERVER_ERROR,
+            0,null,Instant.now(clock)));
     }
 
     private void authorizePhoto(Dependent dependent,Long ownerId,boolean administrative) {
