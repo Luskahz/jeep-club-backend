@@ -103,7 +103,7 @@ public class AdminVehicleController {
             @RequestPart(value="photos",required=false) java.util.List<MultipartFile> photos,
             @RequestPart(value="gallery",required=false) @Valid com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryRequest gallery,
             @Parameter(hidden = true) org.springframework.web.multipart.MultipartHttpServletRequest multipart,
-            @AuthenticationPrincipal UserPrincipal principal) throws IOException {
+            @AuthenticationPrincipal UserPrincipal principal) throws IOException, jakarta.servlet.ServletException {
         com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.validate(multipart,true);
         if(gallery==null && (multipart.getMultiFileMap().containsKey("gallery") || multipart.getParameterMap().containsKey("gallery")))
             throw new com.jeepclub.backend.shared.storage.exception.InvalidStorageFileException("Explicit gallery must be a JSON object.");
@@ -330,7 +330,7 @@ public class AdminVehicleController {
             @RequestPart("gallery") @Valid com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryUpdateRequest request,
             @RequestPart(value="photos",required=false) java.util.List<MultipartFile> photos,
             @Parameter(hidden=true) org.springframework.web.multipart.MultipartHttpServletRequest multipart,
-            @AuthenticationPrincipal UserPrincipal principal) throws IOException {
+            @AuthenticationPrincipal UserPrincipal principal) throws IOException, jakarta.servlet.ServletException {
         com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.validate(multipart,false);
         var change=com.jeepclub.backend.vehicles.api.http.dto.gallery.VehicleGalleryHttp.change(request.asGallery(),photos);
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore()).body(DetailResponseDTO.from(adminVehicleService.replaceGallery(vehicleId,change,principal.getUserId())));

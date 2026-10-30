@@ -7,7 +7,15 @@ import java.io.IOException;
 import java.util.*;
 public final class VehicleGalleryHttp {
     private VehicleGalleryHttp() {}
-    public static void validate(MultipartHttpServletRequest request,boolean creation) {
+    public static void validate(MultipartHttpServletRequest request,boolean creation) throws IOException, jakarta.servlet.ServletException {
+        // Servlet form fields and file parts live in separate maps. Count the original
+        // JSON parts so a duplicate split across those maps cannot bypass either limit.
+        var structuredCounts=new HashMap<String,Integer>();
+        for(var part:request.getParts()) {
+            if(part.getName().equals("gallery") || creation && part.getName().equals("vehicle"))
+                if(structuredCounts.merge(part.getName(),1,Integer::sum)>1)
+                    throw new InvalidStorageFileException("Structured JSON parts must not be repeated.");
+        }
         for(var e:request.getMultiFileMap().entrySet()) {
             int limit=e.getKey().equals("photos")?5:(e.getKey().equals("gallery") || creation && (e.getKey().equals("vehicle") || e.getKey().equals("photo")))?1:0;
             if(e.getValue().size()>limit) throw new InvalidStorageFileException("Unexpected multipart fields or image count.");
