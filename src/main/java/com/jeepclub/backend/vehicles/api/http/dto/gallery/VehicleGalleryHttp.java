@@ -27,7 +27,7 @@ public final class VehicleGalleryHttp {
         if(request.getMultiFileMap().containsKey("photo") && (request.getMultiFileMap().containsKey("photos") || request.getMultiFileMap().containsKey("gallery") || request.getParameterMap().containsKey("gallery")))
             throw new InvalidStorageFileException("Legacy photo cannot be combined with gallery/photos.");
     }
-    public static VehicleGalleryChange change(VehicleGalleryRequest gallery,List<MultipartFile> files) throws IOException {
+    public static VehicleGalleryChange change(VehicleGalleryRequest gallery,List<MultipartFile> files) {
         var uploads=new ArrayList<ImageUpload>();
         if(files!=null) {
             if(files.size()>5) throw new InvalidStorageFileException("A vehicle accepts at most five images.");

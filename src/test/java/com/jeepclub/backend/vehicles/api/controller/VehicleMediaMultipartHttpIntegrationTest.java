@@ -48,7 +48,7 @@ class VehicleMediaMultipartHttpIntegrationTest {
         var structured = field(editing ? "gallery" : "vehicle", "application/json",
                 editing ? "{\"expectedRevision\":0,\"images\":[]}" : uniqueData());
         var invalid = new ArrayList<List<HttpPart>>();
-        invalid.add(List.of(field("unexpected", "text/plain", "value")));
+        invalid.add(List.of(field("unexpected", "text/plain", "value"), image("photos")));
         invalid.add(List.of(field("photo", "text/plain", "images/unauthorized.png")));
         invalid.add(List.of(field("photos", "text/plain", "images/unauthorized.png")));
         invalid.add(List.of(image("unknown")));
@@ -126,6 +126,21 @@ class VehicleMediaMultipartHttpIntegrationTest {
     record HttpPart(String name, String filename, String type, byte[] bytes) {}
     HttpPart field(String name, String type, String value) { return new HttpPart(name, null, type, value.getBytes(StandardCharsets.UTF_8)); }
     HttpPart image(String name) { return new HttpPart(name, "photo.png", "image/png", VehicleMediaOrchestrationIntegrationTest.PNG); }
+
+    @Test void realServletPreservesTransport413AndStructuredMediaType415() throws Exception {
+        multipartActor(); long before = vehicles.count();
+        var oversized = sendMultipart("/vehicles/include/member", "POST", List.of(field("vehicle", "application/json", uniqueData()),
+                new HttpPart("photo", "photo.png", "image/png", new byte[10 * 1024 * 1024 + 1])));
+        assertThat(oversized.statusCode()).as(oversized.body()).isEqualTo(413);
+        assertThat(oversized.body()).contains("\"status\":413");
+        for (boolean admin : new boolean[]{false, true}) {
+            var wrongType = sendMultipart("/vehicles/include/" + (admin ? "admin/10" : "member"), "POST",
+                    List.of(field("vehicle", "text/plain", uniqueData()), image("photo")));
+            assertThat(wrongType.statusCode()).as(wrongType.body()).isEqualTo(415);
+        }
+        assertThat(vehicles.count()).isEqualTo(before); verifyNoInteractions(storage);
+    }
+
     HttpResponse<String> sendMultipart(String path, String method, List<HttpPart> parts) throws Exception {
         String boundary = "Regression" + UUID.randomUUID(); var body = new ByteArrayOutputStream();
         for (var part : parts) {
