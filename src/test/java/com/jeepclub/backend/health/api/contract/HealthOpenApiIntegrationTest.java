@@ -21,7 +21,7 @@ class HealthOpenApiIntegrationTest {
     @Test
     void administrativePresentationIsAdditiveAndRestrictedToExistingReadRoutes() throws Exception {
         var document = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
-        for (String schema : java.util.List.of("MedicalProfileResponse", "MedicalProfileSummaryResponse")) {
+        for (String schema : java.util.List.of("AdminMedicalProfileResponse", "MedicalProfileSummaryResponse")) {
             document.andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['ownerName']['type']").value("string"))
                     .andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['responsibleName']").exists())
                     .andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['cpf']").doesNotExist())
@@ -32,10 +32,11 @@ class HealthOpenApiIntegrationTest {
             document.andExpect(jsonPath("$['paths']['" + route + "']['get']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_READ"))
                     .andExpect(jsonPath("$['paths']['" + route + "']['get']['responses']['200']['headers']['Cache-Control']['schema']['example']").value("no-store"));
         }
-        document.andExpect(jsonPath("$['paths']['/admin/medical-profiles/{profileId}/owner']").doesNotExist())
+        document.andExpect(jsonPath("$['paths']['/admin/medical-profiles/{profileId}']['get']['responses']['200']['content']['application/json']['schema']['$ref']").value("#/components/schemas/AdminMedicalProfileResponse"))
+                .andExpect(jsonPath("$['paths']['/admin/medical-profiles/{profileId}/owner']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/identity/admin/users/options']").doesNotExist())
-                .andExpect(jsonPath("$['components']['schemas']['PersonalMedicalProfileResponse']['properties']['ownerName']").doesNotExist())
-                .andExpect(jsonPath("$['components']['schemas']['PersonalMedicalProfileResponse']['properties']['responsibleName']").doesNotExist());
+                .andExpect(jsonPath("$['components']['schemas']['MedicalProfileResponse']['properties']['ownerName']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['MedicalProfileResponse']['properties']['responsibleName']").doesNotExist());
     }
 
     @Test
@@ -57,7 +58,7 @@ class HealthOpenApiIntegrationTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$['paths']['/medical-profiles/me']['get']['responses']['200']['content']['application/json']['schema']['$ref']")
-                        .value("#/components/schemas/PersonalMedicalProfileResponse"))
+                        .value("#/components/schemas/MedicalProfileResponse"))
                 .andExpect(jsonPath("$['paths']['/medical-profiles/me']['put']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/medical-profiles/dependents/{dependentId}']['get']['responses']['403']['content']['application/problem+json']['schema']['$ref']")

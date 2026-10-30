@@ -96,8 +96,9 @@ integram a projeção HTTP. Matrícula não participa da resolução.
 `MedicalProfileResponse` e `MedicalProfileSummaryResponse` exigem a projeção
 completa no mapper `fromPresentation`; não há mapper administrativo que receba
 somente o domínio. As rotas pessoais usam `PersonalMedicalProfileResponse`,
-com os mesmos campos JSON e tipos anteriores; o nome do schema OpenAPI pessoal
-passa a refletir essa separação. Mutações, exportações e acesso emergencial
+com os mesmos campos JSON, tipos e nome de schema OpenAPI anteriores
+(`MedicalProfileResponse`); o detalhe administrativo usa o schema
+`AdminMedicalProfileResponse`. Mutações, exportações e acesso emergencial
 mantêm seus contratos próprios. As quatro leituras administrativas retornam
 `Cache-Control: no-store` e continuam exigindo `HEALTH_MEDICAL_PROFILE_READ`.
 

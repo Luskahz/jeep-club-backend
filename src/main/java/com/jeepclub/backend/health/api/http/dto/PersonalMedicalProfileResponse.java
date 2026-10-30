@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
-@Schema(description = "Resposta detalhada com os dados do perfil médico.")
+@Schema(name = "MedicalProfileResponse", description = "Resposta detalhada com os dados do perfil médico.")
 public record PersonalMedicalProfileResponse(
         @Schema(description = "ID do perfil médico.", example = "1")
         Long id,
