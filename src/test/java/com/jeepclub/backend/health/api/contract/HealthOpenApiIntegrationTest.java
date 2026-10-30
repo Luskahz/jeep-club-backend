@@ -19,6 +19,26 @@ class HealthOpenApiIntegrationTest {
     @Autowired private MockMvc mockMvc;
 
     @Test
+    void administrativePresentationIsAdditiveAndRestrictedToExistingReadRoutes() throws Exception {
+        var document = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
+        for (String schema : java.util.List.of("MedicalProfileResponse", "MedicalProfileSummaryResponse")) {
+            document.andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['ownerName']['type']").value("string"))
+                    .andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['responsibleName']").exists())
+                    .andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['cpf']").doesNotExist())
+                    .andExpect(jsonPath("$['components']['schemas']['" + schema + "']['properties']['email']").doesNotExist());
+        }
+        for (String route : java.util.List.of("/admin/medical-profiles", "/admin/medical-profiles/{profileId}",
+                "/admin/medical-profiles/users/{userId}", "/admin/medical-profiles/dependents/{dependentId}")) {
+            document.andExpect(jsonPath("$['paths']['" + route + "']['get']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_READ"))
+                    .andExpect(jsonPath("$['paths']['" + route + "']['get']['responses']['200']['headers']['Cache-Control']['schema']['example']").value("no-store"));
+        }
+        document.andExpect(jsonPath("$['paths']['/admin/medical-profiles/{profileId}/owner']").doesNotExist())
+                .andExpect(jsonPath("$['paths']['/identity/admin/users/options']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['PersonalMedicalProfileResponse']['properties']['ownerName']").doesNotExist())
+                .andExpect(jsonPath("$['components']['schemas']['PersonalMedicalProfileResponse']['properties']['responsibleName']").doesNotExist());
+    }
+
+    @Test
     void remainingOperationalContractsMatchActualMethodsPermissionsAndPrivacySchemas() throws Exception {
         mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
                 .andExpect(jsonPath("$['paths']['/admin/medical-profiles/{profileId}']['get']['x-required-permissions'][0]").value("HEALTH_MEDICAL_PROFILE_READ"))
@@ -37,7 +57,7 @@ class HealthOpenApiIntegrationTest {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$['paths']['/medical-profiles/me']['get']['responses']['200']['content']['application/json']['schema']['$ref']")
-                        .value("#/components/schemas/MedicalProfileResponse"))
+                        .value("#/components/schemas/PersonalMedicalProfileResponse"))
                 .andExpect(jsonPath("$['paths']['/medical-profiles/me']['put']['responses']['400']['content']['application/problem+json']['schema']['$ref']")
                         .value("#/components/schemas/ApiErrorResponse"))
                 .andExpect(jsonPath("$['paths']['/medical-profiles/dependents/{dependentId}']['get']['responses']['403']['content']['application/problem+json']['schema']['$ref']")

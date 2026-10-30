@@ -3,7 +3,7 @@ package com.jeepclub.backend.health.api.http.controller;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import com.jeepclub.backend.health.api.http.dto.MedicalProfileRequest;
-import com.jeepclub.backend.health.api.http.dto.MedicalProfileResponse;
+import com.jeepclub.backend.health.api.http.dto.PersonalMedicalProfileResponse;
 import com.jeepclub.backend.health.core.application.service.medicalprofile.MedicalProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,7 +41,7 @@ public class MedicalProfileController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Perfil médico retornado.",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MedicalProfileResponse.class))),
+                                    schema = @Schema(implementation = PersonalMedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -59,14 +59,14 @@ public class MedicalProfileController {
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<MedicalProfileResponse> getMyMedicalProfile(
+    public ResponseEntity<PersonalMedicalProfileResponse> getMyMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         var profile = medicalProfileService.getMyMedicalProfile(
                 principal.getUserId()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(PersonalMedicalProfileResponse.fromDomain(profile));
     }
 
     @PutMapping("/me")
@@ -76,7 +76,7 @@ public class MedicalProfileController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Perfil criado ou atualizado.",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MedicalProfileResponse.class))),
+                                    schema = @Schema(implementation = PersonalMedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Dados médicos inválidos.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -97,7 +97,7 @@ public class MedicalProfileController {
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<MedicalProfileResponse> upsertMyMedicalProfile(
+    public ResponseEntity<PersonalMedicalProfileResponse> upsertMyMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody MedicalProfileRequest request
     ) {
@@ -106,7 +106,7 @@ public class MedicalProfileController {
                 request.toApplicationData()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(PersonalMedicalProfileResponse.fromDomain(profile));
     }
 
     @GetMapping("/dependents/{dependentId}")
@@ -116,7 +116,7 @@ public class MedicalProfileController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Perfil médico retornado.",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MedicalProfileResponse.class))),
+                                    schema = @Schema(implementation = PersonalMedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Formato do identificador do dependente inválido.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -140,7 +140,7 @@ public class MedicalProfileController {
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<MedicalProfileResponse> getDependentMedicalProfile(
+    public ResponseEntity<PersonalMedicalProfileResponse> getDependentMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Identificador do dependente proprietário do perfil.", example = "10", required = true)
             @PathVariable Long dependentId
@@ -150,7 +150,7 @@ public class MedicalProfileController {
                 dependentId
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(PersonalMedicalProfileResponse.fromDomain(profile));
     }
 
     @PutMapping("/dependents/{dependentId}")
@@ -160,7 +160,7 @@ public class MedicalProfileController {
             responses = {
                     @ApiResponse(responseCode = "200", description = "Perfil criado ou atualizado.",
                             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                                    schema = @Schema(implementation = MedicalProfileResponse.class))),
+                                    schema = @Schema(implementation = PersonalMedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Identificador ou dados médicos inválidos.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -184,7 +184,7 @@ public class MedicalProfileController {
                                     schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<MedicalProfileResponse> upsertDependentMedicalProfile(
+    public ResponseEntity<PersonalMedicalProfileResponse> upsertDependentMedicalProfile(
             @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Identificador do dependente proprietário do perfil.", example = "10", required = true)
             @PathVariable Long dependentId,
@@ -196,7 +196,7 @@ public class MedicalProfileController {
                 request.toApplicationData()
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok(PersonalMedicalProfileResponse.fromDomain(profile));
     }
 
     @DeleteMapping("/me")

@@ -1,5 +1,6 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerPresentationQuery;
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileAccessDeniedException;
@@ -67,8 +68,8 @@ class MedicalProfileOwnerValidationServiceTest {
                 repository,
                 statusChecker,
                 activeOwnersQuery,
-                clock
-        );
+                clock,
+                org.mockito.Mockito.mock(MedicalProfileOwnerPresentationQuery.class));
     }
 
     @Test

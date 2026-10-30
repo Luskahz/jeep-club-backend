@@ -24,7 +24,22 @@ class MedicalProfileAdministrativeResponseTest {
     @Test
     void listSummaryDoesNotExposeClinicalContent() {
         assertThat(componentNames(MedicalProfileSummaryResponse.class))
-                .containsExactlyInAnyOrder("id", "ownerType", "ownerId", "updatedAt");
+                .containsExactlyInAnyOrder("id", "ownerType", "ownerId", "ownerName", "responsibleName", "updatedAt");
+    }
+
+    @Test
+    void administrativeDetailPreservesEveryPreviousFieldAndOnlyAddsTwoNames() {
+        Set<String> previous = componentNames(PersonalMedicalProfileResponse.class);
+        Set<String> current = componentNames(MedicalProfileResponse.class);
+        assertThat(previous).containsExactlyInAnyOrder("id", "ownerType", "ownerId", "bloodType", "allergies",
+                "chronicConditions", "continuousMedications", "healthInsuranceProvider", "healthInsurancePlan",
+                "healthInsuranceNumber", "emergencyContactName", "emergencyContactPhone",
+                "emergencyContactRelationship", "observations", "createdAt", "updatedAt");
+        assertThat(current).containsAll(previous).hasSize(previous.size() + 2).contains("ownerName", "responsibleName");
+        var previousTypes = Stream.of(PersonalMedicalProfileResponse.class.getRecordComponents())
+                .collect(Collectors.toMap(java.lang.reflect.RecordComponent::getName, java.lang.reflect.RecordComponent::getType));
+        Stream.of(MedicalProfileResponse.class.getRecordComponents()).filter(field -> previous.contains(field.getName()))
+                .forEach(field -> assertThat(field.getType()).isEqualTo(previousTypes.get(field.getName())));
     }
 
     @Test
@@ -48,6 +63,8 @@ class MedicalProfileAdministrativeResponseTest {
                 1L,
                 MedicalProfileOwnerType.USER,
                 7L,
+                "Synthetic owner",
+                null,
                 BloodType.O_POSITIVE,
                 secret,
                 secret,

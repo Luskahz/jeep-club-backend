@@ -1,5 +1,6 @@
 package com.jeepclub.backend.health.infra.persistence;
 
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerPresentationQuery;
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileConflictException;
 import com.jeepclub.backend.health.core.application.service.medicalprofile.AdminMedicalProfileService;
@@ -137,7 +138,8 @@ class MedicalProfileConcurrencyIntegrationTest {
                     public MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
                 },
                 (ownerType, ownerIds) -> java.util.Set.of(),
-                Clock.fixed(NOW.plusSeconds(20), ZoneOffset.UTC)
+                Clock.fixed(NOW.plusSeconds(20), ZoneOffset.UTC),
+                org.mockito.Mockito.mock(MedicalProfileOwnerPresentationQuery.class)
         );
 
         CountDownLatch memberUpdatedWhileLockIsHeld = new CountDownLatch(1);

@@ -1,6 +1,8 @@
 package com.jeepclub.backend.health.api.http;
 
 import com.jeepclub.backend.dependents.core.domain.enums.DependentStatus;
+import com.jeepclub.backend.dependents.api.module.DependentsQuery;
+import com.jeepclub.backend.iam.identity.api.module.UserQuery;
 import com.jeepclub.backend.dependents.core.domain.enums.RelationshipType;
 import com.jeepclub.backend.dependents.infra.persistence.entity.DependentEntity;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
@@ -27,6 +29,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +45,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = {"spring.datasource.url=jdbc:h2:mem:health_http_audit;DB_CLOSE_DELAY=-1;MODE=MySQL;NON_KEYWORDS=USER",
+        "spring.jpa.properties.hibernate.generate_statistics=true", "logging.level.org.hibernate.stat=OFF",
         "spring.jpa.show-sql=false", "logging.level.org.hibernate.SQL=OFF", "logging.level.org.hibernate.orm.jdbc.bind=OFF"})
 @AutoConfigureMockMvc(printOnlyOnFailure = false, print = org.springframework.boot.webmvc.test.autoconfigure.MockMvcPrint.NONE)
 @ActiveProfiles("test")
@@ -54,6 +58,8 @@ class HealthHttpIntegrationTest {
     @Autowired MedicalProfileRepository profiles;
     @Autowired MedicalProfileHistoryJpaRepository history;
     @Autowired JsonMapper json;
+    @MockitoSpyBean UserQuery userQuery;
+    @MockitoSpyBean DependentsQuery dependentsQuery;
     // Only the authentication boundary is stubbed; filters, method security, ownership, services and JPA are real.
     @MockitoBean JwtTokenParser parser;
     @MockitoBean UserAuthoritiesProvider authorities;
@@ -215,6 +221,150 @@ class HealthHttpIntegrationTest {
         problem(call("GET", "/admin/medical-profiles/" + inactive.getId(), null), 409);
         call("DELETE", "/admin/medical-profiles/" + inactive.getId(), null).andExpect(status().isNoContent());
         assertThat(profiles.findById(inactive.getId())).isEmpty();
+    }
+
+    @Test
+    @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+    void allAdministrativeReadRoutesReturnCurrentNamesAndNoAdditionalRegistrationData(org.springframework.boot.test.system.CapturedOutput output) throws Exception {
+        user.setName("Responsible A"); other.setName("Responsible B");
+        dependent.setName("Same child"); foreignDependent.setName("Same child");
+        var own = seed(MedicalProfileOwnerType.USER, user.getId());
+        var child = seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
+        seed(MedicalProfileOwnerType.DEPENDENT, foreignDependent.getId());
+        em.flush(); em.clear();
+        permissions("HEALTH_MEDICAL_PROFILE_READ");
+        for (String path : List.of("/admin/medical-profiles/" + own.getId(), "/admin/medical-profiles/users/" + user.getId())) {
+            call("GET", path, null).andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(jsonPath("$.ownerName").value("Responsible A"))
+                    .andExpect(jsonPath("$.responsibleName").value(org.hamcrest.Matchers.nullValue()))
+                    .andExpect(jsonPath("$.ownerId").value(user.getId()))
+                    .andExpect(jsonPath("$.allergies").value(SENTINEL))
+                    .andExpect(jsonPath("$.cpf").doesNotExist()).andExpect(jsonPath("$.email").doesNotExist())
+                    .andExpect(jsonPath("$.phoneNumber").doesNotExist());
+        }
+        for (String path : List.of("/admin/medical-profiles/" + child.getId(), "/admin/medical-profiles/dependents/" + dependent.getId())) {
+            call("GET", path, null).andExpect(status().isOk())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(jsonPath("$.ownerName").value("Same child"))
+                    .andExpect(jsonPath("$.responsibleName").value("Responsible A"))
+                    .andExpect(jsonPath("$.ownerId").value(dependent.getId()))
+                    .andExpect(jsonPath("$.cpf").doesNotExist()).andExpect(jsonPath("$.userId").doesNotExist())
+                    .andExpect(jsonPath("$.email").doesNotExist()).andExpect(jsonPath("$.phoneNumber").doesNotExist());
+        }
+        var response = call("GET", "/admin/medical-profiles?sort=id,asc", null).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.content[0].ownerName").value("Responsible A"))
+                .andExpect(jsonPath("$.content[1].responsibleName").value("Responsible A"))
+                .andExpect(jsonPath("$.content[2].responsibleName").value("Responsible B"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(response).doesNotContain("cpf", "email", "phoneNumber", "birthDate", "relationshipType", SENTINEL);
+        assertThat(output.getAll()).doesNotContain(SENTINEL);
+        // Personal JSON stays unchanged despite the administrative DTO extension.
+        call("GET", "/medical-profiles/me", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.ownerName").doesNotExist()).andExpect(jsonPath("$.responsibleName").doesNotExist());
+    }
+
+    @Test
+    void nextReadReflectsRenamedUserDependentAndChangedResponsible() throws Exception {
+        var own = seed(MedicalProfileOwnerType.USER, user.getId());
+        var child = seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
+        permissions("HEALTH_MEDICAL_PROFILE_READ");
+        call("GET", "/admin/medical-profiles/" + own.getId(), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.ownerName").value("Synthetic user"));
+        user.setName("Renamed user"); dependent.setName("Renamed child"); other.setName("New responsible");
+        dependent.setUserId(other.getId());
+        em.flush(); em.clear();
+        call("GET", "/admin/medical-profiles/" + own.getId(), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.ownerName").value("Renamed user"));
+        call("GET", "/admin/medical-profiles/dependents/" + dependent.getId(), null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(child.getId()))
+                .andExpect(jsonPath("$.ownerName").value("Renamed child"))
+                .andExpect(jsonPath("$.responsibleName").value("New responsible"));
+    }
+
+    @Test
+    void fiftyProfilesUseTwoPresentationBatchesAndKeepPaginationSortingAndTotals() throws Exception {
+        seed(MedicalProfileOwnerType.USER, user.getId());
+        for (int i = 1; i <= 50; i++) {
+            var child = dependent(user.getId(), String.format("8000000%04d", i));
+            seed(MedicalProfileOwnerType.DEPENDENT, child.getId());
+        }
+        var excluded = seed(MedicalProfileOwnerType.USER, other.getId());
+        other.setStatus(UserStatus.INACTIVE);
+        em.flush(); em.clear();
+        permissions("HEALTH_MEDICAL_PROFILE_READ");
+        clearInvocations(userQuery, dependentsQuery);
+        var statistics = em.getEntityManagerFactory().unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        long before = statistics.getPrepareStatementCount();
+        var page = call("GET", "/admin/medical-profiles?size=999&sort=id,desc", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(50)).andExpect(jsonPath("$.content.length()").value(50))
+                .andExpect(jsonPath("$.totalElements").value(51)).andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.content[0].ownerType").value("DEPENDENT"))
+                .andExpect(jsonPath("$.content[49].responsibleName").value("Synthetic user"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(statistics.getPrepareStatementCount() - before).as("SQL statements for a 50-profile page").isLessThanOrEqualTo(6);
+        var content = json.readTree(page).get("content");
+        long previous = Long.MAX_VALUE;
+        for (var item : content) {
+            assertThat(item.get("id").asLong()).isLessThan(previous).isNotEqualTo(excluded.getId());
+            previous = item.get("id").asLong();
+        }
+        verify(dependentsQuery).findDetailsByIds(argThat(ids -> ids.size() == 50));
+        verify(userQuery).findByIds(argThat(ids -> ids.size() == 1 && ids.contains(user.getId())));
+        verify(userQuery, never()).findById(any());
+        verify(dependentsQuery, never()).existsById(any());
+        call("GET", "/admin/medical-profiles?page=1&size=50&sort=id,desc", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(51)).andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].ownerType").value("USER"))
+                .andExpect(jsonPath("$.content[0].responsibleName").value(org.hamcrest.Matchers.nullValue()));
+        clearInvocations(userQuery, dependentsQuery);
+        call("GET", "/admin/medical-profiles?page=2&size=50", null).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(51)).andExpect(jsonPath("$.empty").value(true));
+        verify(userQuery, never()).findByIds(any()); verify(dependentsQuery, never()).findDetailsByIds(any());
+    }
+
+    @Test
+    void emptyPageDoesNotResolveNames() throws Exception {
+        permissions("HEALTH_MEDICAL_PROFILE_READ");
+        clearInvocations(userQuery, dependentsQuery);
+        call("GET", "/admin/medical-profiles", null).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(jsonPath("$.totalElements").value(0)).andExpect(jsonPath("$.empty").value(true));
+        verify(userQuery, never()).findByIds(any()); verify(dependentsQuery, never()).findDetailsByIds(any());
+    }
+
+    @Test
+    void brokenResponsibleRegistrationDoesNotReturnPartiallyIdentifiedClinicalData() throws Exception {
+        dependent.setUserId(999999999L);
+        var saved = seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
+        em.flush(); em.clear();
+        permissions("HEALTH_MEDICAL_PROFILE_READ");
+        for (String path : List.of("/admin/medical-profiles/" + saved.getId(),
+                "/admin/medical-profiles/dependents/" + dependent.getId(), "/admin/medical-profiles")) {
+            problem(call("GET", path, null), 404).andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_NOT_FOUND"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void administrativeOwnerAndProfileSelectorsPreserveMissingAndInactiveErrors(boolean forDependent) throws Exception {
+        var type = forDependent ? MedicalProfileOwnerType.DEPENDENT : MedicalProfileOwnerType.USER;
+        var ownerId = forDependent ? dependent.getId() : user.getId();
+        String ownerPath = "/admin/medical-profiles/" + (forDependent ? "dependents/" : "users/") + ownerId;
+        permissions("HEALTH_MEDICAL_PROFILE_READ");
+        problem(call("GET", ownerPath, null), 404).andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_NOT_FOUND"));
+        var saved = seed(type, ownerId);
+        if (forDependent) dependent.setStatus(DependentStatus.INACTIVE); else user.setStatus(UserStatus.INACTIVE);
+        em.flush(); em.clear();
+        for (String path : List.of(ownerPath, "/admin/medical-profiles/" + saved.getId())) {
+            problem(call("GET", path, null), 409).andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_INACTIVE"));
+        }
+        var orphan = seed(type, 999999999L);
+        problem(call("GET", "/admin/medical-profiles/" + orphan.getId(), null), 404)
+                .andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_NOT_FOUND"));
+        problem(call("GET", "/admin/medical-profiles/999999999", null), 404)
+                .andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_NOT_FOUND"));
     }
 
     @Test
