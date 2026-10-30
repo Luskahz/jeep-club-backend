@@ -45,7 +45,7 @@ class MembershipActivationFlowIntegrationTest {
     private static final String PASSWORD = "DefinitivePassword2026!";
     @Autowired MockMvc mvc;
     @Autowired com.jeepclub.backend.memberships.core.application.service.notification.RejectionNotificationService rejectionDelivery;
-    @Autowired com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository rejectionQueue;
+    @MockitoSpyBean com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository rejectionQueue;
     @Autowired UserRegistration registration;
     @Autowired UserQuery identities;
     @Autowired AuthenticationAccountJpaRepository accounts;
@@ -221,13 +221,15 @@ class MembershipActivationFlowIntegrationTest {
     }
 
     @Test
-    void deliveryFailurePreservesApprovalIdentityAccountAndTokenAndAllowsManualRecovery() throws Exception {
+    @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+    void deliveryFailurePreservesApprovalIdentityAccountAndTokenAndAllowsManualRecovery(org.springframework.boot.test.system.CapturedOutput output) throws Exception {
         Long id = submit("12345678909");
         long accountCount = accounts.count();
         long tokenCount = tokens.count();
         doThrow(new org.springframework.mail.MailSendException("private@example.com bearer-secret"))
                 .when(mail).sendActivationLink(any(), any(), any());
-        approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        var response = approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        String firstLink = json(response, "$.activationLink");
         var approved = applications.findById(id).orElseThrow();
         assertThat(approved.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
         assertThat(identities.findByCpf("12345678909").orElseThrow().id()).isEqualTo(approved.getCreatedUserId());
@@ -238,7 +240,9 @@ class MembershipActivationFlowIntegrationTest {
         administration.resendActivationLink(id);
         assertThat(accounts.count()).isEqualTo(accountCount + 1);
         assertThat(tokens.findById(original.getId()).orElseThrow().getUsedAt()).isNotNull();
-        assertThat(deliveredToken(1)).isNotBlank();
+        String freshRaw = deliveredToken(1);
+        assertThat(freshRaw).isNotBlank();
+        assertThat(output.getAll()).doesNotContain(firstLink, freshRaw, "private@example.com", "bearer-secret");
     }
 
     @Test
@@ -777,6 +781,19 @@ class MembershipActivationFlowIntegrationTest {
     }
 
     @Test
+    void rejectionResendHttpReportsUnknownWhenSmtpAcceptanceCannotBeRecorded() throws Exception {
+        Long id = submit(nextCpf()); reject(id, false).andExpect(status().isNoContent());
+        doThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic result write failure"))
+                .when(rejectionQueue).complete(any(), eq(com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository.Result.SMTP_ACCEPTED), any());
+        try {
+            mvc.perform(post("/admin/membership-applications/{id}/rejection-notification/resend", id).header("Authorization", admin))
+                    .andExpect(status().isServiceUnavailable()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                    .andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_RESULT_UNKNOWN"));
+        } finally { reset(rejectionQueue); }
+        assertThat(rejectionQueue.status(id).state()).isEqualTo("PROCESSING");
+    }
+
+    @Test
     void rejectionResendHttpReportsActualSmtpOutcomeAndSanitizedHistory() throws Exception {
         Long id = submit(nextCpf());
         String path = "/admin/membership-applications/" + id + "/rejection-notification";
@@ -784,6 +801,10 @@ class MembershipActivationFlowIntegrationTest {
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_NOT_REJECTED"));
         mvc.perform(post("/admin/membership-applications/{id}/reject", id).header("Authorization", admin))
                 .andExpect(status().isNoContent());
+        var reserved = rejectionQueue.claimManual(id, adminId, clock.instant());
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_PROCESSING"));
+        rejectionQueue.complete(reserved, com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository.Result.SMTP_FAILED, clock.instant());
         doThrow(new org.springframework.mail.MailSendException("private@example.com private reason"))
                 .when(mail).sendRejectionNotice(any(), any(), nullable(String.class));
         mvc.perform(post(path + "/resend").header("Authorization", admin))

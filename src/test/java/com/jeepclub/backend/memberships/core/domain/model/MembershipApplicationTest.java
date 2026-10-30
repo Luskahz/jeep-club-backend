@@ -184,6 +184,15 @@ class MembershipApplicationTest {
         assertThat(app.getVersion()).isEqualTo(1L);
     }
 
+    @Test
+    void rejectionReasonRejectsAbuseAndNormalizesControlCharactersBeforePersistence() {
+        MembershipApplication app = createPending();
+        app.reject(10L, "  Original\u0000reason\r\nwith\u202econtrols  ", NOW);
+        assertThat(app.getRejectionReason()).isEqualTo("Original reason  with controls");
+        assertThatThrownBy(() -> createPending().reject(10L, "x".repeat(2001), NOW))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("2000");
+    }
+
     private MembershipApplication createPending() {
         return MembershipApplication.create(
                 "Lucas Silva",
