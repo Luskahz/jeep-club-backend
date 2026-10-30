@@ -224,7 +224,7 @@ public class AdminEventController {
     @GetMapping("/{id}/health/{type}/{participantId}")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ')")
     @RequiredPermission("PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ")
-    @Operation(summary="Leitura médica individual auditada de participante confirmado, independente do lifecycle temporal")
+    @Operation(summary="Leitura médica individual auditada de participante confirmado, independente do lifecycle temporal",description="Exige permissão de emergência, inscrição CONFIRMED e ownership atual. Recupera acesso de dependente INACTIVE/ARCHIVED preexistente sem alterar cadastro. Inscrição cancelada, não participante e dependente de outro titular não autorizam acesso.")
     @ApiResponse(responseCode="200", description="Leitura médica individual auditada de participante confirmado, independente do lifecycle temporal")
     public EmergencyMedicalProfileQuery.Profile health(@PathVariable Long id, @PathVariable MedicalProfileOwner type, @PathVariable Long participantId, @AuthenticationPrincipal UserPrincipal principal) {
         return service.health(id, type, participantId, principal.getUserId());

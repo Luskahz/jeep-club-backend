@@ -126,7 +126,7 @@ class DependentPhotoIntegrationTest {
         mvc.perform(get("/dependents/{id}/photo",id).header("Authorization",otherToken)).andExpect(status().isForbidden());
         read(id,ownerToken).andExpect(status().isOk()).andExpect(content().bytes(PNG)).andExpect(content().contentType("image/png"))
                 .andExpect(header().string("Cache-Control","no-store")).andExpect(header().string("Content-Disposition","inline; filename=\"dependent-photo.png\""));
-        verify(audit).recordInTransaction(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ")&&e.actorId().equals(owner)));
+        verify(audit).recordRequired(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ")&&e.actorId().equals(owner)&&e.status()==200));
     }
 
     @Test void adminReadAndPhotoMaintenanceHaveDistinctExplicitAuthoritiesAndValidateBothIds() throws Exception {
@@ -172,12 +172,12 @@ class DependentPhotoIntegrationTest {
         assertThat(storage.load(old).content()).containsExactly(PNG);read(id,ownerToken).andExpect(content().bytes(png(3)));
     }
 
-    @Test void archivedAndInactivePhotosRemainReadableButMutationIsRejectedBeforeUpload() throws Exception {
+    @Test void archivedAndInactivePhotosAreRevokedBeforeAnyStorageReadOrMutation() throws Exception {
         Long id=id(create(ownerToken,cpf(),PNG).andExpect(status().isCreated()));String key=key(id);
-        dependents.archive(id,owner,owner);read(id,ownerToken).andExpect(status().isOk()).andExpect(content().bytes(PNG));
+        dependents.archive(id,owner,owner);read(id,ownerToken).andExpect(status().isNotFound());
         replace(id,ownerToken,png(2)).andExpect(status().isConflict());
         mvc.perform(delete("/dependents/{id}/photo",id).header("Authorization",ownerToken)).andExpect(status().isConflict());
-        dependents.unarchive(id,owner,owner);read(id,ownerToken).andExpect(status().isOk());replace(id,ownerToken,png(2)).andExpect(status().isConflict());
+        dependents.unarchive(id,owner,owner);read(id,ownerToken).andExpect(status().isNotFound());replace(id,ownerToken,png(2)).andExpect(status().isConflict());
         assertThat(key(id)).isEqualTo(key);verify(storage,times(1)).store(any(),anyString());
     }
 
@@ -292,9 +292,27 @@ class DependentPhotoIntegrationTest {
 
     @Test void photoIsNotReturnedIfItsRequiredTransactionalAuditFails() throws Exception {
         Long id=id(create(ownerToken,cpf(),PNG).andExpect(status().isCreated()));String original=key(id);
-        tx(() -> {doThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic read audit failure")).when(audit).recordInTransaction(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ")));return null;});
+        doThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic read audit failure")).when(audit).recordRequired(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ")));
         read(id,ownerToken).andExpect(status().isInternalServerError()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
         assertThat(key(id)).isEqualTo(original);verify(storage,never()).delete(anyString());
+    }
+    @Test void physicalReadFailureIsDurablyAuditedWithoutPrivateDetails() throws Exception {
+        Long id=id(create(ownerToken,cpf(),PNG).andExpect(status().isCreated()));String original=key(id);
+        doThrow(new StorageOperationException(StorageOperationException.Operation.READ,new java.io.IOException("private-provider-details"))).when(storage).load(original);
+        read(id,ownerToken).andExpect(status().isServiceUnavailable())
+            .andExpect(r -> assertThat(r.getResponse().getContentAsString()).doesNotContain(original,"private-provider-details"));
+        verify(audit).recordRequired(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ") && e.status()==503 && e.outcome()==SystemLogOutcome.SERVER_ERROR));
+        verify(audit,never()).recordRequired(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ") && e.outcome()==SystemLogOutcome.SUCCESS));
+    }
+    @Test void bytesWaitForMandatoryAuditCompletion() throws Exception {
+        Long id=id(create(ownerToken,cpf(),PNG).andExpect(status().isCreated()));
+        var auditing=new CountDownLatch(1);var release=new CountDownLatch(1);var pool=Executors.newSingleThreadExecutor();
+        doAnswer(a -> {auditing.countDown();await(release);return a.callRealMethod();}).when(audit).recordRequired(argThat(e -> e.action().equals("DEPENDENT_PHOTO_READ")));
+        try {
+            var reading=pool.submit(() -> read(id,ownerToken).andReturn().getResponse());
+            assertThat(auditing.await(20,TimeUnit.SECONDS)).isTrue();assertThat(reading.isDone()).isFalse();
+            release.countDown();assertThat(reading.get(10,TimeUnit.SECONDS).getContentAsByteArray()).containsExactly(PNG);
+        } finally {release.countDown();pool.shutdownNow();}
     }
 
     @Test void concurrentPhotoReplacementUsesCurrentStateAndPreservesTheOtherCommittedRegistrationChange() throws Exception {

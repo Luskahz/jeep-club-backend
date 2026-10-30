@@ -282,7 +282,7 @@ public class AdminVehicleController {
     @org.springframework.web.bind.annotation.PatchMapping("/deactivate/admin/{vehicleId}")
     @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_DEACTIVATE')")
     @RequiredPermission("VEHICLES_VEHICLE_DEACTIVATE")
-    @Operation(summary="Desativar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @Operation(summary="Desativar veículo", description="HTTP 409 VEHICLE_LIFECYCLE_CONFLICT se houver participação operacional em Event não encerrado. Não cancela inscrições nem desassocia participantes. Histórico não impede a transição.")
     @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DetailResponseDTO> deactivate(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -292,7 +292,7 @@ public class AdminVehicleController {
     @org.springframework.web.bind.annotation.PatchMapping("/archive/admin/{vehicleId}")
     @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_ARCHIVE')")
     @RequiredPermission("VEHICLES_VEHICLE_ARCHIVE")
-    @Operation(summary="Arquivar veículo", description="Unarchive retorna a INACTIVE. Exclusão legada não pode ser reativada.")
+    @Operation(summary="Arquivar veículo", description="HTTP 409 VEHICLE_LIFECYCLE_CONFLICT se houver participação operacional em Event não encerrado. Não cancela inscrições nem desassocia participantes. Histórico não impede a transição.")
     @ApiResponse(responseCode="409",description="Transição incompatível.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DetailResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long vehicleId,
             @AuthenticationPrincipal UserPrincipal principal) {

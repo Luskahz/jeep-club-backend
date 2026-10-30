@@ -14,6 +14,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DependentsQueryService implements DependentsQuery {
+    @Override public boolean isDependentOfUser(Long id,Long owner) {
+        return id!=null && owner!=null && dependentRepository.findById(id).filter(d -> d.getUserId().equals(owner)).isPresent();
+    }
     private final DependentHistoricalPresentationRepository history;
     public java.util.List<Details> findDetailsByIds(Collection<Long> ids) {
         if(ids==null || ids.isEmpty())return java.util.List.of();

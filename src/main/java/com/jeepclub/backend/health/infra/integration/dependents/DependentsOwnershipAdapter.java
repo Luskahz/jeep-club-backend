@@ -7,9 +7,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class DependentsOwnershipAdapter implements DependentOwnershipChecker {
+public class DependentsOwnershipAdapter implements DependentOwnershipChecker, com.jeepclub.backend.health.core.port.EmergencyDependentOwnershipChecker {
 
     private final DependentsQuery dependentsQuery;
+    private final com.jeepclub.backend.dependents.api.module.DependentLifecycleLock lifecycle;
+    @Override public boolean belongsToUserForEmergency(Long id,Long owner) {
+        return lifecycle.byId(id).filter(d -> d.userId().equals(owner)).isPresent();
+    }
 
     @Override
     public boolean belongsToUser(Long dependentId, Long userId) {

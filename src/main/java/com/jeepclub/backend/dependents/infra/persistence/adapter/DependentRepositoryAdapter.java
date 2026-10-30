@@ -27,6 +27,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DependentRepositoryAdapter implements DependentRepository {
     private final jakarta.persistence.EntityManager entityManager;
+    @Override public Optional<com.jeepclub.backend.dependents.core.repository.DependentPhotoReference> findPhotoReference(Long id) {
+        // Scalar projection bypasses any preloaded entity in an open persistence context.
+        return entityManager.createQuery("select d.userId,d.status,d.photoStorageKey from DependentEntity d where d.id=:id",Object[].class)
+            .setParameter("id",id).getResultList().stream().findFirst().map(row ->
+                new com.jeepclub.backend.dependents.core.repository.DependentPhotoReference((Long)row[0],(DependentStatus)row[1],(String)row[2]));
+    }
 
     public List<Dependent> findByIds(Collection<Long> ids) {
         return ids.isEmpty()?List.of():jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
