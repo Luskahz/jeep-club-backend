@@ -268,7 +268,7 @@ public class AdminMembershipApplicationController {
     public ResponseEntity<Void> reject(
             @Parameter(description = "Identificador da solicitação pendente.", example = "123")
             @PathVariable Long id,
-            @RequestBody(required = false) RejectMembershipRequestDTO request,
+            @Valid @RequestBody(required = false) RejectMembershipRequestDTO request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         String reason = request != null ? request.reason() : null;

@@ -38,11 +38,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Committed HTTP transactions with real Identity/Authentication and H2 persistence. */
 @SpringBootTest(properties={"memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.imports.apply-enabled=true"})
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(CommitFailureInjection.class)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class MembershipActivationFlowIntegrationTest {
     private static final String PASSWORD = "DefinitivePassword2026!";
     @Autowired MockMvc mvc;
+    @Autowired com.jeepclub.backend.memberships.core.application.service.notification.RejectionNotificationService rejectionDelivery;
+    @Autowired com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository rejectionQueue;
     @Autowired UserRegistration registration;
     @Autowired UserQuery identities;
     @Autowired AuthenticationAccountJpaRepository accounts;
@@ -249,13 +252,13 @@ class MembershipActivationFlowIntegrationTest {
         });
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
         verifyNoInteractions(mail);
-        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
-            administration.approveWithAccessLink(id, adminId);
-            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                    new org.springframework.transaction.support.TransactionSynchronization() {
-                        @Override public void beforeCommit(boolean readOnly) { throw new IllegalStateException("commit fault"); }
-                    });
-        })).isInstanceOf(IllegalStateException.class);
+        try {
+            assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+                administration.approveWithAccessLink(id, adminId);
+                CommitFailureInjection.ARMED.set(true);
+            })).isInstanceOfAny(org.springframework.transaction.TransactionSystemException.class, org.springframework.orm.jpa.JpaSystemException.class)
+                    .hasRootCauseInstanceOf(java.sql.SQLException.class);
+        } finally { CommitFailureInjection.ARMED.remove(); }
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
         verifyNoInteractions(mail);
     }
@@ -486,6 +489,7 @@ class MembershipActivationFlowIntegrationTest {
             assertThat(row.getPreviousReviewerId()).isEqualTo(before.getReviewedByUserId());
             assertThat(row.getPreviousReviewedAt()).isEqualTo(before.getReviewedAt());assertThat(row.getOriginalUserId()).isEqualTo(user);
         });
+        rejectionDelivery.process(rejectionQueue.status(id).notificationId());
         verify(mail).sendRejectionNotice(anyString(),eq("Candidate Jeep Club"),eq("Administrative review"));
     }
 
@@ -570,6 +574,8 @@ class MembershipActivationFlowIntegrationTest {
         Long user=applications.findById(id).orElseThrow().getCreatedUserId();
         doThrow(new RuntimeException("synthetic notification failure")).when(mail).sendRejectionNotice(any(),any(),any());
         reject(id,false).andExpect(status().isNoContent());
+        rejectionDelivery.process(rejectionQueue.status(id).notificationId());
+        assertThat(rejectionQueue.status(id).state()).isEqualTo("PENDING");
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.REJECTED);
         assertThat(identities.findById(user)).isEmpty();assertThat(accounts.findById(user)).isEmpty();
     }
@@ -768,6 +774,31 @@ class MembershipActivationFlowIntegrationTest {
 
     private ResultActions approve(Long id) throws Exception {
         return mvc.perform(post("/admin/membership-applications/{id}/approve/access-link", id).header("Authorization", admin));
+    }
+
+    @Test
+    void rejectionResendHttpReportsActualSmtpOutcomeAndSanitizedHistory() throws Exception {
+        Long id = submit(nextCpf());
+        String path = "/admin/membership-applications/" + id + "/rejection-notification";
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_NOT_REJECTED"));
+        mvc.perform(post("/admin/membership-applications/{id}/reject", id).header("Authorization", admin))
+                .andExpect(status().isNoContent());
+        doThrow(new org.springframework.mail.MailSendException("private@example.com private reason"))
+                .when(mail).sendRejectionNotice(any(), any(), nullable(String.class));
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isBadGateway()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_PROVIDER_FAILED"));
+        reset(mail);
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.result").value("SMTP_ACCEPTED"));
+        mvc.perform(get(path).header("Authorization", admin)).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store")).andExpect(jsonPath("$.state").value("SENT"))
+                .andExpect(jsonPath("$.automaticAttempts").value(0)).andExpect(jsonPath("$.attempts[0].origin").value("MANUAL"))
+                .andExpect(jsonPath("$.attempts[0].actorId").value(adminId)).andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.reason").doesNotExist());
+        mvc.perform(post("/admin/membership-applications/999999999/rejection-notification/resend").header("Authorization", admin))
+                .andExpect(status().isNotFound());
     }
 
     private String deliveredToken(int count) {

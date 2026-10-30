@@ -10,6 +10,7 @@ public record RejectMembershipRequestDTO(
                 example = "Documentação incompleta ou inconsistente.",
                 nullable = true
         )
+        @jakarta.validation.constraints.Size(max = 2000)
         String reason
 
 ) {}
