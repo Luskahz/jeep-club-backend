@@ -218,21 +218,69 @@ class MembershipActivationFlowIntegrationTest {
     }
 
     @Test
-    void deliveryFailureRollsBackApprovalIdentityAccountAndTokenThenAllowsRetry() throws Exception {
+    void deliveryFailurePreservesApprovalIdentityAccountAndTokenAndAllowsManualRecovery() throws Exception {
         Long id = submit("12345678909");
         long accountCount = accounts.count();
         long tokenCount = tokens.count();
-        doThrow(new RuntimeException("injected delivery failure")).when(mail).sendActivationLink(any(), any(), any());
-        approve(id).andExpect(status().isInternalServerError());
-        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
-        assertThat(applications.findById(id).orElseThrow().getCreatedUserId()).isNull();
-        assertThat(identities.findByCpf("12345678909")).isEmpty();
-        assertThat(accounts.count()).isEqualTo(accountCount);
-        assertThat(tokens.count()).isEqualTo(tokenCount);
-        reset(mail);
+        doThrow(new org.springframework.mail.MailSendException("private@example.com bearer-secret"))
+                .when(mail).sendActivationLink(any(), any(), any());
         approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
-        assertThat(identities.findByCpf("12345678909")).isPresent();
+        var approved = applications.findById(id).orElseThrow();
+        assertThat(approved.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+        assertThat(identities.findByCpf("12345678909").orElseThrow().id()).isEqualTo(approved.getCreatedUserId());
+        assertThat(accounts.count()).isEqualTo(accountCount + 1);
+        assertThat(tokens.count()).isEqualTo(tokenCount + 1);
+        var original = tokens.findAll().stream().filter(t -> t.getApplicationId().equals(id)).findFirst().orElseThrow();
+        reset(mail);
+        administration.resendActivationLink(id);
+        assertThat(accounts.count()).isEqualTo(accountCount + 1);
+        assertThat(tokens.findById(original.getId()).orElseThrow().getUsedAt()).isNotNull();
         assertThat(deliveredToken(1)).isNotBlank();
+    }
+
+    @Test
+    void outerTransactionRollbackAndCommitFailureNeverSendInvitation() throws Exception {
+        Long id = submit(nextCpf());
+        var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(status -> {
+            administration.approveWithAccessLink(id, adminId);
+            verifyNoInteractions(mail);
+            status.setRollbackOnly();
+        });
+        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
+        verifyNoInteractions(mail);
+        assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+            administration.approveWithAccessLink(id, adminId);
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override public void beforeCommit(boolean readOnly) { throw new IllegalStateException("commit fault"); }
+                    });
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
+        verifyNoInteractions(mail);
+    }
+
+    @Test
+    void smtpObservesApprovalAndTokenFromAnIndependentCommittedTransaction() throws Exception {
+        Long id = submit(nextCpf());
+        doAnswer(invocation -> {
+            var committed = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            committed.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            committed.executeWithoutResult(status -> {
+                assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+                String link = invocation.getArgument(2);
+                String raw = link.substring(link.indexOf("token=") + 6);
+                assertThat(tokens.findByTokenHash(hashes.hash(raw))).isPresent();
+                assertThat(tokens.findByTokenHash(raw)).isEmpty();
+            });
+            return null;
+        }).when(mail).sendActivationLink(any(), any(), any());
+        var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(status -> {
+            administration.approveWithAccessLink(id, adminId);
+            verifyNoInteractions(mail);
+        });
+        verify(mail).sendActivationLink(any(), any(), any());
     }
 
     @Test
