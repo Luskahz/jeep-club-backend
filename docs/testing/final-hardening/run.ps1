@@ -20,8 +20,8 @@ function Run-Evidence([string]$Name, [string[]]$MavenArguments, [string]$PitModu
     $items = if ($PitModule) { @() } else { @('surefire-reports','failsafe-reports','site/jacoco','jacoco.exec','hardening-unit.exec','hardening-mysql.exec','hardening-merged.exec') }
     foreach ($item in $items) {
         if (Test-Path "target/$item") {
-            $name = $item.Replace('/','-')
-            Copy-Item -LiteralPath "target/$item" -Destination (Join-Path $destination $name) -Recurse
+            $artifactName = $item.Replace('/','-')
+            Copy-Item -LiteralPath "target/$item" -Destination (Join-Path $destination $artifactName) -Recurse
         }
     }
     if ($PitModule -and (Test-Path "target/pit-reports/$PitModule")) {

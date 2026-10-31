@@ -11,10 +11,11 @@ parser.add_argument('out', type=Path)
 args = parser.parse_args()
 mutants = []
 for mutation in ET.parse(args.xml).getroot().findall('mutation'):
-    mutants.append(dict(mutation.attrib, **{n.tag: n.text for n in mutation}))
+    mutants.append(dict(mutation.attrib, **{n.tag: [child.text for child in n] if len(n) else n.text for n in mutation}))
 counts = Counter(m['status'] for m in mutants)
 detected = sum(m.get('detected') == 'true' for m in mutants)
-result = {'total': len(mutants), 'counts': dict(counts),
+statuses = ('KILLED','SURVIVED','NO_COVERAGE','TIMED_OUT','NON_VIABLE','RUN_ERROR','MEMORY_ERROR','NOT_STARTED')
+result = {'total': len(mutants), 'counts': {s: counts[s] for s in dict.fromkeys((*statuses,*counts))},
           'mutation_score_detected': round(100 * detected / len(mutants), 4) if mutants else None,
           'killed_percent': round(100 * counts['KILLED'] / len(mutants), 4) if mutants else None,
           'classes': sorted({m['mutatedClass'] for m in mutants}),

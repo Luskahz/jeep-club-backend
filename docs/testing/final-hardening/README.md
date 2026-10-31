@@ -52,4 +52,3 @@ python docs/testing/final-hardening/measure.py --coverage target/site/jacoco/jac
 Only merge exec data from the same compiled production classes and deliberately selected runs. A report from a failed/incomplete suite is diagnostic and is not a passing gate. Do not add percentages or average class percentages. `measure.py` sums physical package counters for all five metrics, inventories unique XML testcase IDs and records runner/context mechanisms (including inheritance). Categories are mutually exclusive; mechanism tags retain overlap. Repeated Maven executions are reported separately, never added as new test cases.
 
 PIT reports are under `target/pit-reports/{identity,authorization,publications,platform-shared}`; JaCoCo XML/CSV/HTML are under `target/site/jacoco`. Local raw artifacts are preserved outside the repository in `C:\Users\lucas.l\.codex\tmp\jeep-final-hardening-f52e1523`. Raw logs can contain generated test secrets and are not versioned.
-
