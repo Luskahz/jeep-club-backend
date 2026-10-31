@@ -8,6 +8,7 @@ import org.testcontainers.mysql.MySQLContainer;
 
 /** Runs the same real lifecycle, retention, history, rollback and race cases on Flyway-managed MySQL. */
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class PrincipalLifecycleMySqlIT extends PrincipalLifecycleIntegrationTest {
     @org.springframework.beans.factory.annotation.Autowired
     com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLocks;

@@ -441,6 +441,7 @@
                     </targetClasses>
                     <targetTests combine.self="override">
                         <param>com.jeepclub.backend.platform.storage.image.ImageMediaServiceTest</param>
+                        <param>com.jeepclub.backend.platform.storage.image.PrivateImageMediaContractTest</param>
                         <param>com.jeepclub.backend.platform.logging.SystemLogServiceAdapterTest</param>
                         <param>com.jeepclub.backend.platform.logging.SystemLogPersistenceWorkerTest</param>
                         <param>com.jeepclub.backend.platform.security.handler.*</param>

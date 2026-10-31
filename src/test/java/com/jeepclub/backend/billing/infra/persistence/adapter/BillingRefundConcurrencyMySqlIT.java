@@ -8,6 +8,7 @@ import org.testcontainers.mysql.MySQLContainer;
 
 /** Exercises the production dialect's FOR UPDATE NOWAIT against a migrated, isolated MySQL. */
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class BillingRefundConcurrencyMySqlIT extends BillingRefundConcurrencyIntegrationTest {
     @Container
     static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
