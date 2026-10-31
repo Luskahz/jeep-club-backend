@@ -67,7 +67,8 @@ jobs:
   mysql-migrations:
     name: MySQL migrations
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # This job executes the full MySQL suite twice, including the archive probe.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
