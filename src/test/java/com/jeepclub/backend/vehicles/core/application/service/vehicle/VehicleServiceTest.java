@@ -43,7 +43,18 @@ class VehicleServiceTest {
 
     @Mock private com.jeepclub.backend.platform.storage.image.ImageMediaCommand mediaCommand;
     @Mock private com.jeepclub.backend.vehicles.core.port.UserPort userPort;
+    @Mock private com.jeepclub.backend.vehicles.api.module.spi.VehicleLifecycleGuard lifecycleGuard;
     private VehicleService service;
+
+    @Test void operationalParticipationBlocksBothLifecycleMutationsBeforeSave() {
+        var vehicle=vehicle(1L, 7L, VehicleStatus.ACTIVE);
+        when(vehicleRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(vehicle));
+        when(lifecycleGuard.hasOperationalParticipation(1L,NOW)).thenReturn(true);
+        assertThatThrownBy(() -> service.deactivate(1L,7L)).isInstanceOf(com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException.class);
+        assertThatThrownBy(() -> service.archive(1L,7L)).isInstanceOf(com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException.class);
+        assertThat(vehicle.getStatus()).isEqualTo(com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE);
+        verify(vehicleRepository,never()).save(any());
+    }
 
     @BeforeEach
     void setUp() {
@@ -52,7 +63,7 @@ class VehicleServiceTest {
         service = new VehicleService(
                 vehicleRepository,
                 Clock.fixed(NOW, ZoneOffset.UTC), userPort, images, mediaCommand, new com.jeepclub.backend.vehicles.core.application.service.internal.VehicleGalleryAssembler(images,mediaCommand)
-        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of());
+        , org.mockito.Mockito.mock(com.jeepclub.backend.platform.logging.SystemLogService.class), java.util.List.of(), java.util.List.of(lifecycleGuard));
     }
 
     @Test

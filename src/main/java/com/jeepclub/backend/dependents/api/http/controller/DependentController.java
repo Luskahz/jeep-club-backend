@@ -223,7 +223,7 @@ public class DependentController {
 
     @PatchMapping("/{id}/disable")
     @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
-    @Operation(summary = "disable meu dependente", description = "Ownership obrigatório; unarchive retorna a INACTIVE e não ativa automaticamente.")
+    @Operation(summary = "disable meu dependente", description="HTTP 409 DEPENDENT_LIFECYCLE_CONFLICT para participacao operacional em Event nao encerrado; sem cancelamento ou desassociacao. Historico e permitido.")
     @ApiResponse(responseCode="409", description="Transição incompatível.", content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DependentResponseDTO> disable(@PathVariable @jakarta.validation.constraints.Positive Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
@@ -241,7 +241,7 @@ public class DependentController {
 
     @PatchMapping("/{id}/archive")
     @org.springframework.security.access.prepost.PreAuthorize("isAuthenticated()")
-    @Operation(summary = "archive meu dependente", description = "Ownership obrigatório; unarchive retorna a INACTIVE e não ativa automaticamente.")
+    @Operation(summary = "archive meu dependente", description="HTTP 409 DEPENDENT_LIFECYCLE_CONFLICT para participacao operacional em Event nao encerrado; sem cancelamento ou desassociacao. Historico e permitido.")
     @ApiResponse(responseCode="409", description="Transição incompatível.", content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema=@Schema(implementation=ApiErrorResponse.class)))
     public ResponseEntity<DependentResponseDTO> archive(@PathVariable @jakarta.validation.constraints.Positive Long id,
             @AuthenticationPrincipal UserPrincipal principal) {

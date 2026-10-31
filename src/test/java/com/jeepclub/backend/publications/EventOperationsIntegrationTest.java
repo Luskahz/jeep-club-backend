@@ -85,6 +85,7 @@ class EventOperationsIntegrationTest {
         when(vehicles.findActive(anyLong())).thenAnswer(a -> Optional.of(new EventVehicleQuery.VehicleCapacity(a.getArgument(0), 10L, 3)));
         when(vehicles.findActiveBatch(anyCollection())).thenAnswer(a -> ((Collection<Long>) a.getArgument(0)).stream().map(id -> new EventVehicleQuery.VehicleCapacity(id, 10L, 3)).toList());
         when(dependents.isActiveDependentOfUser(anyLong(), eq(10L))).thenReturn(true);
+        when(dependents.isDependentOfUser(anyLong(),eq(10L))).thenReturn(true);
     }
     Event event(boolean required) {
         var rule = new AdminEventService.ChargeConfiguration(null, "Event " + UUID.randomUUID(), null, AMOUNT, false, required, null);
@@ -372,6 +373,7 @@ class EventOperationsIntegrationTest {
         assertThatThrownBy(() -> admin.health(e.getId(), MedicalProfileOwner.USER, 10L, 99L)).hasMessageContaining("profile not found");
         var profile = new EmergencyMedicalProfileQuery.Profile("O_POSITIVE", "private", null, null, null, null, null, null, null, null, null);
         when(health.find(any(), anyLong())).thenReturn(Optional.of(profile));
+        when(health.findConfirmedDependent(anyLong(),anyLong())).thenReturn(Optional.of(profile));
         clock.now=NOW; // Before the scheduled start: emergencies remain accessible.
         assertThat(admin.health(e.getId(), MedicalProfileOwner.DEPENDENT, 201L, 99L)).isEqualTo(profile);
         clock.now=START.plus(java.time.Duration.ofDays(2));
@@ -388,7 +390,7 @@ class EventOperationsIntegrationTest {
     }
     @Test void emergencyRejectsDependentWhoseOwnershipChanged() {
         var event=freeEvent();member.register(event.getId(),10L,allocation());
-        when(dependents.isActiveDependentOfUser(201L,10L)).thenReturn(false);
+        when(dependents.isDependentOfUser(201L,10L)).thenReturn(false);
         assertThatThrownBy(()->admin.health(event.getId(),MedicalProfileOwner.DEPENDENT,201L,99L)).hasMessageContaining("participant not found");
         verify(health,never()).find(any(),anyLong());
     }

@@ -24,6 +24,19 @@ public class MedicalProfileOwnerStatusAdapter implements
     private final com.jeepclub.backend.dependents.api.module.DependentLifecycleLock dependentLocks;
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void lockForDeletion(MedicalProfileOwnerType type, Long ownerId, Long actorId) {
+        var userIds = type == MedicalProfileOwnerType.USER
+                ? java.util.stream.Stream.of(ownerId, actorId) : java.util.stream.Stream.of(actorId);
+        userIds.distinct().sorted().forEach(id -> identities.byId(id).orElseThrow(() ->
+                new com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException(id)));
+        if (type == MedicalProfileOwnerType.DEPENDENT) {
+            dependentLocks.byId(ownerId).orElseThrow(() ->
+                    new com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerNotFoundException(type, ownerId));
+        }
+    }
+
+    @Override
     public MedicalProfileOwnerStatus getStatus(
             MedicalProfileOwnerType ownerType,
             Long ownerId

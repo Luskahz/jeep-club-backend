@@ -21,6 +21,142 @@ import static org.assertj.core.api.Assertions.*;
 /** Runs only with -Pmysql-migrations; missing Docker is a FAILURE, never a skip. */
 @Testcontainers
 class MySqlMigrationIT {
+    private static String dependentInsert(String table, long id, long owner, long actor) {
+        boolean history=table.endsWith("_history");
+        return "INSERT INTO "+table+"(id,name,cpf,birth_date,relationship_type,user_id,status,created_at"
+                +(history?",dependent_id,deleted_by_user_id,deleted_at":"")+") VALUES("
+                +id+",'Synthetic dependent','"+String.format("%011d",id)+"','2010-01-01','CHILD',"
+                +owner+",'ACTIVE',UTC_TIMESTAMP(6)"+(history?","+(id+1000)+","+actor+",UTC_TIMESTAMP(6)":"")+")";
+    }
+
+    private static String profileInsert(String table, long id, String type, long owner, long actor) {
+        boolean history=table.endsWith("_history");
+        return "INSERT INTO "+table+"(id,owner_type,owner_id,blood_type,created_at,updated_at"
+                +(history?",medical_profile_id,deleted_by_user_id,deleted_at":"")+") VALUES("
+                +id+",'"+type+"',"+owner+",'UNKNOWN',UTC_TIMESTAMP(6),UTC_TIMESTAMP(6)"
+                +(history?","+(id+1000)+","+actor+",UTC_TIMESTAMP(6)":"")+")";
+    }
+
+    private static void referenceUsers(String db) throws Exception {
+        try(var c=connection(db);var s=c.createStatement()) {
+            s.executeUpdate("INSERT INTO identity_users(id,name,cpf,status,created_at) VALUES"
+                    +"(700,'Synthetic owner','00000000700','ACTIVE',UTC_TIMESTAMP(6)),"
+                    +"(701,'Synthetic actor','00000000701','INACTIVE',UTC_TIMESTAMP(6)),"
+                    +"(702,'Synthetic unreferenced','00000000702','ARCHIVED',UTC_TIMESTAMP(6))");
+        }
+    }
+
+    @Test void manualSqlCannotBreakCurrentOrRetainedReferences() throws Exception {
+        String db=database();flyway(db).migrate();referenceUsers(db);
+        try(var c=connection(db);var s=c.createStatement()) {
+            s.executeUpdate(dependentInsert("dependents_dependent",710,700,0));
+            assertFkRejected(s,"DELETE FROM identity_users WHERE id=700");
+            assertFkRejected(s,"UPDATE identity_users SET id=999 WHERE id=700");
+            assertFkRejected(s,dependentInsert("dependents_dependent",711,999,0));
+            s.executeUpdate(profileInsert("medical_profiles",720,"USER",701,0));
+            s.executeUpdate(profileInsert("medical_profiles",721,"DEPENDENT",710,0));
+            assertFkRejected(s,"DELETE FROM identity_users WHERE id=701");
+            assertFkRejected(s,"UPDATE identity_users SET id=999 WHERE id=701");
+            assertFkRejected(s,"DELETE FROM dependents_dependent WHERE id=710");
+            assertFkRejected(s,"UPDATE dependents_dependent SET id=999 WHERE id=710");
+            for(var type:List.of("USER","DEPENDENT"))
+                assertFkRejected(s,profileInsert("medical_profiles",722,type,999,0));
+            assertFkRejected(s,"UPDATE medical_profiles SET owner_id=999 WHERE id=720");
+            assertFkRejected(s,"UPDATE medical_profiles SET owner_type='DEPENDENT' WHERE id=720");
+            s.execute("SET SESSION sql_mode=''");
+            assertThatThrownBy(() -> s.executeUpdate(profileInsert("medical_profiles",723,"INVALID",700,0)))
+                    .isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> s.executeUpdate("UPDATE medical_profiles SET owner_type='' WHERE id=720"))
+                    .isInstanceOf(java.sql.SQLException.class);
+            s.executeUpdate(profileInsert("medical_profiles_history",730,"USER",701,700));
+            s.executeUpdate(profileInsert("medical_profiles_history",731,"DEPENDENT",710,700));
+            s.executeUpdate("DELETE FROM medical_profiles"); // History does not FK the deleted profile ID.
+            assertFkRejected(s,"DELETE FROM identity_users WHERE id=701");
+            assertFkRejected(s,"DELETE FROM dependents_dependent WHERE id=710");
+            for(var type:List.of("USER","DEPENDENT"))
+                assertFkRejected(s,profileInsert("medical_profiles_history",732,type,999,700));
+            assertFkRejected(s,profileInsert("medical_profiles_history",732,"USER",700,999));
+            assertThatThrownBy(() -> s.executeUpdate(profileInsert("medical_profiles_history",732,"INVALID",700,700)))
+                    .isInstanceOf(java.sql.SQLException.class);
+            s.executeUpdate("DELETE FROM medical_profiles_history");
+            s.executeUpdate(dependentInsert("dependents_dependent_history",740,700,701));
+            s.executeUpdate("DELETE FROM dependents_dependent"); // History does not FK the deleted dependent ID.
+            assertFkRejected(s,"DELETE FROM identity_users WHERE id=700");
+            assertFkRejected(s,"DELETE FROM identity_users WHERE id=701");
+            assertFkRejected(s,"UPDATE identity_users SET id=999 WHERE id=701");
+            assertFkRejected(s,dependentInsert("dependents_dependent_history",741,999,701));
+            assertFkRejected(s,dependentInsert("dependents_dependent_history",741,700,999));
+            assertThat(s.executeUpdate("DELETE FROM identity_users WHERE id=702")).isEqualTo(1);
+        }
+        assertRetainedConstraints(db);
+        assertThat(flyway(db).migrate().migrationsExecuted).isZero();
+        assertRetainedConstraints(db);validateJpa(db);
+    }
+
+    private static void assertFkRejected(java.sql.Statement statement,String sql) {
+        assertThatThrownBy(() -> statement.executeUpdate(sql)).isInstanceOfSatisfying(java.sql.SQLException.class,
+                failure -> assertThat(failure.getErrorCode()).isIn(1451,1452));
+    }
+
+    private static void assertRetainedConstraints(String db) throws Exception {
+        var constraints=rows(db,"SELECT constraint_name,delete_rule,update_rule FROM information_schema.referential_constraints "
+                +"WHERE constraint_schema=DATABASE() AND constraint_name IN ('fk_dependent_identity_user',"
+                +"'fk_dependent_history_identity_user','fk_dependent_history_actor','fk_medical_profile_user_owner',"
+                +"'fk_medical_profile_dependent_owner','fk_medical_history_user_owner','fk_medical_history_dependent_owner',"
+                +"'fk_medical_history_actor') ORDER BY constraint_name");
+        assertThat(constraints).hasSize(8).allSatisfy(row -> assertThat(row).endsWith(", RESTRICT, RESTRICT]"));
+        assertThat(rows(db,"SELECT extra FROM information_schema.columns WHERE table_schema=DATABASE() "
+                +"AND table_name IN ('medical_profiles','medical_profiles_history') AND column_name IN ('user_owner_id','dependent_owner_id')"))
+                .hasSize(4).allSatisfy(row -> assertThat(row).contains("STORED GENERATED"));
+    }
+
+    @ParameterizedTest @ValueSource(strings={"DEPENDENT","DEPENDENT_HISTORY_OWNER","DEPENDENT_HISTORY_ACTOR",
+            "PROFILE_USER","PROFILE_DEPENDENT","HISTORY_USER","HISTORY_DEPENDENT","HISTORY_ACTOR","INVALID_TYPE","UNSIGNED"})
+    void referencePreflightFailsBeforeAnyBusinessDataOrTableChange(String defect) throws Exception {
+        String db=database();Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("11").load().migrate();referenceUsers(db);
+        try(var c=connection(db);var s=c.createStatement()) {
+            switch(defect) {
+                case "DEPENDENT" -> s.executeUpdate(dependentInsert("dependents_dependent",710,999,0));
+                case "DEPENDENT_HISTORY_OWNER" -> s.executeUpdate(dependentInsert("dependents_dependent_history",710,999,701));
+                case "DEPENDENT_HISTORY_ACTOR" -> s.executeUpdate(dependentInsert("dependents_dependent_history",710,700,999));
+                case "PROFILE_USER" -> s.executeUpdate(profileInsert("medical_profiles",720,"USER",999,0));
+                case "PROFILE_DEPENDENT" -> s.executeUpdate(profileInsert("medical_profiles",720,"DEPENDENT",999,0));
+                case "HISTORY_USER" -> s.executeUpdate(profileInsert("medical_profiles_history",720,"USER",999,701));
+                case "HISTORY_DEPENDENT" -> s.executeUpdate(profileInsert("medical_profiles_history",720,"DEPENDENT",999,701));
+                case "HISTORY_ACTOR" -> s.executeUpdate(profileInsert("medical_profiles_history",720,"USER",700,999));
+                case "INVALID_TYPE" -> { s.execute("SET SESSION sql_mode=''");s.executeUpdate(profileInsert("medical_profiles",720,"INVALID",700,0)); }
+                case "UNSIGNED" -> s.execute("ALTER TABLE medical_profiles MODIFY owner_id BIGINT UNSIGNED NOT NULL");
+                default -> throw new IllegalArgumentException(defect);
+            }
+        }
+        var tables=List.of("identity_users","dependents_dependent","dependents_dependent_history","medical_profiles","medical_profiles_history");
+        var before=new java.util.HashMap<String,List<String>>();
+        for(var table:tables)before.put(table,fixtureRows(db,table));
+        assertThatThrownBy(() -> flyway(db).migrate()).isInstanceOf(FlywayException.class).hasStackTraceContaining("PR121 preflight");
+        for(var table:tables)assertThat(fixtureRows(db,table)).isEqualTo(before.get(table));
+        assertThat(rows(db,"SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND column_name='user_owner_id'"))
+                .containsExactly("[0]");
+    }
+
+    @Test void referenceUpgradePreservesInactiveOwnersAndDoesNotDuplicateExistingForeignKey() throws Exception {
+        String db=database();Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("11").load().migrate();referenceUsers(db);
+        try(var c=connection(db);var s=c.createStatement()) {
+            s.executeUpdate(dependentInsert("dependents_dependent",710,702,0));
+            s.executeUpdate(profileInsert("medical_profiles",720,"USER",701,0));
+            s.executeUpdate(profileInsert("medical_profiles_history",721,"USER",702,700));
+            s.execute("ALTER TABLE dependents_dependent ADD CONSTRAINT legacy_identity_reference FOREIGN KEY(user_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+        }
+        var before=fixtureRows(db,"identity_users");
+        flyway(db).migrate();validateJpa(db);
+        assertThat(fixtureRows(db,"identity_users")).isEqualTo(before);
+        assertThat(rows(db,"SELECT COUNT(*) FROM information_schema.key_column_usage WHERE constraint_schema=DATABASE() "
+                +"AND table_name='dependents_dependent' AND column_name='user_id' AND referenced_table_name='identity_users'"))
+                .containsExactly("[1]");
+        assertThat(rows(db,"SELECT owner_type,owner_id,user_owner_id,dependent_owner_id FROM medical_profiles"))
+                .containsExactly("[USER, 701, 701, null]");
+    }
     @Container
     static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
             .withUsername("root").withPassword("migration-test-only")
@@ -187,6 +323,8 @@ class MySqlMigrationIT {
         dependentPhotoPhysicalConstraints(expected);
         vehicleGalleryPhysicalConstraints(expected);
         eventGuestPhysicalConstraints(expected);
+        rejectionNotificationPhysicalConstraints(expected);
+        retainedReferencePhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -475,6 +613,57 @@ class MySqlMigrationIT {
         }
     }
 
+
+    // Independently describe DB-only constraints missing from the JPA mappings.
+    private static void retainedReferencePhysicalConstraints(String name) throws Exception {
+        try (var c=connection(name); var st=c.createStatement()) {
+            for (var table:List.of("medical_profiles","medical_profiles_history")) {
+                st.execute("ALTER TABLE "+table+" ADD user_owner_id BIGINT GENERATED ALWAYS AS (CASE WHEN owner_type='USER' THEN owner_id ELSE NULL END) STORED, ADD dependent_owner_id BIGINT GENERATED ALWAYS AS (CASE WHEN owner_type='DEPENDENT' THEN owner_id ELSE NULL END) STORED, ADD CONSTRAINT ck_"+table+"_owner_type CHECK(owner_type IN ('USER','DEPENDENT'))");
+            }
+            st.execute("ALTER TABLE dependents_dependent ADD CONSTRAINT fk_dependent_identity_user FOREIGN KEY(user_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE dependents_dependent_history ADD CONSTRAINT fk_dependent_history_identity_user FOREIGN KEY(user_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE dependents_dependent_history ADD CONSTRAINT fk_dependent_history_actor FOREIGN KEY(deleted_by_user_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE medical_profiles ADD CONSTRAINT fk_medical_profile_user_owner FOREIGN KEY(user_owner_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE medical_profiles ADD CONSTRAINT fk_medical_profile_dependent_owner FOREIGN KEY(dependent_owner_id) REFERENCES dependents_dependent(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE medical_profiles_history ADD CONSTRAINT fk_medical_history_user_owner FOREIGN KEY(user_owner_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE medical_profiles_history ADD CONSTRAINT fk_medical_history_dependent_owner FOREIGN KEY(dependent_owner_id) REFERENCES dependents_dependent(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+            st.execute("ALTER TABLE medical_profiles_history ADD CONSTRAINT fk_medical_history_actor FOREIGN KEY(deleted_by_user_id) REFERENCES identity_users(id) ON DELETE RESTRICT ON UPDATE RESTRICT");
+        }
+    }
+
+    private static void rejectionNotificationPhysicalConstraints(String name) throws Exception {
+        try (var c = connection(name); var st = c.createStatement()) {
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT fk_membership_rejection_application FOREIGN KEY(application_id) REFERENCES membership_applications(id)");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_type CHECK(type = 'MEMBERSHIP_REJECTED')");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_state CHECK(state IN ('PENDING','PROCESSING','SENT','FAILED'))");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_count CHECK(automatic_attempts BETWEEN 0 AND 3)");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_lease CHECK((state='PROCESSING' AND lease_until IS NOT NULL AND current_attempt_id IS NOT NULL) OR (state<>'PROCESSING' AND lease_until IS NULL AND current_attempt_id IS NULL))");
+            st.execute("ALTER TABLE membership_rejection_notifications ADD CONSTRAINT ck_membership_rejection_pending CHECK(state<>'PENDING' OR next_attempt_at IS NOT NULL)");
+            st.execute("ALTER TABLE membership_rejection_notification_attempts ADD CONSTRAINT fk_membership_rejection_attempt FOREIGN KEY(notification_id) REFERENCES membership_rejection_notifications(id)");
+            st.execute("ALTER TABLE membership_rejection_notification_attempts ADD CONSTRAINT ck_membership_rejection_origin CHECK((origin='AUTOMATIC' AND automatic_number IS NOT NULL AND automatic_number BETWEEN 1 AND 3 AND actor_id IS NULL) OR (origin='MANUAL' AND automatic_number IS NULL AND actor_id IS NOT NULL))");
+            st.execute("ALTER TABLE membership_rejection_notification_attempts ADD CONSTRAINT ck_membership_rejection_result CHECK(result IN ('PROCESSING','SMTP_ACCEPTED','SIMULATED','SMTP_FAILED','UNKNOWN','INELIGIBLE'))");
+        }
+    }
+
+    @Test void rejectionNotificationMigrationPreservesHistoricalDecisionsWithoutBackfillAndEnforcesAttempts() throws Exception {
+        String db = database();
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("10").cleanDisabled(true).load().migrate();
+        try(var c = connection(db);var st = c.createStatement()) {
+            st.executeUpdate("INSERT INTO membership_applications(id,name,cpf,status,requested_at,version,rejection_reason) VALUES(710,'Synthetic history','00000000710','REJECTED',UTC_TIMESTAMP(6),4,'Original decision')");
+        }
+        var before = rows(db,"select * from membership_applications order by id");
+        flyway(db).migrate(); validateJpa(db);
+        assertThat(rows(db,"select * from membership_applications order by id")).isEqualTo(before);
+        assertThat(count(db,"membership_rejection_notifications")).isZero();
+        try(var c = connection(db);var st = c.createStatement()) {
+            st.executeUpdate("INSERT INTO membership_rejection_notifications(id,application_id,decision_version,type,state,automatic_attempts,next_attempt_at,created_at,updated_at,version) VALUES(1,710,4,'MEMBERSHIP_REJECTED','PENDING',0,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),UTC_TIMESTAMP(6),0)");
+            assertThatThrownBy(() -> st.executeUpdate("INSERT INTO membership_rejection_notification_attempts(notification_id,origin,result,started_at) VALUES(1,'AUTOMATIC','PROCESSING',UTC_TIMESTAMP(6))")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> st.executeUpdate("UPDATE membership_rejection_notifications SET automatic_attempts=4 WHERE id=1")).isInstanceOf(java.sql.SQLException.class);
+            assertThatThrownBy(() -> st.executeUpdate("UPDATE membership_rejection_notifications SET state='PROCESSING' WHERE id=1")).isInstanceOf(java.sql.SQLException.class);
+        }
+    }
+
     private static void eventGuestPhysicalConstraints(String name) throws Exception {
         try(var c=connection(name);var st=c.createStatement()) {
             st.execute("ALTER TABLE event_registrations ADD CONSTRAINT uk_event_registration_identity UNIQUE(id,event_id,user_id)");
@@ -565,6 +754,7 @@ class MySqlMigrationIT {
         Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration")
                 .target("6").cleanDisabled(true).load().migrate();
         try(var c=connection(db);var st=c.createStatement()) {
+            st.executeUpdate("INSERT INTO identity_users(id,name,cpf,status,created_at) VALUES(900,'Synthetic photo owner','00000000900','ACTIVE',UTC_TIMESTAMP(6))");
             st.executeUpdate("INSERT INTO dependents_dependent(id,name,cpf,birth_date,relationship_type,user_id,status,created_at) VALUES(901,'Synthetic live photo fixture','00000000000','2015-01-01','CHILD',900,'ACTIVE',UTC_TIMESTAMP(6))");
             st.executeUpdate("INSERT INTO dependents_dependent_history(dependent_id,name,cpf,birth_date,relationship_type,user_id,status,deleted_by_user_id,created_at,deleted_at) VALUES(902,'Synthetic history photo fixture','00000000001','2015-01-01','CHILD',900,'INACTIVE',900,UTC_TIMESTAMP(6),UTC_TIMESTAMP(6))");
         }

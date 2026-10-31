@@ -21,11 +21,18 @@ public final class ImageMultipartAdapter {
         }
     }
 
-    public static ImageUpload read(MultipartFile file) throws IOException {
+    public static ImageUpload read(MultipartFile file) {
         if (file == null) return null;
         if (file.isEmpty() || file.getSize() > ImageUpload.MAX_BYTES) {
             throw new InvalidStorageFileException("A non-empty image up to 5 MB is required.");
         }
-        return new ImageUpload(file.getOriginalFilename(), file.getContentType(), file.getBytes());
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException exception) {
+            // IOException alone cannot establish client fault (e.g. a server temp-file failure).
+            throw new ImageUploadReadException();
+        }
+        return new ImageUpload(file.getOriginalFilename(), file.getContentType(), bytes);
     }
 }

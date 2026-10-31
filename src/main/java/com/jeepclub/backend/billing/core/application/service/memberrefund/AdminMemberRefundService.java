@@ -101,7 +101,7 @@ public class AdminMemberRefundService {
     @Transactional
     public MemberRefundResult approve(Long id, Long userId) {
         Objects.requireNonNull(userId, "approvedByUserId cannot be null");
-        MemberRefund refund = findMemberRefundOrThrow(id);
+        MemberRefund refund = findMemberRefundForUpdateOrThrow(id);
         refund.approve(userId, Instant.now(clock));
         return MemberRefundResult.from(memberRefundRepository.save(refund));
     }
@@ -109,7 +109,7 @@ public class AdminMemberRefundService {
     @Transactional
     public MemberRefundResult reject(Long id, Long userId, String reason) {
         Objects.requireNonNull(userId, "rejectedByUserId cannot be null");
-        MemberRefund refund = findMemberRefundOrThrow(id);
+        MemberRefund refund = findMemberRefundForUpdateOrThrow(id);
         refund.reject(userId, reason, Instant.now(clock));
         return MemberRefundResult.from(memberRefundRepository.save(refund));
     }
@@ -117,14 +117,14 @@ public class AdminMemberRefundService {
     @Transactional
     public MemberRefundResult markAsRefunded(Long id, Long userId) {
         Objects.requireNonNull(userId, "refundedByUserId cannot be null");
-        MemberRefund refund = findMemberRefundOrThrow(id);
+        MemberRefund refund = findMemberRefundForUpdateOrThrow(id);
         refund.markAsRefunded(userId, Instant.now(clock));
         return MemberRefundResult.from(memberRefundRepository.save(refund));
     }
 
     @Transactional
     public MemberRefundResult expire(Long id) {
-        MemberRefund refund = findMemberRefundOrThrow(id);
+        MemberRefund refund = findMemberRefundForUpdateOrThrow(id);
         refund.expire(Instant.now(clock));
         return MemberRefundResult.from(memberRefundRepository.save(refund));
     }
@@ -132,9 +132,15 @@ public class AdminMemberRefundService {
     @Transactional
     public MemberRefundResult cancel(Long id, Long userId) {
         Objects.requireNonNull(userId, "canceledByUserId cannot be null");
-        MemberRefund refund = findMemberRefundOrThrow(id);
+        MemberRefund refund = findMemberRefundForUpdateOrThrow(id);
         refund.cancel(userId, Instant.now(clock));
         return MemberRefundResult.from(memberRefundRepository.save(refund));
+    }
+
+    private MemberRefund findMemberRefundForUpdateOrThrow(Long id) {
+        Objects.requireNonNull(id, "id cannot be null");
+        return memberRefundRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new MemberRefundNotFoundException("Member refund not found."));
     }
 
     private MemberRefund findMemberRefundOrThrow(Long id) {

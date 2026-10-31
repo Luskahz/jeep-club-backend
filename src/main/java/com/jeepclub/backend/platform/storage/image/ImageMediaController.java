@@ -1,9 +1,11 @@
 package com.jeepclub.backend.platform.storage.image;
 
 import com.jeepclub.backend.shared.storage.StorageResource;
+import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
@@ -16,8 +18,6 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-
 @RestController
 @RequestMapping("/media/images")
 @RequiredArgsConstructor
@@ -27,8 +27,10 @@ public class ImageMediaController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Enviar imagem", description = "Upload avulso mantido temporariamente para consumidores existentes de Identity, Tools, Publications e edição de Vehicle. A criação de Vehicle recebe a foto diretamente como multipart no endpoint de negócio. Aceita JPEG, PNG ou WebP até 5 MB, conferindo extensão/MIME/assinatura. Objetos compartilhados não são apagados por substituição ou desassociação.")
-    public ResponseEntity<ImageUploadResponse> upload(@RequestPart("file") MultipartFile file) throws IOException {
-        String key = images.store(file.getOriginalFilename(), file.getContentType(), file.getBytes());
+    @ApiResponse(responseCode = "500", description = "IMAGE_UPLOAD_READ_FAILED: falha operacional ao ler a imagem enviada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
+    public ResponseEntity<ImageUploadResponse> upload(@RequestPart("file") MultipartFile file) {
+        var upload = ImageMultipartAdapter.read(file);
+        String key = images.store(upload.filename(), upload.contentType(), upload.content());
         return ResponseEntity.status(201).body(new ImageUploadResponse(key, "/media/images?key=" + key));
     }
 

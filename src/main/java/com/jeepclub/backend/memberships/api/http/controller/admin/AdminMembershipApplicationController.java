@@ -174,7 +174,7 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Aprovar solicitação com link de acesso",
-            description = "Cria o usuário com PENDING_FIRST_ACCESS, emite o token próprio de Membership e envia o convite por e-mail e retorna o mesmo link uma única vez. A resposta sensível usa Cache-Control: no-store; não registrar seu corpo.",
+            description = "Confirma usuário PENDING_FIRST_ACCESS e hash do token de Membership; só então tenta enviar o convite. Retorna o link uma única vez, sem confirmar aceite SMTP ou entrega. Falha SMTP preserva aprovação; recuperação pelo reenvio manual. Cache-Control: no-store; não registrar o corpo.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Solicitação aprovada e usuário criado.",
                             headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control",
@@ -217,9 +217,9 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Reenviar convite de ativação",
-            description = "Invalida convites ativos, emite um novo token sem recriar User ou AuthenticationAccount e envia ao e-mail atual do User.",
+            description = "Invalida tokens ativos e confirma novo hash sem recriar User ou AuthenticationAccount. Após commit, tenta enviar ao e-mail atual do User. Falha SMTP preserva o novo token; 204 não confirma aceite ou entrega, e a recuperação é manual.",
             responses = {
-                    @ApiResponse(responseCode = "204", description = "Novo convite emitido e enviado."),
+                    @ApiResponse(responseCode = "204", description = "Novo token confirmado; envio tentado após commit, sem confirmação de entrega."),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.",
                             content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE,
                                     schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -245,7 +245,7 @@ public class AdminMembershipApplicationController {
     @SwaggerOperationGroup(value = "Rotas administrativas", order = 30)
     @Operation(
             summary = "Rejeitar solicitação",
-            description = "Aceita PENDING ou APPROVED ainda reversível antes do primeiro acesso. Vínculos impeditivos ou ativação concluída retornam 409 sem efeitos parciais. Motivo opcional é enviado após commit.",
+            description = "Aceita PENDING ou APPROVED ainda reversível antes do primeiro acesso. Vínculos impeditivos ou ativação concluída retornam 409 sem efeitos parciais. Persiste notificação durável na mesma transação; envio genérico com motivo opcional após commit e até três tentativas automáticas totais.",
             responses = {
                     @ApiResponse(responseCode = "204", description = "Solicitação rejeitada."),
                     @ApiResponse(responseCode = "400", description = "Identificador da solicitação inválido.",
@@ -268,7 +268,7 @@ public class AdminMembershipApplicationController {
     public ResponseEntity<Void> reject(
             @Parameter(description = "Identificador da solicitação pendente.", example = "123")
             @PathVariable Long id,
-            @RequestBody(required = false) RejectMembershipRequestDTO request,
+            @Valid @RequestBody(required = false) RejectMembershipRequestDTO request,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         String reason = request != null ? request.reason() : null;

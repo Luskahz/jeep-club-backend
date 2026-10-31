@@ -11,4 +11,7 @@ public interface MedicalProfileOwnerStatusChecker {
 
     /** Called inside writes, before taking the profile lock. */
     MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id);
+
+    /** Identity IDs ascending, then dependent, before the profile/history write. */
+    void lockForDeletion(MedicalProfileOwnerType type, Long ownerId, Long actorId);
 }

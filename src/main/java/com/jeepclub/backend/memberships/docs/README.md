@@ -70,13 +70,13 @@ As duas formas de aprovação criam um `User` em `PENDING_FIRST_ACCESS` por
 identificador retornado. Falha nessa integração impede a aprovação da
 solicitação na transação atual. A opção de senha temporária funciona com ou sem
 e-mail e devolve a senha uma única vez. A opção por e-mail exige endereço,
-persiste somente o hash do token e devolve ao administrador o mesmo link enviado
+persiste somente o hash do token e devolve ao administrador o link cujo envio será tentado após commit
 ao e-mail atual do User. O link é construído uma única vez com a configuração
 existente; a resposta usa `Cache-Control: no-store` e não pode ser registrada
 em logs, analytics, traces, storage persistente do navegador ou listagens.
 
 A rejeição simples não cria bloqueio. O motivo é opcional e, quando presente,
-é enviado ao mail sender configurado somente após commit. Para `APPROVED`,
+integra a comunicação enviada somente após commit. Mesmo sem motivo, há uma mensagem genérica. A decisão e a pendência durável são atômicas; veja [confiabilidade das notificações](notifications.md). Para `APPROVED`,
 Identity é bloqueada antes da solicitação; Authentication confirma credencial
 `PENDING_FIRST_ACCESS` existente. Tokens Membership são inutilizados e Identity
 executa sua exclusão segura com histórico, revogação e limpeza de Authorization.

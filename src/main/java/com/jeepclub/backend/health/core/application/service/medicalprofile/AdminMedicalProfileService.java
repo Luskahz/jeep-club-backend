@@ -1,6 +1,9 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
+import com.jeepclub.backend.health.core.application.result.AdminMedicalProfilePresentation;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerPresentationQuery;
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerPresentationQuery.Owner;
 import com.jeepclub.backend.health.core.application.exceptions.InvalidMedicalProfileDataException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileNotFoundException;
 import com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerInactiveException;
@@ -35,9 +38,37 @@ public class AdminMedicalProfileService {
     private final MedicalProfileOwnerStatusChecker ownerStatusChecker;
     private final MedicalProfileActiveOwnersQuery activeOwnersQuery;
     private final Clock clock;
+    private final MedicalProfileOwnerPresentationQuery ownerPresentationQuery;
 
     @Transactional(readOnly = true)
-    public MedicalProfile getById(Long id) {
+    public AdminMedicalProfilePresentation getPresentationById(Long id) {
+        return present(getById(id));
+    }
+
+    @Transactional(readOnly = true)
+    public AdminMedicalProfilePresentation getPresentationByOwner(MedicalProfileOwnerType type, Long id) {
+        return present(getByOwner(type, id));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<AdminMedicalProfilePresentation> listPresentations(Pageable pageable) {
+        Page<MedicalProfile> page = listMedicalProfiles(pageable);
+        if (page.isEmpty()) return new PageImpl<>(List.of(), page.getPageable(), page.getTotalElements());
+        var names = ownerPresentationQuery.resolve(page.stream().map(this::owner).toList());
+        return page.map(profile -> new AdminMedicalProfilePresentation(profile, names.get(owner(profile))));
+    }
+
+    private AdminMedicalProfilePresentation present(MedicalProfile profile) {
+        Owner owner = owner(profile);
+        return new AdminMedicalProfilePresentation(profile, ownerPresentationQuery.resolve(List.of(owner)).get(owner));
+    }
+
+    private Owner owner(MedicalProfile profile) {
+        return new Owner(profile.getOwnerType(), profile.getOwnerId());
+    }
+
+    @Transactional(readOnly = true)
+    MedicalProfile getById(Long id) {
         if (id == null || id <= 0) {
             throw new InvalidMedicalProfileDataException(
                     "O ID do perfil médico deve ser positivo."
@@ -52,7 +83,7 @@ public class AdminMedicalProfileService {
     }
 
     @Transactional(readOnly = true)
-    public MedicalProfile getByOwner(
+    MedicalProfile getByOwner(
             MedicalProfileOwnerType ownerType,
             Long ownerId
     ) {
@@ -66,7 +97,7 @@ public class AdminMedicalProfileService {
     }
 
     @Transactional(readOnly = true)
-    public Page<MedicalProfile> listMedicalProfiles(
+    Page<MedicalProfile> listMedicalProfiles(
             Pageable pageable
     ) {
         List<MedicalProfile> content = new ArrayList<>(pageable.getPageSize());
@@ -172,6 +203,7 @@ public class AdminMedicalProfileService {
                 .findById(profileId)
                 .orElseThrow(MedicalProfileNotFoundException::new);
 
+        ownerStatusChecker.lockForDeletion(profile.getOwnerType(), profile.getOwnerId(), deletedByUserId);
         medicalProfileRepository.delete(
                 profile,
                 deletedByUserId,

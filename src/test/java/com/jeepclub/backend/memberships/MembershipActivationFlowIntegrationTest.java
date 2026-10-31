@@ -38,11 +38,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Committed HTTP transactions with real Identity/Authentication and H2 persistence. */
 @SpringBootTest(properties={"memberships.registry.issuance.enabled=true","memberships.registry.issuance.approved=true","memberships.registry.imports.apply-enabled=true"})
 @AutoConfigureMockMvc
+@org.springframework.context.annotation.Import(CommitFailureInjection.class)
 @ActiveProfiles("test")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class MembershipActivationFlowIntegrationTest {
     private static final String PASSWORD = "DefinitivePassword2026!";
     @Autowired MockMvc mvc;
+    @Autowired com.jeepclub.backend.memberships.core.application.service.notification.RejectionNotificationService rejectionDelivery;
+    @MockitoSpyBean com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository rejectionQueue;
     @Autowired UserRegistration registration;
     @Autowired UserQuery identities;
     @Autowired AuthenticationAccountJpaRepository accounts;
@@ -218,21 +221,73 @@ class MembershipActivationFlowIntegrationTest {
     }
 
     @Test
-    void deliveryFailureRollsBackApprovalIdentityAccountAndTokenThenAllowsRetry() throws Exception {
+    @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+    void deliveryFailurePreservesApprovalIdentityAccountAndTokenAndAllowsManualRecovery(org.springframework.boot.test.system.CapturedOutput output) throws Exception {
         Long id = submit("12345678909");
         long accountCount = accounts.count();
         long tokenCount = tokens.count();
-        doThrow(new RuntimeException("injected delivery failure")).when(mail).sendActivationLink(any(), any(), any());
-        approve(id).andExpect(status().isInternalServerError());
-        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
-        assertThat(applications.findById(id).orElseThrow().getCreatedUserId()).isNull();
-        assertThat(identities.findByCpf("12345678909")).isEmpty();
-        assertThat(accounts.count()).isEqualTo(accountCount);
-        assertThat(tokens.count()).isEqualTo(tokenCount);
+        doThrow(new org.springframework.mail.MailSendException("private@example.com bearer-secret"))
+                .when(mail).sendActivationLink(any(), any(), any());
+        var response = approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
+        String firstLink = json(response, "$.activationLink");
+        var approved = applications.findById(id).orElseThrow();
+        assertThat(approved.getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+        assertThat(identities.findByCpf("12345678909").orElseThrow().id()).isEqualTo(approved.getCreatedUserId());
+        assertThat(accounts.count()).isEqualTo(accountCount + 1);
+        assertThat(tokens.count()).isEqualTo(tokenCount + 1);
+        var original = tokens.findAll().stream().filter(t -> t.getApplicationId().equals(id)).findFirst().orElseThrow();
         reset(mail);
-        approve(id).andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"));
-        assertThat(identities.findByCpf("12345678909")).isPresent();
-        assertThat(deliveredToken(1)).isNotBlank();
+        administration.resendActivationLink(id);
+        assertThat(accounts.count()).isEqualTo(accountCount + 1);
+        assertThat(tokens.findById(original.getId()).orElseThrow().getUsedAt()).isNotNull();
+        String freshRaw = deliveredToken(1);
+        assertThat(freshRaw).isNotBlank();
+        assertThat(output.getAll()).doesNotContain(firstLink, freshRaw, "private@example.com", "bearer-secret");
+    }
+
+    @Test
+    void outerTransactionRollbackAndCommitFailureNeverSendInvitation() throws Exception {
+        Long id = submit(nextCpf());
+        var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(status -> {
+            administration.approveWithAccessLink(id, adminId);
+            verifyNoInteractions(mail);
+            status.setRollbackOnly();
+        });
+        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
+        verifyNoInteractions(mail);
+        try {
+            assertThatThrownBy(() -> tx.executeWithoutResult(status -> {
+                administration.approveWithAccessLink(id, adminId);
+                CommitFailureInjection.ARMED.set(true);
+            })).isInstanceOfAny(org.springframework.transaction.TransactionSystemException.class, org.springframework.orm.jpa.JpaSystemException.class)
+                    .hasRootCauseInstanceOf(java.sql.SQLException.class);
+        } finally { CommitFailureInjection.ARMED.remove(); }
+        assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.PENDING);
+        verifyNoInteractions(mail);
+    }
+
+    @Test
+    void smtpObservesApprovalAndTokenFromAnIndependentCommittedTransaction() throws Exception {
+        Long id = submit(nextCpf());
+        doAnswer(invocation -> {
+            var committed = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+            committed.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+            committed.executeWithoutResult(status -> {
+                assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.APPROVED);
+                String link = invocation.getArgument(2);
+                String raw = link.substring(link.indexOf("token=") + 6);
+                assertThat(tokens.findByTokenHash(hashes.hash(raw))).isPresent();
+                assertThat(tokens.findByTokenHash(raw)).isEmpty();
+            });
+            return null;
+        }).when(mail).sendActivationLink(any(), any(), any());
+        var tx = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        tx.executeWithoutResult(status -> {
+            administration.approveWithAccessLink(id, adminId);
+            verifyNoInteractions(mail);
+        });
+        verify(mail).sendActivationLink(any(), any(), any());
     }
 
     @Test
@@ -438,6 +493,7 @@ class MembershipActivationFlowIntegrationTest {
             assertThat(row.getPreviousReviewerId()).isEqualTo(before.getReviewedByUserId());
             assertThat(row.getPreviousReviewedAt()).isEqualTo(before.getReviewedAt());assertThat(row.getOriginalUserId()).isEqualTo(user);
         });
+        rejectionDelivery.process(rejectionQueue.status(id).notificationId());
         verify(mail).sendRejectionNotice(anyString(),eq("Candidate Jeep Club"),eq("Administrative review"));
     }
 
@@ -522,6 +578,8 @@ class MembershipActivationFlowIntegrationTest {
         Long user=applications.findById(id).orElseThrow().getCreatedUserId();
         doThrow(new RuntimeException("synthetic notification failure")).when(mail).sendRejectionNotice(any(),any(),any());
         reject(id,false).andExpect(status().isNoContent());
+        rejectionDelivery.process(rejectionQueue.status(id).notificationId());
+        assertThat(rejectionQueue.status(id).state()).isEqualTo("PENDING");
         assertThat(applications.findById(id).orElseThrow().getStatus()).isEqualTo(MembershipApplicationStatus.REJECTED);
         assertThat(identities.findById(user)).isEmpty();assertThat(accounts.findById(user)).isEmpty();
     }
@@ -720,6 +778,48 @@ class MembershipActivationFlowIntegrationTest {
 
     private ResultActions approve(Long id) throws Exception {
         return mvc.perform(post("/admin/membership-applications/{id}/approve/access-link", id).header("Authorization", admin));
+    }
+
+    @Test
+    void rejectionResendHttpReportsUnknownWhenSmtpAcceptanceCannotBeRecorded() throws Exception {
+        Long id = submit(nextCpf()); reject(id, false).andExpect(status().isNoContent());
+        doThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic result write failure"))
+                .when(rejectionQueue).complete(any(), eq(com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository.Result.SMTP_ACCEPTED), any());
+        try {
+            mvc.perform(post("/admin/membership-applications/{id}/rejection-notification/resend", id).header("Authorization", admin))
+                    .andExpect(status().isServiceUnavailable()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                    .andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_RESULT_UNKNOWN"));
+        } finally { reset(rejectionQueue); }
+        assertThat(rejectionQueue.status(id).state()).isEqualTo("PROCESSING");
+    }
+
+    @Test
+    void rejectionResendHttpReportsActualSmtpOutcomeAndSanitizedHistory() throws Exception {
+        Long id = submit(nextCpf());
+        String path = "/admin/membership-applications/" + id + "/rejection-notification";
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_NOT_REJECTED"));
+        mvc.perform(post("/admin/membership-applications/{id}/reject", id).header("Authorization", admin))
+                .andExpect(status().isNoContent());
+        var reserved = rejectionQueue.claimManual(id, adminId, clock.instant());
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_PROCESSING"));
+        rejectionQueue.complete(reserved, com.jeepclub.backend.memberships.core.repository.RejectionNotificationRepository.Result.SMTP_FAILED, clock.instant());
+        doThrow(new org.springframework.mail.MailSendException("private@example.com private reason"))
+                .when(mail).sendRejectionNotice(any(), any(), nullable(String.class));
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isBadGateway()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("MEMBERSHIP_REJECTION_NOTIFICATION_PROVIDER_FAILED"));
+        reset(mail);
+        mvc.perform(post(path + "/resend").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.result").value("SMTP_ACCEPTED"));
+        mvc.perform(get(path).header("Authorization", admin)).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store")).andExpect(jsonPath("$.state").value("SENT"))
+                .andExpect(jsonPath("$.automaticAttempts").value(0)).andExpect(jsonPath("$.attempts[0].origin").value("MANUAL"))
+                .andExpect(jsonPath("$.attempts[0].actorId").value(adminId)).andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.reason").doesNotExist());
+        mvc.perform(post("/admin/membership-applications/999999999/rejection-notification/resend").header("Authorization", admin))
+                .andExpect(status().isNotFound());
     }
 
     private String deliveredToken(int count) {

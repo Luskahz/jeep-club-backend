@@ -24,6 +24,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -55,10 +56,10 @@ public class AdminMedicalProfileController {
             description = """
                     Retorna uma página zero-based de resumos de perfis cujos owners ainda estão ativos.
                     `page` começa em 0; `size` é 20 por padrão e limitado a 50; `sort` usa `id`
-                    como ordenação padrão. O retorno mantém o formato direto de `Page` vigente.
+                    como ordenação padrão. O retorno mantém o envelope `PageResponse` vigente, com nomes cadastrais atuais e Cache-Control: no-store.
                     """,
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Página de perfis médicos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfilePageResponseSchema.class))),
+                    @ApiResponse(responseCode = "200", description = "Página de perfis médicos com nomes cadastrais atuais.", headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control", schema = @Schema(type = "string", example = "no-store")), content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfilePageResponseSchema.class))),
                     @ApiResponse(responseCode = "400", description = "Parâmetros de paginação ou ordenação inválidos.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão HEALTH_MEDICAL_PROFILE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -72,10 +73,10 @@ public class AdminMedicalProfileController {
             @PageableDefault(size = 20, sort = "id") Pageable pageable
     ) {
         PageResponse<MedicalProfileSummaryResponse> profiles = PageResponse.from(adminMedicalProfileService
-                .listMedicalProfiles(pageable)
-                .map(MedicalProfileSummaryResponse::fromDomain));
+                .listPresentations(pageable)
+                .map(MedicalProfileSummaryResponse::fromPresentation));
 
-        return ResponseEntity.ok(profiles);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(profiles);
     }
 
     @GetMapping("/{profileId}")
@@ -85,7 +86,7 @@ public class AdminMedicalProfileController {
     @Operation(
             summary = "Consultar perfil médico por ID",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Perfil médico retornado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfileResponse.class))),
+                    @ApiResponse(responseCode = "200", description = "Perfil médico com nomes cadastrais atuais; responsibleName null para USER.", headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control", schema = @Schema(type = "string", example = "no-store")), content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Identificador do perfil inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão HEALTH_MEDICAL_PROFILE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -99,10 +100,10 @@ public class AdminMedicalProfileController {
             @Parameter(description = "Identificador do perfil médico.", example = "1", required = true)
             @PathVariable Long profileId
     ) {
-        var profile = adminMedicalProfileService.getById(
+        var profile = adminMedicalProfileService.getPresentationById(
                 profileId
         );
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(MedicalProfileResponse.fromPresentation(profile));
     }
 
     @GetMapping("/users/{userId}")
@@ -112,7 +113,7 @@ public class AdminMedicalProfileController {
     @Operation(
             summary = "Consultar perfil médico de um usuário",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Perfil médico retornado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfileResponse.class))),
+                    @ApiResponse(responseCode = "200", description = "Perfil médico com nomes cadastrais atuais; responsibleName null para USER.", headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control", schema = @Schema(type = "string", example = "no-store")), content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Identificador do usuário inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão HEALTH_MEDICAL_PROFILE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -126,12 +127,12 @@ public class AdminMedicalProfileController {
             @Parameter(description = "Identificador do usuário proprietário.", example = "10", required = true)
             @PathVariable Long userId
     ) {
-        var profile = adminMedicalProfileService.getByOwner(
+        var profile = adminMedicalProfileService.getPresentationByOwner(
                 MedicalProfileOwnerType.USER,
                 userId
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(MedicalProfileResponse.fromPresentation(profile));
     }
 
     @PutMapping("/users/{userId}")
@@ -173,7 +174,7 @@ public class AdminMedicalProfileController {
     @Operation(
             summary = "Consultar perfil médico de um dependente",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Perfil médico retornado.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfileResponse.class))),
+                    @ApiResponse(responseCode = "200", description = "Perfil médico com nomes cadastrais atuais; responsibleName null para USER.", headers = @io.swagger.v3.oas.annotations.headers.Header(name = "Cache-Control", schema = @Schema(type = "string", example = "no-store")), content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = MedicalProfileResponse.class))),
                     @ApiResponse(responseCode = "400", description = "Identificador do dependente inválido.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão HEALTH_MEDICAL_PROFILE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -187,12 +188,12 @@ public class AdminMedicalProfileController {
             @Parameter(description = "Identificador do dependente proprietário.", example = "10", required = true)
             @PathVariable Long dependentId
     ) {
-        var profile = adminMedicalProfileService.getByOwner(
+        var profile = adminMedicalProfileService.getPresentationByOwner(
                 MedicalProfileOwnerType.DEPENDENT,
                 dependentId
         );
 
-        return ResponseEntity.ok(MedicalProfileResponse.fromDomain(profile));
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(MedicalProfileResponse.fromPresentation(profile));
     }
 
     @PutMapping("/dependents/{dependentId}")

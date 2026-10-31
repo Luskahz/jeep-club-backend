@@ -36,6 +36,8 @@ public class AdminVehicleService {
     private final com.jeepclub.backend.vehicles.core.application.service.internal.VehicleGalleryAssembler galleryAssembler;
     private final com.jeepclub.backend.platform.logging.SystemLogService audit;
     private final java.util.List<com.jeepclub.backend.vehicles.api.module.spi.VehicleDeletionGuard> deletionGuards;
+    private final java.util.List<com.jeepclub.backend.vehicles.api.module.spi.VehicleLifecycleGuard> lifecycleGuards;
+
 
     @Transactional
     public Vehicle createForOwner(
@@ -274,11 +276,13 @@ public class AdminVehicleService {
         return vehicle;
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Vehicle deactivate(Long id, Long actorId) {
         var vehicle=getForUpdate(id);
         if(vehicle.isLegacyDeleted()) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Historically deleted vehicle cannot be changed.");
         var before=vehicle.getStatus(); var now=Instant.now(clock);
+        if(before!=VehicleStatus.INACTIVE && lifecycleGuards.stream().anyMatch(guard -> guard.hasOperationalParticipation(id,now)))
+            throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Vehicle has operational Event participation.");
         if(vehicle.deactivate(now)) {
             vehicle=vehicleRepository.save(vehicle);
             audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,
@@ -288,11 +292,13 @@ public class AdminVehicleService {
         return vehicle;
     }
 
-    @Transactional
+    @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Vehicle archive(Long id, Long actorId) {
         var vehicle=getForUpdate(id);
         if(vehicle.isLegacyDeleted()) throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Historically deleted vehicle cannot be changed.");
         var before=vehicle.getStatus(); var now=Instant.now(clock);
+        if(before!=VehicleStatus.ARCHIVED && lifecycleGuards.stream().anyMatch(guard -> guard.hasOperationalParticipation(id,now)))
+            throw new com.jeepclub.backend.vehicles.core.domain.exception.VehicleLifecycleConflictException("Vehicle has operational Event participation.");
         if(vehicle.archive(now)) {
             vehicle=vehicleRepository.save(vehicle);
             audit.recordInTransaction(new com.jeepclub.backend.platform.logging.SystemLogEvent(actorId,

@@ -11,6 +11,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.memberships")
 public class MembershipExceptionHandler extends ApiExceptionHandler {
 
+    @ExceptionHandler(RejectionNotificationException.class)
+    public ResponseEntity<ApiErrorResponse> handleRejectionNotification(RejectionNotificationException ex) {
+        HttpStatus status = switch (ex.getKind()) {
+            case NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case PROVIDER_FAILED -> HttpStatus.BAD_GATEWAY;
+            case RESULT_UNKNOWN -> HttpStatus.SERVICE_UNAVAILABLE;
+            default -> HttpStatus.CONFLICT;
+        };
+        return buildErrorResponse("MEMBERSHIP_REJECTION_NOTIFICATION_" + ex.getKind().name(), ex.getMessage(), status);
+    }
+
     @ExceptionHandler(MembershipApplicationNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNotFound(MembershipApplicationNotFoundException ex) {
         return buildErrorResponse("MEMBERSHIP_APPLICATION_NOT_FOUND", ex.getMessage(), HttpStatus.NOT_FOUND);

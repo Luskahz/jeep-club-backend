@@ -2,6 +2,7 @@ package com.jeepclub.backend.billing.infra.persistence.adapter;
 
 import com.jeepclub.backend.billing.core.domain.enums.refund.MemberRefundStatus;
 import com.jeepclub.backend.billing.core.domain.model.MemberRefund;
+import com.jeepclub.backend.billing.core.domain.exception.refund.InvalidMemberRefundStateException;
 import com.jeepclub.backend.billing.core.repository.MemberRefundRepository;
 import com.jeepclub.backend.billing.infra.persistence.entity.MemberRefundEntity;
 import com.jeepclub.backend.billing.infra.persistence.jpa.MemberRefundJpaRepository;
@@ -9,10 +10,12 @@ import com.jeepclub.backend.billing.infra.persistence.mapper.MemberRefundMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 @Repository
 @RequiredArgsConstructor
@@ -39,6 +42,19 @@ public class MemberRefundAdapter implements MemberRefundRepository {
     public Optional<MemberRefund> findById(Long id) {
         return jpa.findById(id)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public Optional<MemberRefund> findByIdForUpdate(Long id) {
+        return lockedRead(() -> jpa.findWithLockingById(id)).map(mapper::toDomain);
+    }
+
+    private Optional<MemberRefundEntity> lockedRead(Supplier<Optional<MemberRefundEntity>> query) {
+        try {
+            return query.get();
+        } catch (PessimisticLockingFailureException exception) {
+            throw new InvalidMemberRefundStateException("Member refund is being changed by another transaction.");
+        }
     }
 
     @Override
@@ -76,26 +92,26 @@ public class MemberRefundAdapter implements MemberRefundRepository {
 
     @Override
     public Optional<MemberRefund> findActiveByMemberPaymentId(Long memberPaymentId) {
-        return jpa.findFirstByMemberPaymentIdAndStatusIn(
+        return lockedRead(() -> jpa.findFirstByMemberPaymentIdAndStatusIn(
                         memberPaymentId,
                         ACTIVE_REFUND_STATUSES
-                )
+                ))
                 .map(mapper::toDomain);
     }
 
     @Override
     public boolean existsActiveByMemberPaymentId(Long memberPaymentId) {
-        return jpa.findFirstByMemberPaymentIdAndStatusIn(
+        return lockedRead(() -> jpa.findFirstByMemberPaymentIdAndStatusIn(
                 memberPaymentId,
                 ACTIVE_REFUND_STATUSES
-        ).isPresent();
+        )).isPresent();
     }
 
     @Override
     public boolean existsRefundedByMemberPaymentId(Long memberPaymentId) {
-        return jpa.findFirstByMemberPaymentIdAndStatusIn(
+        return lockedRead(() -> jpa.findFirstByMemberPaymentIdAndStatusIn(
                 memberPaymentId,
                 List.of(MemberRefundStatus.REFUNDED)
-        ).isPresent();
+        )).isPresent();
     }
 }

@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface DependentRepository {
+    Optional<DependentPhotoReference> findPhotoReference(Long id);
     List<Dependent> findByIds(Collection<Long> ids);
     List<Dependent> findByUserAfterId(Long userId, long afterId, int limit);
 

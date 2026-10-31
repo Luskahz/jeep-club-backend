@@ -2,12 +2,12 @@ package com.jeepclub.backend.health.api.http.dto;
 
 import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
-import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
+import com.jeepclub.backend.health.core.application.result.AdminMedicalProfilePresentation;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
 
-@Schema(description = "Resposta detalhada com os dados do perfil médico.")
+@Schema(name = "AdminMedicalProfileResponse", description = "Resposta administrativa detalhada com dados do perfil médico e nomes cadastrais atuais.")
 public record MedicalProfileResponse(
         @Schema(description = "ID do perfil médico.", example = "1")
         Long id,
@@ -17,6 +17,12 @@ public record MedicalProfileResponse(
 
         @Schema(description = "ID do usuário ou dependente proprietário do perfil médico.", example = "10")
         Long ownerId,
+
+        @Schema(description = "Nome atual do usuário ou dependente proprietário.")
+        String ownerName,
+
+        @Schema(description = "Nome atual do usuário responsável pelo dependente; null para USER.", nullable = true)
+        String responsibleName,
 
         @Schema(description = "Tipo sanguíneo.", example = "O_POSITIVE")
         BloodType bloodType,
@@ -57,11 +63,14 @@ public record MedicalProfileResponse(
         @Schema(description = "Data e hora da última atualização do perfil médico.", format = "date-time")
         Instant updatedAt
 ) {
-    public static MedicalProfileResponse fromDomain(MedicalProfile profile) {
+    public static MedicalProfileResponse fromPresentation(AdminMedicalProfilePresentation presentation) {
+        var profile = presentation.profile();
         return new MedicalProfileResponse(
                 profile.getId(),
                 profile.getOwnerType(),
                 profile.getOwnerId(),
+                presentation.names().ownerName(),
+                presentation.names().responsibleName(),
                 profile.getBloodType(),
                 profile.getAllergies(),
                 profile.getChronicConditions(),

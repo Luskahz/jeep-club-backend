@@ -13,7 +13,7 @@ O resolvedor global atual aceita qualquer usuário autenticado e somente chaves 
 
 - Foto opcional em criação multipart no endpoint de negócio; JSON existente sem foto continua válido. Part `dependent` é DTO estruturado e validado; `photo` é um arquivo opcional, até 5 MiB, JPEG/PNG/WebP conforme validação global.
 - Atualização multipart com foto omitida preserva a associação; nova foto substitui a referência. PUT JSON de dados cadastrais preserva foto. PATCH dedicado com arquivo substitui; DELETE dedicado desassocia. Não aceitar storageKey, URL física, Base64 ou userId no DTO de escrita.
-- Titular somente administra seu próprio dependente; ACTIVE permite mudanças de foto, INACTIVE/ARCHIVED devolvem conflito. Leitura de cadastros arquivados mantém ownership. Administrador lê com DEPENDENTS_DEPENDENT_READ e altera/remove com nova DEPENDENTS_DEPENDENT_PHOTO_UPDATE, sem grants automáticos a roles CUSTOM.
+- Titular somente administra seu próprio dependente; ACTIVE permite mudanças de foto, INACTIVE/ARCHIVED devolvem conflito. BACK-544 substitui a regra original de leitura: exige dependent ACTIVE no snapshot; INACTIVE/ARCHIVED retornam 404. Leitura já autorizada antes da revogação pode concluir com a chave capturada. Administrador lê com DEPENDENTS_DEPENDENT_READ e altera/remove com DEPENDENTS_DEPENDENT_PHOTO_UPDATE, sem grants automáticos a roles CUSTOM.
 - Respostas member/admin apresentam rota de leitura autorizada por ID, sem chave interna. Leitura é auditada e usa Cache-Control: no-store. Não registrar chaves, bytes, filenames ou dados do dependente em logs.
 - Live e histórico persistem `photo_storage_key` nullable. Trocar, remover associação ou excluir dependente não apaga arquivos anteriores/compartilhados. Somente a imagem recém-criada é compensada em rollback, pela infraestrutura da BACK-510.
 - Query pública usada por Health/Publications e exports mantém suas projeções de identificação: referências privadas não são adicionadas a relatórios ou integrações que não autorizam acesso à foto. Snapshot de exclusão preserva a referência internamente.
@@ -28,7 +28,7 @@ O resolvedor global atual aceita qualquer usuário autenticado e somente chaves 
 | Atualizar cadastro/foto | PUT /dependents/{id}, JSON ou multipart | Titular, dependente ACTIVE | 200; foto omitida preservada |
 | Substituir foto | PATCH /dependents/{id}/photo, multipart photo | Titular e cadastro elegíveis | 200 |
 | Desassociar | DELETE /dependents/{id}/photo | Titular e cadastro ACTIVE | 200, photoUrl nula; repetição não altera timestamp |
-| Ler foto | GET /dependents/{id}/photo | Titular autenticado ativo; dependente operacional inclusive INACTIVE/ARCHIVED | Binário, no-store e auditoria |
+| Ler foto | GET /dependents/{id}/photo | Titular autenticado ativo; dependente ACTIVE no snapshot (BACK-544) | Binário, no-store e auditoria confirmada antes da resposta |
 | Ler administrativamente | GET /users/{userId}/dependents/{id}/photo | DEPENDENTS_DEPENDENT_READ, par de IDs válido | Binário, no-store e auditoria |
 | Manter administrativamente | PATCH ou DELETE /users/{userId}/dependents/{id}/photo | DEPENDENTS_DEPENDENT_PHOTO_UPDATE; titular/dependente elegíveis | 200, resposta com rota administrativa |
 

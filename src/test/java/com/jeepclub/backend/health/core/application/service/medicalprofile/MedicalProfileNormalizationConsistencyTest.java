@@ -1,5 +1,6 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerPresentationQuery;
 import com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand;
 import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
@@ -45,8 +46,8 @@ class MedicalProfileNormalizationConsistencyTest {
                 repository, ownershipChecker, statusChecker, clock
         );
         adminService = new AdminMedicalProfileService(
-                repository, statusChecker, (ownerType, ownerIds) -> java.util.Set.of(), clock
-        );
+                repository, statusChecker, (ownerType, ownerIds) -> java.util.Set.of(), clock,
+                org.mockito.Mockito.mock(MedicalProfileOwnerPresentationQuery.class));
         when(statusChecker.getStatus(MedicalProfileOwnerType.USER, 7L))
                 .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
         when(statusChecker.getStatusForUpdate(MedicalProfileOwnerType.USER, 7L)).thenReturn(MedicalProfileOwnerStatus.ACTIVE);

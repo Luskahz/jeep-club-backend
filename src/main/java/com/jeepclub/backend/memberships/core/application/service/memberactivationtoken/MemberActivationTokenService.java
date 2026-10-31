@@ -10,7 +10,7 @@ import com.jeepclub.backend.memberships.core.domain.enums.MembershipApplicationS
 import com.jeepclub.backend.memberships.core.port.ActivationRecipient;
 import com.jeepclub.backend.memberships.core.port.ActivationRecipientPort;
 import com.jeepclub.backend.memberships.core.port.CompletePendingFirstAccessPort;
-import com.jeepclub.backend.memberships.core.port.MemberActivationMailSender;
+import com.jeepclub.backend.memberships.core.port.MemberActivationInvitationDelivery;
 import com.jeepclub.backend.memberships.core.port.MemberActivationTokenHashPort;
 import com.jeepclub.backend.memberships.core.port.MemberActivationTokenGenerator;
 import com.jeepclub.backend.memberships.core.port.MembershipTimeProperties;
@@ -34,7 +34,7 @@ public class MemberActivationTokenService {
     private final MembershipApplicationRepository applicationRepository;
     private final CompletePendingFirstAccessPort completeFirstAccessPort;
     private final ActivationRecipientPort activationRecipientPort;
-    private final MemberActivationMailSender mailSender;
+    private final MemberActivationInvitationDelivery invitationDelivery;
     private final com.jeepclub.backend.memberships.core.port.MemberActivationLinkFactory linkFactory;
     private final com.jeepclub.backend.memberships.core.port.PendingMembershipAuthentication pendingAuthentication;
     private final Clock clock;
@@ -113,15 +113,9 @@ public class MemberActivationTokenService {
                 now
         );
         memberActivationTokenRepository.save(token);
-        try {
-            String link = linkFactory.create(rawToken);
-            mailSender.sendActivationLink(recipient.email(), recipient.name(), link);
-            return link;
-        } catch (RuntimeException providerFailure) {
-            // MailSendException may retain SimpleMailMessage (including the bearer link).
-            // Do not let it, its cause, or suppressed exceptions reach generic HTTP logging.
-            throw new com.jeepclub.backend.memberships.core.application.exception.MembershipInvitationDeliveryException();
-        }
+        String link = linkFactory.create(rawToken);
+        invitationDelivery.afterCommit(application.getId(), token.getTokenHash(), recipient.email(), recipient.name(), link);
+        return link;
     }
 
     private MembershipApplication requireApprovedApplicationForUpdate(Long id) {

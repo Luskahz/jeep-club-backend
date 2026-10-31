@@ -24,7 +24,7 @@ class MedicalProfileAccessBoundaryTest {
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final MedicalProfileService member = new MedicalProfileService(repository, ownership, owners, clock);
     private final AdminMedicalProfileService admin = new AdminMedicalProfileService(repository, owners,
-            mock(MedicalProfileActiveOwnersQuery.class), clock);
+            mock(MedicalProfileActiveOwnersQuery.class), clock, org.mockito.Mockito.mock(MedicalProfileOwnerPresentationQuery.class));
 
     @ParameterizedTest
     @EnumSource(value = MedicalProfileOwnerStatus.class, names = {"INACTIVE", "NOT_FOUND"})
