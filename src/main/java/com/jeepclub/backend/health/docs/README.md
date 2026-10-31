@@ -74,6 +74,53 @@ paginação, permissions e respostas RFC 9457 — é o OpenAPI publicado em
 `PageResponse<MedicalProfileSummaryResponse>`: página zero-based, `size` padrão
 20 e limite global 50, com ordenação padrão por `id`.
 
+### Apresentação administrativa do proprietário
+
+`AdminMedicalProfileService` compõe uma projeção interna somente após validar
+o owner (ou montar a página final de owners elegíveis). A porta
+`MedicalProfileOwnerPresentationQuery`, implementada em `infra.integration`,
+consome `DependentsQuery.findDetailsByIds` e `UserQuery.findByIds`. IDs dos
+usuários titulares e responsáveis são combinados e deduplicados. São feitas
+no máximo uma consulta de detalhes de Dependents e uma de Identity por página
+HTTP de até 50 itens; página vazia não consulta nomes. Ambos os contratos são
+limitados a 500 IDs por lote, inclusive para consumidores internos.
+
+Os DTOs administrativos acrescentam `ownerName` e `responsibleName` aos campos
+anteriores, sem modificar o envelope `PageResponse`. Para USER, `ownerId` é
+`Identity.User.id`, o nome vem de Identity e `responsibleName` é null. Para
+DEPENDENT, `ownerId` é `Dependent.id`; o nome e o `userId` responsável vêm do
+cadastro atual de Dependents e o nome do responsável vem de Identity.
+CPF, e-mail, telefone e outros campos cadastrais consultados internamente não
+integram a projeção HTTP. Matrícula não participa da resolução.
+
+`MedicalProfileResponse` e `MedicalProfileSummaryResponse` exigem a projeção
+completa no mapper `fromPresentation`; não há mapper administrativo que receba
+somente o domínio. As rotas pessoais usam `PersonalMedicalProfileResponse`,
+com os mesmos campos JSON, tipos e nome de schema OpenAPI anteriores
+(`MedicalProfileResponse`); o detalhe administrativo usa o schema
+`AdminMedicalProfileResponse`. Mutações, exportações e acesso emergencial
+mantêm seus contratos próprios. As quatro leituras administrativas retornam
+`Cache-Control: no-store` e continuam exigindo `HEALTH_MEDICAL_PROFILE_READ`.
+
+A projeção é recalculada a cada consulta, sem cache, colunas novas ou nomes
+persistidos em Health. As leituras participam da transação read-only da
+aplicação e do isolamento configurado no banco, sem locks pessimistas. Em
+MySQL REPEATABLE READ refletem o snapshot de leitura dessa transação; em READ
+COMMITTED mudanças entre statements podem ser observadas. Nome e vínculo do
+dependente são obtidos juntos; o responsável é resolvido pelo `userId` desse
+mesmo detalhe, nunca por nome. Alterações posteriores ao snapshot aparecem
+na próxima consulta; não há garantia de linearização com alterações cadastrais
+concorrentes. Se a resolução observar owner removido/inativo após a seleção,
+falha com os erros existentes 404/409 em vez de devolver dados clínicos com
+identificação parcial. Um responsável ausente gera
+`MEDICAL_PROFILE_OWNER_NOT_FOUND` para o dependente; seu status não acrescenta
+uma nova regra de elegibilidade ao dependente ativo. Totais e itens não são
+recalculados silenciosamente durante o enriquecimento.
+
+A necessidade funcional veio do PR #115, encerrado sem merge; esta solução foi
+refeita sobre a `develop`, sem reaproveitar sua implementação ou criar rotas
+de seleção de usuários/owner.
+
 ## Testes relevantes
 
 A [auditoria da suíte](test-audit.md) registra a matriz entre produção,

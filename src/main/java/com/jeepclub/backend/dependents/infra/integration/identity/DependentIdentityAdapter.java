@@ -14,11 +14,21 @@ public class DependentIdentityAdapter implements DependentUserPort {
     private final UserQuery identityQuery;
 
     @Override
-    public boolean existsById(Long userId) {
-        return identityQuery.existsById(userId);
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void lockHistoryIdentities(Long ownerId, Long actorId) {
+        java.util.stream.Stream.of(ownerId, actorId).distinct().sorted().forEach(id ->
+                identityLock.byId(id).orElseThrow(() ->
+                        new com.jeepclub.backend.iam.identity.api.module.exception.UserNotFoundException(id)));
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public boolean existsById(Long userId) {
+        return identityLock.byId(userId).isPresent();
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
     public boolean existsActiveById(Long userId) {
         return identityLock.byId(userId).map(user -> user.administrativelyActive()).orElse(false);
     }

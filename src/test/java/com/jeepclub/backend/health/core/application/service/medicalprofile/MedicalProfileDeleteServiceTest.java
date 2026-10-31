@@ -1,5 +1,6 @@
 package com.jeepclub.backend.health.core.application.service.medicalprofile;
 
+import com.jeepclub.backend.health.core.port.MedicalProfileOwnerPresentationQuery;
 import com.jeepclub.backend.health.core.domain.enums.BloodType;
 import com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType;
 import com.jeepclub.backend.health.core.domain.model.MedicalProfile;
@@ -51,8 +52,8 @@ class MedicalProfileDeleteServiceTest {
                 repository,
                 ownerStatusChecker,
                 (ownerType, ownerIds) -> java.util.Set.of(),
-                clock
-        );
+                clock,
+                org.mockito.Mockito.mock(MedicalProfileOwnerPresentationQuery.class));
         lenient().when(ownerStatusChecker.getStatus(any(), any()))
                 .thenReturn(MedicalProfileOwnerStatus.ACTIVE);
     }
