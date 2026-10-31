@@ -54,6 +54,16 @@ jobs:
       - name: Verify
         run: ./mvnw --batch-mode --no-transfer-progress verify
 
+      - name: Preserve unit and coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-verify-evidence
+          path: |
+            target/surefire-reports
+            target/jacoco.exec
+            target/site/jacoco
+
   mysql-migrations:
     name: MySQL migrations
     runs-on: ubuntu-latest
@@ -81,6 +91,8 @@ jobs:
             target/failsafe-reports
             target/audit-evidence
             target/forward-migration-evidence
+            target/jacoco.exec
+            target/site/jacoco
 
   deploy:
     name: Deploy to VPS

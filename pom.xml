@@ -341,6 +341,115 @@
     </build>
 
     <profiles>
+        <!-- Invoke only jacoco:merge jacoco:report after separate successful unit/MySQL runs. -->
+        <profile>
+            <id>hardening-coverage-merge</id>
+            <build><plugins><plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <fileSets><fileSet>
+                        <directory>${project.build.directory}</directory>
+                        <includes><include>hardening-unit.exec</include><include>hardening-mysql.exec</include></includes>
+                    </fileSet></fileSets>
+                    <destFile>${project.build.directory}/hardening-merged.exec</destFile>
+                    <dataFile>${project.build.directory}/hardening-merged.exec</dataFile>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>identity-hardening-mutation</id>
+            <build><plugins><plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <targetClasses combine.self="override">
+                        <param>com.jeepclub.backend.iam.identity.core.domain.model.User</param>
+                        <param>com.jeepclub.backend.iam.identity.core.application.service.user.UserQueryService</param>
+                    </targetClasses>
+                    <targetTests combine.self="override">
+                        <param>com.jeepclub.backend.identity.core.domain.model.*</param>
+                        <param>com.jeepclub.backend.iam.identity.core.application.service.user.*</param>
+                        <param>com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest</param>
+                        <param>com.jeepclub.backend.identity.core.application.service.user.UserContextBoundaryIntegrationTest</param>
+                    </targetTests>
+                    <excludedClasses combine.self="override" />
+                    <reportsDirectory>${project.build.directory}/pit-reports/identity</reportsDirectory>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>authorization-hardening-mutation</id>
+            <build><plugins><plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <targetClasses combine.self="override">
+                        <param>com.jeepclub.backend.iam.authorization.core.domain.model.Role</param>
+                        <param>com.jeepclub.backend.iam.authorization.core.domain.model.Permission</param>
+                        <param>com.jeepclub.backend.iam.authorization.core.application.service.userrole.AdminUserRoleService</param>
+                        <param>com.jeepclub.backend.iam.authorization.core.application.service.role.AdminRoleService</param>
+                        <param>com.jeepclub.backend.iam.authorization.core.application.service.rolepermission.AdminRolePermissionService</param>
+                    </targetClasses>
+                    <targetTests combine.self="override">
+                        <param>com.jeepclub.backend.authorization.core.*</param>
+                        <param>com.jeepclub.backend.iam.authorization.core.*</param>
+                        <param>com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest</param>
+                        <param>com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest</param>
+                    </targetTests>
+                    <excludedClasses combine.self="override" />
+                    <reportsDirectory>${project.build.directory}/pit-reports/authorization</reportsDirectory>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>publications-hardening-mutation</id>
+            <build><plugins><plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <targetClasses combine.self="override">
+                        <param>com.jeepclub.backend.publications.core.domain.model.EventRegistration</param>
+                        <param>com.jeepclub.backend.publications.core.application.service.internal.EventParticipationRequirement</param>
+                        <param>com.jeepclub.backend.publications.core.application.service.EventService</param>
+                        <param>com.jeepclub.backend.publications.core.application.service.EventReportService</param>
+                    </targetClasses>
+                    <targetTests combine.self="override">
+                        <param>com.jeepclub.backend.publications.core.*</param>
+                        <param>com.jeepclub.backend.publications.EventOperationsIntegrationTest</param>
+                    </targetTests>
+                    <excludedClasses combine.self="override" />
+                    <reportsDirectory>${project.build.directory}/pit-reports/publications</reportsDirectory>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>platform-shared-hardening-mutation</id>
+            <build><plugins><plugin>
+                <groupId>org.pitest</groupId>
+                <artifactId>pitest-maven</artifactId>
+                <configuration>
+                    <targetClasses combine.self="override">
+                        <param>com.jeepclub.backend.platform.storage.image.ImageMediaService</param>
+                        <param>com.jeepclub.backend.platform.logging.SystemLogServiceAdapter</param>
+                        <param>com.jeepclub.backend.platform.security.handler.ApiAccessDeniedHandler</param>
+                        <param>com.jeepclub.backend.shared.export.ExportPages</param>
+                        <param>com.jeepclub.backend.shared.storage.ImageReference</param>
+                        <param>com.jeepclub.backend.shared.storage.StorageResource</param>
+                        <param>com.jeepclub.backend.shared.storage.exception.StorageOperationException</param>
+                    </targetClasses>
+                    <targetTests combine.self="override">
+                        <param>com.jeepclub.backend.platform.storage.image.ImageMediaServiceTest</param>
+                        <param>com.jeepclub.backend.platform.logging.SystemLogServiceAdapterTest</param>
+                        <param>com.jeepclub.backend.platform.logging.SystemLogPersistenceWorkerTest</param>
+                        <param>com.jeepclub.backend.platform.security.handler.*</param>
+                        <param>com.jeepclub.backend.shared.*</param>
+                    </targetTests>
+                    <excludedClasses combine.self="override" />
+                    <reportsDirectory>${project.build.directory}/pit-reports/platform-shared</reportsDirectory>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
         <profile>
             <id>mysql-migrations</id>
             <build><plugins><plugin>
