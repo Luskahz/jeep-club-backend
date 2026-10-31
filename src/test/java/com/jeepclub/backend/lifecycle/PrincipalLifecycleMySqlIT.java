@@ -126,6 +126,21 @@ class PrincipalLifecycleMySqlIT extends PrincipalLifecycleIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(users.findById(owner)).isEmpty();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.class)
+    void medicalDeletionAndActorDeletionRetainEvidenceWithoutDeadlock(com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType type) throws Exception {
+        Long actor=user(true),responsible=user(true);
+        Long owner=type==com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.USER
+                ?responsible:createDependent(responsible).id();
+        Long profile=health.upsertByOwner(type,owner,clinicalData()).getId();
+        orderedRace(() -> identityLocks.byId(actor).orElseThrow(),() -> health.deleteById(profile,actor),
+                () -> org.assertj.core.api.Assertions.assertThatThrownBy(() -> identity.delete(actor,actor,CREATED.plusSeconds(60)))
+                        .isInstanceOf(com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException.class));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM medical_profiles WHERE id=?",Long.class,profile)).isZero();
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM medical_profiles_history WHERE medical_profile_id=? AND deleted_by_user_id=?",Long.class,profile,actor)).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(users.findById(actor)).isPresent();
+    }
+
     @org.junit.jupiter.api.Test
     void profileDeletionRetainsOwnerAndActorEvenWhenOwnerIsArchived() {
         Long owner=user(true),actor=user(true);
