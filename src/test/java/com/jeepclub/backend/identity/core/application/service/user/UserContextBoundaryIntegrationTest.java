@@ -36,6 +36,40 @@ class UserContextBoundaryIntegrationTest {
     @Autowired private AuthenticationAccountRepository accountRepository;
     @Autowired private UserQuery userQuery;
     @Autowired private AdminUserService adminUserService;
+    @Autowired private com.jeepclub.backend.iam.identity.api.module.UserAdministration lifecycle;
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(UserStatus.class)
+    void administrativeStatusFilterDoesNotConfuseAvailabilityWithCredentialState(UserStatus status) {
+        Long id = provision("Status filter", "39053344705", "status-filter@example.com");
+        Instant transition = Instant.parse("2026-08-02T12:00:00Z");
+        if (status == UserStatus.INACTIVE) lifecycle.disable(id, transition);
+        if (status == UserStatus.ARCHIVED) lifecycle.archive(id, id, transition);
+        var matching = adminUserService.findAll(new AdminUserFilter(id,null,null,null,null,null,null,
+                status,null,null,null,null,null),EnumSet.of(AdminUserField.ID,AdminUserField.STATUS),PageRequest.of(0,10));
+        assertThat(matching.getContent()).singleElement().satisfies(user -> {
+            assertThat(user.id()).isEqualTo(id);
+            assertThat(user.status()).isEqualTo(status);
+            assertThat(user.cpf()).isNull();
+            assertThat(user.email()).isNull();
+        });
+        var other = status == UserStatus.ACTIVE ? UserStatus.INACTIVE : UserStatus.ACTIVE;
+        assertThat(adminUserService.findAll(new AdminUserFilter(id,null,null,null,null,null,null,
+                other,null,null,null,null,null),EnumSet.of(AdminUserField.ID),PageRequest.of(0,10))).isEmpty();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,0,1","1,2,0","-2,-1,0"})
+    void creationRangeIsInclusiveAndActuallyFiltersRows(long fromOffset,long toOffset,long expected) {
+        Long id = provision("Range filter", "39053344705", "range-filter@example.com");
+        Instant created = Instant.parse("2026-08-01T12:00:00Z");
+        var result = adminUserService.findAll(new AdminUserFilter(id,null,null,null,null,null,null,null,
+                created.plusSeconds(fromOffset),created.plusSeconds(toOffset),null,null,null),
+                EnumSet.of(AdminUserField.ID),PageRequest.of(0,10));
+        assertThat(result.getTotalElements()).isEqualTo(expected);
+        assertThat(result.getContent()).hasSize((int)expected);
+        if(expected == 1) assertThat(result.getContent().get(0).id()).isEqualTo(id);
+    }
 
     @Test
     void administrationReadsUserAndDisablesBothAggregatesAtomically() {
