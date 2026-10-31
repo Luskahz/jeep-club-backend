@@ -105,6 +105,121 @@ class EventOperationsIntegrationTest {
         return admin.publish(event.getId());
     }
     List<EventRegistration.Allocation> allocation() { return List.of(new EventRegistration.Allocation(101L, true, List.of(201L))); }
+    @Test void memberCannotReadAnUnpublishedEvent() {
+        var draft=admin.create(99L,"Unpublished","Route",List.of(new PublicationImage(
+                "images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg",0,true)),START,null,List.of());
+        assertThatThrownBy(() -> member.findById(draft.getId())).isInstanceOf(EventOperationException.class)
+                .extracting("code").isEqualTo("EVENT_NOT_FOUND");
+        assertThat(admin.findById(draft.getId()).getStatus()).isEqualTo(
+                com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.DRAFT);
+    }
+    @Test void pendingOrVehiclelessOrFullRegistrationCannotReceiveRideRequests() {
+        var pending=event(true); member.register(pending.getId(),10L,memberOnly());
+        admin.createGuest(pending.getId(),99L,guestCpf(pending));
+        assertThat(member.rideRequests(pending.getId(),10L)).isEmpty();
+        var vehicleless=freeEvent(); member.register(vehicleless.getId(),10L,List.of());
+        admin.createGuest(vehicleless.getId(),99L,guestCpf(vehicleless));
+        assertThat(member.rideRequests(vehicleless.getId(),10L)).isEmpty();
+        var full=freeEvent(); member.register(full.getId(),10L,List.of(new EventRegistration.Allocation(101L,true,List.of(201L,202L))));
+        var guest=admin.createGuest(full.getId(),99L,guestCpf(full));
+        assertThat(member.rideRequests(full.getId(),10L)).isEmpty();
+        assertThat(guestState(full.getId(),guest.id()).transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
+        assertThat(admin.offers(full.getId())).isEmpty();
+    }
+    @Test void personalGuestListingNeverIncludesAnotherRequesterOrAdministrativeStandby() {
+        var e=freeEvent(); member.register(e.getId(),10L,memberOnly());
+        secondDriver(102L,20L);
+        member.register(e.getId(),20L,List.of(new EventRegistration.Allocation(102L,true,List.of())));
+        var mine=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        member.requestGuest(e.getId(),20L,102L,guestCpf(e));
+        var standby=admin.createGuest(e.getId(),99L,guestCpf(e));
+        var cancelled=admin.createGuest(e.getId(),99L,guestCpf(e));
+        admin.cancelGuest(e.getId(),cancelled.id(),99L,"Not travelling");
+        assertThat(member.guests(e.getId(),10L)).extracting(EventGuestRequest::id).containsExactly(mine.id());
+        assertThat(admin.guests(e.getId())).hasSize(4);
+        assertThat(member.rideRequests(e.getId(),10L)).containsExactly(standby.id());
+    }
+    @Test void rideResponseRejectsUnknownGuestUnallocatedVehicleAndDuplicateAcceptance() {
+        var e=freeEvent(); member.register(e.getId(),10L,memberOnly());
+        var guest=admin.createGuest(e.getId(),99L,guestCpf(e));
+        assertThatThrownBy(() -> member.respond(e.getId(),Long.MAX_VALUE,10L,101L,true))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_RIDE_OFFER_INVALID");
+        assertThatThrownBy(() -> member.respond(e.getId(),guest.id(),10L,999L,true))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_VEHICLE_NOT_OWNED");
+        var declined=member.respond(e.getId(),guest.id(),10L,101L,false);
+        assertThat(declined.status()).isEqualTo(EventRideOffer.Status.DECLINED);
+        var accepted=member.respond(e.getId(),guest.id(),10L,101L,true);
+        assertThatThrownBy(() -> member.respond(e.getId(),guest.id(),10L,101L,true))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_RIDE_OFFER_INVALID");
+        assertThat(admin.offers(e.getId())).extracting(EventRideOffer::id).containsExactlyInAnyOrder(declined.id(),accepted.id());
+        assertThat(admin.guestHistory(e.getId(),guest.id())).extracting(EventGuestTransition::action)
+                .containsExactly("CREATED","OFFER_DECLINED","OFFER_ACCEPTED");
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(2);
+        assertThat(guestState(e.getId(),guest.id()).transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
+    }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans={true,false})
+    void memberReallocationCannotRemoveAnApprovedGuestsVehicleOrOverfillIt(boolean removeVehicle) {
+        var e=freeEvent();
+        var registration=member.register(e.getId(),10L,memberOnly());
+        var guest=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        admin.reviewGuest(e.getId(),guest.id(),99L,true,null);
+        if(!removeVehicle) {
+            var full=List.of(new EventRegistration.Allocation(101L,true,List.of(201L)));
+            registration=member.allocate(e.getId(),10L,full,List.of());
+            assertThat(registration.allocations()).isEqualTo(full);
+        }
+        var replacement=List.of(new EventRegistration.Allocation(removeVehicle?102L:101L,true,
+                removeVehicle?List.of():List.of(201L,202L)));
+        assertThatThrownBy(() -> member.allocate(e.getId(),10L,replacement,List.of()))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo(
+                        removeVehicle?"EVENT_INVALID_STATE":"EVENT_VEHICLE_CAPACITY_EXCEEDED");
+        assertThat(member.mine(e.getId(),10L).allocations()).isEqualTo(registration.allocations());
+        assertThat(guestState(e.getId(),guest.id()).vehicleId()).isEqualTo(101L);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(removeVehicle?1:0);
+    }
+    @Test void closedEventRejectsRideReadsResponsesAndMemberReallocation() {
+        var e=freeEvent();var registration=member.register(e.getId(),10L,memberOnly());
+        var guest=admin.createGuest(e.getId(),99L,guestCpf(e));clock.now=START;
+        assertThatThrownBy(() -> member.rideRequests(e.getId(),10L)).isInstanceOf(EventOperationException.class)
+                .extracting("code").isEqualTo("EVENT_REGISTRATION_CLOSED");
+        assertThatThrownBy(() -> member.respond(e.getId(),guest.id(),10L,101L,true)).isInstanceOf(EventOperationException.class)
+                .extracting("code").isEqualTo("EVENT_REGISTRATION_CLOSED");
+        assertThatThrownBy(() -> member.allocate(e.getId(),10L,memberOnly(),List.of())).isInstanceOf(EventOperationException.class)
+                .extracting("code").isEqualTo("EVENT_REGISTRATION_CLOSED");
+        assertThat(member.mine(e.getId(),10L).allocations()).isEqualTo(registration.allocations());
+        assertThat(admin.offers(e.getId())).isEmpty();
+    }
+    @Test void aFreeSecondVehicleDoesNotAllowAnOfferForTheMembersFullVehicle() {
+        var e=freeEvent();member.register(e.getId(),10L,List.of(
+                new EventRegistration.Allocation(101L,true,List.of(201L,202L)),
+                new EventRegistration.Allocation(102L,false,List.of())));
+        var guest=admin.createGuest(e.getId(),99L,guestCpf(e));
+        assertThat(member.rideRequests(e.getId(),10L)).containsExactly(guest.id());
+        assertThatThrownBy(() -> member.respond(e.getId(),guest.id(),10L,101L,true))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_VEHICLE_CAPACITY_EXCEEDED");
+        assertThat(admin.offers(e.getId())).isEmpty();
+        assertThat(admin.guestHistory(e.getId(),guest.id())).extracting(EventGuestTransition::action).containsExactly("CREATED");
+    }
+    @Test void pendingGuestPreferenceDoesNotPreventReplacingTheMembersVehicle() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());
+        var guest=member.requestGuest(e.getId(),10L,101L,guestCpf(e));
+        var replacement=List.of(new EventRegistration.Allocation(102L,true,List.of()));
+        assertThat(member.allocate(e.getId(),10L,replacement,List.of()).allocations()).isEqualTo(replacement);
+        assertThat(member.mine(e.getId(),10L).allocations()).isEqualTo(replacement);
+        assertThat(guestState(e.getId(),guest.id()).status()).isEqualTo(EventGuestRequest.Status.PENDING);
+        assertThatThrownBy(() -> admin.reviewGuest(e.getId(),guest.id(),99L,true,null))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_PAYMENT_REQUIRED");
+    }
+    @Test void anotherHouseholdsApprovedGuestDoesNotPreventOwnVehicleReplacement() {
+        var e=freeEvent();member.register(e.getId(),10L,memberOnly());
+        var guest=member.requestGuest(e.getId(),10L,101L,guestCpf(e));admin.reviewGuest(e.getId(),guest.id(),99L,true,null);
+        secondDriver(102L,20L);secondDriver(103L,20L);
+        member.register(e.getId(),20L,List.of(new EventRegistration.Allocation(102L,true,List.of())));
+        var replacement=List.of(new EventRegistration.Allocation(103L,true,List.of()));
+        assertThat(member.allocate(e.getId(),20L,replacement,List.of()).allocations()).isEqualTo(replacement);
+        assertThat(guestState(e.getId(),guest.id()).vehicleId()).isEqualTo(101L);
+    }
     <T> T tx(Supplier<T> work) { return new TransactionTemplate(transactionManager).execute(s -> work.get()); }
     Long receipt(Long eventId, Long user) {
         var charge = financial.findByEvent(eventId).stream().filter(s -> s.userId().equals(user)).findFirst().orElseThrow();
@@ -296,6 +411,10 @@ class EventOperationsIntegrationTest {
     }
     @Test void pendingRequestStillRequiresEligibleOwnedActiveVehicleAndValidGuest() {
         var e=freeEvent();member.register(e.getId(),10L,allocation());
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,null,guestCpf(e)))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_VEHICLE_NOT_OWNED");
+        assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,null,guestCpf(e),"Named guest"))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_VEHICLE_NOT_OWNED");
         assertThatThrownBy(() -> member.requestGuest(e.getId(),20L,101L,guestCpf(e))).hasMessageContaining("registration not found");
         assertThatThrownBy(() -> member.requestGuest(e.getId(),10L,102L,guestCpf(e))).hasMessageContaining("not owned");
         when(vehicles.findActive(101L)).thenReturn(Optional.empty());
@@ -384,6 +503,8 @@ class EventOperationsIntegrationTest {
         var event=freeEvent();member.register(event.getId(),10L,allocation());
         assertThatThrownBy(()->admin.createGuest(event.getId(),99L,"12345678909"," ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(()->member.requestGuest(event.getId(),10L,101L,"12345678909","x".repeat(151))).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->member.requestGuest(event.getId(),10L,101L,"12345678909",(String)null)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(member.requestGuest(event.getId(),10L,101L,"12345678909","x".repeat(150)).guestName()).isEqualTo("x".repeat(150));
         var guest=member.requestGuest(event.getId(),10L,101L,"12345678909","  Convidado Legível  ");
         assertThat(guest.guestName()).isEqualTo("Convidado Legível");
         assertThat(admin.reviewGuest(event.getId(),guest.id(),99L,true,null).guestName()).isEqualTo("Convidado Legível");

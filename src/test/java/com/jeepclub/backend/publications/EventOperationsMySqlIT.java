@@ -8,6 +8,7 @@ import org.testcontainers.mysql.MySQLContainer;
 
 /** Repeats all Event financial, transport, rollback and race scenarios on migrated MySQL. */
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class EventOperationsMySqlIT extends EventOperationsIntegrationTest {
     @org.springframework.beans.factory.annotation.Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @org.springframework.beans.factory.annotation.Autowired com.jeepclub.backend.publications.core.repository.PublicationRepository publications;
