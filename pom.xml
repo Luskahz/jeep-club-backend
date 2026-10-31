@@ -394,6 +394,7 @@
                     <targetTests combine.self="override">
                         <param>com.jeepclub.backend.authorization.core.*</param>
                         <param>com.jeepclub.backend.iam.authorization.core.*</param>
+                        <param>com.jeepclub.backend.authorization.AuthorizationAdministrationIntegrationTest</param>
                         <param>com.jeepclub.backend.lifecycle.PrincipalLifecycleDomainTest</param>
                         <param>com.jeepclub.backend.lifecycle.PrincipalLifecycleIntegrationTest</param>
                     </targetTests>
