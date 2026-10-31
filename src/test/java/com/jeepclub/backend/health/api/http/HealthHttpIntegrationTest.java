@@ -204,6 +204,7 @@ class HealthHttpIntegrationTest {
         seed(MedicalProfileOwnerType.USER, user.getId());
         var inactive = seed(MedicalProfileOwnerType.USER, other.getId());
         other.setStatus(UserStatus.INACTIVE);
+        other.setDisabledAt(CREATED.plusSeconds(1));
         seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
         em.flush();
         permissions("HEALTH_MEDICAL_PROFILE_READ", "HEALTH_MEDICAL_PROFILE_UPDATE", "HEALTH_MEDICAL_PROFILE_DELETE");
