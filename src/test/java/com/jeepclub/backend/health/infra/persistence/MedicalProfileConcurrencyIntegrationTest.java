@@ -128,6 +128,7 @@ class MedicalProfileConcurrencyIntegrationTest {
                 new com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker() {
                     public MedicalProfileOwnerStatus getStatus(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
                     public MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
+                    public void lockForDeletion(MedicalProfileOwnerType type,Long id,Long actor) { throw new UnsupportedOperationException("Update-only fixture"); }
                 },
                 Clock.fixed(NOW.plusSeconds(10), ZoneOffset.UTC)
         );
@@ -136,6 +137,7 @@ class MedicalProfileConcurrencyIntegrationTest {
                 new com.jeepclub.backend.health.core.port.MedicalProfileOwnerStatusChecker() {
                     public MedicalProfileOwnerStatus getStatus(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
                     public MedicalProfileOwnerStatus getStatusForUpdate(MedicalProfileOwnerType type,Long id) { return MedicalProfileOwnerStatus.ACTIVE; }
+                    public void lockForDeletion(MedicalProfileOwnerType type,Long id,Long actor) { throw new UnsupportedOperationException("Update-only fixture"); }
                 },
                 (ownerType, ownerIds) -> java.util.Set.of(),
                 Clock.fixed(NOW.plusSeconds(20), ZoneOffset.UTC),

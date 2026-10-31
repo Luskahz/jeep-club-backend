@@ -336,9 +336,10 @@ class HealthHttpIntegrationTest {
 
     @Test
     void brokenResponsibleRegistrationDoesNotReturnPartiallyIdentifiedClinicalData() throws Exception {
-        dependent.setUserId(999999999L);
         var saved = seed(MedicalProfileOwnerType.DEPENDENT, dependent.getId());
         em.flush(); em.clear();
+        // Simulate an inconsistent upstream projection while physical references remain valid.
+        doReturn(List.of()).when(userQuery).findByIds(any());
         permissions("HEALTH_MEDICAL_PROFILE_READ");
         for (String path : List.of("/admin/medical-profiles/" + saved.getId(),
                 "/admin/medical-profiles/dependents/" + dependent.getId(), "/admin/medical-profiles")) {
@@ -360,8 +361,9 @@ class HealthHttpIntegrationTest {
         for (String path : List.of(ownerPath, "/admin/medical-profiles/" + saved.getId())) {
             problem(call("GET", path, null), 409).andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_INACTIVE"));
         }
-        var orphan = seed(type, 999999999L);
-        problem(call("GET", "/admin/medical-profiles/" + orphan.getId(), null), 404)
+        if (forDependent) doReturn(false).when(dependentsQuery).existsById(ownerId);
+        else doReturn(false).when(userQuery).existsById(ownerId);
+        problem(call("GET", "/admin/medical-profiles/" + saved.getId(), null), 404)
                 .andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_OWNER_NOT_FOUND"));
         problem(call("GET", "/admin/medical-profiles/999999999", null), 404)
                 .andExpect(jsonPath("$.code").value("MEDICAL_PROFILE_NOT_FOUND"));

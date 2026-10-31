@@ -156,6 +156,7 @@ public class DependentService {
 
     @Transactional
     public void delete(Long id, Long ownerId, Long actorId) {
+        dependentUserPort.lockHistoryIdentities(ownerId, actorId);
         var dependent=findDependentForUpdate(id);
         assertBelongsTo(dependent,ownerId);
         if(deletionGuards.stream().anyMatch(guard -> guard.hasRetainedReferences(id)))

@@ -203,6 +203,7 @@ public class AdminMedicalProfileService {
                 .findById(profileId)
                 .orElseThrow(MedicalProfileNotFoundException::new);
 
+        ownerStatusChecker.lockForDeletion(profile.getOwnerType(), profile.getOwnerId(), deletedByUserId);
         medicalProfileRepository.delete(
                 profile,
                 deletedByUserId,

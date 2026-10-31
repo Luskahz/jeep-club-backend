@@ -95,6 +95,7 @@ public class MedicalProfileService {
                 userId
         );
 
+        ownerStatusChecker.lockForDeletion(profile.getOwnerType(), profile.getOwnerId(), userId);
         medicalProfileRepository.delete(
                 profile,
                 userId,
@@ -117,6 +118,7 @@ public class MedicalProfileService {
                 dependentId
         );
 
+        ownerStatusChecker.lockForDeletion(profile.getOwnerType(), profile.getOwnerId(), userId);
         medicalProfileRepository.delete(
                 profile,
                 userId,

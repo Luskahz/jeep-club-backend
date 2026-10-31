@@ -9,6 +9,122 @@ import org.testcontainers.mysql.MySQLContainer;
 /** Runs the same real lifecycle, retention, history, rollback and race cases on Flyway-managed MySQL. */
 @Testcontainers
 class PrincipalLifecycleMySqlIT extends PrincipalLifecycleIntegrationTest {
+    @org.springframework.beans.factory.annotation.Autowired
+    com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLocks;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.jeepclub.backend.dependents.api.module.DependentLifecycleLock dependentLocks;
+    @org.springframework.beans.factory.annotation.Autowired
+    com.jeepclub.backend.health.core.application.service.medicalprofile.AdminMedicalProfileService health;
+
+    private com.jeepclub.backend.dependents.core.application.result.DependentResult createDependent(Long owner) {
+        return dependents.create("Concurrent dependent",String.valueOf(IDS.incrementAndGet()),java.time.LocalDate.of(2010,1,1),
+                com.jeepclub.backend.dependents.core.domain.enums.RelationshipType.CHILD,null,owner);
+    }
+
+    private static com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand clinicalData() {
+        return new com.jeepclub.backend.health.core.application.command.UpsertMedicalProfileCommand(
+                com.jeepclub.backend.health.core.domain.enums.BloodType.UNKNOWN,null,null,null,null,null,null,null,null,null,null);
+    }
+
+    // The holder owns the parent row before the contender starts. No sleeps or timing-based outcomes.
+    private void orderedRace(Runnable lock,Runnable holderAction,Runnable contender) throws Exception {
+        var locked=new java.util.concurrent.CountDownLatch(1);
+        var contenderStarted=new java.util.concurrent.CountDownLatch(1);
+        var executor=java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            var holder=executor.submit(() -> tx(() -> {
+                lock.run();locked.countDown();await(contenderStarted);holderAction.run();return null;
+            }));
+            await(locked);
+            var other=executor.submit(() -> { contenderStarted.countDown();contender.run(); });
+            holder.get(30,java.util.concurrent.TimeUnit.SECONDS);
+            other.get(30,java.util.concurrent.TimeUnit.SECONDS);
+        } finally { locked.countDown();contenderStarted.countDown();executor.shutdownNow(); }
+    }
+
+    private static void await(java.util.concurrent.CountDownLatch latch) {
+        try { org.assertj.core.api.Assertions.assertThat(latch.await(20,java.util.concurrent.TimeUnit.SECONDS)).isTrue(); }
+        catch(InterruptedException e) { Thread.currentThread().interrupt();throw new IllegalStateException(e); }
+    }
+
+    @org.junit.jupiter.api.RepeatedTest(3)
+    void dependentCreationAndUserDeletionSerializeInBothOrders() throws Exception {
+        Long deleted=user(true);
+        orderedRace(() -> identityLocks.byId(deleted).orElseThrow(),
+                () -> identity.delete(deleted,deleted,CREATED.plusSeconds(60)),
+                () -> org.assertj.core.api.Assertions.assertThatThrownBy(() -> createDependent(deleted))
+                        .isInstanceOf(com.jeepclub.backend.dependents.core.application.exception.DependentOwnerNotFoundException.class));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dependents_dependent WHERE user_id=?",Long.class,deleted)).isZero();
+        Long retained=user(true);
+        orderedRace(() -> identityLocks.byId(retained).orElseThrow(),() -> createDependent(retained),
+                () -> org.assertj.core.api.Assertions.assertThatThrownBy(() -> identity.delete(retained,retained,CREATED.plusSeconds(60)))
+                        .isInstanceOf(com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException.class));
+        org.assertj.core.api.Assertions.assertThat(users.findById(retained)).isPresent();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.class)
+    void profileCreationAndOwnerDeletionSerializeInBothOrders(com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType type) throws Exception {
+        for(boolean deleteFirst:new boolean[]{true,false}) {
+            Long user=user(true);
+            Long owner=type==com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.USER?user:createDependent(user).id();
+            Runnable lock=type==com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.USER
+                    ?() -> identityLocks.byId(owner).orElseThrow():() -> dependentLocks.byId(owner).orElseThrow();
+            Runnable delete=type==com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.USER
+                    ?() -> identity.delete(owner,user,CREATED.plusSeconds(60)):() -> dependents.delete(owner,user,user);
+            Runnable create=() -> health.upsertByOwner(type,owner,clinicalData());
+            // Dependent deletion must acquire its Identity history locks before its row.
+            Runnable orderedLock=() -> { identityLocks.byId(user).orElseThrow();lock.run(); };
+            if(deleteFirst) orderedRace(orderedLock,delete,
+                    () -> org.assertj.core.api.Assertions.assertThatThrownBy(create::run)
+                            .isInstanceOf(com.jeepclub.backend.health.core.application.exceptions.MedicalProfileOwnerNotFoundException.class));
+            else orderedRace(orderedLock,create,
+                    () -> org.assertj.core.api.Assertions.assertThatThrownBy(delete::run)
+                            .isInstanceOf(type==com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.USER
+                                    ?com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException.class
+                                    :com.jeepclub.backend.dependents.core.domain.exception.DependentLifecycleConflictException.class));
+            org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM medical_profiles WHERE owner_type=? AND owner_id=?",
+                    Long.class,type.name(),owner)).isEqualTo(deleteFirst?0L:1L);
+        }
+    }
+
+    @org.junit.jupiter.api.RepeatedTest(3)
+    void simultaneousDependentAndUserDeletionRetainHistoryWithoutDeadlock() throws Exception {
+        Long owner=user(true),actor=user(true);Long dependent=createDependent(owner).id();
+        orderedRace(() -> { identityLocks.byId(owner).orElseThrow();identityLocks.byId(actor).orElseThrow(); },
+                () -> dependents.delete(dependent,owner,actor),
+                () -> org.assertj.core.api.Assertions.assertThatThrownBy(() -> identity.delete(owner,owner,CREATED.plusSeconds(60)))
+                        .isInstanceOf(com.jeepclub.backend.iam.identity.api.module.exception.UserDeletionConflictException.class));
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dependents_dependent_history WHERE dependent_id=?",Long.class,dependent)).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update("DELETE FROM identity_users WHERE id=?",actor))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @org.junit.jupiter.api.Test
+    void rolledBackCreationsReleaseLocksAndDoNotRetainReferences() {
+        Long owner=user(true);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> tx(() -> {
+            createDependent(owner);
+            health.upsertByOwner(com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.USER,owner,clinicalData());
+            throw new IllegalStateException("synthetic rollback");
+        })).isInstanceOf(IllegalStateException.class);
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM dependents_dependent WHERE user_id=?",Long.class,owner)).isZero();
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM medical_profiles WHERE owner_type='USER' AND owner_id=?",Long.class,owner)).isZero();
+        identity.delete(owner,owner,CREATED.plusSeconds(60));
+        org.assertj.core.api.Assertions.assertThat(users.findById(owner)).isEmpty();
+    }
+
+    @org.junit.jupiter.api.Test
+    void profileDeletionRetainsOwnerAndActorEvenWhenOwnerIsArchived() {
+        Long owner=user(true),actor=user(true);
+        Long dependent=createDependent(owner).id();
+        Long profile=health.upsertByOwner(com.jeepclub.backend.health.core.domain.enums.MedicalProfileOwnerType.DEPENDENT,dependent,clinicalData()).getId();
+        dependents.archive(dependent,owner,actor);identity.archive(owner,actor,CREATED.plusSeconds(60));
+        health.deleteById(profile,actor);
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM medical_profiles_history WHERE medical_profile_id=?",Long.class,profile)).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update("DELETE FROM dependents_dependent WHERE id=?",dependent)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.update("DELETE FROM identity_users WHERE id=?",actor)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
     @Container static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
             .withUsername("root").withPassword("synthetic-lifecycle-test-only");
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {
