@@ -33,7 +33,7 @@ class PrincipalLifecycleMySqlIT extends PrincipalLifecycleIntegrationTest {
         var executor=java.util.concurrent.Executors.newFixedThreadPool(2);
         try {
             var holder=executor.submit(() -> tx(() -> {
-                lock.run();locked.countDown();await(contenderStarted);holderAction.run();return null;
+                lock.run();locked.countDown();await(contenderStarted);awaitDatabaseWait();holderAction.run();return null;
             }));
             await(locked);
             var other=executor.submit(() -> { contenderStarted.countDown();contender.run(); });
@@ -45,6 +45,18 @@ class PrincipalLifecycleMySqlIT extends PrincipalLifecycleIntegrationTest {
     private static void await(java.util.concurrent.CountDownLatch latch) {
         try { org.assertj.core.api.Assertions.assertThat(latch.await(20,java.util.concurrent.TimeUnit.SECONDS)).isTrue(); }
         catch(InterruptedException e) { Thread.currentThread().interrupt();throw new IllegalStateException(e); }
+    }
+
+    private void awaitDatabaseWait() {
+        long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+        while(System.nanoTime()<deadline) {
+            Integer waits=jdbc.queryForObject("SELECT COUNT(*) FROM performance_schema.data_lock_waits w "
+                    +"JOIN information_schema.innodb_trx b ON b.trx_id=w.blocking_engine_transaction_id "
+                    +"WHERE b.trx_mysql_thread_id=CONNECTION_ID()",Integer.class);
+            if(waits!=null && waits>0)return;
+            Thread.onSpinWait();
+        }
+        throw new AssertionError("Contender never reached a real MySQL lock wait on the holder transaction");
     }
 
     @org.junit.jupiter.api.RepeatedTest(3)
