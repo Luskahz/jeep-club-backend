@@ -48,6 +48,7 @@ class AuthorizationAdministrationIntegrationTest {
     @Autowired RolePresentationQuery presentation;
     @Autowired RootRoleBootstrapService roots;
     @Autowired MockMvc mvc;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate auditJdbc;
     @Autowired Clock clock;
     Long actor, target;
     Role actorRole;
@@ -168,5 +169,46 @@ class AuthorizationAdministrationIntegrationTest {
         mvc.perform(delete(route,targetRole.getId(),permission).header("Authorization","Bearer "+token)).andExpect(status().isNoContent());
         assertThat(permissionBindings.findPermissionsByRoleId(targetRole.getId())).isEmpty();
         assertThat(permissions.findById(permission)).isPresent();
+    }
+
+    @Test
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void deletionHistoryRequiresItsOwnAuthorityAndReturnsAnAuditedNoStoreSnapshot() throws Exception {
+        var deleted=roles.createRole("Historical HTTP "+UUID.randomUUID(),"Preserved description").role();
+        rolePermissions.assignPermissionToRole(deleted.getId(),permission(PermissionCode.IDENTITY_USER_READ));
+        roles.deleteRole(deleted.getId(),actor);
+        String route="/authorization/roles/{id}/deletion-history";
+        problem(mvc.perform(get(route,deleted.getId())),401,"AUTHENTICATION_REQUIRED");
+        grant(PermissionCode.AUTHORIZATION_ROLE_READ);
+        problem(mvc.perform(get(route,deleted.getId()).header("Authorization","Bearer "+token)),403,"ACCESS_DENIED");
+        assertThat(historyAuditCount()).isZero();
+        grant(PermissionCode.AUTHORIZATION_ROLE_HISTORY_READ);
+        var response=mvc.perform(get(route,deleted.getId()).header("Authorization","Bearer "+token))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
+                .andExpect(jsonPath("$.originalId").value(deleted.getId()))
+                .andExpect(jsonPath("$.name").value(deleted.getName()))
+                .andExpect(jsonPath("$.description").value("Preserved description"))
+                .andExpect(jsonPath("$.deletedByUserId").value(actor))
+                .andExpect(jsonPath("$.permissions[0].permissionCode").value("IDENTITY_USER_READ"))
+                .andExpect(jsonPath("$.bindings").isEmpty()).andReturn();
+        assertThat(response.getResponse().getContentAsString()).doesNotContain(token,"synthetic-password-123","passwordHash");
+        assertThat(historyAuditCount()).isEqualTo(1);
+        assertThat(roleRepository.findById(deleted.getId())).isEmpty();
+        assertThat(permissions.findByCode(PermissionCode.IDENTITY_USER_READ)).isPresent();
+    }
+
+    @Test
+    @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void missingOrInvalidDeletionHistoryKeepsRfcProblemsWithoutRecordingSuccessfulAccess() throws Exception {
+        grant(PermissionCode.AUTHORIZATION_ROLE_HISTORY_READ);
+        String route="/authorization/roles/{id}/deletion-history";
+        problem(mvc.perform(get(route,Long.MAX_VALUE).header("Authorization","Bearer "+token)),404,"ROLE_NOT_FOUND");
+        problem(mvc.perform(get(route,0).header("Authorization","Bearer "+token)),400,"VALIDATION_ERROR");
+        assertThat(historyAuditCount()).isZero();
+    }
+
+    long historyAuditCount() {
+        return auditJdbc.queryForObject("SELECT COUNT(*) FROM platform_logs WHERE actor_id=? AND action=?",
+                Long.class,actor,"AUTHORIZATION_ROLE_HISTORY_READ");
     }
 }

@@ -45,3 +45,11 @@ All remaining mutants were reviewed individually:
 | AdminRoleService.deleteRole:146 | Return null | The only production caller ignores this return and emits HTTP 204. Deletion/history, retained-reference guards and mandatory audit failures are asserted. No response body or state changes under this mutant. |
 
 Raw stage evidence is in `authorization-stage/`. Final full regression, combined counters and exact-HEAD CI remain pending. Formal closure awaits review/integration; no attribution/revocation/ROOT guard survivor is being accepted as an untested security rule.
+
+## Final XML audit refinement
+
+The first clean full regression exposed RoleDeletionHistoryController as unexecuted. Its underlying snapshot service was covered by PrincipalLifecycleIntegrationTest, but that did not prove the route's distinct AUTHORIZATION_ROLE_HISTORY_READ authority, no-store response, RFC failures or HTTP-triggered durable audit. Two focused cases now exercise anonymous/read-only denial, authorized preserved permissions/metadata, no credential leakage, one successful audit, missing history and nonpositive ID without a success audit. These run through the real security chain and are inherited by MySQL. This adds two scenario inputs, not a duplicate full role lifecycle.
+
+The earlier 68 new Authorization Surefire cases become 70; the nine inherited HTTP/query cases become eleven (the two independent MySQL contention cases remain). The first final pipeline is intermediate evidence at 38fcb577; a new clean final pipeline and exact-head CI must validate this refinement. No production source or migration changes.
+
+The two history cases execute without an enclosing test transaction. The initial MySQL attempt caught an assertion reading a stale REPEATABLE_READ test snapshot after REQUIRES_NEW audit committed; the assertion remains exactly one durable row, now observed through real request-owned transactions. Corrected focused MySQL: **13 cases, 0 failures/errors/skips**. A separate earlier PowerShell -Dit.test quoting error executed no tests and is excluded from acceptance.
