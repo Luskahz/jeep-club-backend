@@ -48,11 +48,14 @@ class PrincipalLifecycleMySqlIT extends PrincipalLifecycleIntegrationTest {
     }
 
     private void awaitDatabaseWait() {
+        Long holderConnection=jdbc.queryForObject("SELECT CONNECTION_ID()",Long.class);
         long deadline=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
         while(System.nanoTime()<deadline) {
+            // INNODB_TRX has an idle-refresh cache; tight polling can freeze an old snapshot.
+            // Performance Schema exposes live blocker threads without that intermediate cache.
             Integer waits=jdbc.queryForObject("SELECT COUNT(*) FROM performance_schema.data_lock_waits w "
-                    +"JOIN information_schema.innodb_trx b ON b.trx_id=w.blocking_engine_transaction_id "
-                    +"WHERE b.trx_mysql_thread_id=CONNECTION_ID()",Integer.class);
+                    +"JOIN performance_schema.threads b ON b.thread_id=w.blocking_thread_id "
+                    +"WHERE b.processlist_id=?",Integer.class,holderConnection);
             if(waits!=null && waits>0)return;
             Thread.onSpinWait();
         }
