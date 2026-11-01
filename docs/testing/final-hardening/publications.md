@@ -30,9 +30,9 @@ The intermediate EventOperationsMySqlIT run passed 91 cases (81 baseline plus 10
 
 No full registration, Notice, service publication or social happy path is duplicated. The final matrix and mutation decisions distinguish real gaps from guards repeated by the same transactional pipeline.
 
-## Final stage mutation decisions
+## Stage mutation decisions and ownership refinement
 
-The last focused report/private composition selection passed 74 cases (70 report and four private image contract cases). Final stage Publications PIT: **290 total, 279 KILLED, 10 SURVIVED, one NO_COVERAGE, zero TIMED_OUT/NON_VIABLE/execution errors; 96.2069%**, 1m55s. Production targets remain identical to baseline.
+The last focused report/private composition selection passed 74 cases (70 report and four private image contract cases). Stage Publications PIT before the final ownership refinement: **290 total, 279 KILLED, 10 SURVIVED, one NO_COVERAGE, zero TIMED_OUT/NON_VIABLE/execution errors; 96.2069%**, 1m55s. Production targets remain identical to baseline.
 
 | Location | Remaining mutation | Individual decision |
 | --- | --- | --- |
@@ -45,7 +45,12 @@ The last focused report/private composition selection passed 74 cases (70 report
 | EventService.lambda$allocate$1:42 index 6 | Omit dependent IDs from initial pre-lock collection | lockReferences and validations still acquire/validate every dependent before save. The mutation changes pre-acquisition/repetition, not the persistence invariant. Current production lock ordering is preserved; focal mutation testing does not establish every possible scheduling interleaving. |
 | EventService.lambda$register$0:29 index 6 | Same pre-lock omission in registration | EventOperations.register explicitly calls lockReferences and validations before save. Same reasoning as allocation; existing real concurrent registration/lifecycle suites are retained. |
 | EventService.lambda$allocate$2:48 index 14 | Include nonapproved guests in allocated-vehicle list | Domain constructor prohibits vehicle association unless APPROVED. Other statuses have null vehicle; matching previous positive vehicle IDs is unchanged. |
-| EventService.lambda$respond$8:82 index 7 | Allocation membership predicate always true | guestSpace -> spare independently requires a current registration belonging to the actual vehicle owner and allocating that vehicle. Invalid/unallocated vehicle scenario still fails and no offer is saved. |
 | EventService.respond:79 index 15 | Remove first requireOpen | rideRequests is invoked next and requires the same locked event to be open before any mutation. Closed-event tests still fail atomically. |
 
 Remaining lock/pre-acquisition mutations are reviewed as repeated checks within the current transaction, not presented as proof that arbitrary lock removal is safe. Financial, capacity, guest lifecycle and public ownership decision mutants that change behavior are killed.
+
+### Ownership survivor review correction
+
+The earlier spare/guestSpace rationale for EventService.lambda$respond$8:82 index 7 was incorrect: spare validates that the vehicle belongs to its registered owner, but it does not bind that owner to the acting member. An unallocated/nonexistent vehicle alone could not distinguish this rule. The existing rideResponseRejectsUnknownGuestUnallocatedVehicleAndDuplicateAcceptance case now provisions another valid registered driver with available seats through public contracts, verifies that driver is eligible, rejects the first actor's offer for that other driver's vehicle, and asserts no offer/history/seat side effects. The production guard is correct and unchanged; the gap was regression detection. This ownership mutation must be killed, not accepted as redundant. Final focal results supersede the earlier survivor list.
+
+Ownership refinement validation: the focused H2 case passes; EventOperationsMySqlIT passes **91 cases, zero failures/errors/skips** on the same assertions. Focal PIT now generates **290 mutants: 280 KILLED, nine SURVIVED, one NO_COVERAGE, zero timeout/nonviable/execution errors (96.5517%)**. The always-true lambda$respond$8 predicate is killed by rideResponseRejectsUnknownGuestUnallocatedVehicleAndDuplicateAcceptance. No new JUnit case was added for this correction; it strengthens one of the previously added workflow cases. Final clean full evidence remains a separate gate.

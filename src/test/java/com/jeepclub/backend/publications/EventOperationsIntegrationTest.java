@@ -146,6 +146,12 @@ class EventOperationsIntegrationTest {
                 .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_RIDE_OFFER_INVALID");
         assertThatThrownBy(() -> member.respond(e.getId(),guest.id(),10L,999L,true))
                 .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_VEHICLE_NOT_OWNED");
+        secondDriver(103L,20L);
+        member.register(e.getId(),20L,List.of(new EventRegistration.Allocation(103L,true,List.of())));
+        assertThat(member.rideRequests(e.getId(),20L)).contains(guest.id());
+        assertThatThrownBy(() -> member.respond(e.getId(),guest.id(),10L,103L,true))
+                .isInstanceOf(EventOperationException.class).extracting("code").isEqualTo("EVENT_VEHICLE_NOT_OWNED");
+        assertThat(admin.offers(e.getId())).isEmpty();
         var declined=member.respond(e.getId(),guest.id(),10L,101L,false);
         assertThat(declined.status()).isEqualTo(EventRideOffer.Status.DECLINED);
         var accepted=member.respond(e.getId(),guest.id(),10L,101L,true);
@@ -154,7 +160,7 @@ class EventOperationsIntegrationTest {
         assertThat(admin.offers(e.getId())).extracting(EventRideOffer::id).containsExactlyInAnyOrder(declined.id(),accepted.id());
         assertThat(admin.guestHistory(e.getId(),guest.id())).extracting(EventGuestTransition::action)
                 .containsExactly("CREATED","OFFER_DECLINED","OFFER_ACCEPTED");
-        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(2);
+        assertThat(admin.dashboard(e.getId()).availableSeats()).isEqualTo(4);
         assertThat(guestState(e.getId(),guest.id()).transportStatus()).isEqualTo(EventGuestRequest.TransportStatus.STANDBY);
     }
     @org.junit.jupiter.params.ParameterizedTest
