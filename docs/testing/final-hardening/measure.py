@@ -24,8 +24,12 @@ def mechanisms(source, sources):
         tags.append('mysql-testcontainers')
     if 'MockMvc' in source or 'HttpClient' in source or 'TestRestTemplate' in source:
         tags.append('http-contract')
-    if 'springSecurity()' in source or '@AutoConfigureMockMvc' in source:
+    mockmvc = re.search(r'@AutoConfigureMockMvc(?:\s*\(([^)]*)\))?', source)
+    filters_disabled = mockmvc and re.search(r'addFilters\s*=\s*false', mockmvc[1] or '')
+    if 'springSecurity()' in source or (mockmvc and not filters_disabled):
         tags.append('security-filter-chain')
+    elif filters_disabled:
+        tags.append('http-filters-disabled')
     if '@DataJpaTest' in source:
         tags.append('persistence')
     if '@SpringBootTest' in source or '@WebMvcTest' in source or '@SpringJUnitConfig' in source:
