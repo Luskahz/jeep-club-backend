@@ -8,6 +8,7 @@ import org.testcontainers.mysql.MySQLContainer;
 
 /** Same real HTTP/security/module-contract suite against the migrated production database engine. */
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class HealthHttpMySqlIT extends HealthHttpIntegrationTest {
     @Container
     static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")

@@ -11,6 +11,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SystemLogPersistenceWorkerTest {
+    @Test void failedBatchReturnsToRealQueueAndNextExplicitWorkerPassPersistsIt() {
+        var repository = mock(SystemLogJpaRepository.class);
+        var queue = new SystemLogServiceAdapter(repository);
+        var event = new SystemLogEvent(7L,"SYNTHETIC_RETRY","POST","/synthetic",200,SystemLogOutcome.SUCCESS,0,"request",Instant.EPOCH);
+        queue.requeue(List.of(event));
+        org.mockito.Mockito.doThrow(new org.springframework.dao.DataAccessResourceFailureException("synthetic failure"))
+                .doReturn(List.of()).when(repository).saveAll(org.mockito.ArgumentMatchers.any());
+        var worker = new SystemLogPersistenceWorker(queue,repository);
+        worker.persistNextBatch();
+        worker.persistNextBatch();
+        verify(repository, org.mockito.Mockito.times(2)).saveAll(argThat(entities -> {
+            var list = new java.util.ArrayList<SystemLogEntity>();
+            entities.forEach(list::add);
+            return list.size() == 1 && list.get(0).getAction().equals(event.action())
+                    && list.get(0).getOccurredAt().equals(event.occurredAt());
+        }));
+        org.assertj.core.api.Assertions.assertThat(queue.drain(10)).isEmpty();
+        worker.persistNextBatch();
+        org.mockito.Mockito.verifyNoMoreInteractions(repository);
+    }
 
     @Test
     void persistsDrainedEventsAsOneBatch() {
