@@ -36,4 +36,14 @@ Focal PIT after the regression cases: **137 total, 135 KILLED, 2 SURVIVED, 0 NO_
 | User.normalizeRequiredDigits:352 | Remove validateLength | Equivalent for its only caller normalizeCpf: the immediately following exact-11-digit check still rejects every oversized value with IllegalArgumentException. Error-message wording is not the localized HTTP contract. Boundary cases are tested. |
 | User.updateAdministratively:197 | Remove validateMutationInstant | Equivalent: updateProfile validates the identical instant before any field changes; CPF/email assignments happen only after it succeeds. No reflection or internal-spy test is added to distinguish redundant guards. |
 
-Raw stage evidence is preserved locally under `identity-stage/` (JaCoCo XML/CSV, PIT XML/JSON and logs). Final full regression and exact-HEAD CI remain pending. BACK-494 remains completed by scope absorption. Story completion additionally requires PR review and integration in develop.
+Raw stage evidence is preserved locally under `identity-stage/` (JaCoCo XML/CSV, PIT XML/JSON and logs). Final gate results are recorded in the acceptance section below; formal review/integration remains outstanding. BACK-494 remains completed by scope absorption. Story completion additionally requires PR review and integration in develop.
+
+## Final acceptance evidence
+
+Measured clean implementation: 56cce5b41fe5682a714fd96e39a8124bf9dd7475. Full test/verify/MySQL gates and all four focal PIT goals exited zero. CI at the same implementation passed Maven, 479-case MySQL and the 479-case archive/forward probe; deploy was skipped. The delivery revision is the PR head containing this document; its exact SHA and fresh checks are recorded in PR/Jira after documentation publication.
+
+Identity merged LINE: 962 covered / 58 missed (94.3137%); BRANCH: 538 / 47 (91.9658%).
+
+Final focal PIT: 137 total; 135 KILLED, 2 SURVIVED, 0 NO_COVERAGE; zero timeout/nonviable/execution errors; 98.5401%. Individual decisions and exact killing tests are in mutation-decisions.csv and mutation-inventory.csv.
+
+The matrix distinguishes concrete behavior/decision/contract evidence from execution coverage. No production Java, migration, data fixture, contract or coverage threshold changes. Residual subtasks are technically evidenced and remain in progress pending PR review/integration; absorbed subtasks remain done. See coverage-summary.md, mutation-summary.md and execution-evidence.json for physical counters, runner separation, commands, hashes and all outcomes.

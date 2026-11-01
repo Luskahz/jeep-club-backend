@@ -1,0 +1,71 @@
+{
+  "implementation_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+  "run_id": 41255014767,
+  "url": "https://github.com/Luskahz/jeep-club-backend/actions/runs/41255014767",
+  "maven_verify": "success",
+  "mysql_main": "success",
+  "mysql_forward_archive_probe": "success",
+  "deploy": "skipped",
+  "summaries": [
+    {
+      "job_id": 124696220284,
+      "lines": [
+        "2026-11-01T00:08:15.1301837Z [INFO] Tests run: 2515, Failures: 0, Errors: 0, Skipped: 0",
+        "2026-11-01T00:08:19.0820471Z [INFO] BUILD SUCCESS",
+        "2026-11-01T00:08:19.0832912Z [INFO] Total time:  05:11 min"
+      ]
+    },
+    {
+      "job_id": 124696220420,
+      "lines": [
+        "2026-11-01T00:08:30.3002408Z [INFO] Tests run: 479, Failures: 0, Errors: 0, Skipped: 0",
+        "2026-11-01T00:08:32.2249223Z [INFO] BUILD SUCCESS",
+        "2026-11-01T00:08:32.2256094Z [INFO] Total time:  05:27 min",
+        "2026-11-01T00:13:34.1480258Z [INFO] Tests run: 479, Failures: 0, Errors: 0, Skipped: 0",
+        "2026-11-01T00:13:35.7127508Z [INFO] BUILD SUCCESS",
+        "2026-11-01T00:13:35.7191028Z [INFO] Total time:  05:02 min"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 13063235490,
+      "name": "maven-verify-evidence",
+      "size_in_bytes": 7065437,
+      "url": "https://api.github.com/repos/Luskahz/jeep-club-backend/actions/artifacts/13063235490",
+      "archive_download_url": "https://api.github.com/repos/Luskahz/jeep-club-backend/actions/artifacts/13063235490/zip",
+      "expired": false,
+      "created_at": "2026-11-01T00:08:23Z",
+      "expires_at": "2027-01-30T00:02:55Z",
+      "updated_at": "2026-11-01T00:08:23Z",
+      "digest": "sha256:a3d68ec941ed9414389fe8f774bea11d8cc4521c6dfa92c48c7e31d33acedeba",
+      "workflow_run": {
+        "id": 41255014767,
+        "repository_id": 1180067077,
+        "head_repository_id": 1180067077,
+        "head_branch": "test/back-435-436-499-505-final-hardening",
+        "head_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475"
+      }
+    },
+    {
+      "id": 13063075638,
+      "name": "mysql-migration-evidence",
+      "size_in_bytes": 5815382,
+      "url": "https://api.github.com/repos/Luskahz/jeep-club-backend/actions/artifacts/13063075638",
+      "archive_download_url": "https://api.github.com/repos/Luskahz/jeep-club-backend/actions/artifacts/13063075638/zip",
+      "expired": false,
+      "created_at": "2026-11-01T00:13:38Z",
+      "expires_at": "2027-01-30T00:02:55Z",
+      "updated_at": "2026-11-01T00:13:38Z",
+      "digest": "sha256:c4e66b417bcad296954d9f9b230228e0ffc2c1e0e6be5163a5e74e04eaadecca",
+      "workflow_run": {
+        "id": 41255014767,
+        "repository_id": 1180067077,
+        "head_repository_id": 1180067077,
+        "head_branch": "test/back-435-436-499-505-final-hardening",
+        "head_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475"
+      }
+    }
+  ],
+  "note": "The forward archive repeats the 479 cases; it is not 479 additional unique business scenarios. Delivery-head checks are linked from PR #125 after the documentation commit."
+}

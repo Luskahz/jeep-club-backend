@@ -54,3 +54,13 @@ Remaining lock/pre-acquisition mutations are reviewed as repeated checks within 
 The earlier spare/guestSpace rationale for EventService.lambda$respond$8:82 index 7 was incorrect: spare validates that the vehicle belongs to its registered owner, but it does not bind that owner to the acting member. An unallocated/nonexistent vehicle alone could not distinguish this rule. The existing rideResponseRejectsUnknownGuestUnallocatedVehicleAndDuplicateAcceptance case now provisions another valid registered driver with available seats through public contracts, verifies that driver is eligible, rejects the first actor's offer for that other driver's vehicle, and asserts no offer/history/seat side effects. The production guard is correct and unchanged; the gap was regression detection. This ownership mutation must be killed, not accepted as redundant. Final focal results supersede the earlier survivor list.
 
 Ownership refinement validation: the focused H2 case passes; EventOperationsMySqlIT passes **91 cases, zero failures/errors/skips** on the same assertions. Focal PIT now generates **290 mutants: 280 KILLED, nine SURVIVED, one NO_COVERAGE, zero timeout/nonviable/execution errors (96.5517%)**. The always-true lambda$respond$8 predicate is killed by rideResponseRejectsUnknownGuestUnallocatedVehicleAndDuplicateAcceptance. No new JUnit case was added for this correction; it strengthens one of the previously added workflow cases. Final clean full evidence remains a separate gate.
+
+## Final acceptance evidence
+
+Measured clean implementation: 56cce5b41fe5682a714fd96e39a8124bf9dd7475. Full test/verify/MySQL gates and all four focal PIT goals exited zero. CI at the same implementation passed Maven, 479-case MySQL and the 479-case archive/forward probe; deploy was skipped. The delivery revision is the PR head containing this document; its exact SHA and fresh checks are recorded in PR/Jira after documentation publication.
+
+Publications merged LINE: 1919 covered / 126 missed (93.8386%); BRANCH: 1350 / 282 (82.7206%).
+
+Final focal PIT: 290 total; 280 KILLED, 9 SURVIVED, 1 NO_COVERAGE; zero timeout/nonviable/execution errors; 96.5517%. Individual decisions and exact killing tests are in mutation-decisions.csv and mutation-inventory.csv.
+
+The matrix distinguishes concrete behavior/decision/contract evidence from execution coverage. No production Java, migration, data fixture, contract or coverage threshold changes. Residual subtasks are technically evidenced and remain in progress pending PR review/integration; absorbed subtasks remain done. See coverage-summary.md, mutation-summary.md and execution-evidence.json for physical counters, runner separation, commands, hashes and all outcomes.

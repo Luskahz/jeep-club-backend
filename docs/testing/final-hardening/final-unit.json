@@ -1,0 +1,2298 @@
+{
+  "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+  "scope": "Final Surefire-only report from the clean current compilation",
+  "modules": {
+    "Identity": {
+      "counters": {
+        "INSTRUCTION": {
+          "covered": 6291,
+          "missed": 498,
+          "percent": 92.6646
+        },
+        "LINE": {
+          "covered": 962,
+          "missed": 58,
+          "percent": 94.3137
+        },
+        "BRANCH": {
+          "covered": 538,
+          "missed": 47,
+          "percent": 91.9658
+        },
+        "METHOD": {
+          "covered": 265,
+          "missed": 31,
+          "percent": 89.527
+        },
+        "CLASS": {
+          "covered": 77,
+          "missed": 4,
+          "percent": 95.0617
+        }
+      },
+      "packages": {
+        "com/jeepclub/backend/iam/identity/core/domain/exception": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 14
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 5
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/persistence/jpa": {},
+        "com/jeepclub/backend/iam/identity/core/repository": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 33
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/persistence/adapter": {
+          "INSTRUCTION": {
+            "missed": 16,
+            "covered": 461
+          },
+          "BRANCH": {
+            "missed": 2,
+            "covered": 56
+          },
+          "LINE": {
+            "missed": 3,
+            "covered": 68
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 29
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/integration/media": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 6
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 2
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/persistence/query": {
+          "INSTRUCTION": {
+            "missed": 67,
+            "covered": 620
+          },
+          "BRANCH": {
+            "missed": 8,
+            "covered": 51
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 101
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 17
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/domain/model": {
+          "INSTRUCTION": {
+            "missed": 27,
+            "covered": 1005
+          },
+          "BRANCH": {
+            "missed": 6,
+            "covered": 136
+          },
+          "LINE": {
+            "missed": 5,
+            "covered": 201
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 38
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/service/history": {
+          "INSTRUCTION": {
+            "missed": 5,
+            "covered": 29
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/persistence/sort": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 81
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 2
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 8
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/service/bootstrap": {
+          "INSTRUCTION": {
+            "missed": 22,
+            "covered": 50
+          },
+          "LINE": {
+            "missed": 5,
+            "covered": 11
+          },
+          "METHOD": {
+            "missed": 3,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/query/user": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 200
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 19
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 5
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/http/controller": {
+          "INSTRUCTION": {
+            "missed": 17,
+            "covered": 124
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 4
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 19
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 7
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/http/dto/user": {
+          "INSTRUCTION": {
+            "missed": 33,
+            "covered": 515
+          },
+          "BRANCH": {
+            "missed": 4,
+            "covered": 42
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 70
+          },
+          "METHOD": {
+            "missed": 4,
+            "covered": 19
+          },
+          "CLASS": {
+            "missed": 1,
+            "covered": 9
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/http/exception": {
+          "INSTRUCTION": {
+            "missed": 27,
+            "covered": 66
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 10
+          },
+          "METHOD": {
+            "missed": 4,
+            "covered": 10
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/persistence/mapper": {
+          "INSTRUCTION": {
+            "missed": 4,
+            "covered": 240
+          },
+          "BRANCH": {
+            "missed": 3,
+            "covered": 37
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 53
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 6
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/http/dto/admin/user": {
+          "INSTRUCTION": {
+            "missed": 47,
+            "covered": 380
+          },
+          "BRANCH": {
+            "missed": 4,
+            "covered": 32
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 40
+          },
+          "METHOD": {
+            "missed": 3,
+            "covered": 15
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 7
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/command": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 123
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 18
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 19
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 8
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/module": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 153
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 2
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 14
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 7
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 6
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/result/admin/user": {
+          "INSTRUCTION": {
+            "missed": 32,
+            "covered": 39
+          },
+          "LINE": {
+            "missed": 6,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/module/exception": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 48
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 18
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 10
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 9
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/exception/user": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 5
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 2
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/exception": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 23
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 6
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 5
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/port": {},
+        "com/jeepclub/backend/iam/identity/infra/integration/authorization": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 9
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 2
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/identity/core/application/service/user": {
+          "INSTRUCTION": {
+            "missed": 159,
+            "covered": 1785
+          },
+          "BRANCH": {
+            "missed": 19,
+            "covered": 145
+          },
+          "LINE": {
+            "missed": 11,
+            "covered": 249
+          },
+          "METHOD": {
+            "missed": 7,
+            "covered": 62
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 8
+          }
+        },
+        "com/jeepclub/backend/iam/identity/infra/persistence/entity": {
+          "INSTRUCTION": {
+            "missed": 9,
+            "covered": 0
+          },
+          "LINE": {
+            "missed": 3,
+            "covered": 0
+          },
+          "METHOD": {
+            "missed": 3,
+            "covered": 0
+          },
+          "CLASS": {
+            "missed": 3,
+            "covered": 0
+          }
+        },
+        "com/jeepclub/backend/iam/identity/api/module/spi": {},
+        "com/jeepclub/backend/iam/identity/api/http/controller/admin": {
+          "INSTRUCTION": {
+            "missed": 33,
+            "covered": 282
+          },
+          "BRANCH": {
+            "missed": 1,
+            "covered": 13
+          },
+          "LINE": {
+            "missed": 5,
+            "covered": 39
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 12
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        }
+      }
+    },
+    "Authorization": {
+      "counters": {
+        "INSTRUCTION": {
+          "covered": 3995,
+          "missed": 448,
+          "percent": 89.9167
+        },
+        "LINE": {
+          "covered": 823,
+          "missed": 68,
+          "percent": 92.3681
+        },
+        "BRANCH": {
+          "covered": 203,
+          "missed": 59,
+          "percent": 77.4809
+        },
+        "METHOD": {
+          "covered": 248,
+          "missed": 38,
+          "percent": 86.7133
+        },
+        "CLASS": {
+          "covered": 86,
+          "missed": 11,
+          "percent": 88.6598
+        }
+      },
+      "packages": {
+        "com/jeepclub/backend/iam/authorization/api/http/controller": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 19
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 7
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/persistence/entity": {
+          "INSTRUCTION": {
+            "missed": 36,
+            "covered": 0
+          },
+          "LINE": {
+            "missed": 10,
+            "covered": 0
+          },
+          "METHOD": {
+            "missed": 9,
+            "covered": 0
+          },
+          "CLASS": {
+            "missed": 9,
+            "covered": 0
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/integration/identity": {
+          "INSTRUCTION": {
+            "missed": 5,
+            "covered": 65
+          },
+          "BRANCH": {
+            "missed": 1,
+            "covered": 3
+          },
+          "LINE": {
+            "missed": 1,
+            "covered": 12
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/service/role": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 433
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 28
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 68
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 21
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/exception/permission": {
+          "INSTRUCTION": {
+            "missed": 5,
+            "covered": 5
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 2
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/module": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 9
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/persistence/adapter": {
+          "INSTRUCTION": {
+            "missed": 53,
+            "covered": 379
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 2
+          },
+          "LINE": {
+            "missed": 13,
+            "covered": 74
+          },
+          "METHOD": {
+            "missed": 5,
+            "covered": 26
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/http/dto/role": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 79
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 17
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 5
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/service/export": {
+          "INSTRUCTION": {
+            "missed": 108,
+            "covered": 398
+          },
+          "BRANCH": {
+            "missed": 37,
+            "covered": 51
+          },
+          "LINE": {
+            "missed": 3,
+            "covered": 49
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 11
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/exception/role": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 15
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 6
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/security": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 5
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/persistence/query": {
+          "INSTRUCTION": {
+            "missed": 22,
+            "covered": 393
+          },
+          "BRANCH": {
+            "missed": 4,
+            "covered": 6
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 28
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 16
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/query": {
+          "INSTRUCTION": {
+            "missed": 34,
+            "covered": 109
+          },
+          "BRANCH": {
+            "missed": 8,
+            "covered": 10
+          },
+          "LINE": {
+            "missed": 3,
+            "covered": 20
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 9
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/http/dto/userrole": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 6
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/persistence/mapper": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 178
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 67
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 10
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/service/rolepermission": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 148
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 4
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 40
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 8
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/domain/model": {
+          "INSTRUCTION": {
+            "missed": 23,
+            "covered": 719
+          },
+          "BRANCH": {
+            "missed": 4,
+            "covered": 80
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 181
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 39
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/domain/exception/role": {
+          "INSTRUCTION": {
+            "missed": 10,
+            "covered": 28
+          },
+          "LINE": {
+            "missed": 3,
+            "covered": 11
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 6
+          },
+          "CLASS": {
+            "missed": 1,
+            "covered": 6
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/http/controller/admin": {
+          "INSTRUCTION": {
+            "missed": 20,
+            "covered": 217
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 54
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 21
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 8
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/service/permission": {
+          "INSTRUCTION": {
+            "missed": 61,
+            "covered": 11
+          },
+          "BRANCH": {
+            "missed": 4,
+            "covered": 0
+          },
+          "LINE": {
+            "missed": 12,
+            "covered": 2
+          },
+          "METHOD": {
+            "missed": 4,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/module/spi": {},
+        "com/jeepclub/backend/iam/authorization/core/application/exception/rolepermission": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 12
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/http/exception": {
+          "INSTRUCTION": {
+            "missed": 48,
+            "covered": 75
+          },
+          "LINE": {
+            "missed": 12,
+            "covered": 22
+          },
+          "METHOD": {
+            "missed": 7,
+            "covered": 13
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/http/dto": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 12
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 3
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/infra/persistence/jpa": {},
+        "com/jeepclub/backend/iam/authorization/core/repository": {
+          "INSTRUCTION": {
+            "missed": 12,
+            "covered": 117
+          },
+          "LINE": {
+            "missed": 1,
+            "covered": 6
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 6
+          },
+          "CLASS": {
+            "missed": 1,
+            "covered": 6
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/module/role": {},
+        "com/jeepclub/backend/iam/authorization/core/application/service/bootstrap": {
+          "INSTRUCTION": {
+            "missed": 11,
+            "covered": 182
+          },
+          "BRANCH": {
+            "missed": 1,
+            "covered": 7
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 47
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 12
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/domain/exception/permission": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 17
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 6
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/api/http/dto/permission": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 43
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 11
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/result": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 24
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 4
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/domain/enums": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 36
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/exception/userrole": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 17
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 6
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/service/userrole": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 210
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 12
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 65
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 11
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/application/service/history": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 34
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/iam/authorization/core/port": {}
+      }
+    },
+    "Publications": {
+      "counters": {
+        "INSTRUCTION": {
+          "covered": 17122,
+          "missed": 1434,
+          "percent": 92.272
+        },
+        "LINE": {
+          "covered": 1918,
+          "missed": 127,
+          "percent": 93.7897
+        },
+        "BRANCH": {
+          "covered": 1344,
+          "missed": 288,
+          "percent": 82.3529
+        },
+        "METHOD": {
+          "covered": 712,
+          "missed": 91,
+          "percent": 88.6675
+        },
+        "CLASS": {
+          "covered": 160,
+          "missed": 24,
+          "percent": 86.9565
+        }
+      },
+      "packages": {
+        "com/jeepclub/backend/publications/api/http/dto": {
+          "INSTRUCTION": {
+            "missed": 189,
+            "covered": 1704
+          },
+          "BRANCH": {
+            "missed": 19,
+            "covered": 101
+          },
+          "LINE": {
+            "missed": 12,
+            "covered": 175
+          },
+          "METHOD": {
+            "missed": 6,
+            "covered": 61
+          },
+          "CLASS": {
+            "missed": 4,
+            "covered": 36
+          }
+        },
+        "com/jeepclub/backend/publications/infra/persistence/adapter": {
+          "INSTRUCTION": {
+            "missed": 164,
+            "covered": 1675
+          },
+          "BRANCH": {
+            "missed": 26,
+            "covered": 68
+          },
+          "LINE": {
+            "missed": 9,
+            "covered": 194
+          },
+          "METHOD": {
+            "missed": 8,
+            "covered": 80
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 8
+          }
+        },
+        "com/jeepclub/backend/publications/api/http/controller/member": {
+          "INSTRUCTION": {
+            "missed": 101,
+            "covered": 329
+          },
+          "BRANCH": {
+            "missed": 2,
+            "covered": 8
+          },
+          "LINE": {
+            "missed": 9,
+            "covered": 35
+          },
+          "METHOD": {
+            "missed": 9,
+            "covered": 24
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 10
+          }
+        },
+        "com/jeepclub/backend/publications/infra/persistence/jpa": {},
+        "com/jeepclub/backend/publications/core/domain/exception": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 10
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/publications/infra/persistence/query": {
+          "INSTRUCTION": {
+            "missed": 51,
+            "covered": 538
+          },
+          "BRANCH": {
+            "missed": 3,
+            "covered": 21
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 42
+          },
+          "METHOD": {
+            "missed": 2,
+            "covered": 16
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/publications/core/domain/enums": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 90
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 7
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 4
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/publications/infra/persistence/mapper": {
+          "INSTRUCTION": {
+            "missed": 58,
+            "covered": 832
+          },
+          "BRANCH": {
+            "missed": 15,
+            "covered": 49
+          },
+          "LINE": {
+            "missed": 5,
+            "covered": 156
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 19
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        },
+        "com/jeepclub/backend/publications/core/domain/model": {
+          "INSTRUCTION": {
+            "missed": 219,
+            "covered": 2859
+          },
+          "BRANCH": {
+            "missed": 88,
+            "covered": 296
+          },
+          "LINE": {
+            "missed": 16,
+            "covered": 484
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 139
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 22
+          }
+        },
+        "com/jeepclub/backend/publications/core/repository": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 90
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 4
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/publications/infra/persistence/entity": {
+          "INSTRUCTION": {
+            "missed": 60,
+            "covered": 70
+          },
+          "LINE": {
+            "missed": 20,
+            "covered": 20
+          },
+          "METHOD": {
+            "missed": 20,
+            "covered": 14
+          },
+          "CLASS": {
+            "missed": 20,
+            "covered": 14
+          }
+        },
+        "com/jeepclub/backend/publications/infra/integration/lifecycle": {
+          "INSTRUCTION": {
+            "missed": 2,
+            "covered": 91
+          },
+          "BRANCH": {
+            "missed": 5,
+            "covered": 9
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 7
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 7
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 6
+          }
+        },
+        "com/jeepclub/backend/publications/core/application/service/internal": {
+          "INSTRUCTION": {
+            "missed": 58,
+            "covered": 1321
+          },
+          "BRANCH": {
+            "missed": 30,
+            "covered": 160
+          },
+          "LINE": {
+            "missed": 1,
+            "covered": 160
+          },
+          "METHOD": {
+            "missed": 5,
+            "covered": 60
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/publications/api/http/controller/admin": {
+          "INSTRUCTION": {
+            "missed": 74,
+            "covered": 649
+          },
+          "BRANCH": {
+            "missed": 3,
+            "covered": 9
+          },
+          "LINE": {
+            "missed": 9,
+            "covered": 65
+          },
+          "METHOD": {
+            "missed": 8,
+            "covered": 55
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 8
+          }
+        },
+        "com/jeepclub/backend/publications/core/application/query": {
+          "INSTRUCTION": {
+            "missed": 15,
+            "covered": 319
+          },
+          "BRANCH": {
+            "missed": 4,
+            "covered": 38
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 25
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 6
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/publications/api/http/exception": {
+          "INSTRUCTION": {
+            "missed": 83,
+            "covered": 240
+          },
+          "BRANCH": {
+            "missed": 5,
+            "covered": 12
+          },
+          "LINE": {
+            "missed": 15,
+            "covered": 42
+          },
+          "METHOD": {
+            "missed": 11,
+            "covered": 24
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        },
+        "com/jeepclub/backend/publications/core/application/service": {
+          "INSTRUCTION": {
+            "missed": 360,
+            "covered": 6202
+          },
+          "BRANCH": {
+            "missed": 88,
+            "covered": 573
+          },
+          "LINE": {
+            "missed": 31,
+            "covered": 483
+          },
+          "METHOD": {
+            "missed": 20,
+            "covered": 189
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 21
+          }
+        },
+        "com/jeepclub/backend/publications/core/application/exception": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 91
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 14
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 7
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        },
+        "com/jeepclub/backend/publications/api/module": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 12
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        }
+      }
+    },
+    "Platform": {
+      "counters": {
+        "INSTRUCTION": {
+          "covered": 5025,
+          "missed": 294,
+          "percent": 94.4726
+        },
+        "LINE": {
+          "covered": 992,
+          "missed": 58,
+          "percent": 94.4762
+        },
+        "BRANCH": {
+          "covered": 440,
+          "missed": 99,
+          "percent": 81.6327
+        },
+        "METHOD": {
+          "covered": 248,
+          "missed": 4,
+          "percent": 98.4127
+        },
+        "CLASS": {
+          "covered": 75,
+          "missed": 2,
+          "percent": 97.4026
+        }
+      },
+      "packages": {
+        "com/jeepclub/backend/platform/security/handler": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 16
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/platform/time": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 11
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 3
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 3
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/security/principal": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 24
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 6
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/composition/membership": {
+          "INSTRUCTION": {
+            "missed": 2,
+            "covered": 105
+          },
+          "BRANCH": {
+            "missed": 9,
+            "covered": 13
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 8
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 6
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/security/membership": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 83
+          },
+          "BRANCH": {
+            "missed": 2,
+            "covered": 7
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 21
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 5
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/platform/security/jwt": {
+          "INSTRUCTION": {
+            "missed": 95,
+            "covered": 197
+          },
+          "BRANCH": {
+            "missed": 20,
+            "covered": 20
+          },
+          "LINE": {
+            "missed": 20,
+            "covered": 52
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 11
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 4
+          }
+        },
+        "com/jeepclub/backend/platform/web/exception": {
+          "INSTRUCTION": {
+            "missed": 24,
+            "covered": 503
+          },
+          "BRANCH": {
+            "missed": 13,
+            "covered": 29
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 116
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 31
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 6
+          }
+        },
+        "com/jeepclub/backend/platform/openapi/group": {},
+        "com/jeepclub/backend/platform/logging": {
+          "INSTRUCTION": {
+            "missed": 17,
+            "covered": 700
+          },
+          "BRANCH": {
+            "missed": 7,
+            "covered": 53
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 164
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 38
+          },
+          "CLASS": {
+            "missed": 1,
+            "covered": 15
+          }
+        },
+        "com/jeepclub/backend/platform/web/locale": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 13
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 4
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/openapi/security": {},
+        "com/jeepclub/backend/platform/openapi/config": {
+          "INSTRUCTION": {
+            "missed": 5,
+            "covered": 212
+          },
+          "BRANCH": {
+            "missed": 2,
+            "covered": 20
+          },
+          "LINE": {
+            "missed": 1,
+            "covered": 55
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 13
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        },
+        "com/jeepclub/backend/platform/openapi/controller": {
+          "INSTRUCTION": {
+            "missed": 2,
+            "covered": 3
+          },
+          "LINE": {
+            "missed": 1,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/startup/security": {
+          "INSTRUCTION": {
+            "missed": 9,
+            "covered": 32
+          },
+          "BRANCH": {
+            "missed": 2,
+            "covered": 2
+          },
+          "LINE": {
+            "missed": 4,
+            "covered": 9
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 1,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/platform/security/filter": {
+          "INSTRUCTION": {
+            "missed": 11,
+            "covered": 278
+          },
+          "BRANCH": {
+            "missed": 8,
+            "covered": 48
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 70
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 7
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/platform/mail": {
+          "INSTRUCTION": {
+            "missed": 13,
+            "covered": 180
+          },
+          "BRANCH": {
+            "missed": 9,
+            "covered": 25
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 47
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 8
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 2
+          }
+        },
+        "com/jeepclub/backend/platform/web/cors": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 101
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 20
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 18
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/platform/storage/properties": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 50
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 17
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 9
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/platform/database": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 198
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 18
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 24
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 5
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/storage/image": {
+          "INSTRUCTION": {
+            "missed": 17,
+            "covered": 569
+          },
+          "BRANCH": {
+            "missed": 6,
+            "covered": 74
+          },
+          "LINE": {
+            "missed": 5,
+            "covered": 87
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 32
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 10
+          }
+        },
+        "com/jeepclub/backend/platform/security/authorization": {},
+        "com/jeepclub/backend/platform/storage/local": {
+          "INSTRUCTION": {
+            "missed": 53,
+            "covered": 425
+          },
+          "BRANCH": {
+            "missed": 9,
+            "covered": 47
+          },
+          "LINE": {
+            "missed": 13,
+            "covered": 100
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 15
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/export": {
+          "INSTRUCTION": {
+            "missed": 46,
+            "covered": 1012
+          },
+          "BRANCH": {
+            "missed": 12,
+            "covered": 84
+          },
+          "LINE": {
+            "missed": 2,
+            "covered": 129
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 25
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 7
+          }
+        },
+        "com/jeepclub/backend/platform/web/pagination": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 62
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 14
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/startup/properties": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 30
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/startup/config": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 3
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 1
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 1
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/security/config": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 203
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 36
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 8
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        },
+        "com/jeepclub/backend/platform/storage/config": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 15
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 3
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 2
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 1
+          }
+        }
+      }
+    },
+    "Shared": {
+      "counters": {
+        "INSTRUCTION": {
+          "covered": 2924,
+          "missed": 7,
+          "percent": 99.7612
+        },
+        "LINE": {
+          "covered": 412,
+          "missed": 0,
+          "percent": 100.0
+        },
+        "BRANCH": {
+          "covered": 40,
+          "missed": 1,
+          "percent": 97.561
+        },
+        "METHOD": {
+          "covered": 42,
+          "missed": 1,
+          "percent": 97.6744
+        },
+        "CLASS": {
+          "covered": 24,
+          "missed": 0,
+          "percent": 100.0
+        }
+      },
+      "packages": {
+        "com/jeepclub/backend/shared/export": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 231
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 16
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 24
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 14
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 8
+          }
+        },
+        "com/jeepclub/backend/shared/storage/exception": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 76
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 3
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 26
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 11
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 8
+          }
+        },
+        "com/jeepclub/backend/shared/authorization": {
+          "INSTRUCTION": {
+            "missed": 7,
+            "covered": 2511
+          },
+          "BRANCH": {
+            "missed": 0,
+            "covered": 2
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 345
+          },
+          "METHOD": {
+            "missed": 1,
+            "covered": 9
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 3
+          }
+        },
+        "com/jeepclub/backend/shared/bootstrap": {},
+        "com/jeepclub/backend/shared/storage": {
+          "INSTRUCTION": {
+            "missed": 0,
+            "covered": 106
+          },
+          "BRANCH": {
+            "missed": 1,
+            "covered": 19
+          },
+          "LINE": {
+            "missed": 0,
+            "covered": 17
+          },
+          "METHOD": {
+            "missed": 0,
+            "covered": 8
+          },
+          "CLASS": {
+            "missed": 0,
+            "covered": 5
+          }
+        }
+      }
+    }
+  },
+  "platform_shared": {
+    "INSTRUCTION": {
+      "covered": 7949,
+      "missed": 301,
+      "percent": 96.3515
+    },
+    "LINE": {
+      "covered": 1404,
+      "missed": 58,
+      "percent": 96.0328
+    },
+    "BRANCH": {
+      "covered": 480,
+      "missed": 100,
+      "percent": 82.7586
+    },
+    "METHOD": {
+      "covered": 290,
+      "missed": 5,
+      "percent": 98.3051
+    },
+    "CLASS": {
+      "covered": 99,
+      "missed": 2,
+      "percent": 98.0198
+    }
+  },
+  "test_categories": {
+    "mysql-testcontainers": 0,
+    "http-contract": 858,
+    "persistence": 102,
+    "spring-context": 211,
+    "unit-with-mocks": 604,
+    "pure-unit": 740
+  },
+  "tests": {
+    "discovered": 2515,
+    "counts": {
+      "passed": 2514,
+      "failure": 0,
+      "error": 0,
+      "skipped": 1
+    }
+  },
+  "partial_methods_evidence": "coverage-gaps-final.csv; full parsed XML remains in the preserved raw evidence directory"
+}

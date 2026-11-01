@@ -44,7 +44,7 @@ All remaining mutants were reviewed individually:
 | Role.ensureCustom:226 | Remove ensureNotDeleted | Same constructor invariant. ROOT and archived restrictions remain independently tested and their relevant mutants are killed. |
 | AdminRoleService.deleteRole:146 | Return null | The only production caller ignores this return and emits HTTP 204. Deletion/history, retained-reference guards and mandatory audit failures are asserted. No response body or state changes under this mutant. |
 
-Raw stage evidence is in `authorization-stage/`. Final full regression, combined counters and exact-HEAD CI remain pending. Formal closure awaits review/integration; no attribution/revocation/ROOT guard survivor is being accepted as an untested security rule.
+Raw stage evidence is in `authorization-stage/`. Final gate results are recorded in the acceptance section below; formal review/integration remains outstanding. Formal closure awaits review/integration; no attribution/revocation/ROOT guard survivor is being accepted as an untested security rule.
 
 ## Final XML audit refinement
 
@@ -53,3 +53,13 @@ The first clean full regression exposed RoleDeletionHistoryController as unexecu
 The earlier 68 new Authorization Surefire cases become 70; the nine inherited HTTP/query cases become eleven (the two independent MySQL contention cases remain). The first final pipeline is intermediate evidence at 38fcb577; a new clean final pipeline and exact-head CI must validate this refinement. No production source or migration changes.
 
 The two history cases execute without an enclosing test transaction. The initial MySQL attempt caught an assertion reading a stale REPEATABLE_READ test snapshot after REQUIRES_NEW audit committed; the assertion remains exactly one durable row, now observed through real request-owned transactions. Corrected focused MySQL: **13 cases, 0 failures/errors/skips**. A separate earlier PowerShell -Dit.test quoting error executed no tests and is excluded from acceptance.
+
+## Final acceptance evidence
+
+Measured clean implementation: 56cce5b41fe5682a714fd96e39a8124bf9dd7475. Full test/verify/MySQL gates and all four focal PIT goals exited zero. CI at the same implementation passed Maven, 479-case MySQL and the 479-case archive/forward probe; deploy was skipped. The delivery revision is the PR head containing this document; its exact SHA and fresh checks are recorded in PR/Jira after documentation publication.
+
+Authorization merged LINE: 823 covered / 68 missed (92.3681%); BRANCH: 203 / 59 (77.4809%).
+
+Final focal PIT: 160 total; 157 KILLED, 3 SURVIVED, 0 NO_COVERAGE; zero timeout/nonviable/execution errors; 98.1250%. Individual decisions and exact killing tests are in mutation-decisions.csv and mutation-inventory.csv.
+
+The matrix distinguishes concrete behavior/decision/contract evidence from execution coverage. No production Java, migration, data fixture, contract or coverage threshold changes. Residual subtasks are technically evidenced and remain in progress pending PR review/integration; absorbed subtasks remain done. See coverage-summary.md, mutation-summary.md and execution-evidence.json for physical counters, runner separation, commands, hashes and all outcomes.

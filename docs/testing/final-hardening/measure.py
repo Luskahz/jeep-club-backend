@@ -85,11 +85,17 @@ def main():
         source_files = list(args.sources.rglob('*.java'))
         sources = {p.stem: p.read_text(encoding='utf-8-sig') for p in source_files}
         for path in sorted(args.reports.glob("TEST-*.xml")):
-            for case in ET.parse(path).getroot().iter("testcase"):
-                key = case.attrib["classname"] + "#" + case.attrib["name"]
+            suite = ET.parse(path).getroot()
+            for case in suite.iter("testcase"):
+                reported_class = case.attrib["classname"]
+                # Jupiter nested DisplayNames may replace classname in Surefire XML.
+                # Keep the group (no collisions) and the actual suite (source lookup).
+                identity = reported_class if reported_class.startswith('com.jeepclub.') else (
+                    suite.attrib['name'] + '$display[' + reported_class + ']')
+                key = identity + "#" + case.attrib["name"]
                 cases[key] = "failure" if case.find("failure") is not None else "error" if case.find("error") is not None else "skipped" if case.find("skipped") is not None else "passed"
         result["tests"] = {"discovered": len(cases), "counts": {s: sum(v == s for v in cases.values()) for s in ("passed", "failure", "error", "skipped")}, "cases": cases}
-        result['test_mechanisms'] = {name: mechanisms(sources.get(name.rsplit('.', 1)[-1], ''), sources)
+        result['test_mechanisms'] = {name: mechanisms(sources.get(name.split('$', 1)[0].rsplit('.', 1)[-1], ''), sources)
                                      for name in sorted({k.split('#')[0] for k in cases})}
         # Primary categories are mutually exclusive; tags above retain overlapping mechanisms.
         priority = ('mysql-testcontainers', 'http-contract', 'persistence', 'spring-context', 'unit-with-mocks', 'pure-unit')
