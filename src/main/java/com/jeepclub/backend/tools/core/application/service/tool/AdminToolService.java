@@ -36,6 +36,13 @@ public class AdminToolService {
     }
 
     @Transactional(readOnly = true)
+    public Page<com.jeepclub.backend.tools.core.application.result.AdminToolResult> search(
+            com.jeepclub.backend.tools.core.application.query.AdminToolFilter filter,
+            java.util.Set<com.jeepclub.backend.tools.core.application.query.AdminToolField> fields, Pageable pageable) {
+        return toolRepository.search(filter, fields, pageable);
+    }
+
+    @Transactional(readOnly = true)
     public Page<Tool> listAllTools(String name, ToolStatus status, Pageable pageable) {
         return toolRepository.findAll(name, status, pageable);
     }

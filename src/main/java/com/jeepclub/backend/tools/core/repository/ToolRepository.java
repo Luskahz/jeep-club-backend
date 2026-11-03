@@ -10,6 +10,11 @@ import java.util.Optional;
 
 public interface ToolRepository {
 
+    Page<com.jeepclub.backend.tools.core.application.result.AdminToolResult> search(
+            com.jeepclub.backend.tools.core.application.query.AdminToolFilter filter,
+            java.util.Set<com.jeepclub.backend.tools.core.application.query.AdminToolField> fields,
+            Pageable pageable);
+
     Page<Tool> findByUserId(Long userId, Pageable pageable);
 
     Page<Tool> findAll(String name, ToolStatus status, Pageable pageable);

@@ -46,4 +46,19 @@ replaced by real subtasks, not because their acceptance criteria were implemente
 
 ## Execution evidence
 
-Pending implementation and current-HEAD validation. No acceptance criterion is declared complete yet.
+Identity: literal LIKE, stable sort and Membership batching are implemented. The focal
+Identity set passed 77 tests (24 HTTP, 8 persistence, 16 sort, 29 Registry API) in
+`output/admin-hardening-a-b.log`; that combined run exposed a Tools invalid-sort mapping
+failure, so it is not a passing combined build. The subsequent corrected focal build
+passed 60/0/0/0, including Identity and Tools HTTP/persistence (`output/admin-hardening-a-b-c-compile.log`).
+The first Identity-only run failed because a new SQL assertion expected ESCAPE without a
+LIKE filter; the fixture was corrected and then passed.
+
+Tools deliberately searches only name with q; name/status remain compatible and userId is
+an additive exact filter. Neither the current administrative summary nor the Jira requires
+owner-name presentation/search in Tools. No owner-name or description expansion is justified
+by its current screen contract. Thus no Identity call is added. Fields are limited to the
+existing four summary fields; persistence tests observe two statements and only requested
+SELECT columns. Contains search is not claimed to be index optimized.
+
+Full test/verify, real PostgreSQL/MySQL, current-HEAD CI and final acceptance remain pending.

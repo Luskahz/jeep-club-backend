@@ -41,11 +41,12 @@ public class AdminToolController {
     }
 
     @GetMapping
+    @ApiResponse(responseCode="400", description="Filtros, fields ou sort inválidos.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @PreAuthorize("hasAuthority('TOOLS_TOOL_READ')")
     @RequiredPermission("TOOLS_TOOL_READ")
     @Operation(
             summary = "Listar ferramentas administrativamente",
-            description = "Retorna uma página de ferramentas ACTIVE, INACTIVE e ARCHIVED. name aplica contains case-insensitive quando não vazio; status aplica igualdade exata; ambos podem ser combinados. A paginação usa os defaults globais: página zero-based e size 20, limitado a 50.",
+            description = "Retorna ACTIVE, INACTIVE e ARCHIVED. q pesquisa o nome; name/status/userId combinam com AND antes da paginação e count. Texto literal, trim e case-insensitive: %, _ e ! não são curingas. fields opcional ID,NAME,STATUS,USER_ID seleciona colunas e omite campos não pedidos; default preserva o resumo completo. Sort permitido: id,name,status,userId,description,photoStorageKey,createdAt,updatedAt,archivedAt; desempate id asc. Defaults globais: página zero-based, size 20, máximo 50.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Página de ferramentas retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = AdminToolSummaryPageResponseSchema.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
@@ -53,13 +54,14 @@ public class AdminToolController {
             }
     )
     public ResponseEntity<PageResponse<AdminToolSummaryResponseDTO>> listTools(
-            @Parameter(description = "Trecho de nome para busca case-insensitive. Valor nulo ou vazio não filtra.", example = "macaco")
-            @RequestParam(required = false) String name,
-            @Parameter(description = "Status exato da ferramenta.", schema = @Schema(allowableValues = {"ACTIVE", "INACTIVE", "ARCHIVED"}), example = "ACTIVE")
-            @RequestParam(required = false) ToolStatus status,
+            @Valid @ParameterObject @ModelAttribute AdminToolFilterDTO filters,
+            @Parameter(description="Campos do resumo: ID,NAME,STATUS,USER_ID. Omitido/vazio retorna todos.")
+            @RequestParam(required=false) java.util.Set<com.jeepclub.backend.tools.core.application.query.AdminToolField> fields,
             @ParameterObject Pageable pageable) {
+        var selected = fields == null || fields.isEmpty()
+                ? java.util.EnumSet.allOf(com.jeepclub.backend.tools.core.application.query.AdminToolField.class) : fields;
         PageResponse<AdminToolSummaryResponseDTO> tools = PageResponse.from(adminToolService
-                .listAllTools(name, status, pageable)
+                .search(filters.toFilter(), selected, pageable)
                 .map(AdminToolSummaryResponseDTO::new));
         return ResponseEntity.ok(tools);
     }
