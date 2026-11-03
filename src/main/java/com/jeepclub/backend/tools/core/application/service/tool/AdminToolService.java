@@ -39,6 +39,7 @@ public class AdminToolService {
     public Page<com.jeepclub.backend.tools.core.application.result.AdminToolResult> search(
             com.jeepclub.backend.tools.core.application.query.AdminToolFilter filter,
             java.util.Set<com.jeepclub.backend.tools.core.application.query.AdminToolField> fields, Pageable pageable) {
+        if (pageable.getOffset() > Integer.MAX_VALUE) throw new IllegalArgumentException("Pagination offset exceeds the supported range.");
         return toolRepository.search(filter, fields, pageable);
     }
 

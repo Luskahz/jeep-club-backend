@@ -142,6 +142,8 @@ class ToolsHttpIntegrationTest {
             mvc.perform(get("/admin/tools").param(invalid.getKey(),invalid.getValue()).header(AUTHORIZATION,admin))
                     .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
         }
+        mvc.perform(get("/admin/tools").param("page",Integer.toString(Integer.MAX_VALUE)).header(AUTHORIZATION,admin))
+                .andExpect(status().isBadRequest());
         mvc.perform(patch("/admin/tools/{id}/deactivate", id).header(AUTHORIZATION, admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
         mvc.perform(get("/admin/tools").param("status", "INACTIVE").param("name", "cha")
