@@ -83,6 +83,8 @@ class AdminVehicleSearchHttpIntegrationTest {
                     .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
         }
         mvc.perform(get("/vehicles/list/admin")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token").param("page",Integer.toString(Integer.MAX_VALUE)))
+                .andExpect(status().isBadRequest());
         when(authorities.findAuthorityCodesByUserId(99L)).thenReturn(List.of());
         mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token")).andExpect(status().isForbidden());
     }

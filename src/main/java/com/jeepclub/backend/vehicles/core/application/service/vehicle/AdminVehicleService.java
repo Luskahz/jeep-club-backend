@@ -151,6 +151,7 @@ public class AdminVehicleService {
     public Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSearchResult> search(
             com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter filter,
             java.util.Set<com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField> fields, Pageable pageable) {
+        if(pageable.getOffset()>Integer.MAX_VALUE) throw new com.jeepclub.backend.vehicles.core.application.exceptions.InvalidVehicleSearchException("Pagination offset exceeds the supported range.");
         var resolved=filter.q()==null?filter:filter.withOwners(userPort.findIdsByName(filter.q()));
         var page=vehicleRepository.search(resolved,fields,pageable);
         if(!fields.contains(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.OWNER_NAME) || page.isEmpty()) return page;
