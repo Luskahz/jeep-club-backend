@@ -138,7 +138,7 @@ class ToolsHttpIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(id));
         mvc.perform(get("/admin/tools").param("q","%").header(AUTHORIZATION,admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
-        for (var invalid : java.util.Map.of("fields","DESCRIPTION","sort","ownerName,asc","userId","0","status","INVALID","q","x".repeat(101)).entrySet()) {
+        for (var invalid : java.util.Map.of("fields","DESCRIPTION","sort","ownerName,asc","userId","0","status","INVALID","q","x".repeat(101),"page","-1","size","0").entrySet()) {
             mvc.perform(get("/admin/tools").param(invalid.getKey(),invalid.getValue()).header(AUTHORIZATION,admin))
                     .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
         }

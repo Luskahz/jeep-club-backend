@@ -22,6 +22,13 @@ class ToolsOpenApiIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
+    void administrativeSearchParametersArePublished() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/admin/tools']['get']['parameters'][*].name").value(hasItems("q","name","status","userId","fields","page","size","sort")))
+                .andExpect(jsonPath("$['paths']['/admin/tools']['get']['responses']['400']").exists());
+    }
+
+    @Test
     void openApiDescribesCurrentMemberAndAdministrativeToolContracts() throws Exception {
         mockMvc.perform(get("/v3/api-docs"))
                 .andExpect(status().isOk())

@@ -57,6 +57,8 @@ public class AdminToolController {
             @Valid @ParameterObject @ModelAttribute AdminToolFilterDTO filters,
             @Parameter(description="Campos do resumo: ID,NAME,STATUS,USER_ID. Omitido/vazio retorna todos.")
             @RequestParam(required=false) java.util.Set<com.jeepclub.backend.tools.core.application.query.AdminToolField> fields,
+            @Parameter(hidden=true) @RequestParam(required=false,name="page") @jakarta.validation.constraints.Min(0) Integer requestedPage,
+            @Parameter(hidden=true) @RequestParam(required=false,name="size") @jakarta.validation.constraints.Min(1) Integer requestedSize,
             @ParameterObject Pageable pageable) {
         var selected = fields == null || fields.isEmpty()
                 ? java.util.EnumSet.allOf(com.jeepclub.backend.tools.core.application.query.AdminToolField.class) : fields;
