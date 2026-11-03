@@ -10,7 +10,7 @@ final class PublicationConstraintConflicts {
     static boolean matches(Throwable failure, Set<String> known) {
         for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
             if (cause instanceof ConstraintViolationException violation && violation.getConstraintName() != null) {
-                String name = violation.getConstraintName().replace("\"", "").toLowerCase(Locale.ROOT);
+                String name = violation.getConstraintName().replace("\"", "").replace("`", "").toLowerCase(Locale.ROOT);
                 name = name.substring(name.lastIndexOf('.') + 1);
                 for (String constraint : known)
                     if (name.equals(constraint) || name.startsWith(constraint + "_index_")) return true;

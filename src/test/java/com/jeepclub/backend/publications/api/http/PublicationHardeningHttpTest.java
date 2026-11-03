@@ -65,8 +65,10 @@ class PublicationHardeningHttpTest {
         when(comments.create(anyLong(),anyLong(),any(),any())).thenThrow(integrity("uk_publication_comment_image_position"));
         mvc.perform(post("/publications/1/comments").contentType(MediaType.APPLICATION_JSON).content("{\"text\":\"valid\"}"))
                 .andExpect(status().isInternalServerError()).andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"));
-        when(likes.like(anyLong(),anyLong())).thenThrow(integrity("uk_publication_like_member"));
-        mvc.perform(post("/publications/1/likes")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PUBLICATION_LIKE_CONFLICT"));
+        for(String name:List.of("uk_publication_like_member","PUBLIC.UK_PUBLICATION_LIKE_MEMBER_INDEX_9","`publication_likes`.`uk_publication_like_member`")) {
+            doThrow(integrity(name)).when(likes).like(anyLong(),anyLong());
+            mvc.perform(post("/publications/1/likes")).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PUBLICATION_LIKE_CONFLICT"));
+        }
     }
     @Test void oversizedTextAndImagesAreRejectedBeforeServiceWork() throws Exception {
         for (var body : List.of("{\"text\":\""+"x".repeat(10001)+"\"}","{\"images\":["+String.join(",",Collections.nCopies(11,"{\"storageKey\":\"invalid\",\"position\":0}"))+"]}")) {
