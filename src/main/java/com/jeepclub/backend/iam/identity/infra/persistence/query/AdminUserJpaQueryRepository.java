@@ -87,13 +87,13 @@ public class AdminUserJpaQueryRepository {
         if (filter.membershipNumber() != null) result.add(filter.membershipIdentityId() == null
                 ? cb.disjunction() : cb.equal(user.get("id"), filter.membershipIdentityId()));
         if (filter.id() != null) result.add(cb.equal(user.get("id"), filter.id()));
-        if (filter.name() != null) result.add(cb.like(cb.lower(user.get("name")), like(filter.name())));
+        if (filter.name() != null) result.add(cb.like(cb.lower(user.get("name")), like(filter.name()), '!'));
         if (filter.birthDate() != null) result.add(cb.equal(user.get("birthDate"), filter.birthDate()));
-        if (filter.email() != null) result.add(cb.like(cb.lower(user.get("email")), like(filter.email())));
+        if (filter.email() != null) result.add(cb.like(cb.lower(user.get("email")), like(filter.email()), '!'));
         if (filter.cpf() != null) result.add(cb.equal(user.get("cpf"), filter.cpf()));
         if (filter.rg() != null) result.add(cb.equal(user.get("rg"), filter.rg()));
         if (filter.phoneNumber() != null) {
-            result.add(cb.like(user.get("phoneNumber"), "%" + filter.phoneNumber() + "%"));
+            result.add(cb.like(user.get("phoneNumber"), like(filter.phoneNumber()), '!'));
         }
         if (filter.status() != null) result.add(cb.equal(user.get("status"), filter.status()));
         if (filter.createdFrom() != null) {
@@ -111,11 +111,11 @@ public class AdminUserJpaQueryRepository {
         if (filter.query() != null) {
             String search = like(filter.query());
             result.add(cb.or(
-                    cb.like(cb.lower(user.get("name")), search),
-                    cb.like(cb.lower(user.get("email")), search),
-                    cb.like(user.get("cpf"), search),
-                    cb.like(user.get("rg"), search),
-                    cb.like(user.get("phoneNumber"), search),
+                    cb.like(cb.lower(user.get("name")), search, '!'),
+                    cb.like(cb.lower(user.get("email")), search, '!'),
+                    cb.like(user.get("cpf"), search, '!'),
+                    cb.like(user.get("rg"), search, '!'),
+                    cb.like(user.get("phoneNumber"), search, '!'),
                     filter.queryMembershipIdentityId() == null ? cb.disjunction() : cb.equal(user.get("id"),filter.queryMembershipIdentityId())
             ));
         }
@@ -128,7 +128,7 @@ public class AdminUserJpaQueryRepository {
             CriteriaBuilder cb,
             Pageable pageable
     ) {
-        List<Order> orders = pageable.getSort().stream()
+        List<Order> orders = com.jeepclub.backend.iam.identity.infra.persistence.sort.UserSortMapper.map(pageable).getSort().stream()
                 .map(sort -> sort.isAscending()
                         ? cb.asc(user.get(sort.getProperty()))
                         : cb.desc(user.get(sort.getProperty())))
@@ -191,6 +191,7 @@ public class AdminUserJpaQueryRepository {
     }
 
     private static String like(String value) {
-        return "%" + value.toLowerCase(Locale.ROOT) + "%";
+        return "%" + value.trim().toLowerCase(Locale.ROOT)
+                .replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
 }
