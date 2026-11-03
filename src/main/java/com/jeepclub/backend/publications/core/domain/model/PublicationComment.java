@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class PublicationComment {
+    public static final int MAX_TEXT_LENGTH = 10_000;
+    public static final int MAX_IMAGES = 10;
     private final Long id;
     private final Long publicationId;
     private final Long authorUserId;
@@ -34,7 +36,16 @@ public final class PublicationComment {
 
     public static PublicationComment create(Long publicationId, Long authorUserId, String content,
                                             List<PublicationCommentImage> images, Instant now) {
+        validatePayloadSize(content, images == null ? 0 : images.size());
         return new PublicationComment(null, publicationId, authorUserId, content, now, now, images);
+    }
+
+    /** Input-only caps: historical comments remain readable after limits are introduced. */
+    public static void validatePayloadSize(String content, int imageCount) {
+        if (content != null && content.length() > MAX_TEXT_LENGTH)
+            throw new IllegalArgumentException("Comment text exceeds " + MAX_TEXT_LENGTH + " characters.");
+        if (imageCount > MAX_IMAGES)
+            throw new IllegalArgumentException("Comment exceeds " + MAX_IMAGES + " images.");
     }
 
     public static PublicationComment reconstitute(Long id, Long publicationId, Long authorUserId, String content,

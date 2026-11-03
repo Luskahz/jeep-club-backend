@@ -1,5 +1,27 @@
 # Publications
 
+## Hardening — BACK-463 (BACK-473 / BACK-474 / BACK-475)
+
+Novos comentários aceitam até 10000 unidades UTF-16 no texto recebido, antes de trim,
+e até 10 imagens (limites técnicos independentes da galeria editorial). Texto, imagens
+ou ambos continuam válidos; vazio e limite+1 retornam RFC 9457 400 antes de storage
+ou persistência. Comentários históricos maiores continuam legíveis.
+
+NPE inesperado e falhas SQL genéricas permanecem erros internos sanitizados 500.
+Event aceita conflito de lock e apenas constraints nomeadas conhecidas como 409;
+social reconhece exclusivamente uk_publication_like_member para conflito de like.
+Integridade de comentário não recebe código de like.
+
+A aplicação e suas migrations continuam em MySQL. A validação adicional PostgreSQL 17
+usa containers descartáveis, schema Hibernate com halt-on-error e nenhum banco externo:
+`./mvnw -Ppublications-postgresql -DskipUnitTests=true verify`.
+O contexto de teste completo exclui somente a proteção de DDL de produção; essa proteção
+não foi relaxada. As mesmas rotinas Event/Billing, likes, Service e histórico são
+executadas em transações reais. PostgreSQL exige default boolean false para
+legacy_deleted; o override de dialeto preserva MySQL e dispensa migration.
+O perfil mysql-migrations continua cobrindo o banco de produção separadamente.
+Matriz, resultados e limitações: `docs/testing/admin-hardening.md` na raiz.
+
 ## Cancelamentos de Event e inscrição — BACK-460
 
 O cancelamento de Event trata todos os seus contextos financeiros, inclusive ciclos

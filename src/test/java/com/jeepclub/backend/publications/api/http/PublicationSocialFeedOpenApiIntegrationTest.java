@@ -24,6 +24,8 @@ class PublicationSocialFeedOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/publications/feed']['get']['x-required-permissions'][0]").value("PUBLICATIONS_FEED_READ"))
                 .andExpect(jsonPath("$['paths']['/publications/{publicationId}']['get']['x-required-permissions'][0]").value("PUBLICATIONS_PUBLICATION_READ"))
                 .andExpect(jsonPath("$['paths']['/publications/feed']['get']['responses']['200']").exists())
+                .andExpect(jsonPath("$['components']['schemas']['CommentRequest']['properties']['text']['maxLength']").value(10000))
+                .andExpect(jsonPath("$['components']['schemas']['CommentRequest']['properties']['images']['maxItems']").value(10))
                 .andExpect(jsonPath("$['paths']['/publications/{publicationId}/comments']['post']['responses']['201']").exists());
     }
 }
