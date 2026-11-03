@@ -23,6 +23,16 @@ import java.util.Set;
 public class UserRepositoryAdapter implements UserRepository {
     private final jakarta.persistence.EntityManager entityManager;
 
+    @Override
+    public List<Long> findIdsByName(String name, int limit) {
+        if (limit < 1 || limit > 501) throw new IllegalArgumentException("Invalid name query limit.");
+        var cb = entityManager.getCriteriaBuilder(); var query = cb.createQuery(Long.class);
+        var root = query.from(UserEntity.class);
+        String pattern = "%" + name.trim().toLowerCase(Locale.ROOT).replace("!","!!").replace("%","!%").replace("_","!_") + "%";
+        query.select(root.get("id")).where(cb.like(cb.lower(root.get("name")),pattern,'!')).orderBy(cb.asc(root.get("id")));
+        return entityManager.createQuery(query).setMaxResults(limit).getResultList();
+    }
+
     public List<User> findByIds(Collection<Long> ids) {
         return ids.isEmpty() ? List.of() : jpaRepository.findAllById(ids).stream().map(mapper::toDomain).toList();
     }

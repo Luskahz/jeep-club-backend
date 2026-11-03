@@ -1,5 +1,21 @@
 # Identity
 
+## Busca administrativa — BACK-585 / integração BACK-573
+
+`GET /identity/admin/users` mantém contrato, filtros AND, q OR, fields e matrícula
+vigente via Membership. Os padrões LIKE escapam literalmente %, _ e ! com escape
+explícito; texto usa trim e case-insensitive. Sort mantém a allowlist e acrescenta
+id asc quando id não foi pedido, preservando a direção de id explícito. Matrícula
+continua não ordenável. A apresentação de números usa um único batch por página.
+
+O contrato público `UserQuery.findIdsByName` oferece aos consumidores somente IDs
+por trecho literal do nome, em qualquer status administrativo. Vazio não consulta;
+termos têm no máximo 150 caracteres. A query seleciona no máximo 501 IDs para detectar
+overflow e retorna até 500 ou `UserNameSearchTooBroadException`, sem truncar o conjunto.
+Nenhum nome/contato/entidade é materializado nessa busca. O consumidor traduz overflow
+para seu erro funcional e solicita um termo mais específico. Essa extensão suporta
+Vehicles sem acoplar repositórios nem tabelas entre módulos.
+
 ## Lifecycle vigente — BACK-512
 
 Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,

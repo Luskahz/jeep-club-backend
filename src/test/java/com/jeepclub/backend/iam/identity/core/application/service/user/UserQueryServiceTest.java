@@ -16,6 +16,17 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class UserQueryServiceTest {
+    @Test void nameSearchHasAHardLimitAndNeverSilentlyTruncates() {
+        when(repository.findIdsByName("literal %_!",501)).thenReturn(LongStream.rangeClosed(1,500).boxed().toList());
+        assertThat(query.findIdsByName(" literal %_! ")).hasSize(500);
+        when(repository.findIdsByName("broad",501)).thenReturn(LongStream.rangeClosed(1,501).boxed().toList());
+        assertThatThrownBy(() -> query.findIdsByName("broad"))
+                .isInstanceOf(com.jeepclub.backend.iam.identity.api.module.exception.UserNameSearchTooBroadException.class);
+        clearInvocations(repository);
+        assertThat(query.findIdsByName(null)).isEmpty();assertThat(query.findIdsByName(" ")).isEmpty();
+        assertThatThrownBy(() -> query.findIdsByName("x".repeat(151))).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(repository);
+    }
     private static final Instant CREATED = Instant.parse("2026-10-01T12:00:00Z");
     private final UserRepository repository = mock(UserRepository.class);
     private final UserQueryService query = new UserQueryService(repository);

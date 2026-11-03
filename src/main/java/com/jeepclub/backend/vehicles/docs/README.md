@@ -1,5 +1,24 @@
 # Vehicles
 
+## Busca administrativa — BACK-573
+
+`GET /vehicles/list/admin` mantém status default ACTIVE, size default 10 (máximo 50)
+e o resumo completo, inclusive nulls. q combina com OR nome do proprietário, placa,
+nickname e model; plate/ownerId/nickname/model/status combinam com AND. A consulta e
+count aplicam os mesmos predicados antes de LIMIT/OFFSET; placa ignora máscara, texto
+usa trim, case-insensitive e LIKE literal. Sort tem allowlist e desempate id asc.
+Fields=ID,NICKNAME,PLATE,PHOTO,MODEL_YEAR,MODEL,COLOR,OWNER_ID,OWNER_NAME,STATUS seleciona
+colunas reais; campos não pedidos são omitidos e um null solicitado é preservado.
+OWNER_NAME usa ownerId somente como chave auxiliar interna, seguida de um batch.
+
+A porta pública Identity UserQuery.findIdsByName seleciona até 501 IDs para detectar
+overflow: retorna no máximo 500 ou erro 400 VEHICLE_INVALID_SEARCH solicitando refinar
+q, nunca uma lista truncada. Não faz join entre módulos nem pesquisa todos os usuários
+em memória. O limite aplica-se à pesquisa por nome em q mesmo com filtros específicos;
+o custo de contains continua proporcional ao plano do banco, sem promessa de índice.
+Página negativa, size menor que um e fields/sort/filtros inválidos retornam RFC 9457 400.
+Projeção não carrega entidades, galerias ou nomes quando dispensáveis.
+
 ## Galeria vigente — BACK-525
 
 Vehicle possui galeria própria imutável de zero a cinco imagens, com ordem,

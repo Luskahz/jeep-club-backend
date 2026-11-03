@@ -16,6 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class VehiclesOpenApiIntegrationTest {
+    @Test void administrativeSearchDocumentsAllFiltersAndProjection() throws Exception {
+        mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['parameters'][*].name")
+                        .value(org.hamcrest.Matchers.hasItems("q","plate","ownerId","nickname","model","status","fields","page","size","sort")))
+                .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['responses']['400']").exists());
+    }
 
     @Autowired
     private MockMvc mockMvc;

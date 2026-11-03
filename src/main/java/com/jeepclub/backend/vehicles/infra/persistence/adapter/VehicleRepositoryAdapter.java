@@ -28,6 +28,13 @@ import java.util.Optional;
 public class VehicleRepositoryAdapter implements VehicleRepository {
     private final jakarta.persistence.EntityManager entityManager;
 
+    @Override
+    public Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSearchResult> search(
+            com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter filter,
+            java.util.Set<com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField> fields, Pageable pageable) {
+        return new com.jeepclub.backend.vehicles.infra.persistence.query.AdminVehicleJpaQuery(entityManager).findAll(filter,fields,pageable);
+    }
+
 
     private static final String PLATE_CONSTRAINT = "uk_vehicle_plate";
     private static final String RENAVAM_CONSTRAINT = "uk_vehicle_renavam";

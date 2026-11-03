@@ -140,27 +140,32 @@ public class AdminVehicleController {
     }
 
     @GetMapping("/list/admin")
+    @ApiResponse(responseCode="400",description="Filtros, fields ou sort inválidos; q com mais de 500 proprietários exige termo mais específico.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_READ')")
     @RequiredPermission("VEHICLES_VEHICLE_READ")
     @Operation(
             summary = "Listar todos os veículos",
-            description = "Retorna uma página zero-based de todos os veículos ACTIVE. `size` é 10 por padrão e limitado globalmente a 50; `sort` usa `id` por padrão.",
+            description = "Página zero-based de veículos; status default ACTIVE, size 10 e máximo global 50. q usa OR entre nome do proprietário (até 500 IDs, sem truncamento), placa normalizada sem máscara, nickname e model. plate,ownerId,nickname,model,status combinam com AND antes de página/count. Texto literal case-insensitive com trim: %, _ e ! não são curingas. fields opcional seleciona colunas e omite campos não pedidos; default preserva o resumo completo e seus nulls. Sort permitido nos campos persistidos do resumo (exceto ownerName), brand,manufacturingYear,seatingCapacity,fuelType,engineDisplacement,towing,createdAt,updatedAt,archivedAt; id asc é o desempate quando ausente. Proprietários com nome muito amplo exigem refinar q (400).",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Página de veículos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = AdminVehiclePageResponseSchema.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),
                     @ApiResponse(responseCode = "403", description = "Usuário sem a permissão VEHICLES_VEHICLE_READ.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
             }
     )
-    public ResponseEntity<PageResponse<AdminListResponseDTO>> listAllVehicles(
-            @org.springframework.web.bind.annotation.RequestParam(defaultValue="ACTIVE") com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus status,
+    public ResponseEntity<PageResponse<?>> listAllVehicles(
+            @Valid @ParameterObject @org.springframework.web.bind.annotation.ModelAttribute com.jeepclub.backend.vehicles.api.http.dto.list.AdminVehicleFilterDTO filters,
+            @Parameter(description="ID,NICKNAME,PLATE,PHOTO,MODEL_YEAR,MODEL,COLOR,OWNER_ID,OWNER_NAME,STATUS. Omitido/vazio preserva resumo completo; OWNER_NAME não expõe ownerId auxiliar.")
+            @org.springframework.web.bind.annotation.RequestParam(required=false) java.util.Set<com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField> fields,
+            @Parameter(hidden=true) @org.springframework.web.bind.annotation.RequestParam(required=false,name="page") @jakarta.validation.constraints.Min(0) Integer requestedPage,
+            @Parameter(hidden=true) @org.springframework.web.bind.annotation.RequestParam(required=false,name="size") @jakarta.validation.constraints.Min(1) Integer requestedSize,
             @ParameterObject
             @PageableDefault(size = 10, sort = "id") Pageable pageable
     ) {
-        return ResponseEntity.ok(PageResponse.from(
-                (status == com.jeepclub.backend.vehicles.core.domain.enums.VehicleStatus.ACTIVE
-                    ? adminVehicleService.findAllWithOwners(pageable)
-                    : adminVehicleService.findAllWithOwners(status,pageable)).map(AdminListResponseDTO::from)
-        ));
+        boolean complete=fields==null||fields.isEmpty();
+        var selected=complete?java.util.EnumSet.allOf(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.class):fields;
+        var page=adminVehicleService.search(filters.toFilter(),selected,pageable);
+        return ResponseEntity.ok(complete?PageResponse.from(page.map(AdminListResponseDTO::from)):
+                PageResponse.from(page.map(row -> AdminListResponseDTO.selected(row,selected))));
     }
 
     @GetMapping("/detail/admin/{vehicleId}")
