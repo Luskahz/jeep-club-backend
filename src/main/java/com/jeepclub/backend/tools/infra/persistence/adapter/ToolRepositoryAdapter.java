@@ -31,6 +31,36 @@ public class ToolRepositoryAdapter implements ToolRepository {
     private final ToolHistoryMapper historyMapper;
 
     @Override
+    public Page<com.jeepclub.backend.tools.core.application.result.AdminToolResult> search(
+            com.jeepclub.backend.tools.core.application.query.AdminToolFilter filter,
+            java.util.Set<com.jeepclub.backend.tools.core.application.query.AdminToolField> fields, Pageable pageable) {
+        var sort = pageable.getSort();
+        var allowed = java.util.Set.of("id","name","status","userId","description","photoStorageKey","createdAt","updatedAt","archivedAt");
+        for (var order : sort) if (!allowed.contains(order.getProperty()))
+            throw new com.jeepclub.backend.tools.core.application.exception.InvalidToolSortException(order.getProperty());
+        if (sort.getOrderFor("id") == null) sort = sort.and(org.springframework.data.domain.Sort.by("id"));
+        var stable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(),pageable.getPageSize(),sort);
+        var cb = entityManager.getCriteriaBuilder();
+        var query = cb.createTupleQuery(); var root = query.from(ToolEntity.class);
+        java.util.List<jakarta.persistence.criteria.Selection<?>> selections = new java.util.ArrayList<>();
+        for (var field : fields) selections.add(root.get(field.property()).alias(field.property()));
+        query.multiselect(selections);
+        var specification = ToolSpecifications.administrative(filter);
+        query.where(specification.toPredicate(root,query,cb));
+        query.orderBy(sort.stream().map(o -> o.isAscending()?cb.asc(root.get(o.getProperty())):cb.desc(root.get(o.getProperty()))).toList());
+        var content = entityManager.createQuery(query).setFirstResult(Math.toIntExact(stable.getOffset()))
+                .setMaxResults(stable.getPageSize()).getResultList().stream().map(t ->
+                    new com.jeepclub.backend.tools.core.application.result.AdminToolResult(
+                        fields.contains(com.jeepclub.backend.tools.core.application.query.AdminToolField.ID)?t.get("id",Long.class):null,
+                        fields.contains(com.jeepclub.backend.tools.core.application.query.AdminToolField.NAME)?t.get("name",String.class):null,
+                        fields.contains(com.jeepclub.backend.tools.core.application.query.AdminToolField.STATUS)?t.get("status",ToolStatus.class):null,
+                        fields.contains(com.jeepclub.backend.tools.core.application.query.AdminToolField.USER_ID)?t.get("userId",Long.class):null)).toList();
+        var count = cb.createQuery(Long.class); var counted = count.from(ToolEntity.class);
+        count.select(cb.count(counted)); count.where(specification.toPredicate(counted,count,cb));
+        return new org.springframework.data.domain.PageImpl<>(content,stable,entityManager.createQuery(count).getSingleResult());
+    }
+
+    @Override
     public Page<Tool> findAll(String name, ToolStatus status, Pageable pageable) {
         return jpaRepository.findAll(ToolSpecifications.withFilters(name, status), pageable)
                 .map(mapper::toDomain);

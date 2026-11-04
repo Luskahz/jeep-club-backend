@@ -117,6 +117,16 @@
         </dependency>
         <dependency>
             <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
@@ -461,10 +471,23 @@
             </plugin><plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <configuration><argLine>@{surefireArgLine}</argLine></configuration>
+                <configuration><argLine>@{surefireArgLine}</argLine><includes><include>**/*MySqlIT.java</include><include>**/MySqlMigrationIT.java</include></includes></configuration>
                 <executions><execution><goals>
                     <goal>integration-test</goal><goal>verify</goal>
                 </goals></execution></executions>
+            </plugin></plugins></build>
+        </profile>
+        <profile>
+            <id>publications-postgresql</id>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration><skipTests>${skipUnitTests}</skipTests></configuration>
+            </plugin><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration><argLine>@{surefireArgLine}</argLine><includes><include>**/*PostgresIT.java</include></includes></configuration>
+                <executions><execution><goals><goal>integration-test</goal><goal>verify</goal></goals></execution></executions>
             </plugin></plugins></build>
         </profile>
         <profile>

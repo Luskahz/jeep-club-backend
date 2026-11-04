@@ -1,5 +1,33 @@
 # Identity
 
+## Busca administrativa — BACK-585 / integração BACK-573
+
+`GET /identity/admin/users` mantém contrato, filtros AND, q OR, fields e matrícula
+vigente via Membership. Os padrões LIKE escapam literalmente %, _ e ! com escape
+explícito; texto usa trim e case-insensitive. Sort mantém a allowlist e acrescenta
+id asc quando id não foi pedido, preservando a direção de id explícito. Matrícula
+continua não ordenável. A apresentação de números usa um único batch por página.
+
+O contrato público `UserQuery.findIdsByName` oferece aos consumidores somente IDs
+por trecho literal do nome, em qualquer status administrativo. Vazio não consulta;
+termos têm no máximo 150 caracteres. A query seleciona no máximo 501 IDs para detectar
+overflow e retorna até 500 ou `UserNameSearchTooBroadException`, sem truncar o conjunto.
+Nenhum nome/contato/entidade é materializado nessa busca. O consumidor traduz overflow
+para seu erro funcional e solicita um termo mais específico. Esse contrato permanece
+disponível, mas não é usado no OR de Vehicles: seu limite não pode interromper outros
+critérios da busca geral.
+
+`UserNameCriteria` oferece uma composição somente leitura para consultas JPA na
+mesma unidade de persistência. Identity constrói um EXISTS correlacionado por ID,
+com os mesmos trim/LIKE literal/case-insensitive e todos os status administrativos.
+O consumidor passa a expressão de ID e a consulta externa; não recebe entidade,
+repository, tabela/SQL nem coleção de IDs. Não executa consultas durante a composição.
+Conteúdo e count devem usar o mesmo predicado, e a página projetada deve ser limitada.
+Essa fronteira técnica fica restrita à infraestrutura do consumidor: não introduz JPA
+no core nem suporta composição entre bancos/unidades de persistência diferentes.
+Assim Vehicles mantém OR completo para qualquer cardinalidade, com duas consultas e
+batch de apresentação limitado à página, sem alterar o contrato anterior `UserQuery`.
+
 ## Lifecycle vigente — BACK-512
 
 Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,

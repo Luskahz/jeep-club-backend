@@ -15,6 +15,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.tools")
 public class ToolExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.tools.core.application.exception.InvalidToolSortException.class)
+    public ResponseEntity<ApiErrorResponse> invalidSort(Exception exception) {
+        return buildErrorResponse("TOOL_INVALID_SORT", exception.getMessage(), HttpStatus.BAD_REQUEST);
+    }
     @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
     public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
         return buildErrorResponse("TOOL_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);

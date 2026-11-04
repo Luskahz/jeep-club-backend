@@ -27,6 +27,14 @@ import java.util.Optional;
 @Repository
 public class VehicleRepositoryAdapter implements VehicleRepository {
     private final jakarta.persistence.EntityManager entityManager;
+    private final com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames;
+
+    @Override
+    public Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSearchResult> search(
+            com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter filter,
+            java.util.Set<com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField> fields, Pageable pageable) {
+        return new com.jeepclub.backend.vehicles.infra.persistence.query.AdminVehicleJpaQuery(entityManager,ownerNames).findAll(filter,fields,pageable);
+    }
 
 
     private static final String PLATE_CONSTRAINT = "uk_vehicle_plate";

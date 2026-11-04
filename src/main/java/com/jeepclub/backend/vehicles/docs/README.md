@@ -1,5 +1,29 @@
 # Vehicles
 
+## Busca administrativa — BACK-573
+
+`GET /vehicles/list/admin` mantém status default ACTIVE, size default 10 (máximo 50)
+e o resumo completo, inclusive nulls. q combina com OR nome do proprietário, placa,
+nickname e model; plate/ownerId/nickname/model/status combinam com AND. A consulta e
+count aplicam os mesmos predicados antes de LIMIT/OFFSET; placa ignora máscara, texto
+usa trim, case-insensitive e LIKE literal. Sort tem allowlist e desempate id asc.
+Fields=ID,NICKNAME,PLATE,PHOTO,MODEL_YEAR,MODEL,COLOR,OWNER_ID,OWNER_NAME,STATUS seleciona
+colunas reais; campos não pedidos são omitidos e um null solicitado é preservado.
+OWNER_NAME usa ownerId somente como chave auxiliar interna, seguida de um batch.
+
+A capacidade pública Identity `UserNameCriteria` constrói o predicado de nome como
+EXISTS correlacionado pelo ID, dentro do OR de conteúdo e count. Somente Identity
+conhece sua entidade e seu mapping; Vehicles passa uma expressão ownerId ao contrato
+público na infraestrutura. Nenhum tipo JPA entra no core. Esse contrato de composição
+é específico à unidade de persistência compartilhada do monólito, não uma API remota.
+Não transporta listas de IDs, não materializa proprietários e não omite nomes quando
+há mais de 500 correspondências. Cada busca executa dois SELECTs (página limitada e
+count escalar), mais um único batch de apresentação de até 50 proprietários quando
+OWNER_NAME é solicitado. O antigo limite de 500 não se aplica a q. q permanece
+limitado a 150 caracteres; contains/count podem fazer scan, sem promessa de índice.
+Página negativa, size menor que um e fields/sort/filtros inválidos retornam RFC 9457 400.
+Projeção não carrega entidades, galerias ou nomes quando dispensáveis.
+
 ## Galeria vigente — BACK-525
 
 Vehicle possui galeria própria imutável de zero a cinco imagens, com ordem,

@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = PublicationSocialController.class)
 public class PublicationSocialExceptionHandler extends ApiExceptionHandler {
+    private final com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler global;
+    public PublicationSocialExceptionHandler(com.jeepclub.backend.platform.web.exception.GlobalExceptionHandler global) {this.global=global;}
     @ExceptionHandler(PublicationNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> notFound(Exception ignored) {
         return buildErrorResponse("PUBLICATION_NOT_FOUND", "Publication was not found.", HttpStatus.NOT_FOUND);
@@ -27,7 +29,9 @@ public class PublicationSocialExceptionHandler extends ApiExceptionHandler {
         return buildErrorResponse("PUBLICATION_COMMENT_IMAGE_NOT_FOUND", "Comment image was not found.", HttpStatus.NOT_FOUND);
     }
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<ApiErrorResponse> conflict(Exception ignored) {
+    public ResponseEntity<? extends org.springframework.http.ProblemDetail> conflict(DataIntegrityViolationException failure) {
+        if (!PublicationConstraintConflicts.matches(failure, java.util.Set.of("uk_publication_like_member")))
+            return ResponseEntity.internalServerError().body(global.handleUnexpectedException(failure,org.springframework.context.i18n.LocaleContextHolder.getLocale()));
         return buildErrorResponse("PUBLICATION_LIKE_CONFLICT", "Concurrent publication interaction conflict.", HttpStatus.CONFLICT);
     }
 }

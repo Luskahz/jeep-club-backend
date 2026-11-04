@@ -11,6 +11,25 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class PublicationSocialWorkflowTest {
+    @Test void commentLimitsAcceptExactBoundariesAndRejectBeforeAnyExternalWork() {
+        var publications = mock(PublicationRepository.class);
+        var comments = mock(PublicationCommentRepository.class);
+        var images = mock(ImageMediaService.class);
+        var service = new PublicationCommentService(publications,comments,images,CLOCK);
+        var gallery = java.util.stream.IntStream.range(0,10).mapToObj(i -> new PublicationCommentImage(
+                "images/2026/09/27/550e8400-e29b-41d4-a716-4466554400"+String.format("%02d",i)+".jpg",i)).toList();
+        when(publications.findByIdForUpdate(1L)).thenReturn(Optional.of(publishedNotice()));
+        when(comments.save(any())).thenAnswer(a -> a.getArgument(0));
+        assertThat(service.create(1L,9L,"x".repeat(10000),gallery).getImages()).hasSize(10);
+        verify(images,times(10)).requireExisting(anyString());
+        clearInvocations(publications,comments,images);
+        var tooMany = new java.util.ArrayList<>(gallery);tooMany.add(new PublicationCommentImage("images/2026/09/27/550e8400-e29b-41d4-a716-446655440099.jpg",10));
+        assertThatThrownBy(() -> service.create(1L,9L,"x".repeat(10001),List.of())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.create(1L,9L,null,tooMany)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.create(1L,9L,"  ",List.of())).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(publications,comments,images);
+        assertThat(PublicationComment.reconstitute(1L,1L,9L,"x".repeat(10001),NOW,NOW,List.of()).getContent()).hasSize(10001);
+    }
     private static final Instant NOW = Instant.parse("2026-09-27T12:00:00Z");
     private static final Clock CLOCK = Clock.fixed(NOW, ZoneOffset.UTC);
     private static final String KEY = "images/2026/09/27/550e8400-e29b-41d4-a716-446655440000.jpg";

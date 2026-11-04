@@ -16,6 +16,15 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 class UserQueryService implements UserQuery {
+    @Override
+    @Transactional(readOnly=true)
+    public Set<Long> findIdsByName(String name) {
+        if (name == null || name.isBlank()) return Set.of();
+        if (name.length() > 150) throw new IllegalArgumentException("Name search is limited to 150 characters.");
+        var ids = userRepository.findIdsByName(name.trim(),501);
+        if (ids.size() > 500) throw new com.jeepclub.backend.iam.identity.api.module.exception.UserNameSearchTooBroadException();
+        return Set.copyOf(ids);
+    }
     @Transactional(readOnly=true)
     public List<UserDetails> findByIds(Collection<Long> ids) {
         if (ids == null || ids.isEmpty()) return List.of();

@@ -45,7 +45,12 @@ public class PublicationSocialController {
         static LikeResponse from(PublicationLike like) { return new LikeResponse(like.id(), like.publicationId(), like.createdAt()); }
     }
     public record CommentImage(String storageKey, int position) {}
-    public record CommentRequest(String text, List<CommentImage> images) {}
+    public record CommentRequest(
+            @jakarta.validation.constraints.Size(max=PublicationComment.MAX_TEXT_LENGTH)
+            @Schema(maxLength=PublicationComment.MAX_TEXT_LENGTH,description="Até 10000 unidades UTF-16 antes de trim; opcional quando há imagens.") String text,
+            @jakarta.validation.constraints.Size(max=PublicationComment.MAX_IMAGES)
+            @io.swagger.v3.oas.annotations.media.ArraySchema(maxItems=PublicationComment.MAX_IMAGES)
+            List<CommentImage> images) {}
     public record CommentResponse(Long id, Long publicationId, Long authorUserId, String text,
                                   List<CommentImage> images, Instant createdAt) {
         static CommentResponse from(PublicationComment comment) {
@@ -77,14 +82,15 @@ public class PublicationSocialController {
     @PostMapping("/comments")
     @PreAuthorize("hasAuthority('PUBLICATIONS_COMMENT_CREATE')")
     @RequiredPermission("PUBLICATIONS_COMMENT_CREATE")
-    @Operation(summary = "Comment on a published publication", description = "Text, global image storage keys, or both are required; an empty comment is rejected.")
+    @Operation(summary = "Comment on a published publication", description = "Text (up to 10000 UTF-16 units before trim), up to 10 global image keys, or both. Empty or oversized input returns RFC 9457 400 before storage/persistence work. These are technical comment limits, independent of the publication gallery.")
     @ApiResponse(responseCode = "201", description = "Comment created")
     @ResponseStatus(HttpStatus.CREATED)
-    public CommentResponse comment(@PathVariable Long publicationId, @RequestBody CommentRequest request,
+    public CommentResponse comment(@PathVariable Long publicationId, @jakarta.validation.Valid @RequestBody CommentRequest request,
                                    @AuthenticationPrincipal UserPrincipal principal) {
         if (request == null || (request.images() != null && request.images().stream().anyMatch(java.util.Objects::isNull))) {
             throw new IllegalArgumentException("Invalid comment payload.");
         }
+        PublicationComment.validatePayloadSize(request.text(), request.images() == null ? 0 : request.images().size());
         var gallery = request.images() == null ? List.<PublicationCommentImage>of() : request.images().stream()
                 .map(i -> new PublicationCommentImage(i.storageKey(), i.position())).toList();
         return CommentResponse.from(comments.create(publicationId, principal.getUserId(), request.text(), gallery));

@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface UserRepository {
+    /** Select at most limit IDs; callers must detect overflow rather than truncate results. */
+    List<Long> findIdsByName(String name, int limit);
     List<User> findByIds(Collection<Long> ids);
     List<User> findAfterId(long afterId, int limit);
 

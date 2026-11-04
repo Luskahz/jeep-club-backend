@@ -28,7 +28,7 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
+@DataJpaTest(properties="spring.jpa.properties.hibernate.session_factory.statement_inspector=com.jeepclub.backend.tools.infra.persistence.adapter.ToolRepositoryAdapterTest$Sql")
 @ActiveProfiles("test")
 @ContextConfiguration(classes = ToolRepositoryAdapterTest.JpaTestConfiguration.class)
 @Import({
@@ -51,6 +51,44 @@ class ToolRepositoryAdapterTest {
     private ToolHistoryJpaRepository historyJpaRepository;
     @Autowired
     private EntityManager entityManager;
+
+    @Test
+    void administrativeSearchFiltersBeforeCountAndProjectsOnlyRequestedColumns() {
+        var first = repository.save(tool());
+        var second = repository.save(tool());
+        repository.save(Tool.create("Different", "Macaco only in description", 8L, CREATED_AT));
+        entityManager.flush(); entityManager.clear();
+        var filter = new com.jeepclub.backend.tools.core.application.query.AdminToolFilter("  MACACO ", "mac", ToolStatus.ACTIVE, 7L);
+        var fields = java.util.Set.of(com.jeepclub.backend.tools.core.application.query.AdminToolField.NAME);
+        Sql.statements.clear();
+        var page = repository.search(filter, fields, PageRequest.of(1,1,org.springframework.data.domain.Sort.by("name")));
+        assertThat(Sql.statements).hasSize(2);
+        assertThat(Sql.statements.get(0).substring(0,Sql.statements.get(0).indexOf(" from ")))
+                .contains(".name").doesNotContain(".description", ".user_id", ".id");
+        assertThat(page.getTotalElements()).isEqualTo(2);
+        assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.getContent()).singleElement().satisfies(r -> {assertThat(r.name()).isEqualTo(first.getName());assertThat(r.id()).isNull();assertThat(r.userId()).isNull();});
+        var all = java.util.EnumSet.allOf(com.jeepclub.backend.tools.core.application.query.AdminToolField.class);
+        assertThat(repository.search(filter,all,PageRequest.of(1,1,org.springframework.data.domain.Sort.by("name"))).getContent())
+                .extracting(r -> r.id()).containsExactly(second.getId());
+        assertThat(repository.search(filter,all,PageRequest.of(2,1))).isEmpty();
+        assertThatThrownBy(() -> repository.search(filter,all,PageRequest.of(0,1,org.springframework.data.domain.Sort.by("ownerName"))))
+                .isInstanceOf(com.jeepclub.backend.tools.core.application.exception.InvalidToolSortException.class);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"%","_","!","!%_","\\"})
+    void administrativeNameAndQEscapeLiteralCharacters(String marker) {
+        var match = repository.save(Tool.create("Jack"+marker+"stand",null,7L,CREATED_AT));
+        repository.save(Tool.create("JackXstand",null,7L,CREATED_AT));
+        for (var filter : java.util.List.of(
+                new com.jeepclub.backend.tools.core.application.query.AdminToolFilter(marker,null,null,null),
+                new com.jeepclub.backend.tools.core.application.query.AdminToolFilter(null,marker,null,null))) {
+            var page = repository.search(filter,java.util.EnumSet.allOf(com.jeepclub.backend.tools.core.application.query.AdminToolField.class),PageRequest.of(0,10));
+            assertThat(page.getContent()).extracting(r -> r.id()).containsExactly(match.getId());
+            assertThat(page.getTotalElements()).isEqualTo(1);
+        }
+    }
 
     @Test
     void deleteSavesHistoryAndRemovesOperationalEntity() {
@@ -145,5 +183,10 @@ class ToolRepositoryAdapterTest {
     @EnableJpaRepositories(basePackageClasses = ToolJpaRepository.class)
     @EntityScan(basePackageClasses = ToolEntity.class)
     static class JpaTestConfiguration {
+    }
+
+    public static class Sql implements org.hibernate.resource.jdbc.spi.StatementInspector {
+        static final java.util.List<String> statements = new java.util.ArrayList<>();
+        @Override public String inspect(String sql) {statements.add(sql);return sql;}
     }
 }

@@ -39,6 +39,21 @@ class UserSortMapperTest {
     }
 
     @Test
+    void appendsIdWithoutOverridingAnExplicitDirection() {
+        assertThat(UserSortMapper.map(PageRequest.of(0, 2, Sort.by("name", "email"))).getSort())
+                .isEqualTo(Sort.by("name", "email", "id"));
+        var explicit = Sort.by(Sort.Order.desc("name"), Sort.Order.desc("id"));
+        assertThat(UserSortMapper.map(PageRequest.of(0, 2, explicit)).getSort()).isEqualTo(explicit);
+        assertThat(UserSortMapper.map(PageRequest.of(0, 2)).getSort()).isEqualTo(Sort.by("id"));
+    }
+
+    @Test
+    void membershipNumberRemainsUnsortable() {
+        assertThatThrownBy(() -> UserSortMapper.map(PageRequest.of(0, 2, Sort.by("membershipNumber"))))
+                .isInstanceOf(InvalidUserSortFieldException.class);
+    }
+
+    @Test
     void rejectsInternalOrUnknownSortField() {
         Pageable pageable = PageRequest.of(
                 0, 20, Sort.by(Sort.Direction.ASC, "credentialStatus")
