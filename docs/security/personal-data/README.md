@@ -1,6 +1,10 @@
 # Auditoria de dados pessoais — BACK-425 / BACK-409
 
-**Status: proposta para revisão; nenhuma criptografia ou regra funcional foi implementada.**
+**Baseline da auditoria: proposta para revisão, sem criptografia implementada.**
+
+Os contratos e aceites necessários para BACK-477 estão no
+[registro de decisões](decisions.md). A proteção criptográfica permanece
+pendente até as subtasks de implementação.
 
 Tasks: [BACK-425](https://jeep-club-developers.atlassian.net/browse/BACK-425) e
 [BACK-409](https://jeep-club-developers.atlassian.net/browse/BACK-409).
