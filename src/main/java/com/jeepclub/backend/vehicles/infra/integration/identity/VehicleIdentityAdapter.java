@@ -13,13 +13,6 @@ public class VehicleIdentityAdapter implements UserPort {
 
     private final UserQuery identityQuery;
 
-    @Override public java.util.Set<Long> findIdsByName(String name) {
-        try { return identityQuery.findIdsByName(name); }
-        catch (com.jeepclub.backend.iam.identity.api.module.exception.UserNameSearchTooBroadException failure) {
-            throw new com.jeepclub.backend.vehicles.core.application.exceptions.InvalidVehicleSearchException(failure.getMessage());
-        }
-    }
-
     @Override
     public java.util.Map<Long, String> findNamesByIds(java.util.Collection<Long> userIds) {
         if (userIds.isEmpty()) return java.util.Map.of();

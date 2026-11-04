@@ -36,15 +36,14 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class AdminVehicleServiceTest {
     @Test void ownerNameLookupIsBatchedAndRunsOnlyWhenSelected() {
-        var filter=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter("Owner",null,null,null,null,null,java.util.Set.of());
+        var filter=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter("Owner",null,null,null,null,null);
         var row=new com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSearchResult(1L,null,null,null,null,null,null,7L,null,VehicleStatus.ACTIVE);
         var fields=java.util.Set.of(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.OWNER_NAME);
-        when(userPort.findIdsByName("Owner")).thenReturn(java.util.Set.of(7L));
         when(vehicleRepository.search(any(),any(),any())).thenReturn(new PageImpl<>(List.of(row,row)));
         when(userPort.findNamesByIds(List.of(7L))).thenReturn(java.util.Map.of(7L,"Owner"));
         assertThat(service.search(filter,fields,PageRequest.of(0,10)).getContent()).extracting(r -> r.ownerName()).containsExactly("Owner","Owner");
         verify(userPort).findNamesByIds(List.of(7L));
-        verify(vehicleRepository).search(argThat(f -> f.queryOwnerIds().equals(java.util.Set.of(7L))),org.mockito.ArgumentMatchers.eq(fields),any());
+        verify(vehicleRepository).search(org.mockito.ArgumentMatchers.eq(filter),org.mockito.ArgumentMatchers.eq(fields),any());
         org.mockito.Mockito.clearInvocations(userPort);
         service.search(filter,java.util.Set.of(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.ID),PageRequest.of(0,10));
         verify(userPort,never()).findNamesByIds(any());

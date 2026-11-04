@@ -140,12 +140,12 @@ public class AdminVehicleController {
     }
 
     @GetMapping("/list/admin")
-    @ApiResponse(responseCode="400",description="Filtros, fields ou sort inválidos; q com mais de 500 proprietários exige termo mais específico.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
+    @ApiResponse(responseCode="400",description="Filtros, fields, sort ou paginação inválidos.",content=@Content(mediaType=MediaType.APPLICATION_PROBLEM_JSON_VALUE,schema=@Schema(implementation=ApiErrorResponse.class)))
     @PreAuthorize("hasAuthority('VEHICLES_VEHICLE_READ')")
     @RequiredPermission("VEHICLES_VEHICLE_READ")
     @Operation(
             summary = "Listar todos os veículos",
-            description = "Página zero-based de veículos; status default ACTIVE, size 10 e máximo global 50. q usa OR entre nome do proprietário (até 500 IDs, sem truncamento), placa normalizada sem máscara, nickname e model. plate,ownerId,nickname,model,status combinam com AND antes de página/count. Texto literal case-insensitive com trim: %, _ e ! não são curingas. fields opcional seleciona colunas e omite campos não pedidos; default preserva o resumo completo e seus nulls. Sort permitido nos campos persistidos do resumo (exceto ownerName), brand,manufacturingYear,seatingCapacity,fuelType,engineDisplacement,towing,createdAt,updatedAt,archivedAt; id asc é o desempate quando ausente. Proprietários com nome muito amplo exigem refinar q (400).",
+            description = "Página zero-based de veículos; status default ACTIVE, size 10 e máximo global 50. q usa OR entre nome do proprietário, placa normalizada sem máscara, nickname e model, sem limite de cardinalidade de proprietários nem truncamento. plate,ownerId,nickname,model,status combinam com AND antes de página/count. Texto literal case-insensitive com trim: %, _ e ! não são curingas. q tem no máximo 150 caracteres. Busca e count são executados no banco; contains pode fazer scan. fields opcional seleciona colunas e omite campos não pedidos; default preserva o resumo completo e seus nulls. Sort permitido nos campos persistidos do resumo (exceto ownerName), brand,manufacturingYear,seatingCapacity,fuelType,engineDisplacement,towing,createdAt,updatedAt,archivedAt; id asc é o desempate quando ausente.",
             responses = {
                     @ApiResponse(responseCode = "200", description = "Página de veículos retornada.", content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = AdminVehiclePageResponseSchema.class))),
                     @ApiResponse(responseCode = "401", description = "Usuário não autenticado.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class))),

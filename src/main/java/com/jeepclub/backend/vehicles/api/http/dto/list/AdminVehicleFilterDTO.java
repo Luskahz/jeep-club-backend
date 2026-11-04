@@ -10,5 +10,5 @@ import jakarta.validation.constraints.Size;
 public record AdminVehicleFilterDTO(@Size(max=150) String q, @Size(max=20) String plate,
         @Positive Long ownerId, @Size(max=100) String nickname, @Size(max=100) String model,
         @Schema(defaultValue="ACTIVE") VehicleStatus status) {
-    public AdminVehicleFilter toFilter() {return new AdminVehicleFilter(q,plate,ownerId,nickname,model,status,java.util.Set.of());}
+    public AdminVehicleFilter toFilter() {return new AdminVehicleFilter(q,plate,ownerId,nickname,model,status);}
 }

@@ -63,6 +63,13 @@ Commits: 116f4fbf, 3a3b8199, d625d24e.
 
 Commits: 9907e182, aaa5eb65, b6009290, 1053be9d.
 
+Revisão do finding OR do PR #126: a pré-busca nominal limitada foi substituída por
+EXISTS composto pelo contrato público abaixo. As evidências atualizadas estão em
+[admin-hardening.md](admin-hardening.md).
+
+- [src/main/java/com/jeepclub/backend/iam/identity/api/module/UserNameCriteria.java](../../src/main/java/com/jeepclub/backend/iam/identity/api/module/UserNameCriteria.java)
+- [src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/query/UserNameJpaCriteria.java](../../src/main/java/com/jeepclub/backend/iam/identity/infra/persistence/query/UserNameJpaCriteria.java)
+
 - [src/main/java/com/jeepclub/backend/iam/identity/api/module/exception/UserNameSearchTooBroadException.java](../../src/main/java/com/jeepclub/backend/iam/identity/api/module/exception/UserNameSearchTooBroadException.java)
 - [src/main/java/com/jeepclub/backend/iam/identity/api/module/UserQuery.java](../../src/main/java/com/jeepclub/backend/iam/identity/api/module/UserQuery.java)
 - [src/main/java/com/jeepclub/backend/iam/identity/core/application/service/user/UserQueryService.java](../../src/main/java/com/jeepclub/backend/iam/identity/core/application/service/user/UserQueryService.java)

@@ -13,8 +13,20 @@ por trecho literal do nome, em qualquer status administrativo. Vazio não consul
 termos têm no máximo 150 caracteres. A query seleciona no máximo 501 IDs para detectar
 overflow e retorna até 500 ou `UserNameSearchTooBroadException`, sem truncar o conjunto.
 Nenhum nome/contato/entidade é materializado nessa busca. O consumidor traduz overflow
-para seu erro funcional e solicita um termo mais específico. Essa extensão suporta
-Vehicles sem acoplar repositórios nem tabelas entre módulos.
+para seu erro funcional e solicita um termo mais específico. Esse contrato permanece
+disponível, mas não é usado no OR de Vehicles: seu limite não pode interromper outros
+critérios da busca geral.
+
+`UserNameCriteria` oferece uma composição somente leitura para consultas JPA na
+mesma unidade de persistência. Identity constrói um EXISTS correlacionado por ID,
+com os mesmos trim/LIKE literal/case-insensitive e todos os status administrativos.
+O consumidor passa a expressão de ID e a consulta externa; não recebe entidade,
+repository, tabela/SQL nem coleção de IDs. Não executa consultas durante a composição.
+Conteúdo e count devem usar o mesmo predicado, e a página projetada deve ser limitada.
+Essa fronteira técnica fica restrita à infraestrutura do consumidor: não introduz JPA
+no core nem suporta composição entre bancos/unidades de persistência diferentes.
+Assim Vehicles mantém OR completo para qualquer cardinalidade, com duas consultas e
+batch de apresentação limitado à página, sem alterar o contrato anterior `UserQuery`.
 
 ## Lifecycle vigente — BACK-512
 

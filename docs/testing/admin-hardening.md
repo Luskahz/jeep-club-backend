@@ -1,5 +1,53 @@
 # BACK-585 / BACK-574 / BACK-463 / BACK-573
 
+## Revisão do finding OR — PR #126 / BACK-573
+
+Base da correção: `3770208d66ee080092e9fc0974fe76bd75e5f838`, na mesma branch do PR.
+`AdminVehicleService.search` consultava previamente `UserQuery.findIdsByName`, cujo
+overflow em 501 nomes interrompia o OR inteiro com 400, inclusive placa/nickname/model.
+O teste de regressão falhou na base com `expected 200 but was 400` (1 teste, 1 falha,
+0 erros; `output/back-573-or-regression-before.log`). Essa execução não é aprovação.
+
+A correção usa `UserNameCriteria`, contrato público específico de Identity para
+compor um EXISTS correlacionado na consulta externa. Identity mantém a implementação,
+mapping e semântica de nome; Vehicles não importa entidades/repositories de Identity.
+Somente a infraestrutura compõe Criteria na unidade de persistência compartilhada.
+Nenhum tipo JPA entra no core; não há framework genérico ou alteração de schema.
+O contrato `UserQuery.findIdsByName` continua disponível e limitado, mas sai da busca
+Vehicles. Ignorar o overflow omitiria proprietários; aumentar/remover seu limite
+transportaria IDs sem limite. Nenhuma dessas alternativas é adotada.
+
+O mesmo OR/AND entra no SELECT projetado e no count escalar, antes de LIMIT/OFFSET.
+A página permanece limitada a 50; q, a 150 caracteres. Não há lista de IDs de busca,
+truncamento, N+1 ou filtragem em memória. A apresentação de OWNER_NAME continua em um
+batch limitado à página. O EXISTS por ID evita multiplicar linhas quando um veículo
+corresponde a vários ramos. Contains/count podem fazer scan; o OpenAPI declara esse
+custo, sem impor um novo limite de resultados ou prometer índice/benchmark de produção.
+
+`broadOwnerMatchesPreserveEveryOrBranchAndDatabasePagination` usa 501 proprietários
+correspondentes (incluindo ARCHIVED), 501 veículos deles e outros três veículos que
+correspondem exclusivamente por placa, nickname ou model. Espera totalElements=504,
+totalPages=11 e quatro IDs na página 10 de size=50, incluindo o proprietário além do
+limite antigo. Valida AND ownerId/model/nickname, somente duas instruções SQL, EXISTS
+em ambas, LIMIT/OFFSET no SQL e projeção somente de ID. O cenário é herdado pela suíte
+MySQL real com Flyway e `ddl-auto=validate`. Testes existentes preservam LIKE literal,
+placa mascarada, vazios, nulls, fields, autorização, sort e apresentação batelada.
+
+Validação focal: 47 testes, 0 falhas/erros/skips; BUILD SUCCESS
+(`output/back-573-or-focused.log`). A primeira execução MySQL confirmou HTTP 200 e os
+504 resultados, mas falhou na asserção SQL que exigia a palavra OFFSET: MySQL usa
+`LIMIT ?,?`. A asserção foi ajustada para ambas as representações; essa primeira
+execução com falha não é apresentada como aprovada.
+
+Reexecução final MySQL: `mvnw.cmd -Pmysql-migrations -DskipUnitTests=true
+-Dit.test=AdminVehicleSearchMySqlIT verify`, 4 testes, 0 falhas/erros/skips,
+BUILD SUCCESS (`output/back-573-or-mysql-final.log`). As outras três classes da
+execução anterior tiveram resultados individuais aprovados: AdminUserSearchMySqlIT
+8, VehicleGalleryMySqlIT 28 e VehicleMediaOrchestrationMySqlIT 22; o build anterior
+como um todo falhou na asserção de dialeto descrita acima.
+A verificação completa e os checks do novo SHA são registrados no PR #126, separados
+das evidências históricas abaixo. Nenhum merge, deploy ou fechamento Jira é realizado.
+
 ## Audit before implementation
 
 Baseline: origin/develop `f76541692c6c25bc082264bd63cc62ae9b365f48`.
@@ -100,7 +148,7 @@ não representa merge, deploy, ativação ou aceite operacional de produção.
 | BACK-463 / BACK-475 | 110 cenários em PostgreSQL 17.6 real: schema halt-on-error, likes, guest/última vaga, ride selection, Service concorrente, idempotência Billing, nullable unique e hard delete/histórico. Override PostgreSQL de default boolean, sem alterar migrations/MySQL. | EventOperationsPostgresIT (85); PublicationPersistencePostgresIT (19); ServiceChangePersistencePostgresIT (6) |
 | BACK-573 / BACK-576 | Contrato q/plate/ownerId/nickname/model/status/fields com defaults existentes e erros 400, autorização preservada. | VehiclesOpenApiIntegrationTest.administrativeSearchDocumentsAllFiltersAndProjection; AdminVehicleSearchHttpIntegrationTest |
 | BACK-573 / BACK-577 | Placa normalizada sem máscara, predicados/count antes da paginação, campos selecionados no SQL e desempate id. Sem carregar galeria nem filtrar página em memória. | VehicleRepositoryAdapterTest.selectiveAdministrativeQueryUsesTwoStatementsWithoutLoadingGalleryOrUnrequestedColumns; AdminVehicleSearchHttpIntegrationTest.ownerNameIsAppliedBeforePageCountAndSelectedFieldsDoNotLeakAuxiliaryId; qUsesOrAndPlatesIgnoreMaskWhileFiltersUseAnd |
-| BACK-573 / BACK-578 | Extensão mínima UserQuery.findIdsByName: SELECT de até 501 IDs, retorna até 500 ou 400 para refinar termo. Consumer usa porta pública e apresentação batelada; sem N+1 nem import cross-module. | UserQueryServiceTest.nameSearchHasAHardLimitAndNeverSilentlyTruncates; AdminVehicleServiceTest.ownerNameLookupIsBatchedAndRunsOnlyWhenSelected; AdminVehicleSearchHttpIntegrationTest.ownerCardinalityNeverSilentlyTruncatesAndInvalidParametersAre400; AdminVehicleSearchMySqlIT; VehicleAdminSecurityIntegrationTest |
+| BACK-573 / BACK-578 | Identity compõe EXISTS nominal via contrato público UserNameCriteria, no mesmo OR de conteúdo/count. Sem listas de IDs nem limite nominal que bloqueie placa/nickname/model. Apresentação batelada por página; sem N+1 nem import de persistência cross-module. | AdminVehicleSearchHttpIntegrationTest.broadOwnerMatchesPreserveEveryOrBranchAndDatabasePagination (501 proprietários, 504 veículos, página 10, dois SELECTs); AdminVehicleSearchMySqlIT; AdminVehicleServiceTest.ownerNameLookupIsBatchedAndRunsOnlyWhenSelected; VehicleAdminSecurityIntegrationTest |
 
 ## Arquivos, compatibilidade e limites
 
@@ -113,11 +161,12 @@ módulos e o OpenAPI documentam os contratos finais.
   nominal do proprietário nem descrição. Não há materialização/call de Identity em Tools.
 * Vehicles mantém o resumo completo, seus nulls, status ACTIVE e size 10 como defaults.
   fields seleciona somente colunas necessárias (e ownerId auxiliar interno para OWNER_NAME).
-  A busca nominal retorna no máximo 500 IDs ou 400 solicitando refinar o termo; o limite
-  também se aplica com filtros específicos. Não há truncamento silencioso.
+  O EXISTS nominal mantém todos os resultados do OR, mesmo acima de 500 proprietários;
+  não transporta IDs nem trunca resultados. UserQuery.findIdsByName permanece limitado
+  por compatibilidade, mas não participa desta busca.
 * Os SELECT de Identity/Tools/Vehicles usam paginação e count no banco; testes inspecionam
-  duas instruções e as colunas selecionadas. Em Vehicles, lookup nominal e apresentação
-  de nomes acrescentam chamadas bateladas constantes quando necessários, nunca por linha.
+  duas instruções e as colunas selecionadas. Em Vehicles, o nome é filtrado no próprio
+  SQL; somente a apresentação acrescenta um batch de até 50 IDs quando necessária.
 * Contains LIKE pode fazer scan. Não foi executado benchmark/EXPLAIN em uma população
   representativa de produção; não há promessa de otimização nem criação especulativa de índice.
 * Nenhuma migration, configuração de produção, permission ou flag foi modificada.

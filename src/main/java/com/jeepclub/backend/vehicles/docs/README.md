@@ -11,11 +11,16 @@ Fields=ID,NICKNAME,PLATE,PHOTO,MODEL_YEAR,MODEL,COLOR,OWNER_ID,OWNER_NAME,STATUS
 colunas reais; campos não pedidos são omitidos e um null solicitado é preservado.
 OWNER_NAME usa ownerId somente como chave auxiliar interna, seguida de um batch.
 
-A porta pública Identity UserQuery.findIdsByName seleciona até 501 IDs para detectar
-overflow: retorna no máximo 500 ou erro 400 VEHICLE_INVALID_SEARCH solicitando refinar
-q, nunca uma lista truncada. Não faz join entre módulos nem pesquisa todos os usuários
-em memória. O limite aplica-se à pesquisa por nome em q mesmo com filtros específicos;
-o custo de contains continua proporcional ao plano do banco, sem promessa de índice.
+A capacidade pública Identity `UserNameCriteria` constrói o predicado de nome como
+EXISTS correlacionado pelo ID, dentro do OR de conteúdo e count. Somente Identity
+conhece sua entidade e seu mapping; Vehicles passa uma expressão ownerId ao contrato
+público na infraestrutura. Nenhum tipo JPA entra no core. Esse contrato de composição
+é específico à unidade de persistência compartilhada do monólito, não uma API remota.
+Não transporta listas de IDs, não materializa proprietários e não omite nomes quando
+há mais de 500 correspondências. Cada busca executa dois SELECTs (página limitada e
+count escalar), mais um único batch de apresentação de até 50 proprietários quando
+OWNER_NAME é solicitado. O antigo limite de 500 não se aplica a q. q permanece
+limitado a 150 caracteres; contains/count podem fazer scan, sem promessa de índice.
 Página negativa, size menor que um e fields/sort/filtros inválidos retornam RFC 9457 400.
 Projeção não carrega entidades, galerias ou nomes quando dispensáveis.
 

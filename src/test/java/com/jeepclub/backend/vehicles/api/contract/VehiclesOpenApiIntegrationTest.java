@@ -20,7 +20,11 @@ class VehiclesOpenApiIntegrationTest {
         mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
                 .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['parameters'][*].name")
                         .value(org.hamcrest.Matchers.hasItems("q","plate","ownerId","nickname","model","status","fields","page","size","sort")))
-                .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['responses']['400']").exists());
+                .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['responses']['400']").exists())
+                .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['description']")
+                        .value(org.hamcrest.Matchers.containsString("sem limite de cardinalidade de proprietários nem truncamento")))
+                .andExpect(jsonPath("$['paths']['/vehicles/list/admin']['get']['responses']['400']['description']")
+                        .value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("500"))));
     }
 
     @Autowired

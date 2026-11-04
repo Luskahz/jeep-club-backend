@@ -13,7 +13,11 @@ import java.util.*;
 /** Module-local tuple query; no Identity persistence access and no entity/gallery materialization. */
 public final class AdminVehicleJpaQuery {
     private final EntityManager em;
-    public AdminVehicleJpaQuery(EntityManager em) {this.em=em;}
+    private final com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames;
+    public AdminVehicleJpaQuery(EntityManager em, com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames) {
+        this.em=em;
+        this.ownerNames=ownerNames;
+    }
     public Page<AdminVehicleSearchResult> findAll(AdminVehicleFilter filter, Set<AdminVehicleField> fields, Pageable pageable) {
         Sort sort=pageable.getSort();
         var allowed=Set.of("id","nickname","plate","photo","modelYear","model","color","ownerId","status",
@@ -26,14 +30,14 @@ public final class AdminVehicleJpaQuery {
         if(persisted.remove(AdminVehicleField.OWNER_NAME)) persisted.add(AdminVehicleField.OWNER_ID);
         List<Selection<?>> columns=new ArrayList<>();
         for(var field:persisted) columns.add(root.get(field.property()).alias(field.property()));
-        query.multiselect(columns).where(predicates(filter,root,cb).toArray(Predicate[]::new));
+        query.multiselect(columns).where(predicates(filter,root,cb,query).toArray(Predicate[]::new));
         query.orderBy(sort.stream().map(o -> o.isAscending()?cb.asc(root.get(o.getProperty())):cb.desc(root.get(o.getProperty()))).toList());
         var rows=em.createQuery(query).setFirstResult(Math.toIntExact(stable.getOffset())).setMaxResults(stable.getPageSize()).getResultList();
         var count=cb.createQuery(Long.class);var counted=count.from(VehicleEntity.class);
-        count.select(cb.count(counted)).where(predicates(filter,counted,cb).toArray(Predicate[]::new));
+        count.select(cb.count(counted)).where(predicates(filter,counted,cb,count).toArray(Predicate[]::new));
         return new PageImpl<>(rows.stream().map(t -> result(t,persisted)).toList(),stable,em.createQuery(count).getSingleResult());
     }
-    private List<Predicate> predicates(AdminVehicleFilter filter, Root<VehicleEntity> root, CriteriaBuilder cb) {
+    private List<Predicate> predicates(AdminVehicleFilter filter, Root<VehicleEntity> root, CriteriaBuilder cb, CommonAbstractCriteria query) {
         var result=new ArrayList<Predicate>();
         result.add(cb.isFalse(root.get("legacyDeleted")));
         result.add(cb.equal(root.get("status"),filter.status()));
@@ -45,7 +49,7 @@ public final class AdminVehicleJpaQuery {
             String pattern=literal(filter.q());String normalized=AdminVehicleFilter.normalizePlate(filter.q());
             result.add(cb.or(cb.like(cb.lower(root.get("nickname")),pattern,'!'),cb.like(cb.lower(root.get("model")),pattern,'!'),
                     normalized==null||normalized.isEmpty()?cb.disjunction():cb.like(plate(root,cb),literal(normalized),'!'),
-                    filter.queryOwnerIds().isEmpty()?cb.disjunction():root.get("ownerId").in(filter.queryOwnerIds())));
+                    ownerNames.matches(cb,query,root.get("ownerId"),filter.q())));
         }
         return result;
     }

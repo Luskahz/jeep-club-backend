@@ -49,6 +49,8 @@ class VehicleRepositoryAdapterTest {
 
     @Autowired
     private VehicleRepositoryAdapter repository;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames;
     @Autowired
     private VehicleJpaRepository vehicleJpaRepository;
     @Autowired
@@ -66,7 +68,7 @@ class VehicleRepositoryAdapterTest {
         var second=repository.save(vehicle("DEF4G56","12345678902"));
         entityManager.flush();entityManager.clear();Sql.statements.clear();
         var fields=java.util.Set.of(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.NICKNAME);
-        var filter=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter(null,null,7L,"trov",null,null,java.util.Set.of());
+        var filter=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter(null,null,7L,"trov",null,null);
         var page=repository.search(filter,fields,PageRequest.of(1,1,org.springframework.data.domain.Sort.by("nickname")));
         assertThat(page.getTotalElements()).isEqualTo(2);assertThat(page.getTotalPages()).isEqualTo(2);
         assertThat(page.getContent()).singleElement().satisfies(r -> {assertThat(r.nickname()).isEqualTo("Trovão");assertThat(r.id()).isNull();assertThat(r.ownerId()).isNull();});
@@ -76,7 +78,7 @@ class VehicleRepositoryAdapterTest {
         var all=java.util.EnumSet.allOf(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.class);
         assertThat(repository.search(filter,all,PageRequest.of(1,1,org.springframework.data.domain.Sort.by("nickname"))).getContent())
                 .extracting(r -> r.id()).containsExactly(second.getId());
-        var plate=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter(null,"abc-1d23",null,null,null,null,java.util.Set.of());
+        var plate=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter(null,"abc-1d23",null,null,null,null);
         assertThat(repository.search(plate,all,PageRequest.of(0,10)).getContent()).extracting(r -> r.id()).containsExactly(first.getId());
     }
 

@@ -24,7 +24,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest @AutoConfigureMockMvc @ActiveProfiles("test") @Transactional
+@SpringBootTest(properties="spring.jpa.properties.hibernate.session_factory.statement_inspector=com.jeepclub.backend.vehicles.api.controller.AdminVehicleSearchHttpIntegrationTest$Sql")
+@AutoConfigureMockMvc @ActiveProfiles("test") @Transactional
 class AdminVehicleSearchHttpIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired EntityManager em;
@@ -74,10 +75,43 @@ class AdminVehicleSearchHttpIntegrationTest {
         mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token").param("status","INACTIVE"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
     }
-    @Test void ownerCardinalityNeverSilentlyTruncatesAndInvalidParametersAre400() throws Exception {
-        for(int i=0;i<501;i++) owner("Broad Synthetic Owner");
-        mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token").param("q","Broad Synthetic"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VEHICLE_INVALID_SEARCH"));
+    @Test void broadOwnerMatchesPreserveEveryOrBranchAndDatabasePagination() throws Exception {
+        VehicleEntity lastOwnerMatch=null;
+        for(int i=0;i<501;i++) {
+            long id=owner("ABC Broad Synthetic Owner");
+            if(i==500) em.find(UserEntity.class,id).setStatus(UserStatus.ARCHIVED);
+            lastOwnerMatch=vehicle(id,"Owner only",String.format("OWN%04d",i),i==500?"ABC model":"Wrangler");
+        }
+        long other=owner("Other");
+        var plate=vehicle(other,"Plate only","ABC1D23","Wrangler");
+        var nickname=vehicle(other,"ABC nickname","NIC1D23","Wrangler");
+        var model=vehicle(other,"Model only","MOD1D23","ABC model");
+        em.flush();em.clear();Sql.statements.get().clear();
+        mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token")
+                .param("q","abc").param("page","10").param("size","50").param("fields","ID"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(504))
+                .andExpect(jsonPath("$.totalPages").value(11)).andExpect(jsonPath("$.content.length()").value(4))
+                .andExpect(jsonPath("$.content[0].id").value(lastOwnerMatch.getId()))
+                .andExpect(jsonPath("$.content[1].id").value(plate.getId()))
+                .andExpect(jsonPath("$.content[2].id").value(nickname.getId()))
+                .andExpect(jsonPath("$.content[3].id").value(model.getId()))
+                .andExpect(jsonPath("$.content[0].ownerId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].ownerName").doesNotExist());
+        assertThat(Sql.statements.get()).hasSize(2).allSatisfy(sql ->
+                assertThat(sql).contains("exists", "owner_id"));
+        String contentSql=Sql.statements.get().get(0);
+        assertThat(contentSql.substring(0,contentSql.indexOf(" from ")))
+                .contains(".id").doesNotContain(".owner_id", ".nickname", ".model", ".renavam");
+        assertThat(contentSql).containsAnyOf("offset ? rows fetch first ? rows only", "limit ?,?");
+        mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token")
+                .param("q","abc").param("ownerId",Long.toString(other)).param("fields","ID"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(3));
+        mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token")
+                .param("q","abc").param("model","wrangler").param("nickname","abc").param("fields","ID"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(nickname.getId()));
+    }
+    @Test void invalidParametersAre400AndAuthorizationIsPreserved() throws Exception {
         for(var invalid:Map.of("fields","RENAVAM","sort","ownerName,asc","ownerId","0","status","INVALID","q","x".repeat(151),"page","-1","size","0","plate","---").entrySet()) {
             mvc.perform(get("/vehicles/list/admin").header("Authorization","Bearer search-token").param(invalid.getKey(),invalid.getValue()))
                     .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
@@ -98,5 +132,12 @@ class AdminVehicleSearchHttpIntegrationTest {
         row.setBrand("Jeep");row.setModel(model);row.setModelYear(2020);row.setManufacturingYear(2020);row.setSeatingCapacity(5);
         row.setFuelType(FuelType.GASOLINE);row.setEngineDisplacement(2.0);row.setTowing(false);row.setStatus(VehicleStatus.ACTIVE);
         em.persist(row);em.flush();return row;
+    }
+    public static class Sql implements org.hibernate.resource.jdbc.spi.StatementInspector {
+        static final ThreadLocal<List<String>> statements=ThreadLocal.withInitial(ArrayList::new);
+        @Override public String inspect(String sql) {
+            if(sql.startsWith("select ")) statements.get().add(sql);
+            return sql;
+        }
     }
 }
