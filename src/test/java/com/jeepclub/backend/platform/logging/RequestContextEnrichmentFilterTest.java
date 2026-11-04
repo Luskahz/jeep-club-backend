@@ -37,14 +37,14 @@ class RequestContextEnrichmentFilterTest {
                 new MockHttpServletResponse(),
                 (req, res) -> {
                     assertThat(MDC.get(HttpLoggingContext.USER_ID)).isEqualTo("42");
-                    assertThat(MDC.get(HttpLoggingContext.USER_NAME)).isEqualTo("Lucas_Alves");
+                    assertThat(MDC.get("userName")).isNull();
                 }
         );
 
         assertThat(MDC.get(HttpLoggingContext.USER_ID)).isNull();
-        assertThat(MDC.get(HttpLoggingContext.USER_NAME)).isNull();
+        assertThat(MDC.get("userName")).isNull();
         assertThat(request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE)).isEqualTo("42");
-        assertThat(request.getAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE)).isEqualTo("Lucas_Alves");
+        assertThat(request.getAttribute(HttpLoggingContext.class.getName() + ".userName")).isNull();
     }
 
     @Test
@@ -74,12 +74,12 @@ class RequestContextEnrichmentFilterTest {
                 new MockHttpServletResponse(),
                 (req, res) -> {
                     assertThat(MDC.get(HttpLoggingContext.USER_ID)).isEqualTo("42");
-                    assertThat(MDC.get(HttpLoggingContext.USER_NAME)).isNull();
+                    assertThat(MDC.get("userName")).isNull();
                 }
         );
 
         assertThat(request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE)).isEqualTo("42");
-        assertThat(request.getAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE)).isNull();
+        assertThat(request.getAttribute(HttpLoggingContext.class.getName() + ".userName")).isNull();
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 }

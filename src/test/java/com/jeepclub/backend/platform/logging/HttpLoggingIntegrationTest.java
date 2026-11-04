@@ -101,12 +101,14 @@ class HttpLoggingIntegrationTest {
         ).doesNotContain("requestId=", "device=", "userId=", "userName=");
         assertThat(event.getMDCPropertyMap()).containsEntry("requestId", "integration-authenticated")
                 .containsEntry("userId", userId.toString())
-                .containsEntry("userName", "Observability User")
+                .doesNotContainKey("userName")
                 .containsEntry("device", "IOS");
         assertCompactConsoleLine(
                 httpConsoleLine(output, "integration-authenticated"),
-                "integration-authenticated", userId.toString(), "Observability User", "IOS"
+                "integration-authenticated", userId.toString(), "IOS"
         );
+        assertThat(output.getAll()).doesNotContain("Observability User", "observability@example.com", cpf,
+                tokens.accessToken(), tokens.refreshToken());
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 
@@ -127,14 +129,14 @@ class HttpLoggingIntegrationTest {
         ).doesNotContain("requestId=", "device=", "userId=", "userName=");
         assertCompactConsoleLine(
                 httpConsoleLine(output, "integration-anonymous"),
-                "integration-anonymous", "-", "-", "UNKNOWN"
+                "integration-anonymous", "-", "UNKNOWN"
         );
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
     }
 
     @Test
     @Transactional
-    void legacyTokenWithoutNameKeepsUserIdAndUsesMissingNamePlaceholder(
+    void legacyTokenWithoutNameKeepsUserIdWithoutLoggingName(
             CapturedOutput output
     ) throws Exception {
         Instant now = Instant.now(clock);
@@ -179,9 +181,24 @@ class HttpLoggingIntegrationTest {
                 .doesNotContainKey("userName");
         assertCompactConsoleLine(
                 httpConsoleLine(output, "integration-legacy-token"),
-                "integration-legacy-token", issued.userId().toString(), "-", "WEB"
+                "integration-legacy-token", issued.userId().toString(), "WEB"
         );
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
+
+    @Test
+    void unresolvedRequestDoesNotExposePrivatePathInApplicationOrFrameworkLogs(CapturedOutput output)
+            throws Exception {
+        mockMvc.perform(get("/unknown/synthetic-person@example.com/41876293040/secret-token")
+                        .queryParam("token", "private-query-token")
+                        .header("X-Request-Id", "integration-private-path"))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(appender.list).hasSize(1);
+        assertThat(appender.list.get(0).getFormattedMessage())
+                .contains("path=[unresolved]", "status=401");
+        assertThat(output.getAll()).doesNotContain("synthetic-person@example.com", "41876293040",
+                "secret-token", "private-query-token");
     }
 
     private String httpConsoleLine(CapturedOutput output, String requestId) {
@@ -196,22 +213,19 @@ class HttpLoggingIntegrationTest {
             String line,
             String requestId,
             String userId,
-            String userName,
             String device
     ) {
         assertThat(line).contains(
                 "requestId=" + requestId,
                 "userId=" + userId,
-                "userName=\"" + userName + "\"",
                 "device=" + device,
                 "http_request method=",
                 "path=",
                 "status=",
                 "durationMs="
-        ).doesNotContain("\n", "\r");
+        ).doesNotContain("\n", "\r", "userName=");
         assertThat(occurrences(line, "requestId=")).isEqualTo(1);
         assertThat(occurrences(line, "userId=")).isEqualTo(1);
-        assertThat(occurrences(line, "userName=")).isEqualTo(1);
         assertThat(occurrences(line, "device=")).isEqualTo(1);
         assertThat(occurrences(line, "method=")).isEqualTo(1);
         assertThat(occurrences(line, "path=")).isEqualTo(1);

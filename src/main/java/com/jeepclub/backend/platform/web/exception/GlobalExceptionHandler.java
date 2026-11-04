@@ -205,7 +205,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             Exception exception,
             Locale locale
     ) {
-        log.error("Unhandled exception while processing the HTTP request", exception);
+        log.error("http_request unexpected_failure category={}", exception.getClass().getSimpleName());
         return problemFactory.create(
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 "INTERNAL_SERVER_ERROR",

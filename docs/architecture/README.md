@@ -72,8 +72,9 @@ resume como consumi-la e aponta para esse guia.
 ## Navegação obrigatória
 
 A [auditoria de dados pessoais e proposta de proteção em repouso](../security/personal-data/README.md)
-registra a classificação repo-wide e o backlog de BACK-425/BACK-409. Trata-se de
-proposta para revisão, sem alteração do comportamento de produção.
+registra a classificação repo-wide e o backlog de BACK-425/BACK-409. A auditoria
+é a baseline histórica; o [registro de execução](../security/personal-data/implementation.md)
+separa as propostas pendentes dos incrementos implementados.
 
 1. [Organização dos módulos](module-organization.md) — ownership, camadas,
    comunicação entre módulos e limites de Platform/Shared.

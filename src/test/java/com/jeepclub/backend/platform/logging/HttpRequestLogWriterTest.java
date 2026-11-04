@@ -39,7 +39,6 @@ class HttpRequestLogWriterTest {
         var writer = new HttpRequestLogWriter();
         MDC.put(HttpLoggingContext.REQUEST_ID, "request-123");
         MDC.put(HttpLoggingContext.USER_ID, "42");
-        MDC.put(HttpLoggingContext.USER_NAME, "Lucas Alves");
         MDC.put(HttpLoggingContext.DEVICE, "WEB");
 
         writer.write(event(200, false));
@@ -65,7 +64,7 @@ class HttpRequestLogWriterTest {
                 assertThat(event.getMDCPropertyMap())
                         .containsEntry("requestId", "request-123")
                         .containsEntry("userId", "42")
-                        .containsEntry("userName", "Lucas Alves")
+                        .doesNotContainKey("userName")
                         .containsEntry("device", "WEB"));
     }
 

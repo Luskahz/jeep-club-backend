@@ -34,8 +34,8 @@ public class SystemLogServiceAdapter implements SystemLogService {
     @Override
     public void record(SystemLogEvent event) {
         LOGGER.info(
-                "system_log action={} method={} path={} status={} outcome={} actorId={} durationMs={} requestId={}",
-                event.action(), event.method(), event.path(), event.status(), event.outcome(),
+                "system_log action={} method={} status={} outcome={} actorId={} durationMs={} requestId={}",
+                event.action(), event.method(), event.status(), event.outcome(),
                 event.actorId(), event.durationMillis(), event.requestId()
         );
         if (!queue.offer(event)) {
