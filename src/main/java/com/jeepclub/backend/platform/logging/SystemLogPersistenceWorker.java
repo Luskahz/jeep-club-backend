@@ -31,7 +31,8 @@ public class SystemLogPersistenceWorker {
             repository.saveAll(events.stream().map(SystemLogEntity::new).toList());
         } catch (RuntimeException exception) {
             queue.requeue(events);
-            LOGGER.error("system_log persistence_failed batchSize={}", events.size(), exception);
+            LOGGER.error("system_log persistence_failed batchSize={} category={}",
+                    events.size(), exception.getClass().getSimpleName());
         }
     }
 
@@ -47,7 +48,7 @@ public class SystemLogPersistenceWorker {
                 LOGGER.info("system_log cleanup deleted={}", deleted);
             }
         } catch (RuntimeException exception) {
-            LOGGER.error("system_log cleanup_failed", exception);
+            LOGGER.error("system_log cleanup_failed category={}", exception.getClass().getSimpleName());
         }
     }
 }

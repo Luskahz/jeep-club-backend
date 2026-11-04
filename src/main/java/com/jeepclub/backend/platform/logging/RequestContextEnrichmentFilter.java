@@ -31,17 +31,10 @@ public class RequestContextEnrichmentFilter extends OncePerRequestFilter {
         String userId = principal.getUserId().toString();
         request.setAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE, userId);
         MDC.put(HttpLoggingContext.USER_ID, userId);
-        String suppliedUserName = principal.getUserName();
-        if (suppliedUserName != null && !suppliedUserName.isBlank()) {
-            String userName = HttpLogValueSanitizer.singleLine(suppliedUserName);
-            request.setAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE, userName);
-            MDC.put(HttpLoggingContext.USER_NAME, HttpLogValueSanitizer.quoted(userName));
-        }
         try {
             filterChain.doFilter(request, response);
         } finally {
             MDC.remove(HttpLoggingContext.USER_ID);
-            MDC.remove(HttpLoggingContext.USER_NAME);
         }
     }
 }

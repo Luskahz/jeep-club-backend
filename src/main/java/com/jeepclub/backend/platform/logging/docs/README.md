@@ -24,11 +24,12 @@ somente os campos próprios da conclusão HTTP. A saída efetiva é uma única l
 sem repetir contexto:
 
 ```text
-2026-09-13T10:15:30.123-03:00 INFO  [http-nio-8080-exec-1] c.j.backend.platform.logging.http requestId=82fd91 userId=7 userName="Lucas Alves" device=WEB - http_request method=GET path=/vehicles/{vehicleId} status=200 durationMs=37
+2026-11-04T10:15:30.123-03:00 INFO  [http-nio-8080-exec-1] c.j.backend.platform.logging.http requestId=82fd91 userId=7 device=WEB - http_request method=GET path=/vehicles/{vehicleId} status=200 durationMs=37
 ```
 
 O `path` usa o pattern resolvido pelo Spring MVC quando disponível e, caso
-contrário, a URI sem query string. O pattern representa campos MDC ausentes com `-` e
+contrário, o marcador fixo `[unresolved]`. A URI bruta pode conter CPF, e-mail,
+token ou chave de storage, inclusive em 401/403/404. O pattern representa campos MDC ausentes com `-` e
 device ausente ou inválido usa `UNKNOWN`.
 
 Severidade:
@@ -110,7 +111,7 @@ O pipeline possui duas fases coordenadas:
    eventual resíduo da thread, resolve `requestId` e `device`, os coloca no MDC e
    envolve a cadeia do Spring Security;
 2. `RequestContextEnrichmentFilter`, registrado apenas dentro da security chain
-   logo após `JwtAuthenticationFilter`, adiciona `userId` e `userName` quando o
+   logo após `JwtAuthenticationFilter`, adiciona somente `userId` quando o
    `UserPrincipal` existe.
 
 Assim, `requestId` e `device` já existem durante autenticação, autorização, 401,
@@ -123,8 +124,7 @@ Chaves disponíveis durante o trecho aplicável:
 
 - `requestId`;
 - `device`;
-- `userId` para request autenticado;
-- `userName` para request autenticado.
+- `userId` para request autenticado.
 
 O pattern global de console inclui essas chaves com placeholders controlados,
 portanto logs SLF4J internos herdam a correlação sem integração por módulo.
@@ -142,7 +142,8 @@ recupera essa claim e `JwtAuthenticationFilter` a propaga por
 Durante o rollout, access tokens legados válidos podem não conter `name`. Essa
 ausência não invalida assinatura, issuer, tipo, `userId`, `sid`, expiração,
 sessão ou authorities: o request autentica normalmente, `userId` permanece no
-MDC e `userName` usa o placeholder `-`. Não há consulta ao Identity, banco ou
+MDC. O nome não é copiado para MDC, atributos de logging ou console, mesmo
+quando presente no token. Não há consulta ao Identity, banco ou
 serviço externo para preencher o nome ausente. Depois de login ou refresh
 normal, o novo access token volta a carregar a claim.
 
@@ -188,6 +189,27 @@ Paths não incluem query string. Valores controlados usados na linha são
 limitados e caracteres de controle são neutralizados para impedir quebra de
 linha. As categorias Web/Hibernate capazes de expor payload ou bind parameter
 permanecem protegidas na configuração global.
+
+`HandlerMappingIntrospector` fica desligado: seus avisos de cache e mensagens
+TRACE incluem a URI bruta antes da normalização da rota. A integração HTTP
+verifica também a saída de console do framework para uma URL privada sem rota.
+
+A BACK-484 removeu o nome do contexto operacional. A claim `name` e o principal
+continuam no contrato de autenticação; revisar a minimização do JWT é uma
+decisão adicional. `userId` ainda é um identificador pessoal pseudônimo, com
+retenção e acesso a definir pela política operacional.
+
+O handler HTTP inesperado, o worker de System Logs e a compensação de
+comprovantes registram a operação e a classe da exceção, sem mensagem,
+stack trace ou causas encadeadas. Esses objetos podem conter SQL, valores de
+constraints e identificadores. O diagnóstico HTTP mantém `requestId`; jobs
+mantêm operação, quantidade e categoria. Não habilitar logging de payload para
+compensar essa redução. Não há captura de stack sanitizada nesta entrega.
+
+`SystemLogServiceAdapter.record` não replica `event.path` na linha operacional.
+O evento completo continua na fila e na auditoria persistida, inclusive os
+alvos exigidos para acesso clínico. A proteção criptográfica e a retenção desses
+alvos ainda dependem das subtasks de implementação da BACK-409.
 
 ## Uso correto nos módulos
 

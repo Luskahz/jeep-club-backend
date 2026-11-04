@@ -81,7 +81,7 @@ class SystemRequestLoggingFilterTest {
         var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
         var request = new MockHttpServletRequest("GET", "/identity/me");
         request.setAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE, "42");
-        request.setAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE, "Lucas Alves");
+        request.setAttribute(HttpLoggingContext.class.getName() + ".userName", "Lucas Alves");
         var mdcAtCompletion = new AtomicReference<Map<String, String>>();
         doAnswer(invocation -> {
             mdcAtCompletion.set(MDC.getCopyOfContextMap());
@@ -93,7 +93,7 @@ class SystemRequestLoggingFilterTest {
         verify(writer).write(any());
         assertThat(mdcAtCompletion.get())
                 .containsEntry("userId", "42")
-                .containsEntry("userName", "Lucas Alves");
+                .doesNotContainKey("userName");
     }
 
     @Test
@@ -232,6 +232,21 @@ class SystemRequestLoggingFilterTest {
         });
 
         assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/unknown/41876293040", "/activate/secret-token", "/email/person@example.com"})
+    void unresolvedRoutesNeverLogRawIdentifiersOrCredentials(String rawPath) throws Exception {
+        var writer = mock(HttpRequestLogWriter.class);
+        var filter = new SystemRequestLoggingFilter(new ClientPlatformResolver(), writer);
+        var request = new MockHttpServletRequest("GET", rawPath);
+        request.setQueryString("token=secret-token");
+
+        filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
+
+        var captor = org.mockito.ArgumentCaptor.forClass(HttpRequestLogEvent.class);
+        verify(writer).write(captor.capture());
+        assertThat(captor.getValue().path()).isEqualTo("[unresolved]");
     }
 
     private static Stream<String> invalidRequestIds() {

@@ -104,7 +104,8 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
 
     private String route(HttpServletRequest request) {
         Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
-        return pattern instanceof String value ? value : request.getRequestURI();
+        // Unmatched/security-rejected URLs may contain identifiers or credentials.
+        return pattern instanceof String value ? value : "[unresolved]";
     }
 
     private String limit(String value, int maxLength) {
@@ -113,12 +114,8 @@ public class SystemRequestLoggingFilter extends OncePerRequestFilter {
 
     private void restoreIdentityContext(HttpServletRequest request) {
         Object userId = request.getAttribute(HttpLoggingContext.USER_ID_ATTRIBUTE);
-        Object userName = request.getAttribute(HttpLoggingContext.USER_NAME_ATTRIBUTE);
         if (userId instanceof String value) {
             MDC.put(HttpLoggingContext.USER_ID, value);
-        }
-        if (userName instanceof String value) {
-            MDC.put(HttpLoggingContext.USER_NAME, HttpLogValueSanitizer.quoted(value));
         }
     }
 

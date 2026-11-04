@@ -55,7 +55,7 @@ public class PaymentReceiptLifecycle {
         try {
             fileStorage.delete(storageKey);
         } catch (RuntimeException exception) {
-            log.error("{}: storageKey={}", message, storageKey, exception);
+            log.error("{}: category={}", message, exception.getClass().getSimpleName());
         }
     }
 }
