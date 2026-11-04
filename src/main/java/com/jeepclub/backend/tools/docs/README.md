@@ -1,5 +1,18 @@
 # Tools
 
+## Busca administrativa — BACK-574
+
+`GET /admin/tools` preserva o resumo `id,name,status,userId` e os filtros name/status.
+Adiciona q no nome, userId exato e fields=ID,NAME,STATUS,USER_ID. Omitir fields (ou
+enviar vazio) mantém o resumo inteiro. Filtros específicos combinam com AND; texto
+usa trim, contains case-insensitive e LIKE literal (%, _ e ! não são curingas).
+Count e filtros precedem LIMIT/OFFSET. Fields seleciona colunas no banco.
+Sort aceita campos persistidos explicitamente listados no OpenAPI e inclui id asc
+como desempate quando ausente; campo inválido retorna RFC 9457 400. Página negativa
+e size menor que um são inválidos; size acima de 50 mantém o limite global.
+Não há busca de nome do proprietário nem de descrição: não são necessárias ao resumo
+atual. A decisão e as evidências estão em `docs/testing/admin-hardening.md` na raiz.
+
 ## Lifecycle vigente — BACK-512
 
 Os cadastros usam ACTIVE, INACTIVE e ARCHIVED. DELETE é remoção física restrita,

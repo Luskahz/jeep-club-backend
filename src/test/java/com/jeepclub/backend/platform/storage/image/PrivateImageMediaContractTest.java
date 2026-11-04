@@ -25,11 +25,12 @@ class PrivateImageMediaContractTest {
         verifyNoInteractions(storage);
     }
     @Test void privateCommandUsesTheSameCompensationOnlyForItsFreshObject() {
-        var images=mock(ImageMediaService.class);var storage=mock(FileStorage.class);
-        when(images.storePrivate(any(),any(),any())).thenReturn(PRIVATE);
+        var storage=mock(FileStorage.class);var images=new ImageMediaService(storage);
+        when(storage.store(any(StorageFile.class),eq("private-images"))).thenReturn(new StoredFile(PRIVATE));
         TransactionSynchronizationManager.setActualTransactionActive(true);TransactionSynchronizationManager.initSynchronization();
-        var value=new TransactionalImageMediaCommand(images,storage).storePrivateInTransaction(new ImageUpload("photo.png","image/png",new byte[]{1}));
-        assertThat(value).isEqualTo(PRIVATE);verify(images,never()).store(any(),any(),any());
+        var value=new TransactionalImageMediaCommand(images,storage).storePrivateInTransaction(new ImageUpload("photo.png","image/png",new byte[]{(byte)137,80,78,71,13,10,26,10}));
+        assertThat(value).isEqualTo(PRIVATE);
+        verify(storage).store(argThat(file -> file.contentType().equals("image/png") && file.extension().equals("png")),eq("private-images"));
         TransactionSynchronizationManager.getSynchronizations().forEach(s -> s.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
         verify(storage).delete(PRIVATE);verifyNoMoreInteractions(storage);
     }

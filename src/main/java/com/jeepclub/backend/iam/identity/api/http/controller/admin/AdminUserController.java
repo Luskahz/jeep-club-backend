@@ -179,6 +179,8 @@ public class AdminUserController {
                 sort=membershipNumber não é suportado nesta superfície (400);
                 use /admin/members para ordenação global de associados por matrícula.
 
+                Buscas parciais são literais: %, _ e ! não são curingas; trim e case-insensitive.
+                Ordenação inclui id asc como desempate quando id não for solicitado.
                 Os filtros, paginação, ordenação e seleção de campos são
                 aplicados na consulta de persistência.
                 """,

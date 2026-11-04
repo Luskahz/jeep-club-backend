@@ -1,0 +1,333 @@
+{
+  "baseline_sha": "f52e152363151c5556dd5f04e9dc7435e02ffecd",
+  "validated_implementation_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+  "final_runs": [
+    {
+      "arguments": [
+        "clean",
+        "test"
+      ],
+      "name": "clean-test",
+      "endedUtc": "2026-11-01T00:08:24.6349184Z",
+      "startedUtc": "2026-11-01T00:02:16.0733014Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Djacoco.destFile=target/hardening-unit.exec",
+        "-Djacoco.dataFile=target/hardening-unit.exec",
+        "verify"
+      ],
+      "name": "verify",
+      "endedUtc": "2026-11-01T00:14:23.4725912Z",
+      "startedUtc": "2026-11-01T00:08:24.6711035Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Pmysql-migrations",
+        "-DskipUnitTests=true",
+        "-Djacoco.destFile=target/hardening-mysql.exec",
+        "-Djacoco.dataFile=target/hardening-mysql.exec",
+        "verify"
+      ],
+      "name": "mysql",
+      "endedUtc": "2026-11-01T00:39:36.0879439Z",
+      "startedUtc": "2026-11-01T00:14:23.4805533Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Phardening-coverage-merge",
+        "jacoco:merge",
+        "jacoco:report"
+      ],
+      "name": "merged",
+      "endedUtc": "2026-11-01T00:39:57.8481278Z",
+      "startedUtc": "2026-11-01T00:39:36.0963821Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Pidentity-hardening-mutation",
+        "org.pitest:pitest-maven:mutationCoverage"
+      ],
+      "name": "pit-identity",
+      "endedUtc": "2026-11-01T00:40:57.6939832Z",
+      "startedUtc": "2026-11-01T00:39:57.8573182Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Pauthorization-hardening-mutation",
+        "org.pitest:pitest-maven:mutationCoverage"
+      ],
+      "name": "pit-authorization",
+      "endedUtc": "2026-11-01T00:43:54.2881968Z",
+      "startedUtc": "2026-11-01T00:40:57.7028537Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Ppublications-hardening-mutation",
+        "org.pitest:pitest-maven:mutationCoverage"
+      ],
+      "name": "pit-publications",
+      "endedUtc": "2026-11-01T00:45:51.0019167Z",
+      "startedUtc": "2026-11-01T00:43:54.2974289Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    },
+    {
+      "arguments": [
+        "-Pplatform-shared-hardening-mutation",
+        "org.pitest:pitest-maven:mutationCoverage"
+      ],
+      "name": "pit-platform-shared",
+      "endedUtc": "2026-11-01T00:46:10.3797766Z",
+      "startedUtc": "2026-11-01T00:45:51.0116018Z",
+      "sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+      "exitCode": 0
+    }
+  ],
+  "raw_artifacts": {
+    "final-run3\\final-verify\\site-jacoco\\jacoco.xml": {
+      "sha256": "56aaf3a534549899953e3569dcf63815c8641afe29c2e67a80b32f668e3903ec",
+      "bytes": 3113314
+    },
+    "final-run3\\final-mysql\\site-jacoco\\jacoco.xml": {
+      "sha256": "314fe1f5a376b522bec552a776f4d58d24ed2866580ec7a24ab1af0fc325e4b9",
+      "bytes": 3113603
+    },
+    "final-run3\\final-merged\\site-jacoco\\jacoco.xml": {
+      "sha256": "bdffdf2000c015a53951a773ff8ccc8ca65f259316d7614a3da2c2be53d60a40",
+      "bytes": 3113401
+    },
+    "final-run3\\final-pit-identity\\pit\\mutations.xml": {
+      "sha256": "b7534c4b4dfb6a607d9b8eef05b58a24d4a4a412806f029d170d6ff5f88f7082",
+      "bytes": 127828
+    },
+    "final-run3\\final-pit-authorization\\pit\\mutations.xml": {
+      "sha256": "61836d4a083ebd4f02ec5262d90e25a0a2f4e4206245f693249f849b5d8091bf",
+      "bytes": 152921
+    },
+    "final-run3\\final-pit-publications\\pit\\mutations.xml": {
+      "sha256": "15b597a61d42a1833b98fe688c32fcfea96be0cc8a8d1a618af4f330f33e6ec8",
+      "bytes": 318792
+    },
+    "final-run3\\final-pit-platform-shared\\pit\\mutations.xml": {
+      "sha256": "2cd31194d12138119d29f519d3ed16091e006f4dc6677920b8b2db1ef4f303a0",
+      "bytes": 52588
+    }
+  },
+  "unexecuted_classes": [
+    {
+      "class": "com/jeepclub/backend/publications/api/http/dto/ServicePublicationChangeRequestPageResponseSchema",
+      "decision": "Declarative schema/DTO or record constructor; no behavior-only test added for CLASS score"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/api/http/dto/ServicePublicationRequestPageResponseSchema",
+      "decision": "Declarative schema/DTO or record constructor; no behavior-only test added for CLASS score"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/api/http/dto/CreateEventRequestDTO",
+      "decision": "Declarative schema/DTO or record constructor; no behavior-only test added for CLASS score"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/api/http/dto/EventOperationRequests$Ride",
+      "decision": "Declarative schema/DTO or record constructor; no behavior-only test added for CLASS score"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/RoleEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/RolePermissionDeletionHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/RoleEntity",
+      "decision": "Persistence declaration/Lombok constructor/accessors; real repository/persistence behavior exercised via role administration"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/UserRoleDeletionHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/RoleDeletionHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/UserRoleRemovalHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/UserRoleEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/PermissionEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/infra/persistence/entity/RolePermissionEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/platform/logging/SystemLogEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/platform/startup/security/DevelopmentSecurityBootstrapRunner",
+      "decision": "Development-profile startup orchestration; ROOT stability exercised separately; no generic bootstrap campaign"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/identity/api/http/dto/user/UpdateCurrentUserPhotoRequestDTO",
+      "decision": "Declarative schema/DTO or record constructor; no behavior-only test added for CLASS score"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/core/domain/exception/role/DeletedRoleCannotBeChangedException",
+      "decision": "Operational Role constructor rejects deleted state; segregated history; see two equivalent Role PIT decisions"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/authorization/core/repository/RoleDeletionHistoryQueryRepository$RoleDeletionHistoryBinding",
+      "decision": "Declarative schema/DTO or record constructor; no behavior-only test added for CLASS score"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventChargeRuleEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventRegistrationEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventOccupantEmbeddable_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventRideOfferEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventGuestTransitionEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationChangeRequestEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/PublicationCommentEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/NoticeEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/PublicationLikeEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/PublicationCommentImageEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventGuestRequestEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/EventEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/PublicationEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationRequestEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/PublicationImageEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/NoticeHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/ServicePublicationEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/publications/infra/persistence/entity/PublicationHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/identity/infra/persistence/entity/UserEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/identity/infra/persistence/entity/UserDeletionHistoryEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    },
+    {
+      "class": "com/jeepclub/backend/iam/identity/infra/persistence/entity/UserProfileEntity_",
+      "decision": "Generated JPA static metamodel; declarative fields, no domain decision"
+    }
+  ],
+  "resource_log_occurrences": {
+    "Failed to validate connection": {
+      "baseline_occurrences": 40,
+      "final_occurrences": 0
+    },
+    "Communications link failure": {
+      "baseline_occurrences": 144,
+      "final_occurrences": 0
+    },
+    "Shutdown completed.": {
+      "baseline_occurrences": 8,
+      "final_occurrences": 15
+    }
+  },
+  "intermediate_run1": {
+    "sha": "38fcb5778a588d781c2ec7db0554932389c553e5",
+    "clean_test": "2513 discovered; zero failures/errors; one Windows skip",
+    "verify": "same suite passed",
+    "mysql": "INTERRUPTED after XML revealed uncovered historical role HTTP boundary; NOT accepted as passing",
+    "ci_run": 41251064283,
+    "ci_maven": "2513 passed, zero failures/errors/skips",
+    "ci_mysql_main": "477 passed, zero failures/errors/skips",
+    "ci_future_probe": "Cancelled at job maximum 20m; budget corrected to 40m without changing individual test timeouts/retries/migrations"
+  },
+  "notes": [
+    "Run manifest records distinct processes; repeated suites are not unique scenarios.",
+    "Baseline runner variable-name collision affected labels only; corrected metadata and original logs retained externally.",
+    "No production Java or migration changes; final evidence uses only the current clean compilation.",
+    "Raw logs may contain generated test secrets and are deliberately not versioned."
+  ],
+  "intermediate_run2": {
+    "sha": "4e1cc06c6471b72ce5c912cbe42ca29ad2b87f8b",
+    "local_clean_test_and_verify": "2515 discovered; 0 failures/errors; 1 Windows skip in each",
+    "local_mysql": "Interrupted for ownership-test refinement; NOT accepted as passing",
+    "separate_ci_run": 41252696809,
+    "ci_unit": "2515 passed, 0 failures/errors/skips",
+    "ci_mysql_main_and_forward": "479 passed each; 0 failures/errors/skips; intermediate evidence only"
+  }
+}

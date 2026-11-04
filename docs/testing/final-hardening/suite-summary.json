@@ -1,0 +1,42 @@
+{
+  "new_junit_method_definitions": 122,
+  "existing_junit_method_bodies_strengthened": 14,
+  "validated_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+  "suites": {
+    "clean-test": {
+      "discovered": 2515,
+      "counts": {
+        "passed": 2514,
+        "failure": 0,
+        "error": 0,
+        "skipped": 1
+      }
+    },
+    "verify": {
+      "discovered": 2515,
+      "counts": {
+        "passed": 2514,
+        "failure": 0,
+        "error": 0,
+        "skipped": 1
+      }
+    },
+    "mysql": {
+      "discovered": 479,
+      "counts": {
+        "passed": 479,
+        "failure": 0,
+        "error": 0,
+        "skipped": 0
+      }
+    }
+  },
+  "new_surefire_cases": 211,
+  "removed_surefire_cases": 0,
+  "new_mysql_cases": 23,
+  "mysql_inherited_repeated_in_surefire": 339,
+  "mysql_specific_cases": 140,
+  "new_test_files": 12,
+  "modified_test_files": 16,
+  "mysql_specific_cases_definition": "Cases without a direct inherited Surefire method match; not a claim of unique business behaviors."
+}

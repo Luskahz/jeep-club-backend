@@ -6,9 +6,11 @@ import com.jeepclub.backend.publications.core.application.exception.EventOperati
 import com.jeepclub.backend.billing.api.module.EventBillingException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
-import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 @RestControllerAdvice(assignableTypes={AdminEventController.class, com.jeepclub.backend.publications.api.http.controller.admin.AdminEventReportController.class, EventController.class})
 public class EventExceptionHandler extends ApiExceptionHandler {
+    private final GlobalExceptionHandler global;
+    public EventExceptionHandler(GlobalExceptionHandler global) {this.global=global;}
     @ExceptionHandler(com.jeepclub.backend.shared.storage.exception.InvalidStorageKeyException.class)
     public ResponseEntity<ApiErrorResponse> imageInvalid(Exception e) {
         return buildErrorResponse("INVALID_IMAGE", "Image key is invalid.", HttpStatus.BAD_REQUEST);
@@ -28,7 +30,7 @@ public class EventExceptionHandler extends ApiExceptionHandler {
             return buildErrorResponse("EVENT_CHARGE_NOT_FOUND", "Event charge was not found.", HttpStatus.NOT_FOUND);
         return buildErrorResponse("EVENT_CHARGE_INVALID", "Event charge is unavailable or incompatible.", HttpStatus.CONFLICT);
     }
-    @ExceptionHandler({IllegalArgumentException.class, NullPointerException.class, tools.jackson.core.JacksonException.class})
+    @ExceptionHandler({IllegalArgumentException.class, tools.jackson.core.JacksonException.class})
     public ResponseEntity<ApiErrorResponse> invalid(Exception e) {
         return buildErrorResponse("EVENT_INVALID_REQUEST", "Event fields are invalid.", HttpStatus.BAD_REQUEST);
     }
@@ -36,8 +38,14 @@ public class EventExceptionHandler extends ApiExceptionHandler {
     public ResponseEntity<ApiErrorResponse> state(Exception e) {
         return buildErrorResponse("EVENT_INVALID_STATE", "Operation is not allowed in the current state.", HttpStatus.CONFLICT);
     }
-    @ExceptionHandler(DataAccessException.class)
+    @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
     public ResponseEntity<ApiErrorResponse> conflict(Exception e) {
         return buildErrorResponse("EVENT_CONFLICT", "Concurrent change or persistent conflict; refresh the event.", HttpStatus.CONFLICT);
+    }
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<? extends ProblemDetail> integrity(DataIntegrityViolationException e) {
+        if (!PublicationConstraintConflicts.matches(e, java.util.Set.of("uk_event_registration", "uk_event_ride_selected")))
+            return ResponseEntity.internalServerError().body(global.handleUnexpectedException(e,org.springframework.context.i18n.LocaleContextHolder.getLocale()));
+        return conflict(e);
     }
 }

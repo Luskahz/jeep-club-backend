@@ -128,6 +128,22 @@ class ToolsHttpIntegrationTest {
         long id = json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
         mvc.perform(get("/admin/tools/{id}", id).header(AUTHORIZATION, admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Chave"));
+        mvc.perform(get("/admin/tools").param("q","  CHAV ").param("userId",memberId.toString())
+                .param("name","ave").param("fields","NAME").header(AUTHORIZATION,admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("Chave"))
+                .andExpect(jsonPath("$.content[0].id").doesNotExist()).andExpect(jsonPath("$.content[0].userId").doesNotExist());
+        mvc.perform(get("/admin/tools").param("q","   ").param("fields","")
+                .param("userId",memberId.toString()).header(AUTHORIZATION,admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(id));
+        mvc.perform(get("/admin/tools").param("q","%").header(AUTHORIZATION,admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        for (var invalid : java.util.Map.of("fields","DESCRIPTION","sort","ownerName,asc","userId","0","status","INVALID","q","x".repeat(101),"page","-1","size","0").entrySet()) {
+            mvc.perform(get("/admin/tools").param(invalid.getKey(),invalid.getValue()).header(AUTHORIZATION,admin))
+                    .andExpect(status().isBadRequest()).andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+        }
+        mvc.perform(get("/admin/tools").param("page",Integer.toString(Integer.MAX_VALUE)).header(AUTHORIZATION,admin))
+                .andExpect(status().isBadRequest());
         mvc.perform(patch("/admin/tools/{id}/deactivate", id).header(AUTHORIZATION, admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INACTIVE"));
         mvc.perform(get("/admin/tools").param("status", "INACTIVE").param("name", "cha")

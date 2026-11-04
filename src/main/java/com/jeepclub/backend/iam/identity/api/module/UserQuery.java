@@ -12,6 +12,8 @@ import java.util.Set;
  * the administrative activity methods exposed here.</p>
  */
 public interface UserQuery {
+    /** Literal case-insensitive name search. At most 500 IDs, no truncation; refine a broader term. */
+    Set<Long> findIdsByName(String name);
     List<UserDetails> findByIds(Collection<Long> ids);
     List<UserDetails> findAfterId(long afterId, int limit);
 

@@ -22,6 +22,10 @@ import java.util.Locale;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.vehicles")
 public class VehicleExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.vehicles.core.application.exceptions.InvalidVehicleSearchException.class)
+    public ResponseEntity<ApiErrorResponse> invalidSearch(Exception failure) {
+        return buildErrorResponse("VEHICLE_INVALID_SEARCH",failure.getMessage(),HttpStatus.BAD_REQUEST);
+    }
     @ExceptionHandler(com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleGalleryConflict(com.jeepclub.backend.vehicles.core.domain.exception.VehicleGalleryConflictException exception) {
         return buildErrorResponse("VEHICLE_GALLERY_CONFLICT",exception.getMessage(),HttpStatus.CONFLICT);

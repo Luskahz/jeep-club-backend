@@ -9,6 +9,10 @@ import java.time.Instant;
 import java.util.Optional;
 
 public interface VehicleRepository {
+    Page<com.jeepclub.backend.vehicles.core.application.result.AdminVehicleSearchResult> search(
+            com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter filter,
+            java.util.Set<com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField> fields,
+            Pageable pageable);
     java.util.List<Vehicle> findAllByIds(java.util.Collection<Long> ids);
 
     boolean existsByPlate(String plate);

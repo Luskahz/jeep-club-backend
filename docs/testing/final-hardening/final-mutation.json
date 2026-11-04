@@ -1,0 +1,96 @@
+{
+  "identity": {
+    "total": 137,
+    "counts": {
+      "KILLED": 135,
+      "SURVIVED": 2,
+      "NO_COVERAGE": 0,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 98.5401,
+    "killed_percent": 98.5401,
+    "classes": [
+      "com.jeepclub.backend.iam.identity.core.application.service.user.UserQueryService",
+      "com.jeepclub.backend.iam.identity.core.domain.model.User"
+    ],
+    "validated_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+    "maven_total_time": "57.994 s"
+  },
+  "authorization": {
+    "total": 160,
+    "counts": {
+      "KILLED": 157,
+      "SURVIVED": 3,
+      "NO_COVERAGE": 0,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 98.125,
+    "killed_percent": 98.125,
+    "classes": [
+      "com.jeepclub.backend.iam.authorization.core.application.service.role.AdminRoleService",
+      "com.jeepclub.backend.iam.authorization.core.application.service.rolepermission.AdminRolePermissionService",
+      "com.jeepclub.backend.iam.authorization.core.application.service.userrole.AdminUserRoleService",
+      "com.jeepclub.backend.iam.authorization.core.domain.model.Permission",
+      "com.jeepclub.backend.iam.authorization.core.domain.model.Role"
+    ],
+    "validated_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+    "maven_total_time": "02:54 min"
+  },
+  "publications": {
+    "total": 290,
+    "counts": {
+      "KILLED": 280,
+      "SURVIVED": 9,
+      "NO_COVERAGE": 1,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 96.5517,
+    "killed_percent": 96.5517,
+    "classes": [
+      "com.jeepclub.backend.publications.core.application.service.EventReportService",
+      "com.jeepclub.backend.publications.core.application.service.EventService",
+      "com.jeepclub.backend.publications.core.application.service.internal.EventParticipationRequirement",
+      "com.jeepclub.backend.publications.core.domain.model.EventRegistration"
+    ],
+    "validated_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+    "maven_total_time": "01:54 min"
+  },
+  "platform-shared": {
+    "total": 58,
+    "counts": {
+      "KILLED": 57,
+      "SURVIVED": 1,
+      "NO_COVERAGE": 0,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 98.2759,
+    "killed_percent": 98.2759,
+    "classes": [
+      "com.jeepclub.backend.platform.logging.SystemLogServiceAdapter",
+      "com.jeepclub.backend.platform.security.handler.ApiAccessDeniedHandler",
+      "com.jeepclub.backend.platform.storage.image.ImageMediaService",
+      "com.jeepclub.backend.shared.export.ExportPages",
+      "com.jeepclub.backend.shared.storage.ImageReference",
+      "com.jeepclub.backend.shared.storage.StorageResource",
+      "com.jeepclub.backend.shared.storage.exception.StorageOperationException"
+    ],
+    "validated_sha": "56cce5b41fe5682a714fd96e39a8124bf9dd7475",
+    "maven_total_time": "17.528 s"
+  }
+}

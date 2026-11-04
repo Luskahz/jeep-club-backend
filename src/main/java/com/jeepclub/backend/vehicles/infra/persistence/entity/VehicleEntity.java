@@ -88,6 +88,7 @@ public class VehicleEntity {
     private Instant archivedAt;
 
     @org.hibernate.annotations.ColumnDefault("0")
+    @org.hibernate.annotations.DialectOverride.ColumnDefault(dialect=org.hibernate.dialect.PostgreSQLDialect.class,override=@org.hibernate.annotations.ColumnDefault("false"))
     @Column(name = "legacy_deleted", nullable = false)
     private boolean legacyDeleted;
 

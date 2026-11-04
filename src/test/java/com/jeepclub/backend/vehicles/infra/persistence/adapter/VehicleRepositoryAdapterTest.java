@@ -22,6 +22,7 @@ import org.springframework.boot.persistence.autoconfigure.EntityScan;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,7 +37,7 @@ import java.time.Instant;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-@DataJpaTest
+@DataJpaTest(properties="spring.jpa.properties.hibernate.session_factory.statement_inspector=com.jeepclub.backend.vehicles.infra.persistence.adapter.VehicleRepositoryAdapterTest$Sql")
 @ActiveProfiles("test")
 @Import({
         VehicleRepositoryAdapter.class,
@@ -48,6 +49,8 @@ class VehicleRepositoryAdapterTest {
 
     @Autowired
     private VehicleRepositoryAdapter repository;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames;
     @Autowired
     private VehicleJpaRepository vehicleJpaRepository;
     @Autowired
@@ -58,6 +61,26 @@ class VehicleRepositoryAdapterTest {
     private DataSource dataSource;
     @Autowired
     private PlatformTransactionManager transactionManager;
+
+    @Test
+    void selectiveAdministrativeQueryUsesTwoStatementsWithoutLoadingGalleryOrUnrequestedColumns() {
+        var first=repository.save(vehicle("ABC1D23","12345678901"));
+        var second=repository.save(vehicle("DEF4G56","12345678902"));
+        entityManager.flush();entityManager.clear();Sql.statements.clear();
+        var fields=java.util.Set.of(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.NICKNAME);
+        var filter=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter(null,null,7L,"trov",null,null);
+        var page=repository.search(filter,fields,PageRequest.of(1,1,org.springframework.data.domain.Sort.by("nickname")));
+        assertThat(page.getTotalElements()).isEqualTo(2);assertThat(page.getTotalPages()).isEqualTo(2);
+        assertThat(page.getContent()).singleElement().satisfies(r -> {assertThat(r.nickname()).isEqualTo("Trovão");assertThat(r.id()).isNull();assertThat(r.ownerId()).isNull();});
+        assertThat(Sql.statements).hasSize(2);
+        assertThat(Sql.statements.get(0).substring(0,Sql.statements.get(0).indexOf(" from ")))
+                .contains(".nickname").doesNotContain(".id", ".owner_id", ".renavam", ".photo");
+        var all=java.util.EnumSet.allOf(com.jeepclub.backend.vehicles.core.application.query.AdminVehicleField.class);
+        assertThat(repository.search(filter,all,PageRequest.of(1,1,org.springframework.data.domain.Sort.by("nickname"))).getContent())
+                .extracting(r -> r.id()).containsExactly(second.getId());
+        var plate=new com.jeepclub.backend.vehicles.core.application.query.AdminVehicleFilter(null,"abc-1d23",null,null,null,null);
+        assertThat(repository.search(plate,all,PageRequest.of(0,10)).getContent()).extracting(r -> r.id()).containsExactly(first.getId());
+    }
 
     @Test
     void operationalColumnMetadataReflectsHardenedNullabilityAndLength() throws SQLException {
@@ -349,5 +372,9 @@ class VehicleRepositoryAdapterTest {
     @EnableJpaRepositories(basePackageClasses = VehicleJpaRepository.class)
     @EntityScan(basePackageClasses = VehicleEntity.class)
     static class TestConfiguration {
+    }
+    public static class Sql implements org.hibernate.resource.jdbc.spi.StatementInspector {
+        static final java.util.List<String> statements=new java.util.ArrayList<>();
+        @Override public String inspect(String sql) {statements.add(sql);return sql;}
     }
 }

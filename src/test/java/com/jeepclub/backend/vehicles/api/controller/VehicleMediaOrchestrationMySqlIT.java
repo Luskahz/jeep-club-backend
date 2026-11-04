@@ -7,6 +7,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
 @Testcontainers
+@org.springframework.test.annotation.DirtiesContext(classMode=org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class VehicleMediaOrchestrationMySqlIT extends VehicleMediaOrchestrationIntegrationTest {
     @Container static final MySQLContainer MYSQL = new MySQLContainer("mysql:8.0.46")
         .withUsername("root").withPassword("synthetic-media-test-only");

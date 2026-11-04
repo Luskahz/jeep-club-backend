@@ -67,6 +67,9 @@ class AdminUserControllerTest {
     @Mock
     private UserRegistration userRegistration;
 
+    @Mock
+    private com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection membershipNumbers;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -83,7 +86,7 @@ class AdminUserControllerTest {
         pageableResolver.setFallbackPageable(PageRequest.of(0, DEFAULT_PAGE_SIZE));
         pageableResolver.setMaxPageSize(MAX_PAGE_SIZE);
 
-        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, org.mockito.Mockito.mock(com.jeepclub.backend.iam.identity.api.module.spi.UserMembershipNumberProjection.class), validator, userRegistration, Clock.systemUTC()))
+        mockMvc = MockMvcBuilders.standaloneSetup(new AdminUserController(adminUserService, membershipNumbers, validator, userRegistration, Clock.systemUTC()))
                 .setControllerAdvice(new IdentityUserExceptionHandler(), new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(pageableResolver, new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
                     public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
@@ -99,6 +102,21 @@ class AdminUserControllerTest {
                 .setMessageConverters(new JacksonJsonHttpMessageConverter(jsonMapper))
                 .setValidator(validator)
                 .build();
+    }
+
+    @Test
+    void membershipProjectionUsesOneBatchForThePageAndNoBatchWhenOmitted() throws Exception {
+        when(adminUserService.findAll(any(), any(), any())).thenReturn(new PageImpl<>(
+                List.of(user(7L, UserStatus.ACTIVE), user(8L, UserStatus.ACTIVE))));
+        when(membershipNumbers.currentNumbers(List.of(7L, 8L))).thenReturn(java.util.Map.of(7L,"27",8L,"28"));
+        mockMvc.perform(get("/identity/admin/users").param("fields", "NAME,MEMBERSHIP_NUMBER"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content[1].membershipNumber").value("28"))
+                .andExpect(jsonPath("$.content[0].id").doesNotExist());
+        verify(membershipNumbers).currentNumbers(List.of(7L, 8L));
+        org.mockito.Mockito.clearInvocations(membershipNumbers);
+        mockMvc.perform(get("/identity/admin/users").param("fields", "ID,NAME"))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.verifyNoInteractions(membershipNumbers);
     }
 
     @Test

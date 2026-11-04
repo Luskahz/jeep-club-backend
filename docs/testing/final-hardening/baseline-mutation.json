@@ -1,0 +1,88 @@
+{
+  "identity": {
+    "total": 137,
+    "counts": {
+      "KILLED": 92,
+      "SURVIVED": 16,
+      "NO_COVERAGE": 29,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 67.1533,
+    "killed_percent": 67.1533,
+    "classes": [
+      "com.jeepclub.backend.iam.identity.core.application.service.user.UserQueryService",
+      "com.jeepclub.backend.iam.identity.core.domain.model.User"
+    ]
+  },
+  "authorization": {
+    "total": 160,
+    "counts": {
+      "KILLED": 71,
+      "SURVIVED": 28,
+      "NO_COVERAGE": 61,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 44.375,
+    "killed_percent": 44.375,
+    "classes": [
+      "com.jeepclub.backend.iam.authorization.core.application.service.role.AdminRoleService",
+      "com.jeepclub.backend.iam.authorization.core.application.service.rolepermission.AdminRolePermissionService",
+      "com.jeepclub.backend.iam.authorization.core.application.service.userrole.AdminUserRoleService",
+      "com.jeepclub.backend.iam.authorization.core.domain.model.Permission",
+      "com.jeepclub.backend.iam.authorization.core.domain.model.Role"
+    ]
+  },
+  "publications": {
+    "total": 290,
+    "counts": {
+      "SURVIVED": 108,
+      "KILLED": 161,
+      "NO_COVERAGE": 21,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 55.5172,
+    "killed_percent": 55.5172,
+    "classes": [
+      "com.jeepclub.backend.publications.core.application.service.EventReportService",
+      "com.jeepclub.backend.publications.core.application.service.EventService",
+      "com.jeepclub.backend.publications.core.application.service.internal.EventParticipationRequirement",
+      "com.jeepclub.backend.publications.core.domain.model.EventRegistration"
+    ]
+  },
+  "platform-shared": {
+    "total": 58,
+    "counts": {
+      "NO_COVERAGE": 29,
+      "KILLED": 25,
+      "SURVIVED": 4,
+      "TIMED_OUT": 0,
+      "NON_VIABLE": 0,
+      "RUN_ERROR": 0,
+      "MEMORY_ERROR": 0,
+      "NOT_STARTED": 0
+    },
+    "mutation_score_detected": 43.1034,
+    "killed_percent": 43.1034,
+    "classes": [
+      "com.jeepclub.backend.platform.logging.SystemLogServiceAdapter",
+      "com.jeepclub.backend.platform.security.handler.ApiAccessDeniedHandler",
+      "com.jeepclub.backend.platform.storage.image.ImageMediaService",
+      "com.jeepclub.backend.shared.export.ExportPages",
+      "com.jeepclub.backend.shared.storage.ImageReference",
+      "com.jeepclub.backend.shared.storage.StorageResource",
+      "com.jeepclub.backend.shared.storage.exception.StorageOperationException"
+    ]
+  }
+}

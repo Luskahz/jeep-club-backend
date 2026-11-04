@@ -20,6 +20,7 @@ public final class UserSortMapper {
         Sort mappedSort = Sort.by(pageable.getSort().stream()
                 .map(UserSortMapper::validate)
                 .toList());
+        if (mappedSort.getOrderFor("id") == null) mappedSort = mappedSort.and(Sort.by("id"));
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), mappedSort);
     }
 

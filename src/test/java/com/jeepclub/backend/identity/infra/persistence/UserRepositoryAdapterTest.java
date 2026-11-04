@@ -141,6 +141,60 @@ class UserRepositoryAdapterTest {
         ))).isInstanceOf(UserConflictException.class);
     }
 
+    @Test
+    void keysetAndBatchRetainInactiveAndArchivedUsersWithoutReturningUnknownIds() {
+        User first = repository.create(identity("First", "52998224725", "first@example.com", "1"));
+        User inactive = repository.create(identity("Inactive", "16899535009", "inactive@example.com", "2"));
+        User archived = repository.create(identity("Archived", "39053344705", "archived@example.com", "3"));
+        inactive.disable(CREATED_AT.plusSeconds(1));
+        archived.archive(CREATED_AT.plusSeconds(2));
+        repository.saveAndFlush(inactive);
+        repository.saveAndFlush(archived);
+        assertThat(repository.findAfterId(first.getId(), 1)).extracting(User::getId).containsExactly(inactive.getId());
+        assertThat(repository.findAfterId(archived.getId(), 500)).isEmpty();
+        assertThat(repository.findByIds(List.of(inactive.getId(), archived.getId(), Long.MAX_VALUE)))
+                .extracting(User::getStatus).containsExactlyInAnyOrder(
+                        com.jeepclub.backend.iam.identity.api.module.UserStatus.INACTIVE,
+                        com.jeepclub.backend.iam.identity.api.module.UserStatus.ARCHIVED);
+        assertThat(repository.findActiveIdsByIds(List.of(first.getId(), inactive.getId(), archived.getId())))
+                .containsExactly(first.getId());
+        assertThat(repository.findByIds(List.of())).isEmpty();
+        assertThat(repository.findActiveIdsByIds(null)).isEmpty();
+        assertThat(repository.findActiveIdsByIds(List.of())).isEmpty();
+    }
+
+    @Test
+    void missingAndNullCpfQueriesDoNotInventResultsAndFormattedCpfCanBeLocked() {
+        User stored = repository.create(identity("Found", "52998224725", "found@example.com", "123"));
+        assertThat(repository.findByCpf(null)).isEmpty();
+        assertThat(repository.findByCpfForUpdate(null)).isEmpty();
+        assertThat(repository.findByCpf("00000000999")).isEmpty();
+        assertThat(repository.findByCpfForUpdate("00000000999")).isEmpty();
+        assertThat(repository.findByIdForUpdate(Long.MAX_VALUE)).isEmpty();
+        assertThat(repository.findByCpf("529.982.247-25")).get().extracting(User::getId).isEqualTo(stored.getId());
+        assertThat(repository.findByCpfForUpdate("529.982.247-25")).get().extracting(User::getId).isEqualTo(stored.getId());
+    }
+
+    @Test
+    void uniquenessExcludesTheSameIdentityAndHandlesAbsentParameters() {
+        User stored = repository.create(identity("Found", "52998224725", "found@example.com", "123"));
+        assertThat(repository.existsByCpfAndIdNot(stored.getCpf(), stored.getId())).isFalse();
+        assertThat(repository.existsByCpfAndIdNot(stored.getCpf(), Long.MAX_VALUE)).isTrue();
+        assertThat(repository.existsByCpfAndIdNot(null, stored.getId())).isFalse();
+        assertThat(repository.existsByCpfAndIdNot(stored.getCpf(), null)).isFalse();
+        assertThat(repository.existsByEmailAndIdNot(stored.getEmail(), stored.getId())).isFalse();
+        assertThat(repository.existsByEmailAndIdNot(stored.getEmail(), Long.MAX_VALUE)).isTrue();
+        assertThat(repository.existsByEmailAndIdNot(null, stored.getId())).isFalse();
+        assertThat(repository.existsByEmailAndIdNot(stored.getEmail(), null)).isFalse();
+        assertThat(repository.existsByRgAndIdNot(stored.getRg(), stored.getId())).isFalse();
+        assertThat(repository.existsByRgAndIdNot(stored.getRg(), Long.MAX_VALUE)).isTrue();
+        assertThat(repository.existsByRgAndIdNot(null, stored.getId())).isFalse();
+        assertThat(repository.existsByRgAndIdNot(stored.getRg(), null)).isFalse();
+        assertThat(repository.existsByCpf(null)).isFalse();
+        assertThat(repository.existsByEmail(null)).isFalse();
+        assertThat(repository.existsByRg(null)).isFalse();
+    }
+
     private User identity(
             String name,
             String cpf,
