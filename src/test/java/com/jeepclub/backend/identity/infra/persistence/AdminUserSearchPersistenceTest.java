@@ -2,6 +2,7 @@ package com.jeepclub.backend.identity.infra.persistence;
 
 import com.jeepclub.backend.iam.identity.api.module.UserStatus;
 import com.jeepclub.backend.iam.identity.core.application.query.user.*;
+import com.jeepclub.backend.iam.identity.core.application.result.admin.user.AdminUserResult;
 import com.jeepclub.backend.iam.identity.infra.persistence.entity.UserEntity;
 import com.jeepclub.backend.iam.identity.infra.persistence.query.AdminUserJpaQueryRepository;
 import jakarta.persistence.EntityManager;
@@ -81,19 +82,61 @@ class AdminUserSearchPersistenceTest {
                 .extracting(r -> r.id()).containsExactly(match.getId());
         var exact = new AdminUserFilter(null,null,null,null,null,null,null,null,null,null,null,null,null,"999",null,null);
         assertThat(query.findAll(exact, SUMMARY, PageRequest.of(0, 2))).isEmpty();
+        var trimmedMembershipFilter = new com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserFilterDTO(
+                null, null, null, null, null, null, null, null, null, null, null, null, null, "  027  "
+        ).toFilter().resolvedMembership(match.getId(), null);
+        assertThat(trimmedMembershipFilter.membershipNumber()).isEqualTo("027");
+        assertThat(query.findAll(trimmedMembershipFilter, SUMMARY, PageRequest.of(0, 2)).getContent())
+                .extracting(AdminUserResult::id).containsExactly(match.getId());
         var projected = query.findAll(filter(null,null,null,null), Set.of(AdminUserField.MEMBERSHIP_NUMBER), PageRequest.of(0,2));
         assertThat(projected.getContent()).singleElement().satisfies(r -> {assertThat(r.id()).isEqualTo(match.getId());assertThat(r.name()).isNull();});
     }
 
     @Test void qMatchesFormattedCpfAndPhoneNumberAgainstDigitsOnlyColumns() {
-        var match = user("FormattedMatch", "formatted@example.test");
-        match.setCpf("52998224725");
-        match.setPhoneNumber("11987654321");
+        var cpfMatch = user("FormattedCpf", "cpf@example.test");
+        cpfMatch.setCpf("52998224725");
+        cpfMatch.setRg("112233445");
+        cpfMatch.setPhoneNumber("5511987654321");
+
+        var rgMatch = user("FormattedRg", "rg@example.test");
+        rgMatch.setCpf("16899535009");
+        rgMatch.setRg("123456789");
+        rgMatch.setPhoneNumber("5511987659999");
+
+        var numericNoise = user("NumericNoise", "noise@example.test");
+        numericNoise.setCpf("99999123999");
+        numericNoise.setRg("888123888");
+        numericNoise.setPhoneNumber("5511900123000");
+
+        var alphaNumericUser = user("maria123", "maria123@example.test");
+        alphaNumericUser.setCpf("11144477735");
+        alphaNumericUser.setRg("777666555");
+        alphaNumericUser.setPhoneNumber("5521977776666");
+
         em.flush(); em.clear();
-        assertThat(query.findAll(filter(null, null, "529.982.247-25", null), SUMMARY, PageRequest.of(0, 2)).getContent())
-                .extracting(AdminUserResult::id).containsExactly(match.getId());
-        assertThat(query.findAll(filter(null, null, "(11) 98765-4321", null), SUMMARY, PageRequest.of(0, 2)).getContent())
-                .extracting(AdminUserResult::id).containsExactly(match.getId());
+
+        var byFormattedCpf = query.findAll(filter(null, null, "529.982.247-25", null), SUMMARY, PageRequest.of(0, 5));
+        assertThat(byFormattedCpf.getContent()).extracting(AdminUserResult::id).containsExactly(cpfMatch.getId());
+        assertThat(byFormattedCpf.getTotalElements()).isEqualTo(1);
+
+        var byFormattedRg = query.findAll(filter(null, null, "12.345.678-9", null), SUMMARY, PageRequest.of(0, 5));
+        assertThat(byFormattedRg.getContent()).extracting(AdminUserResult::id).containsExactly(rgMatch.getId());
+        assertThat(byFormattedRg.getTotalElements()).isEqualTo(1);
+
+        var byFormattedPhone = query.findAll(filter(null, null, "+55 (11) 98765-4321", null), SUMMARY, PageRequest.of(0, 5));
+        assertThat(byFormattedPhone.getContent()).extracting(AdminUserResult::id).containsExactly(cpfMatch.getId());
+        assertThat(byFormattedPhone.getTotalElements()).isEqualTo(1);
+
+        var byFormattedPhonePrefixPage0 = query.findAll(filter(null, null, "(11) 98765", null), SUMMARY, PageRequest.of(0, 1, Sort.by("name")));
+        var byFormattedPhonePrefixPage1 = query.findAll(filter(null, null, "(11) 98765", null), SUMMARY, PageRequest.of(1, 1, Sort.by("name")));
+        assertThat(byFormattedPhonePrefixPage0.getContent()).extracting(AdminUserResult::id).containsExactly(cpfMatch.getId());
+        assertThat(byFormattedPhonePrefixPage1.getContent()).extracting(AdminUserResult::id).containsExactly(rgMatch.getId());
+        assertThat(byFormattedPhonePrefixPage0.getTotalElements()).isEqualTo(2);
+        assertThat(byFormattedPhonePrefixPage0.getTotalPages()).isEqualTo(2);
+
+        var byAlphaNumeric = query.findAll(filter(null, null, "maria123", null), SUMMARY, PageRequest.of(0, 10));
+        assertThat(byAlphaNumeric.getContent()).extracting(AdminUserResult::id).containsExactly(alphaNumericUser.getId());
+        assertThat(byAlphaNumeric.getTotalElements()).isEqualTo(1);
     }
 
     private AdminUserFilter filter(String name, String email, String q, UserStatus status) {

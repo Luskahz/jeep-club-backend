@@ -118,8 +118,8 @@ public class AdminUserJpaQueryRepository {
                     cb.like(user.get("phoneNumber"), search, '!'),
                     filter.queryMembershipIdentityId() == null ? cb.disjunction() : cb.equal(user.get("id"), filter.queryMembershipIdentityId())
             ));
-            String digitsOnly = filter.query().replaceAll("\\D", "");
-            if (!digitsOnly.isEmpty() && !digitsOnly.equals(filter.query().trim())) {
+            String digitsOnly = numericQuery(filter.query());
+            if (digitsOnly != null) {
                 String digitsSearch = like(digitsOnly);
                 orPredicates.add(cb.like(user.get("cpf"), digitsSearch, '!'));
                 orPredicates.add(cb.like(user.get("rg"), digitsSearch, '!'));
@@ -196,6 +196,15 @@ public class AdminUserJpaQueryRepository {
             case DISABLED_AT -> "disabledAt";
             case UPDATED_AT -> "updatedAt";
         };
+    }
+
+    private static String numericQuery(String value) {
+        String trimmed = value.trim();
+        if (!trimmed.matches("[\\d\\s.()\\-+/]+")) {
+            return null;
+        }
+        String digits = trimmed.replaceAll("\\D", "");
+        return digits.isEmpty() || digits.equals(trimmed) ? null : digits;
     }
 
     private static String like(String value) {
