@@ -61,3 +61,11 @@ Próximos PRs devem tratar separadamente: pipeline síncrono com benchmark p95/c
 D13: comuns exigem revalidação de ACL/moderação em cada request, inclusive 304/HEAD/Range; sensíveis/MASTER exigem private,no-store. Não há mudança HTTP agora. O GET legado e seu problema conhecido de acesso por key continuam como antes; a fundação não corrige nem ativa o cutover.
 
 Sem merge, deploy, operação em VPS, backup operacional, frontend ou dados reais. Resultado de teste local/CI é evidência técnica, sem aceitação operacional.
+
+## Registro de validação
+
+Os comandos e resultados finais do SHA publicado ficam na descrição do PR, com link para a execução de CI. O perfil `mysql-migrations` inclui MediaCatalogMySqlIT; `publications-postgresql` inclui MediaCatalogPostgresIT por convenção de sufixo. A execução normal inclui MediaDomainTest e MediaCatalogPersistenceTest.
+
+Durante a implementação foram corrigidos: isolamento do slice JPA (não carregar repositories de outros módulos), nomes duplicados de checks e enums VARCHAR com checks nomeados/converters explícitos. O teste H2 usa datasource com pool para não depender de sessão de DDL fechada na avaliação de checks. Não se alterou versão do H2 nem configuração operacional.
+
+A primeira comparação física integral falhou porque a migration declarava RESTRICT nas cinco FKs Storage enquanto o DDL JPA usava NO ACTION. O mapping passou a declarar `ForeignKey.options` com `ON DELETE RESTRICT ON UPDATE RESTRICT`, preservando a restrição em ambos os dialetos. A comparação integral permanece exigida; nenhuma diferença foi ignorada ou removida do snapshot. Essa falha é distinta dos testes funcionais do catálogo, que já haviam passado em MySQL e PostgreSQL. Resultados de commits anteriores não substituem os gates do HEAD final.
