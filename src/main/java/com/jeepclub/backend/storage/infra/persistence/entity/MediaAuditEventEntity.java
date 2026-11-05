@@ -59,20 +59,20 @@ public class MediaAuditEventEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "media_id", insertable = false, updatable = false,
-            foreignKey = @ForeignKey(name = "fk_storage_auditevent_asset"))
+            foreignKey = @ForeignKey(name = "fk_storage_auditevent_asset", options = "ON DELETE RESTRICT ON UPDATE RESTRICT"))
     private MediaAssetEntity asset;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(value = {
         @JoinColumn(name = "media_id", referencedColumnName = "media_id", insertable = false, updatable = false),
         @JoinColumn(name = "variant_id", referencedColumnName = "id", insertable = false, updatable = false)
-    }, foreignKey = @ForeignKey(name = "fk_storage_audit_variant"))
+    }, foreignKey = @ForeignKey(name = "fk_storage_audit_variant", options = "ON DELETE RESTRICT ON UPDATE RESTRICT"))
     private MediaVariantEntity variant;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns(value = {
         @JoinColumn(name = "media_id", referencedColumnName = "media_id", insertable = false, updatable = false),
         @JoinColumn(name = "reference_id", referencedColumnName = "id", insertable = false, updatable = false)
-    }, foreignKey = @ForeignKey(name = "fk_storage_audit_reference"))
+    }, foreignKey = @ForeignKey(name = "fk_storage_audit_reference", options = "ON DELETE RESTRICT ON UPDATE RESTRICT"))
     private MediaReferenceEntity reference;
 }

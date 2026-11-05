@@ -76,6 +76,6 @@ public class MediaVariantEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "media_id", insertable = false, updatable = false,
-            foreignKey = @ForeignKey(name = "fk_storage_variant_asset"))
+            foreignKey = @ForeignKey(name = "fk_storage_variant_asset", options = "ON DELETE RESTRICT ON UPDATE RESTRICT"))
     private MediaAssetEntity asset;
 }

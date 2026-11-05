@@ -71,6 +71,6 @@ public class MediaReferenceEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "media_id", insertable = false, updatable = false,
-            foreignKey = @ForeignKey(name = "fk_storage_reference_asset"))
+            foreignKey = @ForeignKey(name = "fk_storage_reference_asset", options = "ON DELETE RESTRICT ON UPDATE RESTRICT"))
     private MediaAssetEntity asset;
 }
