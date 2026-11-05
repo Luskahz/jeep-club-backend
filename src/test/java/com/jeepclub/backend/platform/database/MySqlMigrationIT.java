@@ -325,6 +325,7 @@ class MySqlMigrationIT {
         eventGuestPhysicalConstraints(expected);
         rejectionNotificationPhysicalConstraints(expected);
         retainedReferencePhysicalConstraints(expected);
+        storagePhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -613,6 +614,16 @@ class MySqlMigrationIT {
         }
     }
 
+
+    // The provider key uses MySQL NO PAD binary comparison; JPA stays dialect-neutral.
+    private static void storagePhysicalConstraints(String name) throws Exception {
+        try (var c = connection(name); var st = c.createStatement()) {
+            for (var column : Map.of("provider",32,"namespace",64,"storage_key",512,"variant_code",64).entrySet()) {
+                st.execute("ALTER TABLE storage_media_variants MODIFY " + column.getKey() + " VARCHAR(" + column.getValue()
+                        + ") CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL");
+            }
+        }
+    }
 
     // Independently describe DB-only constraints missing from the JPA mappings.
     private static void retainedReferencePhysicalConstraints(String name) throws Exception {
