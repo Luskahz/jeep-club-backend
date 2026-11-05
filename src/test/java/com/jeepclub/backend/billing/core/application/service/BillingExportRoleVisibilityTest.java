@@ -85,7 +85,7 @@ class BillingExportRoleVisibilityTest {
                 new BillingExportFilter(null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null),
                 ExportFormat.CSV, true);
         assertThat(rows).hasSize(1);
-        assertThat(rows.get(0).cells().get(17)).isEqualTo(42L);
+        assertThat(rows.get(0).cells().get(17)).isEqualTo("42");
         assertThat(rows.get(0).cells().get(20)).isEqualTo("Diretoria");
         verify(roles).findByIds(List.of(42L));
     }
