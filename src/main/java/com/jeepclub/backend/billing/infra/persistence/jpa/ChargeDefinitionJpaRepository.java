@@ -14,7 +14,7 @@ public interface ChargeDefinitionJpaRepository extends JpaRepository<ChargeDefin
         com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType recurrenceType,
         org.springframework.data.domain.Pageable pageable);
 
-    boolean existsByName(String name);
+    boolean existsByNameIgnoreCase(String name);
 
-    boolean existsByNameAndIdNot(String name, Long id);
+    boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
 }

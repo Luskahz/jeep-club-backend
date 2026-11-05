@@ -63,12 +63,12 @@ public class ChargeDefinitionAdapter implements ChargeDefinitionRepository {
 
     @Override
     public boolean existsByName(String name) {
-        return jpa.existsByName(name);
+        return jpa.existsByNameIgnoreCase(name);
     }
 
     @Override
     public boolean existsByNameAndIdNot(String name, Long id) {
-        return jpa.existsByNameAndIdNot(name, id);
+        return jpa.existsByNameIgnoreCaseAndIdNot(name, id);
     }
 
     @Override
