@@ -7,6 +7,7 @@ import org.testcontainers.junit.jupiter.*;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 /** PostgreSQL follows the existing dialect-test support: Hibernate DDL, not the MySQL migration chain. */
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class MediaCatalogPostgresIT extends MediaCatalogPersistenceTest {
