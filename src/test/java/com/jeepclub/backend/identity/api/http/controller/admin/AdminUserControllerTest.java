@@ -202,7 +202,8 @@ class AdminUserControllerTest {
                         .param("createdTo", "2026-01-31T23:59:59Z")
                         .param("updatedFrom", "2026-02-01T00:00:00Z")
                         .param("updatedTo", "2026-02-28T23:59:59Z")
-                        .param("q", "  clube jeep  "))
+                        .param("q", "  clube jeep  ")
+                        .param("membershipNumber", "  027  "))
                 .andExpect(status().isOk());
 
         ArgumentCaptor<AdminUserFilter> filterCaptor = ArgumentCaptor.forClass(AdminUserFilter.class);
@@ -221,7 +222,10 @@ class AdminUserControllerTest {
                 Instant.parse("2026-01-31T23:59:59Z"),
                 Instant.parse("2026-02-01T00:00:00Z"),
                 Instant.parse("2026-02-28T23:59:59Z"),
-                "clube jeep"
+                "clube jeep",
+                "027",
+                null,
+                null
         ));
     }
 
@@ -356,6 +360,11 @@ class AdminUserControllerTest {
     @ValueSource(strings = {
             "cpf=529%20982%20247%2025",
             "id=0",
+            "membershipNumber=0",
+            "membershipNumber=000",
+            "membershipNumber=abc",
+            "membershipNumber=-7",
+            "membershipNumber=%20%20",
             "createdFrom=2026-02-01T00:00:00Z&createdTo=2026-01-01T00:00:00Z",
             "updatedFrom=2026-02-01T00:00:00Z&updatedTo=2026-01-01T00:00:00Z"
     })
@@ -363,6 +372,23 @@ class AdminUserControllerTest {
         mockMvc.perform(get("/identity/admin/users?" + query))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void filterDtoValidatesAndNormalizesMembershipNumberWithSurroundingWhitespace() {
+        try (LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean()) {
+            validator.afterPropertiesSet();
+            var validDto = new com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserFilterDTO(
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, "  0042  "
+            );
+            assertThat(validator.validate(validDto)).isEmpty();
+            assertThat(validDto.toFilter().membershipNumber()).isEqualTo("0042");
+
+            var blankDto = new com.jeepclub.backend.iam.identity.api.http.dto.admin.user.AdminUserFilterDTO(
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, "   "
+            );
+            assertThat(validator.validate(blankDto)).isNotEmpty();
+        }
     }
 
     @Test
