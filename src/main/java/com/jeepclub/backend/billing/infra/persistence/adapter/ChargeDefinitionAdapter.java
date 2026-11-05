@@ -44,9 +44,20 @@ public class ChargeDefinitionAdapter implements ChargeDefinitionRepository {
     @Override
     public ChargeDefinition save(ChargeDefinition chargeDefinition) {
         ChargeDefinitionEntity entity = mapper.toEntity(chargeDefinition);
-        ChargeDefinitionEntity savedEntity = jpa.save(entity);
-
-        return mapper.toDomain(savedEntity);
+        try {
+            return mapper.toDomain(jpa.saveAndFlush(entity));
+        } catch (org.springframework.dao.DataIntegrityViolationException exception) {
+            for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+                if (cause instanceof org.hibernate.exception.ConstraintViolationException violation
+                        && violation.getConstraintName() != null
+                        && violation.getConstraintName().toLowerCase(java.util.Locale.ROOT)
+                        .contains("uk_billing_charge_definitions_name")) {
+                    throw new com.jeepclub.backend.billing.core.application.exception.definition.ChargeDefinitionAlreadyExistsException(
+                            "Charge definition name already exists.");
+                }
+            }
+            throw exception;
+        }
     }
 
     @Override
