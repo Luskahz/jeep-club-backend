@@ -45,19 +45,23 @@ public class BillingExportService {
         };
         String name=switch(product){case DEFINITIONS->"definicoes-atribuicoes";case CYCLES->"ciclos";case CHARGES->"cobrancas";case PAYMENTS->"pagamentos";case REFUNDS->"reembolsos";};
         LocalDate today=LocalDate.now(clock);
+        var authentication=org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean canReadRoles=authentication!=null && authentication.isAuthenticated() && authentication.getAuthorities().stream().anyMatch(a->a.getAuthority().equals("AUTHORIZATION_ROLE_READ"));
         return renderer.render(new ExportDocument(name,"Relatório financeiro: "+name,columns,f.labels(),sink->{
             for(int offset=0;;offset+=ExportPages.CHUNK) {
                 if(offset>=100000)throw new ExportException(ExportException.Reason.LIMIT);
                 var batch=query.read(product,f,offset);
                 var latest=product==Product.CHARGES?query.latestPayments(batch.stream().map(e->e.charge().getId()).toList()):Map.<Long,ExportRow>of();
                 var us=users.findByIds(batch.stream().map(BillingExportQuery.Entry::userId).filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(UserDetails::id,u->u));
-                var rs=roles.findByIds(batch.stream().map(BillingExportQuery.Entry::roleId).filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(RolePresentationQuery.Details::id,r->r));
+                var roleIds=canReadRoles?batch.stream().map(BillingExportQuery.Entry::roleId).filter(Objects::nonNull).distinct().toList():List.<Long>of();
+                var rs=roleIds.isEmpty()?Map.<Long,RolePresentationQuery.Details>of():roles.findByIds(roleIds).stream().collect(Collectors.toMap(RolePresentationQuery.Details::id,r->r));
                 var es=events.findByIds(batch.stream().map(BillingExportQuery.Entry::eventId).filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(EventPresentationQuery.Details::id,e->e));
                 for(var e:batch) {
                     String effective=e.charge()==null?null:e.charge().effectiveStatusAt(today).name();
                     if(f.effectiveStatus()!=null && !f.effectiveStatus().equals(effective))continue;
                     var u=us.get(e.userId());var r=rs.get(e.roleId());var event=es.get(e.eventId());
                     var cells=new ArrayList<>(e.row().cells());
+                    if(!canReadRoles && product==Product.DEFINITIONS && e.roleId()!=null) cells.set(17, "");
                     cells.add(u==null?"":u.name());cells.add(u==null?"":ExportValues.text(u.cpf()));cells.add(r==null?"":r.name());cells.add(event==null?"":event.title());cells.add(event==null?"":ExportValues.text(event.startsAt()));
                     if(e.charge()!=null)cells.add(switch(effective){case "PENDING"->"Pendente";case "OVERDUE"->"Vencida";case "EXPIRED"->"Expirada";case "PAID"->"Paga";default->"Cancelada";});
                     if(product==Product.CHARGES)cells.addAll(latest.getOrDefault(e.charge().getId(),ExportRow.of("","","","","")).cells());

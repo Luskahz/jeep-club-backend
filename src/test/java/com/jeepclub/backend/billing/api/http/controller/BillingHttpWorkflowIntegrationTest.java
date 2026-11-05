@@ -7,6 +7,7 @@ import com.jeepclub.backend.iam.authentication.core.application.service.security
 import com.jeepclub.backend.platform.security.authorization.UserAuthoritiesProvider;
 import com.jeepclub.backend.platform.security.jwt.*;
 import com.jeepclub.backend.billing.core.port.*;
+import com.jeepclub.backend.iam.authorization.api.module.RolePresentationQuery;
 import com.jeepclub.backend.shared.storage.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,6 +47,7 @@ class BillingHttpWorkflowIntegrationTest {
     @MockitoBean AccessTokenAuthenticationService authenticationService;
     @MockitoBean BillingMembershipPort members;
     @MockitoBean BillingAuthorizationPort roles;
+    @MockitoBean RolePresentationQuery rolePresentation;
     @MockitoBean BillingEventPort events;
     @MockitoBean FileStorage storage;
     @TestConfiguration static class TimeConfiguration {
@@ -163,7 +165,7 @@ class BillingHttpWorkflowIntegrationTest {
         for (var route : routes) mvc.perform(token(route)).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
     }
     @Test void allAssignmentHttpKindsAndLifecyclePreserveTheirTargets() throws Exception {
-        auth(99L, "BILLING_CHARGE_DEFINITION_CREATE", "BILLING_CHARGE_DEFINITION_READ", "BILLING_CHARGE_ASSIGNMENT_CREATE", "BILLING_CHARGE_ASSIGNMENT_UPDATE", "BILLING_CHARGE_ASSIGNMENT_READ");
+        auth(99L, "BILLING_CHARGE_DEFINITION_CREATE", "BILLING_CHARGE_DEFINITION_READ", "BILLING_CHARGE_ASSIGNMENT_CREATE", "BILLING_CHARGE_ASSIGNMENT_UPDATE", "BILLING_CHARGE_ASSIGNMENT_READ", "AUTHORIZATION_ROLE_READ");
         long definition = id(mvc.perform(body(post("/billing/charge-definitions"), DEFINITION)).andExpect(status().isCreated()).andReturn());
         mvc.perform(token(get("/billing/charge-definitions/{id}", definition))).andExpect(status().isOk());
         mvc.perform(token(get("/billing/charge-definitions"))).andExpect(status().isOk()).andExpect(jsonPath("$.content[0].name").value("fee"));
@@ -175,6 +177,30 @@ class BillingHttpWorkflowIntegrationTest {
             mvc.perform(token(patch("/billing/charge-assignments/{id}/activate", assignment))).andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
             mvc.perform(token(patch("/billing/charge-assignments/{id}/activate", assignment))).andExpect(status().isConflict()).andExpect(content().contentTypeCompatibleWith("application/problem+json"));
         }
+    }
+    @Test void roleAssignmentsRequireBothPermissionsAndHideRoleDetailsWithoutAuthorization() throws Exception {
+        var definition = definitions.save(ChargeDefinition.create("permissions", null, AMOUNT, com.jeepclub.backend.billing.core.domain.enums.ChargeRecurrenceType.ONE_TIME, true, PaymentAcceptancePolicy.AFTER_DUE_DATE, null, NOW));
+        long definitionId = definition.getId();
+        when(roles.existsActiveRoleByIdForUpdate(20L)).thenReturn(true);
+        when(rolePresentation.findByIds(anyCollection())).thenReturn(List.of(new RolePresentationQuery.Details(20L, "Diretoria")));
+
+        auth(99L, "BILLING_CHARGE_ASSIGNMENT_CREATE");
+        mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/roles/20", definitionId))).andExpect(status().isForbidden());
+        verify(roles, never()).existsActiveRoleByIdForUpdate(20L);
+        mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/all-members", definitionId))).andExpect(status().isCreated());
+        auth(99L, "AUTHORIZATION_ROLE_READ");
+        mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/roles/20", definitionId))).andExpect(status().isForbidden());
+        auth(99L, "BILLING_CHARGE_ASSIGNMENT_CREATE", "AUTHORIZATION_ROLE_READ");
+        long assignmentId = id(mvc.perform(token(post("/billing/charge-definitions/{id}/assignments/roles/20", definitionId))).andExpect(status().isCreated()).andExpect(jsonPath("$.roleName").value("Diretoria")).andReturn());
+
+        auth(99L, "BILLING_CHARGE_ASSIGNMENT_READ", "AUTHORIZATION_ROLE_READ");
+        mvc.perform(token(get("/billing/charge-definitions/{id}/assignments", definitionId))).andExpect(status().isOk()).andExpect(jsonPath("$.content[?(@.audienceType == 'ROLE')].roleId").value(org.hamcrest.Matchers.hasItem(20))).andExpect(jsonPath("$.content[?(@.audienceType == 'ROLE')].roleName").value(org.hamcrest.Matchers.hasItem("Diretoria")));
+        auth(99L, "BILLING_CHARGE_ASSIGNMENT_READ", "BILLING_CHARGE_ASSIGNMENT_UPDATE");
+        mvc.perform(token(get("/billing/charge-assignments/{id}", assignmentId))).andExpect(status().isOk()).andExpect(jsonPath("$.roleId").doesNotExist()).andExpect(jsonPath("$.roleName").doesNotExist());
+        mvc.perform(token(get("/billing/charge-definitions/{id}/assignments", definitionId))).andExpect(status().isOk()).andExpect(jsonPath("$.content.length()").value(2)).andExpect(jsonPath("$.content[?(@.audienceType == 'ROLE')].roleId").value(org.hamcrest.Matchers.contains((Object) null))).andExpect(jsonPath("$.content[?(@.audienceType == 'ROLE')].roleName").value(org.hamcrest.Matchers.contains((Object) null)));
+        mvc.perform(token(patch("/billing/charge-assignments/{id}/deactivate", assignmentId))).andExpect(status().isOk()).andExpect(jsonPath("$.roleId").doesNotExist());
+        auth(99L, "AUTHORIZATION_ROLE_READ");
+        mvc.perform(token(get("/billing/charge-definitions/{id}/assignments", definitionId))).andExpect(status().isForbidden());
     }
     @Test void administrativeChargeAmountAndCancellationAreReflectedInMemberReads() throws Exception {
         var debt = seedCharge(); auth(99L, "BILLING_MEMBER_CHARGE_UPDATE", "BILLING_MEMBER_CHARGE_CANCEL", "BILLING_MEMBER_CHARGE_READ");
