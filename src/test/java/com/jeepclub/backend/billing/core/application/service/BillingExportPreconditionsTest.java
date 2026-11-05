@@ -21,9 +21,9 @@ class BillingExportPreconditionsTest {
         var query = mock(BillingExportQuery.class); var users = mock(UserQuery.class); var renderer = mock(ExportRenderer.class);
         var service = new BillingExportService(query, users, mock(RolePresentationQuery.class), mock(EventPresentationQuery.class), renderer, CLOCK);
         var invalid = new BillingExportFilter(null,null,null,null,null,null,null,null,"NOT_A_STATE",null,null,null,null,null,null,null);
-        assertThatThrownBy(() -> service.export(product, invalid, ExportFormat.CSV)).isInstanceOf(ExportException.class);
+        assertThatThrownBy(() -> service.export(product, invalid, ExportFormat.CSV, false)).isInstanceOf(ExportException.class);
         var missing = new BillingExportFilter(404L,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null);
-        assertThatThrownBy(() -> service.export(product, missing, ExportFormat.CSV)).isInstanceOf(ExportException.class);
+        assertThatThrownBy(() -> service.export(product, missing, ExportFormat.CSV, false)).isInstanceOf(ExportException.class);
         verifyNoInteractions(renderer);
     }
     @ParameterizedTest @EnumSource(value=Product.class,names={"DEFINITIONS","CYCLES"})
@@ -31,7 +31,7 @@ class BillingExportPreconditionsTest {
         var renderer = mock(ExportRenderer.class);
         var service = new BillingExportService(mock(BillingExportQuery.class), mock(UserQuery.class), mock(RolePresentationQuery.class), mock(EventPresentationQuery.class), renderer, CLOCK);
         var filter = new BillingExportFilter(null,null,null,null,null,null,null,null,null,null,"PENDING",null,null,null,null,null);
-        assertThatThrownBy(() -> service.export(product, filter, ExportFormat.CSV)).isInstanceOf(ExportException.class);
+        assertThatThrownBy(() -> service.export(product, filter, ExportFormat.CSV, false)).isInstanceOf(ExportException.class);
         verifyNoInteractions(renderer);
     }
 }
