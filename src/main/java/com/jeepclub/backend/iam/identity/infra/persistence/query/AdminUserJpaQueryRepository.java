@@ -110,14 +110,22 @@ public class AdminUserJpaQueryRepository {
         }
         if (filter.query() != null) {
             String search = like(filter.query());
-            result.add(cb.or(
+            List<Predicate> orPredicates = new ArrayList<>(List.of(
                     cb.like(cb.lower(user.get("name")), search, '!'),
                     cb.like(cb.lower(user.get("email")), search, '!'),
                     cb.like(user.get("cpf"), search, '!'),
                     cb.like(user.get("rg"), search, '!'),
                     cb.like(user.get("phoneNumber"), search, '!'),
-                    filter.queryMembershipIdentityId() == null ? cb.disjunction() : cb.equal(user.get("id"),filter.queryMembershipIdentityId())
+                    filter.queryMembershipIdentityId() == null ? cb.disjunction() : cb.equal(user.get("id"), filter.queryMembershipIdentityId())
             ));
+            String digitsOnly = filter.query().replaceAll("\\D", "");
+            if (!digitsOnly.isEmpty() && !digitsOnly.equals(filter.query().trim())) {
+                String digitsSearch = like(digitsOnly);
+                orPredicates.add(cb.like(user.get("cpf"), digitsSearch, '!'));
+                orPredicates.add(cb.like(user.get("rg"), digitsSearch, '!'));
+                orPredicates.add(cb.like(user.get("phoneNumber"), digitsSearch, '!'));
+            }
+            result.add(cb.or(orPredicates.toArray(Predicate[]::new)));
         }
         return result;
     }

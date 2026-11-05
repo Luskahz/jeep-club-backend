@@ -85,6 +85,17 @@ class AdminUserSearchPersistenceTest {
         assertThat(projected.getContent()).singleElement().satisfies(r -> {assertThat(r.id()).isEqualTo(match.getId());assertThat(r.name()).isNull();});
     }
 
+    @Test void qMatchesFormattedCpfAndPhoneNumberAgainstDigitsOnlyColumns() {
+        var match = user("FormattedMatch", "formatted@example.test");
+        match.setCpf("52998224725");
+        match.setPhoneNumber("11987654321");
+        em.flush(); em.clear();
+        assertThat(query.findAll(filter(null, null, "529.982.247-25", null), SUMMARY, PageRequest.of(0, 2)).getContent())
+                .extracting(AdminUserResult::id).containsExactly(match.getId());
+        assertThat(query.findAll(filter(null, null, "(11) 98765-4321", null), SUMMARY, PageRequest.of(0, 2)).getContent())
+                .extracting(AdminUserResult::id).containsExactly(match.getId());
+    }
+
     private AdminUserFilter filter(String name, String email, String q, UserStatus status) {
         return new AdminUserFilter(null,name,null,email,null,null,null,status,null,null,null,null,q);
     }
