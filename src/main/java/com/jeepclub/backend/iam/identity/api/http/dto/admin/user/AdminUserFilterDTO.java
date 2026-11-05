@@ -72,7 +72,7 @@ public record AdminUserFilterDTO(
         @Size(max = 150) String q,
 
         @Schema(description = "Matrícula decimal vigente de Membership, normalizando zeros iniciais. Não busca histórico. Combinável com todos os filtros.", example = "027", maxLength = 64)
-        @Size(min = 1, max = 64) @Pattern(regexp="0*[1-9][0-9]*") String membershipNumber
+        @Size(min = 1, max = 64) @Pattern(regexp = "^\\s*0*[1-9][0-9]*\\s*$") String membershipNumber
 ) {
     public AdminUserFilterDTO(Long id, String name, LocalDate birthDate, String email, String cpf, String rg,
             String phoneNumber, UserStatus status, Instant createdFrom, Instant createdTo,
@@ -83,7 +83,7 @@ public record AdminUserFilterDTO(
         return new AdminUserFilter(
                 id, normalize(name), birthDate, normalize(email), digits(cpf), digits(rg),
                 digits(phoneNumber), status, createdFrom, createdTo, updatedFrom, updatedTo,
-                normalize(q), membershipNumber, null, null
+                normalize(q), normalize(membershipNumber), null, null
         );
     }
 
