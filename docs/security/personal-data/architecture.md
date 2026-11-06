@@ -184,9 +184,12 @@ reapareçam em restore. Definir RPO/RTO e teste de indisponibilidade de KMS.
 
 ## Rollout compatível com a política de schema
 
-Nenhuma introdução automática de Flyway/Liquibase. A política atual usa entities
-e Hibernate (`ddl-auto=update` padrão; Flyway desabilitado), o que não migra
-semântica de dados nem prova o estado de produção.
+A baseline auditada usava Hibernate update, mas a política vigente já adotou
+Flyway e Hibernate validate. Seguir a
+[política atual de migrations](../../database/04-flyway-strategy.md), com DDL
+versionado imutável e validação em MySQL. Não introduzir outro framework nem
+usar Hibernate update para executar backfill. Migrations não comprovam o estado
+de produção nem substituem a migração semântica dos dados.
 
 **Cenário preferencial, banco ainda vazio:** confirmar por evidência operacional
 que não há dados reais, revisar proposta/queries, preparar schema e providers

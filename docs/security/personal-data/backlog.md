@@ -1,7 +1,9 @@
 # Findings e backlog de implementação
 
 Relacionado à [auditoria](README.md) e à [proposta](architecture.md).
-Os IDs `PD-*` são referências locais, **não issues já criadas no Jira**.
+Os IDs `PD-*` eram referências locais na auditoria. As issues BACK-477 a BACK-488
+foram posteriormente informadas pelo solicitante; o mapeamento e progresso estão
+em [execução após auditoria](implementation.md).
 As estimativas são faixas iniciais de dias de engenharia, sem espera por
 provider/aprovação, para refinamento pelo time. Nenhum item autoriza mudança
 de contrato ou criptografia antes da revisão da proposta.
