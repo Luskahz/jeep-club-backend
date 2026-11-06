@@ -30,6 +30,7 @@ final class SchemaMappings {
             var reader = readers.getMetadataReader(resource);
             if (reader.getAnnotationMetadata().hasAnnotation(Entity.class.getName())) {
                 String name = reader.getClassMetadata().getClassName();
+                if (version < 13 && name.startsWith("com.jeepclub.backend.storage.")) continue;
                 if (version < 2 && name.endsWith(".UserProfileEntity")) continue;
                 if (version < 3 && name.endsWith(".AccountActivationInvitationEntity")) continue;
                 if (version < 4 && (name.endsWith(".MemberEntity") || name.endsWith(".MembershipNumberClaimEntity")
