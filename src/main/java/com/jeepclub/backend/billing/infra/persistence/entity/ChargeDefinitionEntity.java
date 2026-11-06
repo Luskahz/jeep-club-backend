@@ -20,6 +20,10 @@ import java.time.Instant;
                 @UniqueConstraint(
                         name = "uk_billing_charge_definitions_name",
                         columnNames = "name"
+                ),
+                @UniqueConstraint(
+                        name = "uk_billing_charge_definitions_name_folded",
+                        columnNames = "name_folded"
                 )
         },
         indexes = {
@@ -43,6 +47,10 @@ public class ChargeDefinitionEntity {
             length = 120
     )
     private String name;
+
+    @org.hibernate.annotations.GeneratedColumn("lower(name)")
+    @Column(name = "name_folded", length = 120, insertable = false, updatable = false)
+    private String nameFolded;
 
     @Column(
             name = "description",

@@ -44,7 +44,8 @@ public class AdminChargeDefinitionService {
         Objects.requireNonNull(recurrenceType, "recurrenceType cannot be null");
         Objects.requireNonNull(paymentAcceptancePolicy, "paymentAcceptancePolicy cannot be null");
 
-        String normalizedName = normalizeName(name);
+        String displayName = normalizeName(name);
+        String normalizedName = displayName.toLowerCase(Locale.ROOT);
 
         if (chargeDefinitionRepository.existsByName(normalizedName)) {
             throw new ChargeDefinitionAlreadyExistsException(
@@ -55,7 +56,7 @@ public class AdminChargeDefinitionService {
         Instant now = Instant.now(clock);
 
         ChargeDefinition chargeDefinition = ChargeDefinition.create(
-                normalizedName,
+                displayName,
                 description,
                 defaultAmount,
                 recurrenceType,
@@ -141,7 +142,8 @@ public class AdminChargeDefinitionService {
 
         ChargeDefinition chargeDefinition = findChargeDefinitionForUpdate(id);
 
-        String normalizedName = normalizeName(name);
+        String displayName = normalizeName(name);
+        String normalizedName = displayName.toLowerCase(Locale.ROOT);
 
         if (chargeDefinitionRepository.existsByNameAndIdNot(normalizedName, id)) {
             throw new ChargeDefinitionAlreadyExistsException(
@@ -150,7 +152,7 @@ public class AdminChargeDefinitionService {
         }
 
         chargeDefinition.update(
-                normalizedName,
+                displayName,
                 description,
                 defaultAmount,
                 recurrenceType,
@@ -195,7 +197,7 @@ public class AdminChargeDefinitionService {
             throw new IllegalArgumentException("Charge definition name cannot be blank.");
         }
 
-        return name.trim().toLowerCase(Locale.ROOT);
+        return name.trim();
     }
 
     @Transactional

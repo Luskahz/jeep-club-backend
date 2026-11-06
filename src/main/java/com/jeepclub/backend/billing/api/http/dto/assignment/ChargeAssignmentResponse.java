@@ -26,6 +26,9 @@ public record ChargeAssignmentResponse(
         @Schema(description = "Identificador da role, quando o público-alvo for ROLE.", example = "2", nullable = true)
         Long roleId,
 
+        @Schema(description = "Nome da role, quando autorizado e disponível.", nullable = true)
+        String roleName,
+
         @Schema(description = "Identificador do evento, quando o público-alvo for EVENT_PARTICIPANTS.", example = "15", nullable = true)
         Long eventId,
 
@@ -40,6 +43,10 @@ public record ChargeAssignmentResponse(
 ) {
 
     public static ChargeAssignmentResponse from(ChargeAssignmentResult result) {
+        return from(result, false, null);
+    }
+
+    public static ChargeAssignmentResponse from(ChargeAssignmentResult result, boolean canReadRole, String roleName) {
         Objects.requireNonNull(result, "result cannot be null");
 
         return new ChargeAssignmentResponse(
@@ -47,7 +54,8 @@ public record ChargeAssignmentResponse(
                 result.chargeDefinitionId(),
                 result.audienceType(),
                 result.userId(),
-                result.roleId(),
+                canReadRole ? result.roleId() : null,
+                canReadRole && result.audienceType() == ChargeAudienceType.ROLE ? roleName : null,
                 result.eventId(),
                 result.active(),
                 result.createdAt(),

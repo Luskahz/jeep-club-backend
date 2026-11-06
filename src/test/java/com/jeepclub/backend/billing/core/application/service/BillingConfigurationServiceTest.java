@@ -47,10 +47,10 @@ class BillingConfigurationServiceTest {
         assignmentService = new AdminChargeAssignmentService(assignments, definitions, events, members, roles, CLOCK);
         cycleService = new AdminChargeCycleService(cycles, definitions, assignments, charges, refunds, members, roles, events, CLOCK, payments);
     }
-    @Test void createCanonicalizesNameAndRejectsDuplicateBeforeSaving() {
+    @Test void createPreservesNameCaseAndRejectsDuplicateBeforeSaving() {
         when(definitions.save(any())).thenAnswer(i -> i.getArgument(0));
         var result = definitionService.create("  MeNsAl  ", " desc ", AMOUNT, ChargeRecurrenceType.MONTHLY, true, PaymentAcceptancePolicy.AFTER_DUE_DATE, null);
-        assertThat(result.name()).isEqualTo("mensal"); assertThat(result.createdAt()).isEqualTo(NOW);
+        assertThat(result.name()).isEqualTo("MeNsAl"); assertThat(result.createdAt()).isEqualTo(NOW);
         verify(definitions).existsByName("mensal");
         when(definitions.existsByName("mensal")).thenReturn(true);
         assertThatThrownBy(() -> definitionService.create("MENSAL", null, AMOUNT, ChargeRecurrenceType.MONTHLY, true,
@@ -71,7 +71,7 @@ class BillingConfigurationServiceTest {
         var d = definition(); when(definitions.findByIdForUpdate(3L)).thenReturn(Optional.of(d)); when(definitions.save(d)).thenReturn(d);
         definitionService.deactivate(3L); assertThat(d.isActive()).isFalse(); definitionService.activate(3L); assertThat(d.isActive()).isTrue();
         definitionService.update(3L, " FEE ", null, BigDecimal.TEN, ChargeRecurrenceType.YEARLY, false, PaymentAcceptancePolicy.AFTER_DUE_DATE, null);
-        assertThat(d.getName()).isEqualTo("fee"); assertThat(d.getDefaultAmount()).isEqualByComparingTo(BigDecimal.TEN);
+        assertThat(d.getName()).isEqualTo("FEE"); assertThat(d.getDefaultAmount()).isEqualByComparingTo(BigDecimal.TEN);
         when(definitions.existsByNameAndIdNot("fee", 3L)).thenReturn(true);
         assertThatThrownBy(() -> definitionService.update(3L, " FEE ", null, AMOUNT, ChargeRecurrenceType.YEARLY, true,
                 PaymentAcceptancePolicy.AFTER_DUE_DATE, null)).isInstanceOf(ChargeDefinitionAlreadyExistsException.class);

@@ -40,6 +40,7 @@ import java.net.URI;
 public class AdminChargeAssignmentController {
 
     private final AdminChargeAssignmentService adminChargeAssignmentService;
+    private final ChargeAssignmentPresentation presentation;
 
     @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/all-members")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_CREATE')")
@@ -57,7 +58,7 @@ public class AdminChargeAssignmentController {
 
         return ResponseEntity
                 .created(URI.create("/billing/charge-definitions/" + chargeDefinitionId + "/assignments/" + result.id()))
-                .body(ChargeAssignmentResponse.from(result));
+                .body(presentation.present(result));
     }
 
     @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/users/{userId}")
@@ -80,12 +81,12 @@ public class AdminChargeAssignmentController {
 
         return ResponseEntity
                 .created(URI.create("/billing/charge-definitions/" + chargeDefinitionId + "/assignments/" + result.id()))
-                .body(ChargeAssignmentResponse.from(result));
+                .body(presentation.present(result));
     }
 
     @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/roles/{roleId}")
-    @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_CREATE')")
-    @RequiredPermission("BILLING_CHARGE_ASSIGNMENT_CREATE")
+    @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_CREATE') and hasAuthority('AUTHORIZATION_ROLE_READ')")
+    @RequiredPermission({"BILLING_CHARGE_ASSIGNMENT_CREATE", "AUTHORIZATION_ROLE_READ"})
     @ApiResponse(responseCode = "404", description = "Definição ou role ativa não encontrada.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @ApiResponse(responseCode = "409", description = "Atribuição já existe ou definição não aceita alteração.", content = @Content(mediaType = MediaType.APPLICATION_PROBLEM_JSON_VALUE, schema = @Schema(implementation = ApiErrorResponse.class)))
     @Operation(
@@ -103,7 +104,7 @@ public class AdminChargeAssignmentController {
 
         return ResponseEntity
                 .created(URI.create("/billing/charge-definitions/" + chargeDefinitionId + "/assignments/" + result.id()))
-                .body(ChargeAssignmentResponse.from(result));
+                .body(presentation.present(result));
     }
 
     @PostMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments/events/{eventId}/participants")
@@ -126,7 +127,7 @@ public class AdminChargeAssignmentController {
 
         return ResponseEntity
                 .created(URI.create("/billing/charge-definitions/" + chargeDefinitionId + "/assignments/" + result.id()))
-                .body(ChargeAssignmentResponse.from(result));
+                .body(presentation.present(result));
     }
 
     @GetMapping("/billing/charge-definitions/{chargeDefinitionId}/assignments")
@@ -147,7 +148,7 @@ public class AdminChargeAssignmentController {
                 pageable
         );
 
-        return ResponseEntity.ok(PageResponse.from(results.map(ChargeAssignmentResponse::from)));
+        return ResponseEntity.ok(PageResponse.from(presentation.present(results)));
     }
     @GetMapping("/billing/charge-assignments/{assignmentId}")
     @PreAuthorize("hasAuthority('BILLING_CHARGE_ASSIGNMENT_READ')")
@@ -162,7 +163,7 @@ public class AdminChargeAssignmentController {
     ) {
         ChargeAssignmentResult result = adminChargeAssignmentService.findById(assignmentId);
 
-        return ResponseEntity.ok(ChargeAssignmentResponse.from(result));
+        return ResponseEntity.ok(presentation.present(result));
     }
 
     @PatchMapping("/billing/charge-assignments/{assignmentId}/activate")
@@ -179,7 +180,7 @@ public class AdminChargeAssignmentController {
     ) {
         ChargeAssignmentResult result = adminChargeAssignmentService.activate(assignmentId);
 
-        return ResponseEntity.ok(ChargeAssignmentResponse.from(result));
+        return ResponseEntity.ok(presentation.present(result));
     }
 
     @PatchMapping("/billing/charge-assignments/{assignmentId}/deactivate")
@@ -196,6 +197,6 @@ public class AdminChargeAssignmentController {
     ) {
         ChargeAssignmentResult result = adminChargeAssignmentService.deactivate(assignmentId);
 
-        return ResponseEntity.ok(ChargeAssignmentResponse.from(result));
+        return ResponseEntity.ok(presentation.present(result));
     }
 }

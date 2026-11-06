@@ -19,7 +19,7 @@ public class BillingExportService {
     private final ExportRenderer renderer;
     private final Clock clock;
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
-    public ExportFile export(Product product,BillingExportFilter f,ExportFormat format) {
+    public ExportFile export(Product product,BillingExportFilter f,ExportFormat format,boolean canReadRoles) {
         f.validate();
         boolean financial=product==Product.CHARGES || product==Product.PAYMENTS || product==Product.REFUNDS;
         if(!financial && (f.chargeStatus()!=null || f.effectiveStatus()!=null)
@@ -44,6 +44,9 @@ public class BillingExportService {
             case REFUNDS -> List.of("ID","ID da cobrança","ID do pagamento","ID do ciclo","ID do usuário","Valor","Motivo","Situação","Elegível em","Elegível até","Criado por","Solicitado em","Solicitado por","Aprovado em","Aprovado por","Rejeitado em","Rejeitado por","Motivo da rejeição","Reembolsado em","Reembolsado por","Cancelado em","Cancelado por","Criado em","Atualizado em","ID da definição","Definição na geração","Código do ciclo","Recorrência","Ano de referência","Mês de referência","ID do evento","Valor originalmente pago","Nome do usuário","CPF do usuário","Nome do papel","Título do evento","Início do evento","Situação efetiva da cobrança");
         };
         String name=switch(product){case DEFINITIONS->"definicoes-atribuicoes";case CYCLES->"ciclos";case CHARGES->"cobrancas";case PAYMENTS->"pagamentos";case REFUNDS->"reembolsos";};
+        // Use the header definition instead of a hardcoded CSV/PDF column offset.
+        final int definitionTargetColumn = product==Product.DEFINITIONS ? columns.indexOf("ID do alvo") : -1;
+        if(product==Product.DEFINITIONS && definitionTargetColumn<0) throw new IllegalStateException("Definition target column missing");
         LocalDate today=LocalDate.now(clock);
         return renderer.render(new ExportDocument(name,"Relatório financeiro: "+name,columns,f.labels(),sink->{
             for(int offset=0;;offset+=ExportPages.CHUNK) {
@@ -51,13 +54,17 @@ public class BillingExportService {
                 var batch=query.read(product,f,offset);
                 var latest=product==Product.CHARGES?query.latestPayments(batch.stream().map(e->e.charge().getId()).toList()):Map.<Long,ExportRow>of();
                 var us=users.findByIds(batch.stream().map(BillingExportQuery.Entry::userId).filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(UserDetails::id,u->u));
-                var rs=roles.findByIds(batch.stream().map(BillingExportQuery.Entry::roleId).filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(RolePresentationQuery.Details::id,r->r));
+                var roleIds=canReadRoles?batch.stream().map(BillingExportQuery.Entry::roleId).filter(Objects::nonNull).distinct().toList():List.<Long>of();
+                var rs=roleIds.isEmpty()?Map.<Long,RolePresentationQuery.Details>of():roles.findByIds(roleIds).stream().collect(Collectors.toMap(RolePresentationQuery.Details::id,r->r));
                 var es=events.findByIds(batch.stream().map(BillingExportQuery.Entry::eventId).filter(Objects::nonNull).distinct().toList()).stream().collect(Collectors.toMap(EventPresentationQuery.Details::id,e->e));
                 for(var e:batch) {
                     String effective=e.charge()==null?null:e.charge().effectiveStatusAt(today).name();
                     if(f.effectiveStatus()!=null && !f.effectiveStatus().equals(effective))continue;
-                    var u=us.get(e.userId());var r=rs.get(e.roleId());var event=es.get(e.eventId());
+                    var u=e.userId()==null?null:us.get(e.userId());
+                    var r=e.roleId()==null?null:rs.get(e.roleId());
+                    var event=e.eventId()==null?null:es.get(e.eventId());
                     var cells=new ArrayList<>(e.row().cells());
+                    if(!canReadRoles && product==Product.DEFINITIONS && e.roleId()!=null) cells.set(definitionTargetColumn, "");
                     cells.add(u==null?"":u.name());cells.add(u==null?"":ExportValues.text(u.cpf()));cells.add(r==null?"":r.name());cells.add(event==null?"":event.title());cells.add(event==null?"":ExportValues.text(event.startsAt()));
                     if(e.charge()!=null)cells.add(switch(effective){case "PENDING"->"Pendente";case "OVERDUE"->"Vencida";case "EXPIRED"->"Expirada";case "PAID"->"Paga";default->"Cancelada";});
                     if(product==Product.CHARGES)cells.addAll(latest.getOrDefault(e.charge().getId(),ExportRow.of("","","","","")).cells());
