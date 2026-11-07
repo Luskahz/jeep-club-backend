@@ -24,7 +24,12 @@ public class EventService {
         findById(id);
         var stable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         var page = participants.confirmedUserIds(id, stable);
-        var identities = users.findByIds(page.getContent()).stream().collect(java.util.stream.Collectors.toMap(com.jeepclub.backend.iam.identity.api.module.UserDetails::id, java.util.function.Function.identity()));
+        var ids = page.getContent();
+        var identities = new java.util.HashMap<Long, com.jeepclub.backend.iam.identity.api.module.UserDetails>();
+        for (int offset = 0; offset < ids.size(); offset += 500) {
+            users.findByIds(ids.subList(offset, Math.min(offset + 500, ids.size())))
+                .forEach(user -> identities.put(user.id(), user));
+        }
         return page.map(userId -> {
             var user = java.util.Objects.requireNonNull(identities.get(userId), "Registered user missing");
             return new Participant(user.id(), user.name(), user.profilePhotoStorageKey());
