@@ -44,13 +44,19 @@ class PublicationFeedServiceTest {
                 com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.PUBLISHED,
                 NOW.minusSeconds(100), NOW.minusSeconds(90), NOW.minusSeconds(90), null, gallery(),
                 NOW.plusSeconds(80), null, com.jeepclub.backend.publications.core.domain.enums.EventStatus.OPEN);
+        var other = Event.reconstitute(3L, 7L, "Trail 2", "Body",
+                com.jeepclub.backend.publications.core.domain.enums.PublicationStatus.PUBLISHED,
+                NOW.minusSeconds(100), NOW.minusSeconds(90), NOW.minusSeconds(90), null, gallery(),
+                NOW.plusSeconds(80), null, com.jeepclub.backend.publications.core.domain.enums.EventStatus.OPEN);
         when(publications.findPublished(isNull(), isNull(), isNull(), any())).thenAnswer(call ->
-                new PageImpl<Publication>(List.of(event), call.getArgument(3), 1));
-        when(social.get(List.of(2L), 9L)).thenReturn(Map.of(2L, new PublicationSocialSummaryQuery.Summary(0, 0, false)));
-        when(counts.confirmedCounts(List.of(2L))).thenReturn(Map.of(2L, 4L));
+                new PageImpl<Publication>(List.of(event, other), call.getArgument(3), 2));
+        when(social.get(List.of(2L, 3L), 9L)).thenReturn(Map.of(2L, new PublicationSocialSummaryQuery.Summary(0, 0, false),
+                3L, new PublicationSocialSummaryQuery.Summary(0, 0, false)));
+        when(counts.confirmedCounts(List.of(2L, 3L))).thenReturn(Map.of(2L, 4L));
         var page = new PublicationFeedService(publications, social, counts).feed(null, null, null, PageRequest.of(0, 20), 9L);
         assertThat(((PublicationFeedDTO.EventDetails) PublicationFeedDTO.Item.from(page.getContent().get(0), NOW).details()).registrationCount()).isEqualTo(4);
-        verify(counts, times(1)).confirmedCounts(List.of(2L));
+        assertThat(((PublicationFeedDTO.EventDetails) PublicationFeedDTO.Item.from(page.getContent().get(1), NOW).details()).registrationCount()).isZero();
+        verify(counts, times(1)).confirmedCounts(List.of(2L, 3L));
         verifyNoMoreInteractions(counts);
     }
 
