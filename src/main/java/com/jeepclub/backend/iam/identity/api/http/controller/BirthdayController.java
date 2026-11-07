@@ -4,6 +4,8 @@ import com.jeepclub.backend.iam.identity.core.application.result.BirthdayResult;
 import com.jeepclub.backend.iam.identity.core.application.service.user.BirthdayQueryService;
 import com.jeepclub.backend.memberships.api.security.RequiresMembership;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -27,7 +29,7 @@ public class BirthdayController {
 
     @GetMapping("/identity/users/birthdays")
     @Operation(summary = "Consultar aniversariantes do mês", description = "Inclui usuários ativos de Identity, mesmo sem associação.", responses = {
-            @ApiResponse(responseCode = "200", description = "Aniversariantes; Cache-Control: no-store"),
+            @ApiResponse(responseCode = "200", description = "Aniversariantes", headers = @Header(name = "Cache-Control", description = "no-store", schema = @Schema(type = "string", example = "no-store"))),
             @ApiResponse(responseCode = "400", description = "Mês inválido"),
             @ApiResponse(responseCode = "401", description = "Autenticação necessária"),
             @ApiResponse(responseCode = "402", description = "Pagamento exigível"),

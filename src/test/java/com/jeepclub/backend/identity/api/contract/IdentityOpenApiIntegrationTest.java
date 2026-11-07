@@ -68,7 +68,8 @@ class IdentityOpenApiIntegrationTest {
         var response = mockMvc.perform(get("/v3/api-docs")).andExpect(status().isOk());
         for (String code : java.util.List.of("200", "400", "401", "402", "503"))
             response.andExpect(jsonPath("$['paths']['/identity/users/birthdays']['get']['responses']['" + code + "']").exists());
-        response.andExpect(jsonPath("$['paths']['/identity/users/birthdays']['get']['x-required-permissions']").doesNotExist())
+        response.andExpect(jsonPath("$['paths']['/identity/users/birthdays']['get']['responses']['200']['headers']['Cache-Control']").exists())
+                .andExpect(jsonPath("$['paths']['/identity/users/birthdays']['get']['x-required-permissions']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/identity/users/birthdays']['get']['x-requires-membership']").value(true));
     }
 
