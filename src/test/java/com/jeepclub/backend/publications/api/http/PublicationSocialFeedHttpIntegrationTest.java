@@ -122,6 +122,10 @@ class PublicationSocialFeedHttpIntegrationTest {
         var request = requests.save(ServicePublicationRequest.create(7L, "Service", "Body", new BigDecimal("12.00"), "123456789", List.of(new PublicationImage(KEY, 0, true)), NOW));
         long serviceId = adminRequests.approve(request.getId(), 8L).getCreatedPublicationId();
         long draftId = publications.save(Notice.create(7L, "Draft", "Body", List.of(new PublicationImage(KEY, 0, true)), NOW)).getId();
+        var archived = Notice.create(7L, "Archived", "Body", List.of(new PublicationImage(KEY, 0, true)), NOW);
+        archived.publish(NOW.plusSeconds(1));
+        archived.archive(NOW.plusSeconds(2));
+        long archivedId = publications.save(archived).getId();
         when(membership.evaluate(anyLong())).thenReturn(MembershipAccessResult.ALLOWED);
         authenticate(9L);
         when(authorities.findAuthorityCodesByUserId(9L)).thenReturn(List.of());
@@ -131,7 +135,11 @@ class PublicationSocialFeedHttpIntegrationTest {
         }
         mvc.perform(get("/publications/{id}", draftId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         mvc.perform(get("/publications/{id}/comments", draftId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
+        mvc.perform(get("/publications/{id}", archivedId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
+        mvc.perform(get("/publications/{id}/comments", archivedId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         mvc.perform(post("/publications/{id}/likes", id).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isForbidden());
+        when(membership.evaluate(anyLong())).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
+        mvc.perform(get("/publications/feed").header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isPaymentRequired());
     }
 
     private void authenticate(long userId) {

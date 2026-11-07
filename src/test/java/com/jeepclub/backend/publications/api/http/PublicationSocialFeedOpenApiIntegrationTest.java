@@ -25,6 +25,7 @@ class PublicationSocialFeedOpenApiIntegrationTest {
                 .andExpect(jsonPath("$['paths']['/publications/{publicationId}']['get']['x-required-permissions']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/events/{id}']['get']['x-required-permissions']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/services/{id}']['get']['x-required-permissions']").doesNotExist())
+                .andExpect(jsonPath("$['paths']['/publications/feed']['get']['x-requires-membership']").value(true))
                 .andExpect(jsonPath("$['paths']['/publications/feed']['get']['responses']['200']").exists())
                 .andExpect(jsonPath("$['components']['schemas']['CommentRequest']['properties']['text']['maxLength']").value(10000))
                 .andExpect(jsonPath("$['components']['schemas']['CommentRequest']['properties']['images']['maxItems']").value(10))
