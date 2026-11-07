@@ -7,7 +7,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 @Testcontainers
+@org.springframework.boot.test.context.SpringBootTest(classes = BirthdayHttpPostgresIT.PostgresApplication.class)
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class BirthdayHttpPostgresIT extends BirthdayHttpIntegrationTest {
+    // Container-only schema, matching the existing Publications PostgreSQL integration tests.
+    @org.springframework.boot.autoconfigure.EnableAutoConfiguration
+    @org.springframework.boot.autoconfigure.AutoConfigurationPackage(basePackages = "com.jeepclub.backend")
+    @org.springframework.context.annotation.ComponentScan(basePackages = "com.jeepclub.backend", excludeFilters = {
+        @org.springframework.context.annotation.ComponentScan.Filter(type = org.springframework.context.annotation.FilterType.ASSIGNABLE_TYPE, classes = {com.jeepclub.backend.BackendApplication.class, com.jeepclub.backend.platform.database.SchemaSafetyConfiguration.class}),
+        @org.springframework.context.annotation.ComponentScan.Filter(type = org.springframework.context.annotation.FilterType.CUSTOM, classes = {org.springframework.boot.context.TypeExcludeFilter.class, org.springframework.boot.autoconfigure.AutoConfigurationExcludeFilter.class})})
+    static class PostgresApplication {}
     @Container static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:17.6-alpine");
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -15,6 +24,8 @@ class BirthdayHttpPostgresIT extends BirthdayHttpIntegrationTest {
         registry.add("spring.datasource.password", POSTGRES::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        registry.add("spring.flyway.enabled", () -> "false");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.jpa.properties.hibernate.hbm2ddl.halt_on_error", () -> "true");
     }
 }
