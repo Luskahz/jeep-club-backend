@@ -231,7 +231,6 @@ class ServicePublicationHttpIntegrationTest {
                 get("/admin/service-publication-requests/1"),
                 post("/admin/service-publication-requests/1/approve"),
                 post("/admin/service-publication-requests/1/reject").contentType(MediaType.APPLICATION_JSON).content("{}"),
-                get("/services/1"),
                 patch("/services/1").contentType(MediaType.APPLICATION_JSON).content("{\"title\":\"Next\"}"),
                 delete("/services/1"),
                 get("/service-publication-change-requests/1"),
@@ -243,6 +242,8 @@ class ServicePublicationHttpIntegrationTest {
                 delete("/admin/services/1")
         };
         for (var action : serviceActions) mvc.perform(token(action)).andExpect(status().isForbidden());
+        mvc.perform(get("/services/1")).andExpect(status().isUnauthorized());
+        mvc.perform(token(get("/services/1"))).andExpect(status().isNotFound());
         authenticate(99L, "PUBLICATIONS_SERVICE_REQUEST_READ");
         mvc.perform(token(post("/admin/service-publication-requests/1/approve"))).andExpect(status().isForbidden());
         authenticate(500L, "PUBLICATIONS_SERVICE_CHANGE_REQUEST_APPROVE");
