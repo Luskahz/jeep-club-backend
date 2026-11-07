@@ -59,6 +59,43 @@ class EventHttpIntegrationTest {
         mvc.perform(token(post("/events/{id}/registrations",id).contentType("application/json").content("{\"allocations\":[{\"vehicleId\":101,\"member\":true,\"dependentIds\":[]}]}"))).andExpect(status().isCreated());
         return id;
     }
+    @Test @Transactional void memberOperationsBindPrincipalAndPersistOnlyAuthorizedEffects() throws Exception {
+        long event = guestEvent();
+        auth(99L, "PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
+        var created = mvc.perform(token(post("/admin/events/{id}/guest-requests", event).contentType("application/json")
+                .content("{\"cpf\":\"12345678901\",\"guestName\":\"Standby guest\"}")))
+            .andExpect(status().isCreated()).andReturn();
+        long guest = json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        auth(10L, "PUBLICATIONS_EVENT_READ", "PUBLICATIONS_EVENT_REGISTER", "PUBLICATIONS_EVENT_REGISTRATION_READ",
+            "PUBLICATIONS_EVENT_REGISTRATION_CANCEL", "PUBLICATIONS_EVENT_GUEST_REQUEST_READ",
+            "PUBLICATIONS_EVENT_RIDE_OFFER_READ", "PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND");
+        mvc.perform(token(get("/events/{id}", event))).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(event));
+        mvc.perform(token(put("/events/{id}/registrations/me/allocations", event).contentType("application/json")
+                .content("{\"allocations\":[{\"vehicleId\":101,\"member\":true,\"dependentIds\":[]}]}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.userId").value(10)).andExpect(jsonPath("$.allocations[0].vehicleId").value(101));
+        mvc.perform(token(put("/events/{id}/registrations/me/allocations", event).contentType("application/json")
+                .content("{\"allocations\":[{\"vehicleId\":-1,\"member\":true,\"dependentIds\":[]}]}")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(token(get("/events/{id}/registrations/me", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.allocations[0].vehicleId").value(101));
+        mvc.perform(token(get("/events/{id}/guest-requests", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").isEmpty());
+        mvc.perform(token(get("/events/{id}/ride-requests", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0]").value(guest));
+        mvc.perform(token(post("/events/{id}/ride-requests/{guest}/response", event, guest).contentType("application/json")
+                .content("{\"vehicleId\":101,\"accept\":true}")))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.userId").value(10))
+            .andExpect(jsonPath("$.guestRequestId").value(guest)).andExpect(jsonPath("$.status").value("ACCEPTED"));
+        auth(20L, "PUBLICATIONS_EVENT_REGISTRATION_CANCEL");
+        mvc.perform(token(post("/events/{id}/registrations/me/cancel", event))).andExpect(status().isNotFound());
+        auth(10L, "PUBLICATIONS_EVENT_REGISTRATION_CANCEL", "PUBLICATIONS_EVENT_REGISTRATION_READ");
+        mvc.perform(token(get("/events/{id}/registrations/me", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CONFIRMED"));
+        mvc.perform(token(post("/events/{id}/registrations/me/cancel", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.userId").value(10)).andExpect(jsonPath("$.status").value("CANCELLED"));
+        mvc.perform(token(get("/events/{id}/registrations/me", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
     @Test @Transactional void administrativeGuestHttpLifecycleAndTypedHistory() throws Exception {
         long event=guestEvent();auth(99L,"PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
         var created=mvc.perform(token(post("/admin/events/{id}/guest-requests",event).contentType("application/json")
