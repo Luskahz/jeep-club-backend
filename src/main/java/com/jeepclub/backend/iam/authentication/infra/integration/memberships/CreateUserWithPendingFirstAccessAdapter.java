@@ -1,6 +1,7 @@
 package com.jeepclub.backend.iam.authentication.infra.integration.memberships;
 
 import com.jeepclub.backend.iam.authentication.core.port.RandomPasswordGenerator;
+import com.jeepclub.backend.iam.authentication.core.port.ManualTemporaryPasswordGenerator;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
 import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
 import com.jeepclub.backend.memberships.core.port.CreateUserWithPendingFirstAccessPort;
@@ -19,6 +20,7 @@ public class CreateUserWithPendingFirstAccessAdapter
 
     private final UserRegistration userRegistration;
     private final RandomPasswordGenerator passwordGenerator;
+    private final ManualTemporaryPasswordGenerator manualPasswords;
     private final Clock clock;
 
     @Override
@@ -28,7 +30,7 @@ public class CreateUserWithPendingFirstAccessAdapter
             String cpf,
             String phoneNumber
     ) {
-        String temporaryPassword = passwordGenerator.generateSecurePassword();
+        String temporaryPassword = manualPasswords.generate();
         Long identityId = createPendingUser(
                 name,
                 email,

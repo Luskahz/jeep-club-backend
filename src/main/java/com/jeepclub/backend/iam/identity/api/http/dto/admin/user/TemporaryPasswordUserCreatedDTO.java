@@ -7,6 +7,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record TemporaryPasswordUserCreatedDTO(
         @Schema(example = "456", requiredMode = Schema.RequiredMode.REQUIRED) Long userId,
         @Schema(implementation = String.class, allowableValues = "TEMPORARY_PASSWORD", example = "TEMPORARY_PASSWORD", requiredMode = Schema.RequiredMode.REQUIRED) UserActivationMethod activationMethod,
-        @Schema(description = "Segredo de uso inicial; nunca recuperável.", example = "<senha provisória>", requiredMode = Schema.RequiredMode.REQUIRED) String temporaryPassword
+        @Schema(description = "Segredo de uso inicial; nunca recuperável.", example = "kmpra482", requiredMode = Schema.RequiredMode.REQUIRED) String temporaryPassword
 ) implements AdminCreateUserResponseDTO {
 }

@@ -13,7 +13,7 @@ public record TemporaryPasswordAdminResponseDTO(
 
         @Schema(
                 description = "Senha provisória gerada para o usuário.",
-                example = "A9x@72Lm#pQ",
+                example = "kmpra482",
                 requiredMode = Schema.RequiredMode.REQUIRED
         )
         String temporaryPassword,

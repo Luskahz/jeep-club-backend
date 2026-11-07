@@ -317,6 +317,7 @@ class MembershipActivationFlowIntegrationTest {
         Long id = submit("39053344705");
         String temporary = json(mvc.perform(post("/admin/membership-applications/{id}/approve/temporary-password", id)
                 .header("Authorization", admin)).andExpect(status().isOk()), "$.temporaryPassword");
+        assertThat(temporary).matches("[a-z]{5}[0-9]{3}");
         String challenge = json(login("39053344705", temporary).andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PASSWORD_CHANGE_REQUIRED")), "$.passwordChangeToken");
         mvc.perform(post("/authentication/login/password-change").contentType(MediaType.APPLICATION_JSON)
