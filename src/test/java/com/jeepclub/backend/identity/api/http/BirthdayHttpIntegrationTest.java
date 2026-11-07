@@ -40,6 +40,7 @@ class BirthdayHttpIntegrationTest {
         save("Zoe", "00000000001", LocalDate.of(2000, 2, 29), UserStatus.ACTIVE);
         save("Ana", "00000000002", LocalDate.of(2004, 2, 1), UserStatus.ACTIVE);
         save("Inactive", "00000000003", LocalDate.of(2000, 2, 1), UserStatus.INACTIVE);
+        save("Archived", "00000000005", LocalDate.of(2000, 2, 1), UserStatus.ARCHIVED);
         save("No date", "00000000004", null, UserStatus.ACTIVE);
         when(jwt.parseAndValidate("birthday-token")).thenReturn(new JwtAuthenticatedUser(99L, 199L, "Member", Instant.now().plusSeconds(3600)));
         when(authorities.findAuthorityCodesByUserId(99L)).thenReturn(List.of());
