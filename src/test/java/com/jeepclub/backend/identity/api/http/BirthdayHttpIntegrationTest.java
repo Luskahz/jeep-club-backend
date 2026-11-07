@@ -50,7 +50,8 @@ class BirthdayHttpIntegrationTest {
                 .andExpect(jsonPath("$.month").value(2)).andExpect(jsonPath("$.birthdays.length()").value(2))
                 .andExpect(jsonPath("$.birthdays[0].name").value("Ana")).andExpect(jsonPath("$.birthdays[1].birthDay").value(29))
                 .andExpect(jsonPath("$.birthdays[0].birthMonth").value(2)).andExpect(jsonPath("$.birthdays[0].birthDate").doesNotExist())
-                .andExpect(jsonPath("$.birthdays[0].cpf").doesNotExist());
+                .andExpect(jsonPath("$.birthdays[0].cpf").doesNotExist())
+                .andExpect(jsonPath("$.birthdays[0].length()").value(4));
         for (String month : List.of("0", "13", "abc"))
             mvc.perform(get("/identity/users/birthdays").param("month", month).header("Authorization", "Bearer birthday-token")).andExpect(status().isBadRequest());
         mvc.perform(get("/identity/users/birthdays").header("Authorization", "Bearer birthday-token")).andExpect(status().isBadRequest());
