@@ -117,6 +117,8 @@ class EventHttpIntegrationTest {
             .andExpect(jsonPath("$.content[0].email").doesNotExist());
         mvc.perform(token(get("/events/{id}/participants", event).param("size", "1").param("page", "1")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].userId").value(11));
+        mvc.perform(token(get("/events/{id}/participants", event).param("size", "10").param("page", "2147483647")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty()).andExpect(jsonPath("$.totalElements").value(2));
         mvc.perform(token(get("/publications/{id}", event))).andExpect(status().isOk())
             .andExpect(jsonPath("$.details.registrationCount").value(2));
         mvc.perform(token(get("/publications/feed").param("type", "EVENT"))).andExpect(status().isOk())
