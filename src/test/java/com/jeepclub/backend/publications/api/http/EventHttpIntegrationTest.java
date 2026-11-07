@@ -203,10 +203,12 @@ class EventHttpIntegrationTest {
             post("/admin/events/1/finish"), delete("/admin/events/1"), get("/admin/events/1/dashboard"),
             get("/admin/events/1/health/USER/10"), get("/admin/events/1/guest-requests"), get("/admin/events/1/ride-offers"),
             post("/admin/events/1/ride-offers/1/select"), post("/admin/events/1/guest-requests/1/approve"),
-            get("/events/1"), get("/events/1/registrations/me"), get("/events/1/ride-requests"), get("/events/1/guest-requests"));
+            get("/events/1/registrations/me"), get("/events/1/ride-requests"), get("/events/1/guest-requests"));
         for (var action : actions) mvc.perform(action).andExpect(status().isUnauthorized());
         auth(99L, "PUBLICATIONS_NOTICE_READ");
         for (var action : actions) mvc.perform(token(action)).andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        mvc.perform(get("/events/1")).andExpect(status().isUnauthorized());
+        mvc.perform(token(get("/events/1"))).andExpect(status().isNotFound());
         auth(99L, "PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ");
         mvc.perform(token(get("/admin/events/1/health/USER/10"))).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
         auth(10L, "PUBLICATIONS_EVENT_READ");
@@ -260,6 +262,12 @@ class EventHttpIntegrationTest {
             var item = document.get("paths").get(path);
             for (String method : item.propertyNames()) {
                 var operation = item.get(method);
+                if (path.equals("/events/{id}") && method.equals("get")) {
+                    assertThat(operation.has("x-required-permissions")).isFalse();
+                    assertThat(operation.get("x-requires-membership").asBoolean()).isTrue();
+                    checked++;
+                    continue;
+                }
                 String permission = operation.get("x-required-permissions").get(0).asString();
                 if (path.endsWith("/export")) {
                     assertThat(permission).isEqualTo(path.contains("/health/")

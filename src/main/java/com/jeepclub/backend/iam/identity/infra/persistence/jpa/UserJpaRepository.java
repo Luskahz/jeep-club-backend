@@ -14,6 +14,16 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface UserJpaRepository extends JpaRepository<UserEntity, Long> {
+    @Query("""
+            select new com.jeepclub.backend.iam.identity.core.application.result.BirthdayResult(
+                u.id, u.name, day(u.birthDate), month(u.birthDate))
+            from UserEntity u
+            where u.status = :status and u.birthDate is not null and month(u.birthDate) = :month
+            order by day(u.birthDate), u.name, u.id
+            """)
+    List<com.jeepclub.backend.iam.identity.core.application.result.BirthdayResult> findBirthdays(
+            @Param("month") int month, @Param("status") UserStatus status);
+
     java.util.List<UserEntity> findByIdGreaterThanOrderByIdAsc(Long id, org.springframework.data.domain.Pageable pageable);
 
 

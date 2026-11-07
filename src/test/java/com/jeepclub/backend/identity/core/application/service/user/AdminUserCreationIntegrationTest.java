@@ -79,6 +79,7 @@ class AdminUserCreationIntegrationTest {
             assertThat(user.rg()).isEqualTo("52998224725");
             assertThat(user.phoneNumber()).isEqualTo("11999998888");
         });
+        assertThat(result.temporaryPassword()).matches("[a-z]{5}[0-9]{3}");
         var account = accounts.findByIdentityId(result.userId()).orElseThrow();
         assertThat(account.getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
         assertThat(account.getPasswordHash()).isNotEqualTo(result.temporaryPassword());

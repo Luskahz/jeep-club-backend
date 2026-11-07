@@ -42,8 +42,6 @@ public class EventController {
         return service.allocate(id, principal.getUserId(), r.allocations().stream().map(a -> new EventRegistration.Allocation(a.vehicleId(), a.member(), a.dependentIds())).toList(), r.dependentIds());
     }
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_READ')")
-    @RequiredPermission("PUBLICATIONS_EVENT_READ")
     @Operation(summary="Read published event without private financial data")
     @ApiResponse(responseCode="200", description="Read published event without private financial data")
     public EventResponseDTO read(@PathVariable Long id) {
