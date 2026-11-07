@@ -17,6 +17,7 @@ public class EventParticipantJpaQuery implements EventParticipantRepository {
     public Page<Long> confirmedUserIds(Long eventId, Pageable pageable) {
         long total = em.createQuery("select count(r) from EventRegistrationEntity r where r.eventId = :id and r.status = 'CONFIRMED'", Long.class)
                 .setParameter("id", eventId).getSingleResult();
+        if (pageable.getOffset() >= total) return new PageImpl<>(java.util.List.of(), pageable, total);
         var users = em.createQuery("select r.userId from EventRegistrationEntity r where r.eventId = :id and r.status = 'CONFIRMED' order by r.id", Long.class)
                 .setParameter("id", eventId).setFirstResult(Math.toIntExact(pageable.getOffset()))
                 .setMaxResults(pageable.getPageSize()).getResultList();
