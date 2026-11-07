@@ -97,8 +97,6 @@ public class PublicationSocialController {
     }
 
     @GetMapping("/comments")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_COMMENT_READ')")
-    @RequiredPermission("PUBLICATIONS_COMMENT_READ")
     @Operation(summary = "List comments", description = "Newest first, with comment ID as the stable tie-breaker; response uses PageResponse.")
     @ApiResponse(responseCode = "200", description = "Page of comments")
     public PageResponse<CommentResponse> comments(@PathVariable Long publicationId, Pageable pageable) {

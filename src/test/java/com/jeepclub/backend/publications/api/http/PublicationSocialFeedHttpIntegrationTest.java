@@ -112,6 +112,28 @@ class PublicationSocialFeedHttpIntegrationTest {
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("PUBLICATION_COMMENT_IMAGE_NOT_FOUND"));
     }
 
+    @Test @Transactional void memberWithoutPublicationPermissionsCanReadButCannotWrite() throws Exception {
+        var notice = Notice.create(7L, "Published", "Body", List.of(new PublicationImage(KEY, 0, true)), NOW);
+        notice.publish(NOW.plusSeconds(1));
+        long id = publications.save(notice).getId();
+        var event = Event.create(7L, "Event", "Body", List.of(new PublicationImage(KEY, 0, true)), NOW.plusSeconds(3600), NOW);
+        event.publish(NOW.plusSeconds(1));
+        long eventId = publications.save(event).getId();
+        var request = requests.save(ServicePublicationRequest.create(7L, "Service", "Body", new BigDecimal("12.00"), "123456789", List.of(new PublicationImage(KEY, 0, true)), NOW));
+        long serviceId = adminRequests.approve(request.getId(), 8L).getCreatedPublicationId();
+        long draftId = publications.save(Notice.create(7L, "Draft", "Body", List.of(new PublicationImage(KEY, 0, true)), NOW)).getId();
+        when(membership.evaluate(anyLong())).thenReturn(MembershipAccessResult.ALLOWED);
+        authenticate(9L);
+        when(authorities.findAuthorityCodesByUserId(9L)).thenReturn(List.of());
+        for (String path : List.of("/publications/feed?size=1", "/publications/" + id, "/publications/" + id + "/comments", "/events/" + eventId, "/services/" + serviceId)) {
+            mvc.perform(get(path).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isOk());
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+        }
+        mvc.perform(get("/publications/{id}", draftId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
+        mvc.perform(get("/publications/{id}/comments", draftId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
+        mvc.perform(post("/publications/{id}/likes", id).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isForbidden());
+    }
+
     private void authenticate(long userId) {
         when(jwt.parseAndValidate("social-token")).thenReturn(
                 new JwtAuthenticatedUser(userId, 199L, "Member", Instant.now().plusSeconds(3600)));

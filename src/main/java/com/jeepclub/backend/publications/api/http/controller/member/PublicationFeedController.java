@@ -1,7 +1,6 @@
 package com.jeepclub.backend.publications.api.http.controller.member;
 
 import com.jeepclub.backend.memberships.api.security.RequiresMembership;
-import com.jeepclub.backend.platform.openapi.security.RequiredPermission;
 import com.jeepclub.backend.platform.security.principal.UserPrincipal;
 import com.jeepclub.backend.platform.web.pagination.PageResponse;
 import com.jeepclub.backend.publications.api.http.dto.PublicationFeedDTO;
@@ -15,7 +14,6 @@ import com.jeepclub.backend.platform.web.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.time.Clock;
@@ -37,8 +35,6 @@ public class PublicationFeedController {
     private final Clock clock;
 
     @GetMapping("/feed")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_FEED_READ')")
-    @RequiredPermission("PUBLICATIONS_FEED_READ")
     @Operation(summary = "Read unified publication feed", description = "Only PUBLISHED concrete publications. Optional type=NOTICE|EVENT|SERVICE and inclusive publishedFrom/publishedTo filters. Ordered publishedAt DESC, id DESC. Social counts are batched.")
     @ApiResponse(responseCode = "200", description = "Page of visible publications")
     public PageResponse<PublicationFeedDTO.Item> feed(@RequestParam(required = false) String type,
@@ -51,8 +47,6 @@ public class PublicationFeedController {
     }
 
     @GetMapping("/{publicationId}")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_PUBLICATION_READ')")
-    @RequiredPermission("PUBLICATIONS_PUBLICATION_READ")
     @Operation(summary = "Read publication detail", description = "Only PUBLISHED concrete publications. Returns ordered full gallery and subtype details; Event FINISHED remains visible while editorially published.")
     @ApiResponse(responseCode = "200", description = "Visible publication detail")
     public PublicationFeedDTO.Detail detail(@PathVariable Long publicationId,
