@@ -16,6 +16,20 @@ public class EventService {
     private final EventOperations events;
     private final EventOperationsRepository operations;
     private final EventFinancialQuery financial;
+    private final com.jeepclub.backend.publications.core.repository.EventParticipantRepository participants;
+    private final com.jeepclub.backend.iam.identity.api.module.UserQuery users;
+    public record Participant(Long userId, String name, String profilePhotoStorageKey) {}
+    @Transactional(readOnly=true)
+    public org.springframework.data.domain.Page<Participant> participants(Long id, org.springframework.data.domain.Pageable pageable) {
+        findById(id);
+        var stable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+        var page = participants.confirmedUserIds(id, stable);
+        var identities = users.findByIds(page.getContent()).stream().collect(java.util.stream.Collectors.toMap(com.jeepclub.backend.iam.identity.api.module.UserDetails::id, java.util.function.Function.identity()));
+        return page.map(userId -> {
+            var user = java.util.Objects.requireNonNull(identities.get(userId), "Registered user missing");
+            return new Participant(user.id(), user.name(), user.profilePhotoStorageKey());
+        });
+    }
     public Event findById(Long id) {
         var event = events.locked(id);
         if (event.getStatus() != PublicationStatus.PUBLISHED) throw error("EVENT_NOT_FOUND");
