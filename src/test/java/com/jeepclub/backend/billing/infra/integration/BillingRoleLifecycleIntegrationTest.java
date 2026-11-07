@@ -50,5 +50,3 @@ class BillingRoleLifecycleIntegrationTest {
         assertThat((Boolean) tx.execute(status -> assignments.existsRoleAssignmentByChargeDefinitionIdAndRoleId(ids.get(0), ids.get(1)))).isTrue();
     }
 }
-
-
