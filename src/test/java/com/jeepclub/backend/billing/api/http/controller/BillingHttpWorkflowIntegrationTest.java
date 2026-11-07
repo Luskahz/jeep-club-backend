@@ -97,6 +97,21 @@ class BillingHttpWorkflowIntegrationTest {
         assertThat(cycles.findById(cycle).orElseThrow().getChargeDefinitionDescriptionSnapshot()).isEqualTo("annual");
         assertThat(charges.findByChargeCycleId(cycle)).allMatch(MemberCharge::isPending);
     }
+    @Test void definitionNameRetainsCaseAndDuplicateReturnsControlledConflict() throws Exception {
+        auth(99L, "BILLING_CHARGE_DEFINITION_CREATE", "BILLING_CHARGE_DEFINITION_UPDATE", "BILLING_CHARGE_DEFINITION_READ");
+        String original = DEFINITION.replace("fee", "  Mensal Jeep  ");
+        long definition = id(mvc.perform(body(post("/billing/charge-definitions"), original))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.name").value("Mensal Jeep")).andReturn());
+        mvc.perform(body(post("/billing/charge-definitions"), DEFINITION.replace("fee", "MENSAL JEEP")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CHARGE_DEFINITION_ALREADY_EXISTS"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SQL"))));
+        mvc.perform(body(put("/billing/charge-definitions/{id}", definition), DEFINITION.replace("fee", "  mensal JEEP  ")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("mensal JEEP"));
+        mvc.perform(token(get("/billing/charge-definitions/{id}", definition))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("mensal JEEP"));
+        mvc.perform(token(get("/billing/charge-definitions"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("mensal JEEP"));
+    }
     MockMultipartHttpServletRequestBuilder upload(String route, long id, boolean update) {
         var builder = multipart(route, id).file(new MockMultipartFile("receiptFile", "receipt.pdf", "application/pdf", new byte[]{1}));
         if (update) builder.with(request -> { request.setMethod("PUT"); return request; });

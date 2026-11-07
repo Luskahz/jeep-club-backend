@@ -27,11 +27,13 @@ class EventHttpIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired Clock clock;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockitoBean JwtTokenParser jwtTokenParser;
     @MockitoBean UserAuthoritiesProvider authoritiesProvider;
     @MockitoBean AccessTokenAuthenticationService authenticationService;
     @MockitoBean MembershipAccessQuery membershipAccess;
     @MockitoBean ImageMediaService media;
+    @MockitoBean com.jeepclub.backend.iam.identity.api.module.UserQuery users;
     @MockitoBean com.jeepclub.backend.vehicles.api.module.EventVehicleQuery vehicles;
     @MockitoBean com.jeepclub.backend.vehicles.api.module.VehicleLifecycleLock vehicleLocks;
     @BeforeEach void guestVehicles() {
@@ -58,6 +60,92 @@ class EventHttpIntegrationTest {
         auth(10L,"PUBLICATIONS_EVENT_REGISTER");
         mvc.perform(token(post("/events/{id}/registrations",id).contentType("application/json").content("{\"allocations\":[{\"vehicleId\":101,\"member\":true,\"dependentIds\":[]}]}"))).andExpect(status().isCreated());
         return id;
+    }
+    @Test @Transactional void memberOperationsBindPrincipalAndPersistOnlyAuthorizedEffects() throws Exception {
+        long event = guestEvent();
+        auth(99L, "PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
+        var created = mvc.perform(token(post("/admin/events/{id}/guest-requests", event).contentType("application/json")
+                .content("{\"cpf\":\"12345678901\",\"guestName\":\"Standby guest\"}")))
+            .andExpect(status().isCreated()).andReturn();
+        long guest = json.readTree(created.getResponse().getContentAsString()).get("id").asLong();
+        auth(10L, "PUBLICATIONS_EVENT_READ", "PUBLICATIONS_EVENT_REGISTER", "PUBLICATIONS_EVENT_REGISTRATION_READ",
+            "PUBLICATIONS_EVENT_REGISTRATION_CANCEL", "PUBLICATIONS_EVENT_GUEST_REQUEST_READ",
+            "PUBLICATIONS_EVENT_RIDE_OFFER_READ", "PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND");
+        mvc.perform(token(get("/events/{id}", event))).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(event));
+        mvc.perform(token(put("/events/{id}/registrations/me/allocations", event).contentType("application/json")
+                .content("{\"allocations\":[{\"vehicleId\":101,\"member\":true,\"dependentIds\":[]}]}")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.userId").value(10)).andExpect(jsonPath("$.allocations[0].vehicleId").value(101));
+        mvc.perform(token(put("/events/{id}/registrations/me/allocations", event).contentType("application/json")
+                .content("{\"allocations\":[{\"vehicleId\":-1,\"member\":true,\"dependentIds\":[]}]}")))
+            .andExpect(status().isBadRequest());
+        mvc.perform(token(get("/events/{id}/registrations/me", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.allocations[0].vehicleId").value(101));
+        mvc.perform(token(get("/events/{id}/guest-requests", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.content").isEmpty());
+        mvc.perform(token(get("/events/{id}/ride-requests", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0]").value(guest));
+        mvc.perform(token(post("/events/{id}/ride-requests/{guest}/response", event, guest).contentType("application/json")
+                .content("{\"vehicleId\":101,\"accept\":true}")))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.userId").value(10))
+            .andExpect(jsonPath("$.guestRequestId").value(guest)).andExpect(jsonPath("$.status").value("ACCEPTED"));
+        auth(99L, "PUBLICATIONS_EVENT_READ_ADMIN");
+        mvc.perform(token(get("/admin/events/{id}/ride-offers", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].userId").value(10)).andExpect(jsonPath("$.content[0].status").value("ACCEPTED"));
+        auth(20L, "PUBLICATIONS_EVENT_REGISTRATION_CANCEL");
+        mvc.perform(token(post("/events/{id}/registrations/me/cancel", event))).andExpect(status().isNotFound());
+        auth(10L, "PUBLICATIONS_EVENT_REGISTRATION_CANCEL", "PUBLICATIONS_EVENT_REGISTRATION_READ");
+        mvc.perform(token(get("/events/{id}/registrations/me", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CONFIRMED"));
+        mvc.perform(token(post("/events/{id}/registrations/me/cancel", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.userId").value(10)).andExpect(jsonPath("$.status").value("CANCELLED"));
+        mvc.perform(token(get("/events/{id}/registrations/me", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("CANCELLED"));
+    }
+    @Test @Transactional void confirmedParticipantsArePagedAndCountsAppearInPublication() throws Exception {
+        long event = guestEvent();
+        auth(11L, "PUBLICATIONS_EVENT_REGISTER");
+        mvc.perform(token(post("/events/{id}/registrations", event).contentType("application/json").content("{\"allocations\":[]}")))
+            .andExpect(status().isCreated());
+        when(users.findByIds(anyCollection())).thenAnswer(call -> ((Collection<Long>) call.getArgument(0)).stream()
+            .map(id -> new com.jeepclub.backend.iam.identity.api.module.UserDetails(id, "Member " + id, null, null, null, null, null,
+                id == 10 ? "images/profile.jpg" : null, true, Instant.now(clock), null, null)).toList());
+        auth(10L, "PUBLICATIONS_EVENT_READ", "PUBLICATIONS_FEED_READ", "PUBLICATIONS_PUBLICATION_READ");
+        mvc.perform(token(get("/events/{id}/participants", event).param("size", "1")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content[0].userId").value(10)).andExpect(jsonPath("$.content[0].name").value("Member 10"))
+            .andExpect(jsonPath("$.content[0].profilePhotoStorageKey").value("images/profile.jpg"))
+            .andExpect(jsonPath("$.content[0].email").doesNotExist());
+        mvc.perform(token(get("/events/{id}/participants", event).param("size", "1").param("page", "1")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].userId").value(11));
+        mvc.perform(token(get("/events/{id}/participants", event).param("size", "10").param("page", "2147483647")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content").isEmpty()).andExpect(jsonPath("$.totalElements").value(2));
+        mvc.perform(token(get("/publications/{id}", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.details.registrationCount").value(2));
+        mvc.perform(token(get("/publications/feed").param("type", "EVENT"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.content[0].details.registrationCount").value(2));
+        jdbc.update("update event_registrations set status='PENDING_PAYMENT' where event_id=? and user_id=?", event, 11L);
+        mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(1));
+        jdbc.update("update event_registrations set status='CONFIRMED' where event_id=? and user_id=?", event, 11L);
+        auth(11L, "PUBLICATIONS_EVENT_REGISTRATION_CANCEL");
+        mvc.perform(token(post("/events/{id}/registrations/me/cancel", event))).andExpect(status().isOk());
+        auth(10L, "PUBLICATIONS_EVENT_READ", "PUBLICATIONS_PUBLICATION_READ");
+        mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(token(get("/publications/{id}", event))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.details.registrationCount").value(1));
+        mvc.perform(get("/events/{id}/participants", event)).andExpect(status().isUnauthorized());
+        auth(10L, "PUBLICATIONS_NOTICE_READ");
+        mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isForbidden());
+        auth(10L, "PUBLICATIONS_EVENT_READ");
+        when(membershipAccess.evaluate(10L)).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
+        mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isPaymentRequired());
+        auth(99L, "PUBLICATIONS_EVENT_CREATE");
+        var draft = mvc.perform(token(post("/admin/events").contentType("application/json")
+            .content(CREATE.formatted(Instant.now(clock).plusSeconds(86400))))).andExpect(status().isCreated()).andReturn();
+        long draftId = json.readTree(draft.getResponse().getContentAsString()).get("id").asLong();
+        auth(10L, "PUBLICATIONS_EVENT_READ");
+        mvc.perform(token(get("/events/{id}/participants", draftId))).andExpect(status().isNotFound());
     }
     @Test @Transactional void administrativeGuestHttpLifecycleAndTypedHistory() throws Exception {
         long event=guestEvent();auth(99L,"PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
