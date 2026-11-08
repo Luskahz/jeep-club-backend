@@ -141,7 +141,7 @@ class PublicationSocialFeedHttpIntegrationTest {
         var archivedEvent = publications.findById(eventId).orElseThrow();
         archivedEvent.archive(NOW.plusSeconds(2)); publications.save(archivedEvent);
         var archivedService = publications.findById(serviceId).orElseThrow();
-        archivedService.archive(NOW.plusSeconds(2)); publications.save(archivedService);
+        archivedService.archive(archivedService.getUpdatedAt().plusSeconds(1)); publications.save(archivedService);
         mvc.perform(get("/events/{id}", eventId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         mvc.perform(get("/services/{id}", serviceId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         when(membership.evaluate(anyLong())).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
