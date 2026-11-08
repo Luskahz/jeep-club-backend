@@ -146,8 +146,13 @@ public class AuthenticationAccount {
 
     public void issueManualPassword(String hash, Instant now) {
         boolean firstAccess = isPendingFirstAccess();
+        Instant previousPasswordChangedAt = passwordChangedAt;
         changeToTemporaryPassword(hash, now);
-        if (firstAccess) credentialStatus = CredentialStatus.PENDING_FIRST_ACCESS;
+        if (firstAccess) {
+            credentialStatus = CredentialStatus.PENDING_FIRST_ACCESS;
+            // Issuing a manual credential is not proof that onboarding was completed.
+            passwordChangedAt = previousPasswordChangedAt;
+        }
         manualPasswordExpiresAt = now.plus(java.time.Duration.ofHours(24));
     }
 

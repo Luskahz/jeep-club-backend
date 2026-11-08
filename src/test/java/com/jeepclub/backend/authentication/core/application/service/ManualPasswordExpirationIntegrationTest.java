@@ -88,12 +88,14 @@ public class ManualPasswordExpirationIntegrationTest {
                 .isInstanceOf(PasswordChangeChallengeInvalidException.class);
         assertThat(accounts.findById(f.id()).orElseThrow().getPasswordHash()).isEqualTo(hash);
         assertThat(accounts.findById(f.id()).orElseThrow().getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        assertThat(accounts.findById(f.id()).orElseThrow().getPasswordChangedAt()).isNull();
     }
     @Test void reissueRenews24HoursInvalidatesPreviousPasswordAndChallengeAndCompletesFirstAccess() {
         Fixture f = manual(); time.set(expiry(f).minusSeconds(60)); var oldChallenge = challenge(f);
         String replacement = recovery.generateTemporaryPassword(f.id()).temporaryPassword();
         assertThat(expiry(f)).isEqualTo(time.get().plusSeconds(86400));
         assertThat(accounts.findById(f.id()).orElseThrow().getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+        assertThat(accounts.findById(f.id()).orElseThrow().getPasswordChangedAt()).isNull();
         assertThatThrownBy(() -> sessions.login(f.cpf(), f.password())).isInstanceOf(InvalidCredentialsException.class);
         assertThatThrownBy(() -> sessions.completeRequiredPasswordChange(oldChallenge.passwordChangeToken(), "NewPassword@123"))
                 .isInstanceOf(PasswordChangeChallengeInvalidException.class);
