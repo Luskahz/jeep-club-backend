@@ -37,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class BillingHttpWorkflowIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @Autowired ChargeDefinitionRepository definitions;
     @Autowired ChargeCycleRepository cycles;
     @Autowired MemberChargeRepository charges;
@@ -97,20 +98,35 @@ class BillingHttpWorkflowIntegrationTest {
         assertThat(cycles.findById(cycle).orElseThrow().getChargeDefinitionDescriptionSnapshot()).isEqualTo("annual");
         assertThat(charges.findByChargeCycleId(cycle)).allMatch(MemberCharge::isPending);
     }
-    @Test void definitionNameRetainsCaseAndDuplicateReturnsControlledConflict() throws Exception {
-        auth(99L, "BILLING_CHARGE_DEFINITION_CREATE", "BILLING_CHARGE_DEFINITION_UPDATE", "BILLING_CHARGE_DEFINITION_READ");
-        String original = DEFINITION.replace("fee", "  Mensal Jeep  ");
+    @Test @Transactional(propagation=org.springframework.transaction.annotation.Propagation.NOT_SUPPORTED)
+    void definitionNameRetainsCaseAndDuplicateReturnsControlledConflict() throws Exception {
+        auth(99L, "BILLING_CHARGE_DEFINITION_CREATE", "BILLING_CHARGE_DEFINITION_UPDATE", "BILLING_CHARGE_DEFINITION_READ", "BILLING_EXPORT");
+        String original = DEFINITION.replace("fee", "  MeNsAl  Jeep  ");
         long definition = id(mvc.perform(body(post("/billing/charge-definitions"), original))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.name").value("Mensal Jeep")).andReturn());
-        mvc.perform(body(post("/billing/charge-definitions"), DEFINITION.replace("fee", "MENSAL JEEP")))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CHARGE_DEFINITION_ALREADY_EXISTS"))
-                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SQL"))));
-        mvc.perform(body(put("/billing/charge-definitions/{id}", definition), DEFINITION.replace("fee", "  mensal JEEP  ")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("mensal JEEP"));
-        mvc.perform(token(get("/billing/charge-definitions/{id}", definition))).andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("mensal JEEP"));
-        mvc.perform(token(get("/billing/charge-definitions"))).andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].name").value("mensal JEEP"));
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.name").value("MeNsAl  Jeep")).andReturn());
+        try {
+            assertThat(jdbc.queryForObject("select name from billing_charge_definitions where id=?", String.class, definition)).isEqualTo("MeNsAl  Jeep");
+            mvc.perform(body(post("/billing/charge-definitions"), DEFINITION.replace("fee", "MENSAL  JEEP")))
+                    .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CHARGE_DEFINITION_ALREADY_EXISTS"))
+                    .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("SQL"))));
+            mvc.perform(body(put("/billing/charge-definitions/{id}", definition), DEFINITION.replace("fee", "  mensal  JEEP  ")))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("mensal  JEEP"));
+            mvc.perform(token(get("/billing/charge-definitions/{id}", definition))).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.name").value("mensal  JEEP"));
+            mvc.perform(token(get("/billing/charge-definitions"))).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].name").value("mensal  JEEP"));
+            for (String format : List.of("CSV", "PDF")) {
+                var response = mvc.perform(token(get("/billing/admin/definitions/export").param("id", Long.toString(definition)).param("format", format)))
+                    .andExpect(status().isOk()).andReturn().getResponse();
+                if (format.equals("CSV")) assertThat(response.getContentAsString(java.nio.charset.StandardCharsets.UTF_8)).contains("mensal  JEEP");
+                else try (var pdf = org.apache.pdfbox.Loader.loadPDF(response.getContentAsByteArray())) {
+                    assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(pdf)).contains("mensal  JEEP");
+                }
+            }
+            assertThat(jdbc.queryForObject("select name from billing_charge_definitions where id=?", String.class, definition)).isEqualTo("mensal  JEEP");
+        } finally {
+            jdbc.update("delete from billing_charge_definitions where id=?", definition);
+        }
     }
     MockMultipartHttpServletRequestBuilder upload(String route, long id, boolean update) {
         var builder = multipart(route, id).file(new MockMultipartFile("receiptFile", "receipt.pdf", "application/pdf", new byte[]{1}));
