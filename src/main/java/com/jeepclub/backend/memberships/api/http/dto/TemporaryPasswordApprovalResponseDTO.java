@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 public record TemporaryPasswordApprovalResponseDTO(
         @Schema(description = "Identificador do User criado em Identity.", example = "456")
         Long userId,
-        @Schema(description = "Senha temporária exibida uma única vez ao administrador.", example = "Temp#Pass2026", accessMode = Schema.AccessMode.READ_ONLY)
+        @Schema(description = "Senha temporária exibida uma única vez ao administrador.", example = "kmpra482", accessMode = Schema.AccessMode.READ_ONLY)
         String temporaryPassword
 ) {
 

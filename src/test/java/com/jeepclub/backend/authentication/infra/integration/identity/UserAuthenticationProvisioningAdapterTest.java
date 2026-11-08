@@ -45,6 +45,7 @@ class UserAuthenticationProvisioningAdapterTest {
     void provisionsPermanentAuthenticationForExistingUserId() {
         adapter.provisionPermanent(42L, "raw-password", NOW);
         AuthenticationAccount account = capturedAccount();
+        assertThat(account.getManualPasswordExpiresAt()).isNull();
         assertThat(account.getIdentityId()).isEqualTo(42L);
         assertThat(account.getCredentialStatus()).isEqualTo(CredentialStatus.PERMANENT);
         assertThat(account.getPasswordHash()).isEqualTo("password-hash");
@@ -54,8 +55,17 @@ class UserAuthenticationProvisioningAdapterTest {
     void provisionsPendingFirstAccessWithoutOwningUserCreation() {
         adapter.provisionPendingFirstAccess(42L, "raw-password", NOW);
         AuthenticationAccount account = capturedAccount();
+        assertThat(account.getManualPasswordExpiresAt()).isNull();
         assertThat(account.getIdentityId()).isEqualTo(42L);
         assertThat(account.getCredentialStatus()).isEqualTo(CredentialStatus.PENDING_FIRST_ACCESS);
+    }
+
+    @Test
+    void manualFirstAccessHasPersistent24HourExpiry() {
+        adapter.provisionPendingManualFirstAccess(42L, "raw-password", NOW);
+        AuthenticationAccount account = capturedAccount();
+        assertThat(account.getManualPasswordExpiresAt()).isEqualTo(NOW.plusSeconds(86400));
+        assertThat(account.isPendingFirstAccess()).isTrue();
     }
 
     private AuthenticationAccount capturedAccount() {

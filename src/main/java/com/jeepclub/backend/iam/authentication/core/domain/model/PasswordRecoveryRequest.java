@@ -175,6 +175,17 @@ public class PasswordRecoveryRequest {
         this.tokenHash = null;
     }
 
+    public void renewManualPassword(Instant now, Instant expiresAt) {
+        requireNow(now);
+        if (status != PasswordRecoveryRequestStatus.OPEN) {
+            throw new PasswordRecoveryRequestStateException("Password recovery request is not open.");
+        }
+        validateExpiration(now, expiresAt);
+        this.expiresAt = expiresAt;
+        this.method = PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD;
+        this.tokenHash = null;
+    }
+
     public void resolve(Instant now) {
         Instant validatedNow = requireNow(now);
 

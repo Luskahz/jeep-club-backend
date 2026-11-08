@@ -12,6 +12,8 @@ public interface UserAuthenticationProvisioningPort {
             Instant now
     );
 
+    void provisionPendingManualFirstAccess(Long userId, String rawPassword, Instant now);
+
     void provisionPermanent(Long userId, String rawPassword, Instant now);
 
     void provisionPendingFirstAccess(Long userId, String rawPassword, Instant now);

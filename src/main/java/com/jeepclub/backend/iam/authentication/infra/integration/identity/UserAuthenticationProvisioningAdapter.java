@@ -49,6 +49,18 @@ public class UserAuthenticationProvisioningAdapter implements UserAuthentication
         create(userId, rawPassword, now, true);
     }
 
+    @Override
+    public void provisionPendingManualFirstAccess(Long userId, String rawPassword, Instant now) {
+        AuthenticationAccount account = AuthenticationAccount.createPendingFirstAccess(
+                userId, passwordHasher.hash(rawPassword), now);
+        account.issueManualPassword(account.getPasswordHash(), now);
+        try {
+            accountRepository.create(account);
+        } catch (AuthenticationAccountConflictException exception) {
+            throw new UserRegistrationConflictException(exception);
+        }
+    }
+
     private AuthenticationAccount create(
             Long userId,
             String rawPassword,

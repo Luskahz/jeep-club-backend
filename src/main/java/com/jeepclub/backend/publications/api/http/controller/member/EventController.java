@@ -49,8 +49,6 @@ public class EventController {
         return PageResponse.from(service.participants(id, pageable).map(EventParticipantResponseDTO::from));
     }
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_READ')")
-    @RequiredPermission("PUBLICATIONS_EVENT_READ")
     @Operation(summary="Read published event without private financial data")
     @ApiResponse(responseCode="200", description="Read published event without private financial data")
     public EventResponseDTO read(@PathVariable Long id) {

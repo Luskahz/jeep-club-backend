@@ -356,3 +356,12 @@ impedimentos privados de lifecycle em `UserDeletionConflictException` público;
 o HTTP administrativo devolve `USER_DELETION_CONFLICT` (409) para esses deletes.
 Member/FKs, finanças, histórico de sessão e retenções continuam impeditivos.
 A ausência de Authentication não autoriza reversão de aprovação em Memberships.
+
+
+## Aniversariantes — BACK-592
+
+`GET /identity/users/birthdays?month=1` exige autenticação e a política existente
+de `@RequiresMembership`. Retorna `month` e `birthdays` completos, apenas com
+`userId`, `name`, `birthDay` e `birthMonth`, com `Cache-Control: no-store`.
+A consulta inclui usuários Identity ativos com data no mês, inclusive sem vínculo
+Member, ordenados por dia, nome e ID. Não expõe o ano de nascimento.

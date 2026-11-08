@@ -36,8 +36,6 @@ public class ServicePublicationController {
     private final ServicePublicationService services;
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_SERVICE_READ')")
-    @RequiredPermission("PUBLICATIONS_SERVICE_READ")
     @Operation(summary = "Consultar serviço publicado", description = "Retorna somente a versão pública PUBLISHED; uma proposta pendente nunca altera esta leitura.")
     @ApiResponse(responseCode = "200", description = "Service publicado.", content = @Content(schema = @Schema(implementation = ServicePublicationResponseDTO.class)))
     public ServicePublicationResponseDTO findPublished(@PathVariable Long id) {

@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class PasswordRecoveryHttpIntegrationTest {
     @Autowired MockMvc mvc;
+    @Autowired com.jeepclub.backend.iam.authentication.core.application.service.passwordrecovery.AdminPasswordRecoveryService adminRecovery;
     @Autowired UserRegistration registration;
     @Autowired UserQuery identities;
     @Autowired PasswordRecoveryRequestJpaRepository recovery;
@@ -81,6 +82,29 @@ class PasswordRecoveryHttpIntegrationTest {
         assertThat(recovery.findById(request.getId()).orElseThrow().getStatus()).isEqualTo(PasswordRecoveryRequestStatus.OPEN);
         mvc.perform(get("/authentication/me").header("Authorization", "Bearer " + login.accessToken()))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void administrativeTemporaryPasswordRevokesSessionAndRequiresChange() throws Exception {
+        var login = register("11144477735");
+        Long id = identities.findByCpf("11144477735").orElseThrow().id();
+        String temporary = adminRecovery.generateTemporaryPassword(id).temporaryPassword();
+        assertThat(temporary).matches("[a-z]{5}[0-9]{3}");
+        assertThat(passwords.matches(temporary, accounts.findById(id).orElseThrow().getPasswordHash())).isTrue();
+        mvc.perform(get("/authentication/me").header("Authorization", "Bearer " + login.accessToken())).andExpect(status().isUnauthorized());
+        mvc.perform(post("/authentication/refresh").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"" + login.refreshToken() + "\"}")).andExpect(status().isUnauthorized());
+        String body = mvc.perform(post("/authentication/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cpf\":\"11144477735\",\"senha\":\"" + temporary + "\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PASSWORD_CHANGE_REQUIRED"))
+                .andExpect(jsonPath("$.accessToken").doesNotExist()).andReturn().getResponse().getContentAsString();
+        String challenge = com.jayway.jsonpath.JsonPath.read(body, "$.passwordChangeToken");
+        mvc.perform(post("/authentication/login/password-change").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"passwordChangeToken\":\"" + challenge + "\",\"newPassword\":\"NewPassword@123\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/authentication/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cpf\":\"11144477735\",\"senha\":\"NewPassword@123\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("AUTHENTICATED"));
     }
 
     private UserAuthenticationTokens register(String cpf) {

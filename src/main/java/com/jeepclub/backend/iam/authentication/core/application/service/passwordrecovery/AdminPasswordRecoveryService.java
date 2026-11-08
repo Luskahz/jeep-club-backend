@@ -35,6 +35,8 @@ public class AdminPasswordRecoveryService {
     private final TemporaryPasswordIssuer passwordIssuer;
     private final CredentialRevocationService revocationService;
     private final PasswordResetTokenIssuer tokenIssuer;
+    private final com.jeepclub.backend.iam.identity.api.module.UserIdentityLock identityLock;
+    private final com.jeepclub.backend.iam.authentication.core.repository.AccountActivationInvitationRepository invitations;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -65,15 +67,22 @@ public class AdminPasswordRecoveryService {
 
     @Transactional
     public TemporaryPasswordAdminResult generateTemporaryPassword(Long userId) {
+        identityLock.byId(userId).orElseThrow(() -> new AuthenticationAccountNotFoundException(userId));
         Instant now = Instant.now(clock);
         AuthenticationAccount account = accountRepository.findByIdentityIdForUpdate(userId)
                 .orElseThrow(() -> new AuthenticationAccountNotFoundException("Authentication account target not found."));
         account.assertCanRequestPasswordChange();
         PasswordRecoveryRequest request = requestManager.getOrCreate(account.getIdentityId(), now);
-        IssuedTemporaryPassword temporaryPassword = passwordIssuer.issue();
         revocationService.revokeAllForUser(account.getIdentityId(), now);
-        request.changeToAdminTemporaryPasswordMethod(now);
-        account.changeToTemporaryPassword(temporaryPassword.passwordHash(), now);
+        var invitation = invitations.findByIdForUpdate(userId);
+        IssuedTemporaryPassword temporaryPassword = passwordIssuer.issue();
+        now = Instant.now(clock);
+        if (invitation.isPresent()) {
+            invitation.get().invalidate(now);
+            invitations.save(invitation.get());
+        }
+        account.issueManualPassword(temporaryPassword.passwordHash(), now);
+        request.renewManualPassword(now, account.getManualPasswordExpiresAt());
         accountRepository.save(account);
         return new TemporaryPasswordAdminResult(
                 temporaryPassword.rawPassword(), requestRepository.save(request)

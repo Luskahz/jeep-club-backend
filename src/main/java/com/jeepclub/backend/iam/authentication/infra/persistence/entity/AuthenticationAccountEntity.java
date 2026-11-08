@@ -74,4 +74,7 @@ public class AuthenticationAccountEntity {
 
     @Column(name = "failed_login_attempts", nullable = false)
     private int failedLoginAttempts;
+
+    @Column(name = "manual_password_expires_at")
+    private Instant manualPasswordExpiresAt;
 }
