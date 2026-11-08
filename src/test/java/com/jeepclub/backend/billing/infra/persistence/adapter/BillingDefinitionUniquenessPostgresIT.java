@@ -18,4 +18,17 @@ class BillingDefinitionUniquenessPostgresIT extends BillingDefinitionUniquenessI
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
         registry.add("spring.jpa.properties.hibernate.hbm2ddl.halt_on_error", () -> "true");
     }
+    @org.junit.jupiter.api.Test void migrationProtectsCaseSensitiveNames() throws Exception {
+        try (var connection = java.sql.DriverManager.getConnection(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             var statement = connection.createStatement()) {
+            statement.execute("CREATE TEMPORARY TABLE billing_charge_definitions (name varchar(120) NOT NULL UNIQUE)");
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(connection,
+                new org.springframework.core.io.ClassPathResource("db/migration/V14__billing_definition_case_insensitive_name.sql"));
+            statement.executeUpdate("INSERT INTO billing_charge_definitions(name) VALUES ('MeNsAl')");
+            org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                statement.executeUpdate("INSERT INTO billing_charge_definitions(name) VALUES ('mensal')"))
+                .isInstanceOfSatisfying(java.sql.SQLException.class,
+                    error -> org.assertj.core.api.Assertions.assertThat(error.getSQLState()).isEqualTo("23505"));
+        }
+    }
 }

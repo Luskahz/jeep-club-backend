@@ -18,7 +18,7 @@ public final class PublicationFeedDTO {
             description = "Subtype details selected by the type field. Service includes its advertised amount; no Billing debt, payment, guest or Health data is included.")
     public sealed interface Details permits NoticeDetails, EventDetails, ServiceDetails {}
     public record NoticeDetails() implements Details {}
-    public record EventDetails(Instant startsAt, Instant endsAt, String status) implements Details {}
+    public record EventDetails(Instant startsAt, Instant endsAt, String status, long registrationCount) implements Details {}
     public record ServiceDetails(BigDecimal amount, String contactPhone) implements Details {}
 
     public record Item(Long id, String type, Long authorUserId, String title, String content,
@@ -31,7 +31,7 @@ public final class PublicationFeedDTO {
                     publication.getTitle(), publication.getContent(), publication.getImages().stream()
                     .filter(PublicationImage::primary).findFirst().map(Image::from).orElse(null),
                     publication.getPublishedAt(), summary.likeCount(), summary.commentCount(), summary.likedByMe(),
-                    PublicationFeedDTO.details(publication, now));
+                    PublicationFeedDTO.details(publication, now, source.registrationCount()));
         }
     }
     public record Detail(Long id, String type, Long authorUserId, String title, String content,
@@ -43,7 +43,7 @@ public final class PublicationFeedDTO {
             return new Detail(publication.getId(), PublicationFeedDTO.type(publication), publication.getAuthorUserId(),
                     publication.getTitle(), publication.getContent(), publication.getImages().stream().map(Image::from).toList(),
                     publication.getPublishedAt(), summary.likeCount(), summary.commentCount(), summary.likedByMe(),
-                    PublicationFeedDTO.details(publication, now));
+                    PublicationFeedDTO.details(publication, now, source.registrationCount()));
         }
     }
     private static String type(Publication publication) {
@@ -52,9 +52,9 @@ public final class PublicationFeedDTO {
         if (publication instanceof ServicePublication) return "SERVICE";
         throw new IllegalStateException("Unsupported publication subtype.");
     }
-    private static Details details(Publication publication, Instant now) {
+    private static Details details(Publication publication, Instant now, long registrationCount) {
         if (publication instanceof Notice) return new NoticeDetails();
-        if (publication instanceof Event event) return new EventDetails(event.getStartsAt(), event.getEndsAt(), event.effectiveStatus(now).name());
+        if (publication instanceof Event event) return new EventDetails(event.getStartsAt(), event.getEndsAt(), event.effectiveStatus(now).name(), registrationCount);
         if (publication instanceof ServicePublication service) return new ServiceDetails(service.getAmount(), service.getContactPhone());
         throw new IllegalStateException("Unsupported publication subtype.");
     }
