@@ -179,14 +179,14 @@ class EventHttpIntegrationTest {
         mvc.perform(get("/events/{id}/participants", event)).andExpect(status().isUnauthorized());
         auth(10L);
         mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isOk());
-        auth(10L, "PUBLICATIONS_EVENT_READ");
+        auth(10L);
         when(membershipAccess.evaluate(10L)).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
         mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isPaymentRequired());
         auth(99L, "PUBLICATIONS_EVENT_CREATE");
         var draft = mvc.perform(token(post("/admin/events").contentType("application/json")
             .content(CREATE.formatted(Instant.now(clock).plusSeconds(86400))))).andExpect(status().isCreated()).andReturn();
         long draftId = json.readTree(draft.getResponse().getContentAsString()).get("id").asLong();
-        auth(10L, "PUBLICATIONS_EVENT_READ");
+        auth(10L);
         mvc.perform(token(get("/events/{id}/participants", draftId))).andExpect(status().isNotFound());
     }
     @Test @Transactional void administrativeGuestHttpLifecycleAndTypedHistory() throws Exception {
@@ -341,7 +341,7 @@ class EventHttpIntegrationTest {
         mvc.perform(token(get("/events/1"))).andExpect(status().isNotFound());
         auth(99L, "PUBLICATIONS_EVENT_HEALTH_EMERGENCY_READ");
         mvc.perform(token(get("/admin/events/1/health/USER/10"))).andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("EVENT_NOT_FOUND"));
-        auth(10L, "PUBLICATIONS_EVENT_READ");
+        auth(10L);
         when(membershipAccess.evaluate(10L)).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
         mvc.perform(token(get("/events/1"))).andExpect(status().isPaymentRequired());
     }

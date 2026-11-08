@@ -138,8 +138,17 @@ class PublicationSocialFeedHttpIntegrationTest {
         mvc.perform(get("/publications/{id}", archivedId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         mvc.perform(get("/publications/{id}/comments", archivedId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         mvc.perform(post("/publications/{id}/likes", id).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isForbidden());
+        var archivedEvent = publications.findById(eventId).orElseThrow();
+        archivedEvent.archive(NOW.plusSeconds(2)); publications.save(archivedEvent);
+        var archivedService = publications.findById(serviceId).orElseThrow();
+        archivedService.archive(NOW.plusSeconds(2)); publications.save(archivedService);
+        mvc.perform(get("/events/{id}", eventId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
+        mvc.perform(get("/services/{id}", serviceId).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isNotFound());
         when(membership.evaluate(anyLong())).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
-        mvc.perform(get("/publications/feed").header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isPaymentRequired());
+        for (String path : List.of("/publications/feed", "/publications/" + id,
+                "/publications/" + id + "/comments", "/events/" + eventId, "/services/" + serviceId)) {
+            mvc.perform(get(path).header(AUTHORIZATION, "Bearer social-token")).andExpect(status().isPaymentRequired());
+        }
     }
 
     private void authenticate(long userId) {
