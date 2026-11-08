@@ -25,17 +25,19 @@ class EventParticipantServiceTest {
         var users = mock(UserQuery.class);
         var pageable = PageRequest.of(0, 501);
         var ids = LongStream.rangeClosed(1, 501).boxed().toList();
-        when(events.locked(1L)).thenReturn(event);
+        var publications = mock(com.jeepclub.backend.publications.core.repository.PublicationRepository.class);
+        when(publications.findById(1L)).thenReturn(java.util.Optional.of(event));
         when(event.getStatus()).thenReturn(PublicationStatus.PUBLISHED);
         when(registrations.confirmedUserIds(1L, pageable)).thenReturn(new PageImpl<>(ids, pageable, 501));
         when(users.findByIds(anyCollection())).thenAnswer(call -> ((Collection<Long>) call.getArgument(0)).stream()
             .map(id -> new UserDetails(id, "Member " + id, null, null, null, null, null, null, true, null, null, null)).toList());
-        var service = new EventService(events, mock(EventOperationsRepository.class), mock(EventFinancialQuery.class), registrations, users);
+        var service = new EventService(events, publications, mock(EventOperationsRepository.class), mock(EventFinancialQuery.class), registrations, users);
         var result = service.participants(1L, pageable);
         assertThat(result.getContent()).hasSize(501);
         assertThat(result.getContent().get(500).userId()).isEqualTo(501);
         verify(users).findByIds(ids.subList(0, 500));
         verify(users).findByIds(ids.subList(500, 501));
         verifyNoMoreInteractions(users);
+        verifyNoInteractions(events);
     }
 }

@@ -177,8 +177,8 @@ class EventHttpIntegrationTest {
         mvc.perform(token(get("/publications/{id}", event))).andExpect(status().isOk())
             .andExpect(jsonPath("$.details.registrationCount").value(1));
         mvc.perform(get("/events/{id}/participants", event)).andExpect(status().isUnauthorized());
-        auth(10L, "PUBLICATIONS_NOTICE_READ");
-        mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isForbidden());
+        auth(10L);
+        mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isOk());
         auth(10L, "PUBLICATIONS_EVENT_READ");
         when(membershipAccess.evaluate(10L)).thenReturn(MembershipAccessResult.PAYMENT_REQUIRED);
         mvc.perform(token(get("/events/{id}/participants", event))).andExpect(status().isPaymentRequired());
@@ -390,6 +390,15 @@ class EventHttpIntegrationTest {
             var item = document.get("paths").get(path);
             for (String method : item.propertyNames()) {
                 var operation = item.get(method);
+                if (path.equals("/events/{id}/participants")) {
+                    assertThat(operation.has("x-required-permissions")).isFalse();
+                    assertThat(operation.get("responses").has("402")).isTrue();
+                    var participant = document.get("components").get("schemas").get("EventParticipantResponseDTO").get("properties");
+                    assertThat(participant.propertyNames()).containsExactlyInAnyOrder("userId", "name", "profilePhotoStorageKey");
+                    assertThat(operation.get("responses").get("200").toString()).contains("EventParticipantResponseDTO");
+                    checked++;
+                    continue;
+                }
                 String permission = operation.get("x-required-permissions").get(0).asString();
                 if (path.endsWith("/export")) {
                     assertThat(permission).isEqualTo(path.contains("/health/")

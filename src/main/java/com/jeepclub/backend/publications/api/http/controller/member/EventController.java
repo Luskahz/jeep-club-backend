@@ -42,12 +42,11 @@ public class EventController {
         return service.allocate(id, principal.getUserId(), r.allocations().stream().map(a -> new EventRegistration.Allocation(a.vehicleId(), a.member(), a.dependentIds())).toList(), r.dependentIds());
     }
     @GetMapping("/{id}/participants")
-    @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_READ')")
-    @RequiredPermission("PUBLICATIONS_EVENT_READ")
-    @Operation(summary="List confirmed event participants")
+    @Operation(summary="List confirmed event participants", description="Requires authentication and authorized Membership. No granular read authority is required. Only published Events are visible.")
+    @ApiResponse(responseCode="402", description="Membership payment required.")
     @ApiResponse(responseCode="200", description="Confirmed registration holders, paginated")
-    public PageResponse<EventService.Participant> participants(@PathVariable Long id, @org.springdoc.core.annotations.ParameterObject Pageable pageable) {
-        return PageResponse.from(service.participants(id, pageable));
+    public PageResponse<EventParticipantResponseDTO> participants(@PathVariable Long id, @org.springdoc.core.annotations.ParameterObject Pageable pageable) {
+        return PageResponse.from(service.participants(id, pageable).map(EventParticipantResponseDTO::from));
     }
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('PUBLICATIONS_EVENT_READ')")

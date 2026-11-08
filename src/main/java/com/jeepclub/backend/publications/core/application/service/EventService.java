@@ -14,6 +14,7 @@ import static com.jeepclub.backend.publications.core.application.service.interna
 @Service @RequiredArgsConstructor @Transactional(isolation=org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
 public class EventService {
     private final EventOperations events;
+    private final com.jeepclub.backend.publications.core.repository.PublicationRepository publications;
     private final EventOperationsRepository operations;
     private final EventFinancialQuery financial;
     private final com.jeepclub.backend.publications.core.repository.EventParticipantRepository participants;
@@ -21,7 +22,8 @@ public class EventService {
     public record Participant(Long userId, String name, String profilePhotoStorageKey) {}
     @Transactional(readOnly=true)
     public org.springframework.data.domain.Page<Participant> participants(Long id, org.springframework.data.domain.Pageable pageable) {
-        findById(id);
+        var publication = publications.findById(id).orElseThrow(() -> error("EVENT_NOT_FOUND"));
+        if (!(publication instanceof Event) || publication.getStatus() != PublicationStatus.PUBLISHED) throw error("EVENT_NOT_FOUND");
         var stable = org.springframework.data.domain.PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         var page = participants.confirmedUserIds(id, stable);
         var ids = page.getContent();
