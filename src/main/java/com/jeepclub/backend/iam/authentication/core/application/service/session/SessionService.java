@@ -73,11 +73,16 @@ public class SessionService {
         }
 
         Instant now = Instant.now(clock);
+        if (account.isManualPasswordExpired(now)) throw new InvalidCredentialsException();
         account.assertCanAttemptLogin();
         if (!identity.administrativelyActive()) {
             throw new AuthenticationAccountBlockedException();
         }
         if (account.isChangePasswordRequired()) {
+            // Acquire challenge mutation locks before the final credential deadline check.
+            challengeRepository.invalidateActiveByUserId(account.getIdentityId(), now);
+            now = Instant.now(clock);
+            if (account.isManualPasswordExpired(now)) throw new InvalidCredentialsException();
             return challengeIssuer.issue(account.getIdentityId(), now);
         }
 
@@ -101,7 +106,7 @@ public class SessionService {
 
         // Identity/account/challenge lock waits can cross the challenge's expiry.
         Instant now = Instant.now(clock);
-        if (!challenge.getUserId().equals(account.getIdentityId()) || !challenge.isValid(now)) {
+        if (!challenge.getUserId().equals(account.getIdentityId()) || !challenge.isValid(now) || account.isManualPasswordExpired(now)) {
             throw invalidChallenge();
         }
         account.assertCanAttemptLogin();
@@ -109,8 +114,13 @@ public class SessionService {
             throw new PasswordChangeNotRequiredException();
         }
 
+        boolean pendingFirstAccess = account.isPendingFirstAccess();
         PasswordRecoveryRequest request = null;
-        if (!account.isPendingFirstAccess()) {
+        if (pendingFirstAccess) {
+            request = recoveryRequestRepository.findOpenByUserIdAndMethodForUpdate(
+                    account.getIdentityId(), PasswordRecoveryRequestMethod.ADMIN_TEMPORARY_PASSWORD, now)
+                    .orElse(null);
+        } else {
             request = recoveryRequestRepository
                     .findOpenByUserIdAndMethodForUpdate(
                             account.getIdentityId(),
@@ -122,15 +132,16 @@ public class SessionService {
                     ));
         }
 
-        // Recovery-request acquisition can also wait; enforce expiry again before any mutation.
+        credentialRevocationService.revokeAllForUser(account.getIdentityId(), now);
+        String newPasswordHash = passwordHasher.hash(newPassword);
+        // Lock waits and password hashing can cross either deadline. All revocations roll back on rejection.
         now = Instant.now(clock);
-        if (!challenge.isValid(now)) throw invalidChallenge();
-        account.changePassword(passwordHasher.hash(newPassword), now);
+        if (!challenge.isValid(now) || account.isManualPasswordExpired(now)) throw invalidChallenge();
+        account.changePassword(newPasswordHash, now);
         if (request != null) {
             request.resolve(now);
         }
         challenge.markAsUsed(now);
-        credentialRevocationService.revokeAllForUser(account.getIdentityId(), now);
 
         String userName = userQuery.findById(userId)
                 .orElseThrow(() -> new AuthenticationAccountNotFoundException("Identity user not found."))
@@ -138,7 +149,7 @@ public class SessionService {
         AuthTokens tokens = tokenIssuanceService.issue(account, userName, now);
         account.recordSuccessfulLogin(now);
         accountRepository.save(account);
-        if (request == null) {
+        if (pendingFirstAccess) {
             membershipOnboardingCompletion.completeApprovedApplicationForIdentity(userId, now);
         }
         if (request != null) {

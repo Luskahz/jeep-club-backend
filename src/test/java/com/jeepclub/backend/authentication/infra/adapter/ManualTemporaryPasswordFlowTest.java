@@ -26,7 +26,7 @@ class ManualTemporaryPasswordFlowTest {
         var now = Instant.now();
         assertThat(adapter.provision(1L, UserActivationMethod.TEMPORARY_PASSWORD, now)).isEqualTo("abcde012");
         assertThat(adapter.provision(2L, UserActivationMethod.EMAIL_INVITATION, now)).isNull();
-        verify(accounts).provisionPendingFirstAccess(1L, "abcde012", now);
+        verify(accounts).provisionPendingManualFirstAccess(1L, "abcde012", now);
         verify(accounts).provisionPendingFirstAccess(2L, "strong-internal", now);
         verify(invitations).issueForNewUser(2L);
     }
@@ -35,10 +35,11 @@ class ManualTemporaryPasswordFlowTest {
         var registration = mock(UserRegistration.class);
         when(strong.generateSecurePassword()).thenReturn("strong-internal"); when(manual.generate()).thenReturn("abcde012");
         when(registration.createPendingFirstAccess(any(), anyString())).thenReturn(1L);
+        when(registration.createPendingManualFirstAccess(any(), anyString())).thenReturn(1L);
         var adapter = new CreateUserWithPendingFirstAccessAdapter(registration, strong, manual, Clock.systemUTC());
         adapter.createPendingUserWithTemporaryPassword("Name", "email", "cpf", "phone");
         adapter.createPendingUserForActivationLink("Name", "email", "cpf", "phone");
-        verify(registration).createPendingFirstAccess(any(), eq("abcde012"));
+        verify(registration).createPendingManualFirstAccess(any(), eq("abcde012"));
         verify(registration).createPendingFirstAccess(any(), eq("strong-internal"));
     }
     @Test void recoveryHashesManualCredential() {

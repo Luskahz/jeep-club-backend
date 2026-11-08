@@ -125,6 +125,7 @@ class AdminUserCreationIntegrationTest {
         AdminUserCreationResult result = registration.createAdministratively(
                 data("16899535009", " ADMIN@example.com "), UserActivationMethod.EMAIL_INVITATION, 1L);
         assertThat(result.temporaryPassword()).isNull();
+        assertThat(accounts.findByIdentityId(result.userId()).orElseThrow().getManualPasswordExpiresAt()).isNull();
         assertThat(registration.administrativeInvitationStatus(result.userId())).isEqualTo("SENT");
         ArgumentCaptor<String> sent = ArgumentCaptor.forClass(String.class);
         verify(mailSender).send(anyString(), anyString(), sent.capture());

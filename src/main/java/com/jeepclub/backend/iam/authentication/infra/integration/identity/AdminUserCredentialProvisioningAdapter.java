@@ -23,7 +23,11 @@ public class AdminUserCredentialProvisioningAdapter implements AdminUserCredenti
     public String provision(Long userId, UserActivationMethod method, Instant now) {
         String temporaryPassword = method == UserActivationMethod.EMAIL_INVITATION
                 ? passwords.generateSecurePassword() : manualPasswords.generate();
-        accounts.provisionPendingFirstAccess(userId, temporaryPassword, now);
+        if (method == UserActivationMethod.TEMPORARY_PASSWORD) {
+            accounts.provisionPendingManualFirstAccess(userId, temporaryPassword, now);
+        } else {
+            accounts.provisionPendingFirstAccess(userId, temporaryPassword, now);
+        }
         if (method == UserActivationMethod.EMAIL_INVITATION) {
             invitations.issueForNewUser(userId);
             return null;

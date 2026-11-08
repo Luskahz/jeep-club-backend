@@ -34,6 +34,7 @@ public class AuthenticationAccount {
     private Instant updatedAt;
     private Instant passwordChangedAt;
     private int failedLoginAttempts;
+    private Instant manualPasswordExpiresAt;
 
     public static AuthenticationAccount create(
             Long identityId,
@@ -126,6 +127,30 @@ public class AuthenticationAccount {
         return account;
     }
 
+    public static AuthenticationAccount reconstitute(
+            Long identityId, String passwordHash, AuthenticationAccessStatus accessStatus,
+            AuthenticationStatus authenticationStatus, CredentialStatus credentialStatus,
+            Instant lastLoginAt, Instant createdAt, Instant accessDisabledAt, Instant updatedAt,
+            Instant passwordChangedAt, int failedLoginAttempts, Instant manualPasswordExpiresAt) {
+        AuthenticationAccount account = reconstitute(identityId, passwordHash, accessStatus,
+                authenticationStatus, credentialStatus, lastLoginAt, createdAt, accessDisabledAt,
+                updatedAt, passwordChangedAt, failedLoginAttempts);
+        account.manualPasswordExpiresAt = manualPasswordExpiresAt;
+        return account;
+    }
+
+    public boolean isManualPasswordExpired(Instant now) {
+        Objects.requireNonNull(now, "now cannot be null");
+        return manualPasswordExpiresAt != null && !now.isBefore(manualPasswordExpiresAt);
+    }
+
+    public void issueManualPassword(String hash, Instant now) {
+        boolean firstAccess = isPendingFirstAccess();
+        changeToTemporaryPassword(hash, now);
+        if (firstAccess) credentialStatus = CredentialStatus.PENDING_FIRST_ACCESS;
+        manualPasswordExpiresAt = now.plus(java.time.Duration.ofHours(24));
+    }
+
     public void registerFailedLogin() {
         if (isBlockedForLogin()) {
             return;
@@ -207,6 +232,7 @@ public class AuthenticationAccount {
         failedLoginAttempts = 0;
         authenticationStatus = AuthenticationStatus.ENABLED;
         credentialStatus = CredentialStatus.PERMANENT;
+        manualPasswordExpiresAt = null;
         updatedAt = now;
     }
 

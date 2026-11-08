@@ -312,6 +312,25 @@ class MySqlMigrationIT {
             assertThat(java.util.HexFormat.of().formatHex(digest)).isEqualTo(entry.getValue());
         }
     }
+    @Test void manualExpiryUpgradePreservesLegacyStrongAndManualCredentials() throws Exception {
+        String db = database();
+        Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
+                .target("14").cleanDisabled(true).load().migrate();
+        referenceUsers(db);
+        try (var c = connection(db); var s = c.createStatement()) {
+            s.executeUpdate("insert into authentication_accounts(identity_id,password_hash,access_status,authentication_status,credential_status,created_at,failed_login_attempts) values"
+                + "(700,'legacy-manual-hash','ENABLED','ENABLED','PENDING_FIRST_ACCESS',UTC_TIMESTAMP(6),0),"
+                + "(701,'legacy-invitation-strong-hash','ENABLED','ENABLED','PENDING_FIRST_ACCESS',UTC_TIMESTAMP(6),0)");
+        }
+        flyway(db).migrate();
+        try (var c = connection(db); var s = c.createStatement(); var rows = s.executeQuery(
+                "select password_hash,manual_password_expires_at from authentication_accounts order by identity_id")) {
+            assertThat(rows.next()).isTrue(); assertThat(rows.getString(1)).isEqualTo("legacy-manual-hash"); assertThat(rows.getObject(2)).isNull();
+            assertThat(rows.next()).isTrue(); assertThat(rows.getString(1)).isEqualTo("legacy-invitation-strong-hash"); assertThat(rows.getObject(2)).isNull();
+        }
+        validateJpa(db);
+    }
+
     @Test void emptyDatabaseMatchesEveryJpaMappingAndIsIdempotent() throws Exception {
         String fresh = database();
         assertThat(flyway(fresh).migrate().migrationsExecuted).isEqualTo(migrationVersions().size());
