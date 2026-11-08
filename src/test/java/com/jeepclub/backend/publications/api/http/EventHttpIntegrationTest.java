@@ -61,6 +61,48 @@ class EventHttpIntegrationTest {
         mvc.perform(token(post("/events/{id}/registrations",id).contentType("application/json").content("{\"allocations\":[{\"vehicleId\":101,\"member\":true,\"dependentIds\":[]}]}"))).andExpect(status().isCreated());
         return id;
     }
+    @Test @Transactional void rejectedRideResponsesLeaveNoOffersOrFalseHistory() throws Exception {
+        long event = guestEvent();
+        auth(99L, "PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
+        long guest = json.readTree(mvc.perform(token(post("/admin/events/{id}/guest-requests", event).contentType("application/json")
+            .content("{\"cpf\":\"12345678901\",\"guestName\":\"Standby\"}"))).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).get("id").asLong();
+        String valid = "{\"vehicleId\":101,\"accept\":true}";
+        auth(20L, "PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND");
+        rejectedRide(event, guest, valid, 404, "EVENT_REGISTRATION_NOT_FOUND");
+        auth(10L, "PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND");
+        when(vehicles.findActive(102L)).thenReturn(Optional.of(new com.jeepclub.backend.vehicles.api.module.EventVehicleQuery.VehicleCapacity(102L, 20L, 3)));
+        rejectedRide(event, guest, "{\"vehicleId\":102,\"accept\":true}", 409, "EVENT_VEHICLE_NOT_OWNED");
+        rejectedRide(event, guest, "{\"vehicleId\":0,\"accept\":true}", 400, null);
+        auth(10L);
+        rejectedRide(event, guest, valid, 403, "ACCESS_DENIED");
+        auth(10L, "PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND");
+        jdbc.update("update event_registrations set status='PENDING_PAYMENT' where event_id=?", event);
+        rejectedRide(event, guest, valid, 409, "EVENT_RIDE_OFFER_INVALID");
+        jdbc.update("update event_registrations set status='CONFIRMED' where event_id=?", event);
+        mvc.perform(token(post("/events/{id}/ride-requests/{guest}/response", event, guest).contentType("application/json").content(valid)))
+            .andExpect(status().isCreated());
+        rejectedRide(event, guest, valid, 409, "EVENT_RIDE_OFFER_INVALID");
+        auth(99L, "PUBLICATIONS_EVENT_GUEST_CANCEL");
+        mvc.perform(token(post("/admin/events/{id}/guest-requests/{guest}/cancel", event, guest).contentType("application/json").content("{\"reason\":\"Withdrawn\"}")))
+            .andExpect(status().isOk());
+        auth(10L, "PUBLICATIONS_EVENT_RIDE_OFFER_RESPOND");
+        rejectedRide(event, guest, valid, 409, "EVENT_RIDE_OFFER_INVALID");
+    }
+    void rejectedRide(long event, long guest, String payload, int http, String code) throws Exception {
+        var offers = jdbc.queryForList("select * from event_ride_offers where event_id=? order by id", event);
+        var history = jdbc.queryForList("select * from event_guest_transitions where event_id=? order by id", event);
+        var guests = jdbc.queryForList("select * from event_guest_requests where event_id=? order by id", event);
+        var registrations = jdbc.queryForList("select * from event_registrations where event_id=? order by id", event);
+        var result = mvc.perform(token(post("/events/{id}/ride-requests/{guest}/response", event, guest).contentType("application/json").content(payload)))
+            .andExpect(status().is(http)).andExpect(content().contentTypeCompatibleWith("application/problem+json"))
+            .andExpect(jsonPath("$.title").isNotEmpty()).andExpect(jsonPath("$.detail").isNotEmpty())
+            .andExpect(jsonPath("$.code").isNotEmpty()).andExpect(jsonPath("$.status").value(http));
+        if (code != null) result.andExpect(jsonPath("$.code").value(code));
+        assertThat(jdbc.queryForList("select * from event_ride_offers where event_id=? order by id", event)).isEqualTo(offers);
+        assertThat(jdbc.queryForList("select * from event_guest_transitions where event_id=? order by id", event)).isEqualTo(history);
+        assertThat(jdbc.queryForList("select * from event_guest_requests where event_id=? order by id", event)).isEqualTo(guests);
+        assertThat(jdbc.queryForList("select * from event_registrations where event_id=? order by id", event)).isEqualTo(registrations);
+    }
     @Test @Transactional void memberOperationsBindPrincipalAndPersistOnlyAuthorizedEffects() throws Exception {
         long event = guestEvent();
         auth(99L, "PUBLICATIONS_EVENT_GUEST_ADMIN_CREATE");
