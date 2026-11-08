@@ -19,8 +19,9 @@ import java.util.Map;
 public class PublicationFeedService {
     private final PublicationRepository publications;
     private final PublicationSocialSummaryQuery social;
+    private final com.jeepclub.backend.publications.core.repository.EventParticipantRepository participants;
 
-    public record Item(Publication publication, PublicationSocialSummaryQuery.Summary summary) {}
+    public record Item(Publication publication, PublicationSocialSummaryQuery.Summary summary, long registrationCount) {}
 
     @Transactional(readOnly = true)
     public Page<Item> feed(String type, Instant from, Instant to, Pageable pageable, Long memberUserId) {
@@ -35,13 +36,16 @@ public class PublicationFeedService {
         var page = publications.findPublished(type, from, to, stable);
         Map<Long, PublicationSocialSummaryQuery.Summary> summaries = social.get(
                 page.getContent().stream().map(Publication::getId).toList(), memberUserId);
-        return page.map(publication -> new Item(publication, summaries.get(publication.getId())));
+        var eventIds = page.getContent().stream().filter(p -> p instanceof com.jeepclub.backend.publications.core.domain.model.Event).map(Publication::getId).toList();
+        var counts = participants.confirmedCounts(eventIds);
+        return page.map(publication -> new Item(publication, summaries.get(publication.getId()), counts.getOrDefault(publication.getId(), 0L)));
     }
 
     @Transactional(readOnly = true)
     public Item detail(Long id, Long memberUserId) {
         var publication = publications.findById(id).orElseThrow(() -> new PublicationNotFoundException(id));
         if (publication.getStatus() != PublicationStatus.PUBLISHED) throw new PublicationNotFoundException(id);
-        return new Item(publication, social.get(java.util.List.of(id), memberUserId).get(id));
+        return new Item(publication, social.get(java.util.List.of(id), memberUserId).get(id),
+                publication instanceof com.jeepclub.backend.publications.core.domain.model.Event ? participants.confirmedCounts(java.util.List.of(id)).getOrDefault(id, 0L) : 0L);
     }
 }
