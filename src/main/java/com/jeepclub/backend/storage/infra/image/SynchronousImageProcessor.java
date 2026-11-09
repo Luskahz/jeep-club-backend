@@ -47,7 +47,8 @@ public final class SynchronousImageProcessor {
             throw new IllegalArgumentException("Invalid upload");
         if (!capacity.tryAcquire()) throw new IllegalStateException("Image processing capacity exceeded");
         try {
-            BufferedImage source = decode(input);
+            byte[] snapshot = input.clone();
+            BufferedImage source = decode(snapshot);
             int limit = (category == Category.OTHER ? 5 : 2) * 1024 * 1024;
             BufferedImage masterImage = source;
             byte[] masterBytes = encode(masterImage);
@@ -62,7 +63,7 @@ public final class SynchronousImageProcessor {
                 byte[] bytes = encode(resized);
                 variants.add(image(preset.code(), resized, bytes, resized.getColorModel().hasAlpha() ? "image/png" : "image/jpeg"));
             }
-            return new Result(hash(input), master, List.copyOf(variants));
+            return new Result(hash(snapshot), master, List.copyOf(variants));
         } finally { capacity.release(); }
     }
     private static BufferedImage decode(byte[] bytes) throws IOException {
