@@ -34,6 +34,7 @@ public class ChargeDefinitionMapper {
         return new ChargeDefinitionEntity(
                 chargeDefinition.getId(),
                 chargeDefinition.getName(),
+                null,
                 chargeDefinition.getDescription(),
                 chargeDefinition.getDefaultAmount(),
                 chargeDefinition.getRecurrenceType(),

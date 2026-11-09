@@ -28,6 +28,7 @@ public class AuthenticationAccountMapper {
         entity.setAccessDisabledAt(domain.getAccessDisabledAt());
         entity.setUpdatedAt(domain.getUpdatedAt());
         entity.setPasswordChangedAt(domain.getPasswordChangedAt());
+        entity.setManualPasswordExpiresAt(domain.getManualPasswordExpiresAt());
         entity.setFailedLoginAttempts(domain.getFailedLoginAttempts());
         return entity;
     }
@@ -48,7 +49,8 @@ public class AuthenticationAccountMapper {
                 entity.getAccessDisabledAt(),
                 entity.getUpdatedAt(),
                 entity.getPasswordChangedAt(),
-                entity.getFailedLoginAttempts()
+                entity.getFailedLoginAttempts(),
+                entity.getManualPasswordExpiresAt()
         );
     }
 }

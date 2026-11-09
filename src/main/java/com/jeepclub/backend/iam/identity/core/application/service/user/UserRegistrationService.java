@@ -90,6 +90,14 @@ class UserRegistrationService implements UserRegistration {
         return userId;
     }
 
+    @Override
+    @Transactional
+    public Long createPendingManualFirstAccess(UserRegistrationData data, String rawPassword) {
+        Long userId = createUser(data);
+        authenticationProvisioningPort.provisionPendingManualFirstAccess(userId, rawPassword, data.now());
+        return userId;
+    }
+
     private Long createUser(UserRegistrationData data) {
         images.requireExisting(data.profilePhotoStorageKey());
         User user = User.create(

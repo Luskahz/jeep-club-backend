@@ -1,0 +1,121 @@
+package com.jeepclub.backend.storage.infra.persistence.adapter;
+
+import com.jeepclub.backend.storage.core.domain.enums.MediaAuditOperation;
+import com.jeepclub.backend.storage.core.domain.model.*;
+import com.jeepclub.backend.storage.core.repository.MediaCatalogRepository;
+import com.jeepclub.backend.storage.infra.persistence.entity.*;
+import com.jeepclub.backend.storage.infra.persistence.mapper.MediaCatalogMapper;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.OptimisticLockException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.Optional;
+
+/** Internal catalog adapter. Each write and its immutable event commit or roll back together. */
+@Repository
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
+    private final EntityManager entityManager;
+
+    @Override public Optional<MediaAsset> findAsset(Long id) {
+        return Optional.ofNullable(entityManager.find(MediaAssetEntity.class, id)).map(MediaCatalogMapper::toDomain);
+    }
+    @Override public Optional<MediaVariant> findVariant(Long id) {
+        return Optional.ofNullable(entityManager.find(MediaVariantEntity.class, id)).map(MediaCatalogMapper::toDomain);
+    }
+    @Override public Optional<MediaReference> findReference(Long id) {
+        return Optional.ofNullable(entityManager.find(MediaReferenceEntity.class, id)).map(MediaCatalogMapper::toDomain);
+    }
+
+    @Override @Transactional
+    public MediaAsset registerAsset(MediaAsset asset, MediaAuditContext audit) {
+        require(asset.mediaId() == null, "Asset already registered");
+        auditTime(audit, asset.updatedAt());
+        var entity = MediaCatalogMapper.toEntity(asset);
+        entityManager.persist(entity);
+        entityManager.flush();
+        var saved = MediaCatalogMapper.toDomain(entity);
+        append(new MediaAuditEvent(null, saved.mediaId(), null, null, MediaAuditOperation.ASSET_REGISTERED,
+                audit, null, saved.version()));
+        return saved;
+    }
+
+    @Override @Transactional
+    public MediaAsset updateAssetMetadata(MediaAsset asset, MediaAuditContext audit) {
+        require(asset.mediaId() != null, "Asset not registered");
+        auditTime(audit, asset.updatedAt());
+        var entity = entityManager.find(MediaAssetEntity.class, asset.mediaId());
+        require(entity != null, "Asset not found");
+        expectedVersion(entity.getVersion(), asset.version());
+        var current = MediaCatalogMapper.toDomain(entity);
+        require(current.revisePurpose(asset.purpose(), asset.updatedAt()).equals(asset), "Immutable asset attributes changed");
+        // No classification/moderation/retention policy is implemented by this foundation.
+        require(!current.purpose().equals(asset.purpose()) || !current.updatedAt().equals(asset.updatedAt()), "No metadata change");
+        entity.setPurpose(asset.purpose()); entity.setUpdatedAt(asset.updatedAt());
+        entityManager.flush();
+        append(new MediaAuditEvent(null, asset.mediaId(), null, null, MediaAuditOperation.ASSET_METADATA_UPDATED,
+                audit, asset.version(), entity.getVersion()));
+        return MediaCatalogMapper.toDomain(entity);
+    }
+
+    @Override @Transactional
+    public MediaVariant registerVariant(MediaVariant variant, MediaAuditContext audit) {
+        require(variant.variantId() == null, "Variant already registered");
+        auditTime(audit, variant.createdAt());
+        var entity = MediaCatalogMapper.toEntity(variant);
+        entityManager.persist(entity); entityManager.flush();
+        var saved = MediaCatalogMapper.toDomain(entity);
+        append(new MediaAuditEvent(null, saved.mediaId(), saved.variantId(), null,
+                MediaAuditOperation.VARIANT_REGISTERED, audit, null, null));
+        return saved;
+    }
+
+    @Override @Transactional
+    public MediaReference recordReference(MediaReference reference, MediaAuditContext audit) {
+        require(reference.referenceId() == null, "Reference already recorded");
+        auditTime(audit, reference.unlinkedAt() == null ? reference.linkedAt() : reference.unlinkedAt());
+        var entity = MediaCatalogMapper.toEntity(reference);
+        entityManager.persist(entity); entityManager.flush();
+        var saved = MediaCatalogMapper.toDomain(entity);
+        append(new MediaAuditEvent(null, saved.mediaId(), null, saved.referenceId(),
+                MediaAuditOperation.REFERENCE_RECORDED, audit, null, saved.version()));
+        return saved;
+    }
+
+    @Override @Transactional
+    public MediaReference endReference(MediaReference reference, MediaAuditContext audit) {
+        require(reference.referenceId() != null && reference.unlinkedAt() != null, "Missing historical interval");
+        auditTime(audit, reference.unlinkedAt());
+        var entity = entityManager.find(MediaReferenceEntity.class, reference.referenceId());
+        require(entity != null, "Reference not found");
+        expectedVersion(entity.getVersion(), reference.version());
+        var current = MediaCatalogMapper.toDomain(entity);
+        require(current.end(reference.unlinkedAt(), reference.unlinkedByUserId(), reference.unlinkReasonCode()).equals(reference),
+                "Immutable reference attributes changed");
+        entity.setUnlinkedAt(reference.unlinkedAt()); entity.setUnlinkedByUserId(reference.unlinkedByUserId());
+        entity.setUnlinkReasonCode(reference.unlinkReasonCode());
+        entityManager.flush();
+        append(new MediaAuditEvent(null, reference.mediaId(), null, reference.referenceId(),
+                MediaAuditOperation.REFERENCE_ENDED, audit, reference.version(), entity.getVersion()));
+        return MediaCatalogMapper.toDomain(entity);
+    }
+
+    private void append(MediaAuditEvent event) {
+        entityManager.persist(MediaCatalogMapper.toEntity(event)); entityManager.flush();
+    }
+    private static void expectedVersion(Long actual, Long expected) {
+        if (!Objects.equals(actual, expected)) throw new OptimisticLockException("Concurrent media catalog change");
+    }
+    private static void auditTime(MediaAuditContext context, Instant changeAt) {
+        Objects.requireNonNull(context, "audit");
+        require(!context.occurredAt().isBefore(changeAt), "Audit precedes change");
+    }
+    private static void require(boolean valid, String message) {
+        if (!valid) throw new IllegalArgumentException(message);
+    }
+}

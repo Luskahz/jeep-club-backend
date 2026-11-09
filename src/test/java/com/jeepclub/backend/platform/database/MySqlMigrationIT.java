@@ -312,6 +312,25 @@ class MySqlMigrationIT {
             assertThat(java.util.HexFormat.of().formatHex(digest)).isEqualTo(entry.getValue());
         }
     }
+    @Test void manualExpiryUpgradePreservesLegacyStrongAndManualCredentials() throws Exception {
+        String db = database();
+        Flyway.configure().dataSource(url(db), MYSQL.getUsername(), MYSQL.getPassword())
+                .target("14").cleanDisabled(true).load().migrate();
+        referenceUsers(db);
+        try (var c = connection(db); var s = c.createStatement()) {
+            s.executeUpdate("insert into authentication_accounts(identity_id,password_hash,access_status,authentication_status,credential_status,created_at,failed_login_attempts) values"
+                + "(700,'legacy-manual-hash','ENABLED','ENABLED','PENDING_FIRST_ACCESS',UTC_TIMESTAMP(6),0),"
+                + "(701,'legacy-invitation-strong-hash','ENABLED','ENABLED','PENDING_FIRST_ACCESS',UTC_TIMESTAMP(6),0)");
+        }
+        flyway(db).migrate();
+        try (var c = connection(db); var s = c.createStatement(); var rows = s.executeQuery(
+                "select password_hash,manual_password_expires_at from authentication_accounts order by identity_id")) {
+            assertThat(rows.next()).isTrue(); assertThat(rows.getString(1)).isEqualTo("legacy-manual-hash"); assertThat(rows.getObject(2)).isNull();
+            assertThat(rows.next()).isTrue(); assertThat(rows.getString(1)).isEqualTo("legacy-invitation-strong-hash"); assertThat(rows.getObject(2)).isNull();
+        }
+        validateJpa(db);
+    }
+
     @Test void emptyDatabaseMatchesEveryJpaMappingAndIsIdempotent() throws Exception {
         String fresh = database();
         assertThat(flyway(fresh).migrate().migrationsExecuted).isEqualTo(migrationVersions().size());
@@ -325,6 +344,7 @@ class MySqlMigrationIT {
         eventGuestPhysicalConstraints(expected);
         rejectionNotificationPhysicalConstraints(expected);
         retainedReferencePhysicalConstraints(expected);
+        storagePhysicalConstraints(expected);
         assertThat(snapshot(fresh)).containsExactlyElementsOf(snapshot(expected));
         assertThat(flyway(fresh).migrate().migrationsExecuted).isZero();
         assertThat(count(fresh, "flyway_schema_history")).isEqualTo(migrationVersions().size());
@@ -613,6 +633,16 @@ class MySqlMigrationIT {
         }
     }
 
+
+    // The provider key uses MySQL NO PAD binary comparison; JPA stays dialect-neutral.
+    private static void storagePhysicalConstraints(String name) throws Exception {
+        try (var c = connection(name); var st = c.createStatement()) {
+            for (var column : Map.of("provider",32,"namespace",64,"storage_key",512,"variant_code",64).entrySet()) {
+                st.execute("ALTER TABLE storage_media_variants MODIFY " + column.getKey() + " VARCHAR(" + column.getValue()
+                        + ") CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL");
+            }
+        }
+    }
 
     // Independently describe DB-only constraints missing from the JPA mappings.
     private static void retainedReferencePhysicalConstraints(String name) throws Exception {
