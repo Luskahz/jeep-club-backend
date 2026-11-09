@@ -13,7 +13,7 @@ class ReconciliationTest {
         var report = new Reconciliation().compare(Map.of(missing, 1, present, 2), Set.of(present, unknown), true, true);
         assertThat(report.missing()).containsExactly(missing);
         assertThat(report.uncatalogued()).containsExactly(unknown);
-        assertThat(report.duplicateCatalogLocations()).containsExactly(present);
+        assertThat(report.sharedCatalogLocations()).containsExactly(present);
         assertThatThrownBy(() -> new Reconciliation().compare(Map.of(), Set.of(), true, false)).isInstanceOf(IllegalArgumentException.class);
     }
 }

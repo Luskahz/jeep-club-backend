@@ -17,7 +17,7 @@ public final class Reconciliation {
         }
         @Override public String toString() { return "Location[redacted]"; }
     }
-    public record Report(List<Location> missing, List<Location> uncatalogued, List<Location> duplicateCatalogLocations) {}
+    public record Report(List<Location> missing, List<Location> uncatalogued, List<Location> sharedCatalogLocations) {}
     public Report compare(Map<Location, Integer> catalogCounts, Set<Location> physical, boolean completeCatalog, boolean completeInventory) {
         Objects.requireNonNull(catalogCounts); Objects.requireNonNull(physical);
         if (!completeCatalog || !completeInventory) throw new IllegalArgumentException("Complete snapshots required");

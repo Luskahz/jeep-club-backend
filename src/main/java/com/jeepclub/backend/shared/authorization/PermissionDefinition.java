@@ -3,6 +3,14 @@ package com.jeepclub.backend.shared.authorization;
 import java.util.Arrays;
 
 public enum PermissionDefinition {
+    STORAGE_MEDIA_READ(PermissionCode.STORAGE_MEDIA_READ, ModuleCode.STORAGE, "Storage: read"),
+    STORAGE_MEDIA_MODERATE(PermissionCode.STORAGE_MEDIA_MODERATE, ModuleCode.STORAGE, "Storage: moderate"),
+    STORAGE_MEDIA_RESTORE(PermissionCode.STORAGE_MEDIA_RESTORE, ModuleCode.STORAGE, "Storage: restore"),
+    STORAGE_MEDIA_AUDIT_READ(PermissionCode.STORAGE_MEDIA_AUDIT_READ, ModuleCode.STORAGE, "Storage: audit read"),
+    STORAGE_MEDIA_LEGAL_HOLD(PermissionCode.STORAGE_MEDIA_LEGAL_HOLD, ModuleCode.STORAGE, "Storage: legal hold"),
+    STORAGE_MEDIA_RETENTION_REVIEW(PermissionCode.STORAGE_MEDIA_RETENTION_REVIEW, ModuleCode.STORAGE, "Storage: retention review"),
+    STORAGE_MEDIA_RECONCILE(PermissionCode.STORAGE_MEDIA_RECONCILE, ModuleCode.STORAGE, "Storage: reconcile"),
+
     DEPENDENTS_DEPENDENT_PHOTO_UPDATE(PermissionCode.DEPENDENTS_DEPENDENT_PHOTO_UPDATE, ModuleCode.DEPENDENTS, "Associar, substituir e desassociar foto privada de dependente"),
     // BACK-512
     IDENTITY_USER_ARCHIVE(PermissionCode.IDENTITY_USER_ARCHIVE, ModuleCode.IDENTITY, "Arquivar cadastro"),

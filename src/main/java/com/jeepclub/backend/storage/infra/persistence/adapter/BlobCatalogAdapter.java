@@ -53,6 +53,7 @@ public class BlobCatalogAdapter implements BlobCatalog {
         var row=em.find(StoredBlobEntity.class, blob.sha256(), LockModeType.PESSIMISTIC_READ);
         var variant=em.find(MediaVariantEntity.class, variantId);
         if (row==null || !row.isReady() || variant==null || row.getSizeBytes()!=variant.getSizeBytes()
+            || blob.sizeBytes()!=row.getSizeBytes() || !("storage-blobs/"+blob.sha256()+".bin").equals(blob.storageKey())
             || !blob.storageKey().equals(variant.getStorageKey()) || !blob.sha256().equals(variant.getChecksum())
             || !"SHA-256".equals(variant.getChecksumAlgorithm()) || !"LOCAL".equals(variant.getProvider())
             || !"storage-blobs".equals(variant.getNamespace())) throw new IllegalArgumentException("Invalid blob binding");

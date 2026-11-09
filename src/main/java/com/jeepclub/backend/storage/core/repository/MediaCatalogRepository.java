@@ -8,6 +8,7 @@ import java.util.List;
 public interface MediaCatalogRepository {
     Optional<MediaAsset> findAsset(Long mediaId);
     Optional<MediaVariant> findVariant(Long variantId);
+    Optional<MediaVariant> findVariant(Long mediaId, String code);
     Optional<MediaReference> findReference(Long referenceId);
     List<MediaReference> findReferences(Long mediaId, long afterId, int limit);
     List<MediaAuditEvent> findAuditEvents(Long mediaId, long afterId, int limit);

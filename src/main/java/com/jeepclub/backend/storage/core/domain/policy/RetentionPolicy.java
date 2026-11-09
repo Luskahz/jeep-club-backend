@@ -45,7 +45,7 @@ public final class RetentionPolicy {
     }
     private static RetentionClass classify(MediaContext context) {
         return switch (context) {
-            case DEPENDENT_PHOTO -> RetentionClass.SENSITIVE;
+            case DEPENDENT_PHOTO, MEDICAL_IMAGE, IDENTIFICATION_PHOTO -> RetentionClass.SENSITIVE;
             case IDENTITY_PROFILE, VEHICLE_PHOTO, PUBLICATION_IMAGE, PUBLICATION_COMMENT, EVENT_IMAGE, TOOL_IMAGE -> RetentionClass.COMMON;
             case UNKNOWN -> null;
         };

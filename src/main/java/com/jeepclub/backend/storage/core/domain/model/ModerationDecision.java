@@ -16,7 +16,7 @@ public record ModerationDecision(long mediaId, Long referenceId, State state, Re
         if ((state == State.VISIBLE) != (reason == Reason.RESTORED)) throw new IllegalArgumentException("Invalid restoration reason");
     }
     /** Internal notes are intentionally omitted from this safe representation. */
-    public PublicView publicView() { return new PublicView(state); }
-    public record PublicView(State state) {}
+    public PublicView publicView() { return new PublicView(state, state == State.VISIBLE ? "RESTORED" : "CONTENT_UNAVAILABLE"); }
+    public record PublicView(State state, String reasonCode) {}
     @Override public String toString() { return "ModerationDecision[mediaId=" + mediaId + ", state=" + state + "]"; }
 }

@@ -1,6 +1,7 @@
 package com.jeepclub.backend.shared.authorization;
 
 public enum ModuleCode {
+    STORAGE,
     AUTHENTICATION,
     AUTHORIZATION,
     BILLING,

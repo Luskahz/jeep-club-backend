@@ -29,6 +29,10 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
     @Override public Optional<MediaVariant> findVariant(Long id) {
         return Optional.ofNullable(entityManager.find(MediaVariantEntity.class, id)).map(MediaCatalogMapper::toDomain);
     }
+    @Override public Optional<MediaVariant> findVariant(Long mediaId, String code) {
+        return entityManager.createQuery("select v from MediaVariantEntity v where v.mediaId=:media and v.variantCode=:code",MediaVariantEntity.class)
+            .setParameter("media",mediaId).setParameter("code",code).getResultStream().findFirst().map(MediaCatalogMapper::toDomain);
+    }
     @Override public Optional<MediaReference> findReference(Long id) {
         return Optional.ofNullable(entityManager.find(MediaReferenceEntity.class, id)).map(MediaCatalogMapper::toDomain);
     }
@@ -56,6 +60,8 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
         require(asset.mediaId() == null, "Asset already registered");
         auditTime(audit, asset.updatedAt());
         var entity = MediaCatalogMapper.toEntity(asset);
+        entity.setCreatedAt(asset.createdAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+        entity.setUpdatedAt(asset.updatedAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         entityManager.persist(entity);
         entityManager.flush();
         var saved = MediaCatalogMapper.toDomain(entity);
@@ -97,8 +103,14 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
     @Override @Transactional
     public MediaReference recordReference(MediaReference reference, MediaAuditContext audit) {
         require(reference.referenceId() == null, "Reference already recorded");
+        entityManager.find(MediaAssetEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        var control=entityManager.find(MediaControlEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        require(control==null || !"DISCARDED".equals(control.getState()),"Media logically discarded");
+        if(control!=null && java.util.Set.of(com.jeepclub.backend.storage.core.domain.enums.MediaContext.DEPENDENT_PHOTO,com.jeepclub.backend.storage.core.domain.enums.MediaContext.MEDICAL_IMAGE,com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTIFICATION_PHOTO).contains(reference.context())) control.setSensitive(true);
         auditTime(audit, reference.unlinkedAt() == null ? reference.linkedAt() : reference.unlinkedAt());
         var entity = MediaCatalogMapper.toEntity(reference);
+        entity.setLinkedAt(reference.linkedAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
+        if(reference.unlinkedAt()!=null) entity.setUnlinkedAt(reference.unlinkedAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         entityManager.persist(entity); entityManager.flush();
         var saved = MediaCatalogMapper.toDomain(entity);
         append(new MediaAuditEvent(null, saved.mediaId(), null, saved.referenceId(),
@@ -109,6 +121,7 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
     @Override @Transactional
     public MediaReference endReference(MediaReference reference, MediaAuditContext audit) {
         require(reference.referenceId() != null && reference.unlinkedAt() != null, "Missing historical interval");
+        entityManager.find(MediaAssetEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         auditTime(audit, reference.unlinkedAt());
         var entity = entityManager.find(MediaReferenceEntity.class, reference.referenceId());
         require(entity != null, "Reference not found");

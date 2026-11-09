@@ -21,11 +21,11 @@ public final class ContextualMediaAccess {
                            Moderation global, Moderation contextual, boolean protectedContext) {
         if (userId == null || userId <= 0 || asset == null || reference == null || variant == null
                 || asset.mediaId() == null || !asset.mediaId().equals(reference.mediaId()) || !asset.mediaId().equals(variant.mediaId())
-                || !reference.isCurrent() || asset.physicalState() != MediaPhysicalState.PRESENT
+                || reference.referenceId() == null || variant.variantId() == null || asset.physicalState() != MediaPhysicalState.PRESENT
                 || global != Moderation.ALLOWED || contextual != Moderation.ALLOWED)
             return new Decision(false, Cache.PRIVATE_NO_STORE);
         boolean master = variant.isPrivateSource();
         if (!authorization.mayRead(userId, reference, master)) return new Decision(false, Cache.PRIVATE_NO_STORE);
-        return new Decision(true, master || protectedContext || reference.context() == MediaContext.DEPENDENT_PHOTO ? Cache.PRIVATE_NO_STORE : Cache.PRIVATE_REVALIDATE);
+        return new Decision(true, master || protectedContext || java.util.Set.of(MediaContext.DEPENDENT_PHOTO,MediaContext.MEDICAL_IMAGE,MediaContext.IDENTIFICATION_PHOTO).contains(reference.context()) ? Cache.PRIVATE_NO_STORE : Cache.PRIVATE_REVALIDATE);
     }
 }

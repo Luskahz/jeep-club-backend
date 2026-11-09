@@ -19,7 +19,7 @@ import org.hibernate.type.SqlTypes;
 @Check(name = "ck_storage_asset_uploader", constraints = "uploaded_by_user_id IS NULL OR uploaded_by_user_id > 0")
 @Check(name = "ck_storage_asset_owner", constraints = "owner_user_id IS NULL OR owner_user_id > 0")
 @Check(name = "ck_storage_asset_origin", constraints = "origin IN ('UNKNOWN','UPLOAD','LEGACY_IMPORT')")
-@Check(name = "ck_storage_asset_source_context", constraints = "source_context IN ('UNKNOWN','IDENTITY_PROFILE','VEHICLE_PHOTO','PUBLICATION_IMAGE','PUBLICATION_COMMENT','EVENT_IMAGE','TOOL_IMAGE','DEPENDENT_PHOTO')")
+@Check(name = "ck_storage_asset_source_context", constraints = "source_context IN ('UNKNOWN','IDENTITY_PROFILE','VEHICLE_PHOTO','PUBLICATION_IMAGE','PUBLICATION_COMMENT','EVENT_IMAGE','TOOL_IMAGE','DEPENDENT_PHOTO','MEDICAL_IMAGE','IDENTIFICATION_PHOTO')")
 @Check(name = "ck_storage_asset_subject_type", constraints = "subject_type IN ('UNKNOWN','USER','DEPENDENT')")
 @Check(name = "ck_storage_asset_classification", constraints = "classification IN ('UNCLASSIFIED','CLASSIFIED')")
 @Check(name = "ck_storage_asset_physical_state", constraints = "physical_state IN ('UNKNOWN','PRESENT','MISSING')")

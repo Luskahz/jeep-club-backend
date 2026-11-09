@@ -21,7 +21,7 @@ import org.hibernate.type.SqlTypes;
 @Check(name = "ck_storage_reference_known_context", constraints = "context <> 'UNKNOWN'")
 @Check(name = "ck_storage_reference_link_actor", constraints = "linked_by_user_id IS NULL OR linked_by_user_id > 0")
 @Check(name = "ck_storage_reference_unlink_actor", constraints = "unlinked_by_user_id IS NULL OR unlinked_by_user_id > 0")
-@Check(name = "ck_storage_reference_context", constraints = "context IN ('UNKNOWN','IDENTITY_PROFILE','VEHICLE_PHOTO','PUBLICATION_IMAGE','PUBLICATION_COMMENT','EVENT_IMAGE','TOOL_IMAGE','DEPENDENT_PHOTO')")
+@Check(name = "ck_storage_reference_context", constraints = "context IN ('UNKNOWN','IDENTITY_PROFILE','VEHICLE_PHOTO','PUBLICATION_IMAGE','PUBLICATION_COMMENT','EVENT_IMAGE','TOOL_IMAGE','DEPENDENT_PHOTO','MEDICAL_IMAGE','IDENTIFICATION_PHOTO')")
 @Check(name = "ck_storage_reference_association_origin", constraints = "association_origin IN ('UNKNOWN','UPLOAD','LEGACY_IMPORT')")
 public class MediaReferenceEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
