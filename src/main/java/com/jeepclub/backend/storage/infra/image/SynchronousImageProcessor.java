@@ -35,7 +35,10 @@ public final class SynchronousImageProcessor {
                 throw new IllegalArgumentException("Invalid preset");
         }
     }
-    public record Image(String code, byte[] bytes, String mimeType, int width, int height, String sha256) {}
+    public record Image(String code, byte[] bytes, String mimeType, int width, int height, String sha256) {
+        public Image { bytes = bytes.clone(); }
+        @Override public byte[] bytes() { return bytes.clone(); }
+    }
     public record Result(String receivedSha256, Image master, List<Image> variants) {}
 
     public Result process(byte[] input, Category category, List<Preset> presets) throws IOException {

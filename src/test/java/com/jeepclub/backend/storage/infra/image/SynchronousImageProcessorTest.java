@@ -23,6 +23,13 @@ class SynchronousImageProcessorTest {
         assertThat(result.master().sha256()).hasSize(64);
         assertThat(result.receivedSha256()).isNotEqualTo(result.master().sha256());
     }
+    @Test void returnedBytesCannotMutateTheHashedRepresentation() throws Exception {
+        var result = new SynchronousImageProcessor().process(image(), SynchronousImageProcessor.Category.PROFILE, List.of());
+        byte[] original = result.master().bytes();
+        byte[] exposed = result.master().bytes();
+        exposed[0] ^= 1;
+        assertThat(result.master().bytes()).containsExactly(original);
+    }
     @Test void rejectsInvalidInputDuplicatePresetsAndOutOfBoundsCrop() throws Exception {
         var processor = new SynchronousImageProcessor();
         assertThatThrownBy(() -> processor.process(new byte[11 * 1024 * 1024], SynchronousImageProcessor.Category.OTHER, List.of())).isInstanceOf(IllegalArgumentException.class);
