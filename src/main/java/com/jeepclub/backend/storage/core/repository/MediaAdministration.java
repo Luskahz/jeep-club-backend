@@ -12,5 +12,7 @@ public interface MediaAdministration {
     List<Entry> list(long afterId,int limit,MediaContext context,String state);
     List<Event> events(long mediaId,long afterId,int limit);
     RetentionReview review(long mediaId,MediaAuditContext actor);
+    /** Internal backfill only: content/checkpoint validation precedes this transition. */
+    void reapplyLegacy(long mediaId,MediaAuditContext actor);
     void discard(long mediaId,MediaAuditContext actor);
 }

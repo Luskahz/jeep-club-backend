@@ -50,7 +50,12 @@ public class LegacyBackfillAdapter implements LegacyBackfill {
             if(row.getMediaId()!=null) {
                 var master=catalog.findVariant(row.getMediaId(),"MASTER").orElseThrow();
                 if(!blob.sha256().equals(master.checksum())) throw new IllegalStateException("Legacy source changed since checkpoint");
-                return new Result(row.isRolledBack()?"ROLLED_BACK":"CATALOGUED",row.getMediaId(),bytes.length);
+                if(row.isRolledBack()) {
+                    var asset=catalog.findAsset(row.getMediaId()).orElseThrow();
+                    if(!id.equals(asset.sourceRecordId())) throw new IllegalStateException("Legacy checkpoint mismatch");
+                    admin.reapplyLegacy(row.getMediaId(),actor);row.setRolledBack(false);em.flush();
+                }
+                return new Result("CATALOGUED",row.getMediaId(),bytes.length);
             }
             Instant now=actor.occurredAt();
             var asset=catalog.registerAsset(MediaAsset.create(MediaOrigin.LEGACY_IMPORT,MediaContext.UNKNOWN,id,null,null,MediaSubjectType.UNKNOWN,null,"LEGACY_CUSTODY",now),actor);

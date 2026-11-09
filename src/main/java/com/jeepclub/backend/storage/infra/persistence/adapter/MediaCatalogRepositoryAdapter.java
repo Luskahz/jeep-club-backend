@@ -105,7 +105,7 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
         require(reference.referenceId() == null, "Reference already recorded");
         entityManager.find(MediaAssetEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         var control=entityManager.find(MediaControlEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-        require(control==null || !"DISCARDED".equals(control.getState()),"Media logically discarded");
+        require(control==null || !control.isDiscarded(),"Media logically discarded");
         if(control!=null && java.util.Set.of(com.jeepclub.backend.storage.core.domain.enums.MediaContext.DEPENDENT_PHOTO,com.jeepclub.backend.storage.core.domain.enums.MediaContext.MEDICAL_IMAGE,com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTIFICATION_PHOTO).contains(reference.context())) control.setSensitive(true);
         auditTime(audit, reference.unlinkedAt() == null ? reference.linkedAt() : reference.unlinkedAt());
         var entity = MediaCatalogMapper.toEntity(reference);

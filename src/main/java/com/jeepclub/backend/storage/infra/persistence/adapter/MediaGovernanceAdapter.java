@@ -17,14 +17,17 @@ public class MediaGovernanceAdapter implements MediaGovernance {
     }
     @Override @Transactional(readOnly=true) public boolean allows(long mediaId,long referenceId) {
         var row=em.find(MediaControlEntity.class,mediaId);
-        if(row==null || !"VISIBLE".equals(row.getState())) return false;
-        var events=em.createQuery("select e from MediaModerationEntity e where e.mediaId=:media and e.referenceId=:ref and e.operation='MODERATION' order by e.id desc",MediaModerationEntity.class)
-            .setParameter("media",mediaId).setParameter("ref",referenceId).setMaxResults(1).getResultList();
+        if(row==null || row.isDiscarded() || !"VISIBLE".equals(row.getState())) return false;
+        var reference=em.find(MediaReferenceEntity.class,referenceId);
+        if(reference==null || !reference.getMediaId().equals(mediaId)) return false;
+        var events=em.createQuery("select e from MediaModerationEntity e, MediaReferenceEntity r where e.referenceId=r.referenceId and e.mediaId=:media and r.context=:context and r.consumerId=:consumer and r.role=:role and e.operation='MODERATION' order by e.id desc",MediaModerationEntity.class)
+            .setParameter("media",mediaId).setParameter("context",reference.getContext())
+            .setParameter("consumer",reference.getConsumerId()).setParameter("role",reference.getRole()).setMaxResults(1).getResultList();
         return events.isEmpty() || "VISIBLE".equals(events.get(0).getState());
     }
     @Override public void moderate(ModerationDecision decision) {
         var row=em.find(MediaControlEntity.class,decision.mediaId(),LockModeType.PESSIMISTIC_WRITE);
-        if(row==null) throw new IllegalArgumentException("Unknown media");
+        if(row==null || row.isDiscarded()) throw new IllegalArgumentException("Unknown or discarded media");
         if(decision.referenceId()==null) row.setState(decision.state().name());
         else {
             var ref=em.find(MediaReferenceEntity.class,decision.referenceId());

@@ -22,9 +22,9 @@ public class MediaAdministrationAdapter implements MediaAdministration {
     }
     @Override @Transactional(readOnly=true) public List<Entry> list(long afterId,int limit,MediaContext context,String state) {
         page(afterId,limit);
-        return em.createQuery("select a,c from MediaAssetEntity a,MediaControlEntity c where a.mediaId=c.mediaId and a.mediaId>:after and (:context is null or a.sourceContext=:context) and ((:state is null and c.state<>'DISCARDED') or c.state=:state) order by a.mediaId",Object[].class)
+        return em.createQuery("select a,c from MediaAssetEntity a,MediaControlEntity c where a.mediaId=c.mediaId and a.mediaId>:after and (:context is null or a.sourceContext=:context) and ((:state is null and c.discarded=false) or (:state='DISCARDED' and c.discarded=true) or (c.discarded=false and c.state=:state)) order by a.mediaId",Object[].class)
             .setParameter("after",afterId).setParameter("context",context).setParameter("state",state).setMaxResults(limit).getResultList().stream().map(row -> {
-                var a=(MediaAssetEntity)row[0];var c=(MediaControlEntity)row[1];return new Entry(a.getMediaId(),a.getSourceContext(),a.getCreatedAt(),c.getState(),c.isSensitive(),c.isLegalHold());
+                var a=(MediaAssetEntity)row[0];var c=(MediaControlEntity)row[1];return new Entry(a.getMediaId(),a.getSourceContext(),a.getCreatedAt(),c.isDiscarded()?"DISCARDED":c.getState(),c.isSensitive(),c.isLegalHold());
             }).toList();
     }
     @Override @Transactional(readOnly=true) public List<Event> events(long mediaId,long afterId,int limit) {
@@ -54,7 +54,18 @@ public class MediaAdministrationAdapter implements MediaAdministration {
         var asset=em.find(MediaAssetEntity.class,mediaId,LockModeType.PESSIMISTIC_WRITE);
         var control=em.find(MediaControlEntity.class,mediaId,LockModeType.PESSIMISTIC_WRITE);
         if(asset==null || control==null || active(mediaId)>0) throw new IllegalArgumentException("Media still in use or unknown");
-        control.setState("DISCARDED");event(mediaId,"LOGICAL_DISCARD","DISCARDED",actor);
+        control.setDiscarded(true);event(mediaId,"LOGICAL_DISCARD","DISCARDED",actor);
+    }
+    @Override public void reapplyLegacy(long mediaId,MediaAuditContext actor) {
+        var asset=em.find(MediaAssetEntity.class,mediaId,LockModeType.PESSIMISTIC_WRITE);
+        var control=em.find(MediaControlEntity.class,mediaId,LockModeType.PESSIMISTIC_WRITE);
+        if(asset==null || control==null || asset.getOrigin()!=com.jeepclub.backend.storage.core.domain.enums.MediaOrigin.LEGACY_IMPORT
+            || asset.getOwnerUserId()!=null || asset.getUploadedByUserId()!=null || asset.getSourceContext()!=MediaContext.UNKNOWN
+            || em.createQuery("select count(r) from MediaReferenceEntity r where r.mediaId=:media",Long.class).setParameter("media",mediaId).getSingleResult()!=0)
+            throw new IllegalArgumentException("Legacy custody cannot be reapplied");
+        if(!control.isDiscarded()) throw new IllegalArgumentException("Legacy custody is not rolled back");
+        control.setDiscarded(false);control.setLegalHold(true);
+        event(mediaId,"LEGACY_REAPPLIED",control.getState(),actor);
     }
     private long active(long mediaId) { return em.createQuery("select count(r) from MediaReferenceEntity r where r.mediaId=:media and r.unlinkedAt is null",Long.class).setParameter("media",mediaId).getSingleResult(); }
     private void event(long id,String operation,String state,MediaAuditContext actor) {
