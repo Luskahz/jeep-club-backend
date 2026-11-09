@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Objects;
+import java.util.List;
 import java.util.Optional;
 
 /** Internal catalog adapter. Each write and its immutable event commit or roll back together. */
@@ -30,6 +31,24 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
     }
     @Override public Optional<MediaReference> findReference(Long id) {
         return Optional.ofNullable(entityManager.find(MediaReferenceEntity.class, id)).map(MediaCatalogMapper::toDomain);
+    }
+
+    @Override public List<MediaReference> findReferences(Long mediaId, long afterId, int limit) {
+        validatePage(mediaId, afterId, limit);
+        return entityManager.createQuery("select r from MediaReferenceEntity r where r.mediaId = :mediaId and r.referenceId > :afterId order by r.referenceId", MediaReferenceEntity.class)
+                .setParameter("mediaId", mediaId).setParameter("afterId", afterId).setMaxResults(limit)
+                .getResultList().stream().map(MediaCatalogMapper::toDomain).toList();
+    }
+
+    @Override public List<MediaAuditEvent> findAuditEvents(Long mediaId, long afterId, int limit) {
+        validatePage(mediaId, afterId, limit);
+        return entityManager.createQuery("select e from MediaAuditEventEntity e where e.mediaId = :mediaId and e.eventId > :afterId order by e.eventId", MediaAuditEventEntity.class)
+                .setParameter("mediaId", mediaId).setParameter("afterId", afterId).setMaxResults(limit)
+                .getResultList().stream().map(MediaCatalogMapper::toDomain).toList();
+    }
+
+    private static void validatePage(Long mediaId, long afterId, int limit) {
+        require(mediaId != null && mediaId > 0 && afterId >= 0 && limit > 0 && limit <= 100, "Invalid catalog page");
     }
 
     @Override @Transactional

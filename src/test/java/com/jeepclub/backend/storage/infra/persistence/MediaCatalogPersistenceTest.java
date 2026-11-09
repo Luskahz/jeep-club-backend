@@ -57,6 +57,18 @@ class MediaCatalogPersistenceTest {
                 NOW, null, null, null, null, null);
     }
     long events(Long media) { return jdbc.queryForObject("select count(*) from storage_media_audit_events where media_id=?", Long.class, media); }
+    @Test void pagesReferenceHistoryAndAuditWithoutMixingAssets() {
+        var a = asset(); var b = asset();
+        var first = catalog.recordReference(reference(a.mediaId(), "one"), audit());
+        catalog.recordReference(reference(b.mediaId(), "other"), audit());
+        var second = catalog.recordReference(reference(a.mediaId(), "two"), audit());
+        catalog.endReference(first.end(NOW.plusSeconds(1), null, "REPLACED"), audit());
+        assertThat(catalog.findReferences(a.mediaId(), 0, 1)).extracting(MediaReference::referenceId).containsExactly(first.referenceId());
+        assertThat(catalog.findReferences(a.mediaId(), first.referenceId(), 10)).extracting(MediaReference::referenceId).containsExactly(second.referenceId());
+        assertThat(catalog.findReferences(a.mediaId(), 0, 10).get(0).isCurrent()).isFalse();
+        assertThat(catalog.findAuditEvents(a.mediaId(), 0, 10)).hasSize(4);
+        assertThatThrownBy(() -> catalog.findReferences(a.mediaId(), 0, 101)).isInstanceOf(IllegalArgumentException.class);
+    }
     @Test void roundTripsUnknownAndKnownProvenanceWithoutCrossModuleForeignKeys() {
         var unknown = asset();
         assertThat(catalog.findAsset(unknown.mediaId())).contains(unknown);
