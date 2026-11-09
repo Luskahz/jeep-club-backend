@@ -44,18 +44,19 @@ public class StorageAdminController {
     public void restore(@PathVariable long mediaId,@RequestParam(required=false) Long referenceId,@AuthenticationPrincipal UserPrincipal actor) {
         governance.moderate(new ModerationDecision(mediaId,referenceId,ModerationDecision.State.VISIBLE,ModerationDecision.Reason.RESTORED,null,actor.getUserId(),Instant.now()));
     }
+    public record HoldChange(Boolean held,String justification) {}
     @PostMapping("/{mediaId}/legal-hold") @PreAuthorize("hasAuthority('STORAGE_MEDIA_LEGAL_HOLD')") @RequiredPermission("STORAGE_MEDIA_LEGAL_HOLD")
-    public void hold(@PathVariable long mediaId,@RequestParam boolean held,@AuthenticationPrincipal UserPrincipal actor) {governance.legalHold(mediaId,held,audit(actor));}
+    public void hold(@PathVariable long mediaId,@RequestBody HoldChange change,@AuthenticationPrincipal UserPrincipal actor) {if(change.held()==null) throw new IllegalArgumentException("Hold state required");governance.legalHold(mediaId,change.held(),change.justification(),audit(actor));}
     @PostMapping("/{mediaId}/retention-review") @PreAuthorize("hasAuthority('STORAGE_MEDIA_RETENTION_REVIEW')") @RequiredPermission("STORAGE_MEDIA_RETENTION_REVIEW")
     public MediaAdministration.RetentionReview review(@PathVariable long mediaId,@AuthenticationPrincipal UserPrincipal actor) {return admin.review(mediaId,audit(actor));}
     @PostMapping("/{mediaId}/discard") @PreAuthorize("hasAuthority('STORAGE_MEDIA_RETENTION_REVIEW')") @RequiredPermission("STORAGE_MEDIA_RETENTION_REVIEW")
     public void discard(@PathVariable long mediaId,@AuthenticationPrincipal UserPrincipal actor) {admin.discard(mediaId,audit(actor));}
-    public record InventorySummary(int checked,int shared,int inconsistent,int uncatalogued) {}
+    public record InventorySummary(int checked,int shared,int inconsistent,int uncatalogued,String nextBlobCursor,String nextInventoryCursor) {}
     @PostMapping("/reconciliation") @PreAuthorize("hasAuthority('STORAGE_MEDIA_RECONCILE')") @RequiredPermission("STORAGE_MEDIA_RECONCILE")
-    public InventorySummary reconcile(@RequestParam(defaultValue="") String afterDigest,@RequestParam(defaultValue="20") int limit) {
-        var report=inspection.inspect(afterDigest,limit);
+    public InventorySummary reconcile(@RequestParam(defaultValue="") String afterDigest,@RequestParam(defaultValue="20") int limit,@RequestParam(required=false) String inventoryCursor,@RequestParam(defaultValue="false") boolean includeFilesystem) {
+        var report=inspection.inspect(afterDigest,limit,inventoryCursor,includeFilesystem);
         return new InventorySummary(report.items().size(),(int)report.items().stream().filter(BlobInspection.Item::shared).count(),
-            (int)report.items().stream().filter(i -> !i.state().equals("READY") && !i.state().equals("UNREFERENCED_RETAINED")).count(),report.uncataloguedFiles().size());
+            (int)report.items().stream().filter(i -> !i.state().equals("READY") && !i.state().equals("UNREFERENCED_RETAINED")).count(),report.uncataloguedFiles().size(),report.nextBlobCursor(),report.nextInventoryCursor());
     }
     private MediaAuditContext audit(UserPrincipal actor) {return new MediaAuditContext(MediaActorKind.USER,actor.getUserId(),Instant.now(),null);}
 }

@@ -69,7 +69,7 @@ public class MediaAdministrationAdapter implements MediaAdministration {
     }
     private long active(long mediaId) { return em.createQuery("select count(r) from MediaReferenceEntity r where r.mediaId=:media and r.unlinkedAt is null",Long.class).setParameter("media",mediaId).getSingleResult(); }
     private void event(long id,String operation,String state,MediaAuditContext actor) {
-        var e=new MediaModerationEntity();e.setMediaId(id);e.setOperation(operation);e.setState(state);e.setActorUserId(actor.actorUserId());e.setOccurredAt(actor.occurredAt());em.persist(e);em.flush();
+        var e=new MediaModerationEntity();e.setMediaId(id);e.setOperation(operation);e.setState(state);if(operation.equals("LEGACY_REAPPLIED")){e.setReason("BACKFILL_CUSTODY");e.setInternalNote("Revalidated source; unknown legacy provenance remains held");}e.setActorUserId(actor.actorUserId());e.setOccurredAt(actor.occurredAt());em.persist(e);em.flush();
     }
     private void page(long after,int limit) { if(after<0 || limit<1 || limit>100) throw new IllegalArgumentException("Invalid page"); }
 }

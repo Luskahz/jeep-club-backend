@@ -8,5 +8,5 @@ public interface MediaGovernance {
     boolean allows(long mediaId, long referenceId);
     void moderate(ModerationDecision decision);
     void previewAccess(long mediaId,long referenceId,MediaAuditContext audit);
-    void legalHold(long mediaId, boolean held, MediaAuditContext audit);
+    void legalHold(long mediaId, boolean held, String justification, MediaAuditContext audit);
 }

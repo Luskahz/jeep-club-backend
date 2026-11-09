@@ -121,7 +121,7 @@ class StorageUploadFlowTest {
         references.dissociate(55,a.mediaId(),a.referenceId());
         now=Instant.now();catalog.endReference(sensitive.end(now,55L,"END"),new MediaAuditContext(MediaActorKind.USER,55L,now,null));
         assertThat(admin.review(a.mediaId(),new MediaAuditContext(MediaActorKind.USER,55L,now.plusSeconds(91L*86400),null)).retentionClass()).isEqualTo("SENSITIVE");
-        governance.legalHold(a.mediaId(),true,audit);
+        governance.legalHold(a.mediaId(),true,"Retention fixture obligation",audit);
         assertThat(admin.review(a.mediaId(),audit).decision()).isEqualTo("LEGAL_HOLD");
         admin.discard(a.mediaId(),audit);
         assertThatThrownBy(() -> resolution.resolve(55,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
@@ -129,17 +129,21 @@ class StorageUploadFlowTest {
     }
     @Test void backfillIsIdempotentUnknownHeldAndRollbackPreservesBytes() {
         var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);
+        long before=jdbc.queryForObject("select count(*) from storage_blobs",Long.class);
         var first=legacy.apply("images/fixture.jpg",audit);var second=legacy.apply("images/fixture.jpg",audit);
+        assertThat(jdbc.queryForObject("select count(*) from storage_blobs",Long.class)).isEqualTo(before);
         assertThat(first.mediaId()).isEqualTo(second.mediaId());
         assertThat(catalog.findAsset(first.mediaId()).orElseThrow().ownerUserId()).isNull();
         assertThat(admin.review(first.mediaId(),audit).decision()).isEqualTo("LEGAL_HOLD");
-        governance.legalHold(first.mediaId(),false,audit);
+        governance.legalHold(first.mediaId(),false,"Authorized fixture release",audit);
         assertThat(admin.review(first.mediaId(),audit).decision()).isEqualTo("INDETERMINATE");
-        governance.legalHold(first.mediaId(),true,audit);
+        governance.legalHold(first.mediaId(),true,"Retention fixture obligation",audit);
         legacy.rollback("images/fixture.jpg",audit);
         assertThat(legacy.inspect("images/fixture.jpg").state()).isEqualTo("ROLLED_BACK");
         var variant=catalog.findVariant(first.mediaId(),"MASTER").orElseThrow();
-        assertThat(blobs.read(blobs.findByVariant(variant.variantId()).orElseThrow())).isNotEmpty();
+        assertThat(variant.storageKey()).isEqualTo("images/fixture.jpg");
+        assertThat(blobs.findByVariant(variant.variantId())).isEmpty();
+        assertThat(BlobCatalogAdapter.digest(legacySource.read(variant.storageKey()))).isEqualTo(variant.checksum());
     }
     @Test void legacyBackfillDetectsChangedSourceWithoutRewritingTheCheckpoint() {
         var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);
@@ -191,6 +195,16 @@ class StorageUploadFlowTest {
         legacy.rollback(key,audit);legacySource.changes.put(key,new byte[]{91,92,93});
         assertThatThrownBy(() -> legacy.apply(key,audit)).isInstanceOf(IllegalStateException.class);
         assertThat(legacy.inspect(key).state()).isEqualTo("ROLLED_BACK");
+    }
+    @Test void holdRequiresPrivateJustificationForBothTransitions() throws Exception {
+        var a=upload.upload(93,MediaContext.IDENTITY_PROFILE,"93",image(93));var audit=new MediaAuditContext(MediaActorKind.USER,93L,Instant.now(),null);
+        assertThatThrownBy(() -> governance.legalHold(a.mediaId(),true," ",audit)).isInstanceOf(IllegalArgumentException.class);
+        governance.legalHold(a.mediaId(),true,"Private retention justification",audit);
+        assertThatThrownBy(() -> governance.legalHold(a.mediaId(),false,null,audit)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(admin.review(a.mediaId(),audit).decision()).isEqualTo("LEGAL_HOLD");
+        governance.legalHold(a.mediaId(),false,"Private release justification",audit);
+        assertThat(jdbc.queryForObject("select internal_note from storage_governance_events where media_id=? and operation='LEGAL_HOLD_RELEASED'",String.class,a.mediaId())).isEqualTo("Private release justification");
+        assertThat(admin.events(a.mediaId(),0,100).toString()).doesNotContain("Private release justification");
     }
     @Test void historicalReferenceRemainsReadableWhenItsConsumerAuthorizesIt() throws Exception {
         var a=upload.upload(44,MediaContext.IDENTITY_PROFILE,"44",image(4));

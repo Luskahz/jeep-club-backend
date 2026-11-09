@@ -44,12 +44,13 @@ public class LegacyBackfillAdapter implements LegacyBackfill {
         } catch(RuntimeException collision) {
             if(!Boolean.TRUE.equals(tx.execute(status -> em.find(LegacyMediaCheckpointEntity.class,id)!=null))) throw collision;
         }
-        var blob=blobs.store(bytes);
+        String digest=BlobCatalogAdapter.digest(bytes);var metadata=source.identify(bytes);
         return tx.execute(status -> {
             var row=em.find(LegacyMediaCheckpointEntity.class,id,LockModeType.PESSIMISTIC_WRITE);
             if(row.getMediaId()!=null) {
                 var master=catalog.findVariant(row.getMediaId(),"MASTER").orElseThrow();
-                if(!blob.sha256().equals(master.checksum())) throw new IllegalStateException("Legacy source changed since checkpoint");
+                if(!digest.equals(master.checksum())) throw new IllegalStateException("Legacy source changed since checkpoint");
+                if(master.namespace().equals("storage-blobs")) blobs.read(blobs.findByVariant(master.variantId()).orElseThrow());
                 if(row.isRolledBack()) {
                     var asset=catalog.findAsset(row.getMediaId()).orElseThrow();
                     if(!id.equals(asset.sourceRecordId())) throw new IllegalStateException("Legacy checkpoint mismatch");
@@ -59,8 +60,9 @@ public class LegacyBackfillAdapter implements LegacyBackfill {
             }
             Instant now=actor.occurredAt();
             var asset=catalog.registerAsset(MediaAsset.create(MediaOrigin.LEGACY_IMPORT,MediaContext.UNKNOWN,id,null,null,MediaSubjectType.UNKNOWN,null,"LEGACY_CUSTODY",now),actor);
-            var variant=catalog.registerVariant(new MediaVariant(null,asset.mediaId(),"MASTER",MediaVariantRole.MASTER,"LOCAL","storage-blobs",blob.storageKey(),"application/octet-stream",blob.sizeBytes(),null,null,"SHA-256",blob.sha256(),null,"LEGACY_V1",null,now),actor);
-            blobs.bind(variant.variantId(),blob);governance.initialize(asset.mediaId(),blob.sha256(),true,actor);governance.legalHold(asset.mediaId(),true,actor);
+            if(!(key.startsWith("images/") || key.startsWith("private-images/"))) throw new IllegalArgumentException("Unsupported legacy namespace");
+            catalog.registerVariant(new MediaVariant(null,asset.mediaId(),"MASTER",MediaVariantRole.MASTER,"LOCAL",key.substring(0,key.indexOf('/')),key,metadata.mimeType(),bytes.length,metadata.width(),metadata.height(),"SHA-256",digest,null,"LEGACY_V2",null,now),actor);
+            governance.initialize(asset.mediaId(),digest,true,actor);governance.legalHold(asset.mediaId(),true,"Unknown legacy provenance pending classification",actor);
             row.setMediaId(asset.mediaId());em.flush();return new Result("CATALOGUED",asset.mediaId(),bytes.length);
         });
     }

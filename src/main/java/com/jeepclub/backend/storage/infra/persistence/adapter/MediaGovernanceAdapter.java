@@ -40,10 +40,11 @@ public class MediaGovernanceAdapter implements MediaGovernance {
         if(reference==null || !reference.getMediaId().equals(mediaId)) throw new IllegalArgumentException("Reference mismatch");
         event(mediaId,referenceId,"ADMIN_PREVIEW",null,null,null,audit.actorUserId(),audit.occurredAt());
     }
-    @Override public void legalHold(long id,boolean held,MediaAuditContext audit) {
+    @Override public void legalHold(long id,boolean held,String justification,MediaAuditContext audit) {
+        if(justification==null || justification.isBlank() || justification.length()>2000) throw new IllegalArgumentException("Hold justification required");
         var row=em.find(MediaControlEntity.class,id,LockModeType.PESSIMISTIC_WRITE);
         if(row==null) throw new IllegalArgumentException("Unknown media"); row.setLegalHold(held);
-        event(id,null,held ? "LEGAL_HOLD_SET" : "LEGAL_HOLD_RELEASED",null,null,null,audit.actorUserId(),audit.occurredAt());
+        event(id,null,held ? "LEGAL_HOLD_SET" : "LEGAL_HOLD_RELEASED",null,"RETENTION_OBLIGATION",justification.trim(),audit.actorUserId(),audit.occurredAt());
     }
     private void event(long id,Long reference,String operation,String state,String reason,String note,Long actor,java.time.Instant at) {
         var e=new MediaModerationEntity();e.setMediaId(id);e.setReferenceId(reference);e.setOperation(operation);e.setState(state);e.setReason(reason);e.setInternalNote(note);e.setActorUserId(actor);e.setOccurredAt(at);em.persist(e);em.flush();
