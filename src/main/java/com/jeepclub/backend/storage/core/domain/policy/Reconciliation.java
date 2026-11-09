@@ -21,7 +21,7 @@ public final class Reconciliation {
     public Report compare(Map<Location, Integer> catalogCounts, Set<Location> physical, boolean completeCatalog, boolean completeInventory) {
         Objects.requireNonNull(catalogCounts); Objects.requireNonNull(physical);
         if (!completeCatalog || !completeInventory) throw new IllegalArgumentException("Complete snapshots required");
-        if (catalogCounts.entrySet().stream().anyMatch(e -> e.getKey() == null || e.getValue() == null || e.getValue() < 1) || physical.contains(null))
+        if (catalogCounts.entrySet().stream().anyMatch(e -> e.getKey() == null || e.getValue() == null || e.getValue() < 1) || physical.stream().anyMatch(Objects::isNull))
             throw new IllegalArgumentException("Invalid inventory");
         var missing = new TreeSet<>(catalogCounts.keySet()); missing.removeAll(physical);
         var unknown = new TreeSet<>(physical); unknown.removeAll(catalogCounts.keySet());
