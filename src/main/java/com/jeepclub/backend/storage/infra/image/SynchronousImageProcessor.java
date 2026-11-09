@@ -48,20 +48,33 @@ public final class SynchronousImageProcessor {
         if (!capacity.tryAcquire()) throw new IllegalStateException("Image processing capacity exceeded");
         try {
             byte[] snapshot = input.clone();
-            BufferedImage source = decode(snapshot);
+            BufferedImage source = ExifOrientation.apply(decode(snapshot), ExifOrientation.read(snapshot));
             int limit = (category == Category.OTHER ? 5 : 2) * 1024 * 1024;
-            BufferedImage masterImage = source;
+            BufferedImage masterImage = resize(source, 4096, 4096);
             byte[] masterBytes = encode(masterImage);
-            // Reject rather than silently degrade below the chosen quality. Callers may retry with another image.
+            while(masterBytes.length > limit && Math.max(masterImage.getWidth(),masterImage.getHeight()) > 256) {
+                masterImage=resize(masterImage,Math.max(1,masterImage.getWidth()*3/4),Math.max(1,masterImage.getHeight()*3/4));
+                masterBytes=encode(masterImage);
+            }
             if (masterBytes.length > limit) throw new IllegalArgumentException("MASTER exceeds category limit");
             String mime = masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg";
             Image master = image("MASTER", masterImage, masterBytes, mime);
             var variants = new java.util.ArrayList<Image>();
+            long derivedPixels=0,totalBytes=masterBytes.length;
             for (Preset preset : presets) {
-                BufferedImage cropped = crop(masterImage, preset.crop());
+                Crop selected=preset.crop();
+                if(selected==null && preset.code().equals("AVATAR_SMALL")) {
+                    int side=Math.min(source.getWidth(),source.getHeight());
+                    selected=new Crop((source.getWidth()-side)/2,(source.getHeight()-side)/2,side,side);
+                }
+                BufferedImage cropped = crop(source, selected);
                 BufferedImage resized = resize(cropped, preset.maxWidth(), preset.maxHeight());
-                byte[] bytes = encode(resized);
-                variants.add(image(preset.code(), resized, bytes, resized.getColorModel().hasAlpha() ? "image/png" : "image/jpeg"));
+                derivedPixels+=(long)resized.getWidth()*resized.getHeight();
+                if(derivedPixels>20_000_000L) throw new IllegalArgumentException("Variant pixel budget exceeded");
+                var presentation=encodePresentation(resized);
+                totalBytes+=presentation.bytes().length;
+                if(totalBytes>20L*1024*1024) throw new IllegalArgumentException("Variant byte budget exceeded");
+                variants.add(image(preset.code(), resized, presentation.bytes(), presentation.mime()));
             }
             return new Result(hash(snapshot), master, List.copyOf(variants));
         } finally { capacity.release(); }
@@ -99,6 +112,21 @@ public final class SynchronousImageProcessor {
         try { g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC); g.drawImage(src, 0, 0, w, h, null); }
         finally { g.dispose(); }
         return out;
+    }
+    private record Encoded(byte[] bytes,String mime) {}
+    private static Encoded encodePresentation(BufferedImage image) throws IOException {
+        var writers=ImageIO.getImageWritersByFormatName("webp");
+        if(!writers.hasNext()) return new Encoded(encode(image),image.getColorModel().hasAlpha()?"image/png":"image/jpeg");
+        var writer=writers.next();
+        try(var bytes=new ByteArrayOutputStream();var output=ImageIO.createImageOutputStream(bytes)) {
+            writer.setOutput(output);var param=writer.getDefaultWriteParam();
+            if(param.canWriteCompressed()) {
+                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+                var types=param.getCompressionTypes();if(types!=null && types.length>0) param.setCompressionType(types[0]);
+                param.setCompressionQuality(0.85f);
+            }
+            writer.write(null,new IIOImage(image,null,null),param);output.flush();return new Encoded(bytes.toByteArray(),"image/webp");
+        } finally { writer.dispose(); }
     }
     private static byte[] encode(BufferedImage image) throws IOException {
         boolean alpha = image.getColorModel().hasAlpha();
