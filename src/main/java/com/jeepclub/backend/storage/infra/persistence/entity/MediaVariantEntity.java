@@ -18,6 +18,7 @@ import org.hibernate.type.SqlTypes;
 @Check(name = "ck_storage_variant_dimensions", constraints = "(width IS NULL AND height IS NULL) OR (width IS NOT NULL AND height IS NOT NULL AND width > 0 AND height > 0)")
 @Check(name = "ck_storage_variant_checksum", constraints = "(checksum_algorithm IS NULL AND checksum IS NULL) OR (checksum_algorithm IS NOT NULL AND checksum IS NOT NULL)")
 @Check(name = "ck_storage_variant_master", constraints = "(role = 'MASTER' AND variant_code = 'MASTER') OR (role = 'DERIVED' AND variant_code NOT IN ('MASTER','ORIGINAL'))")
+@Check(name = "ck_storage_variant_code_uppercase", constraints = "variant_code = UPPER(variant_code)")
 @Check(name = "ck_storage_variant_role", constraints = "role IN ('MASTER','DERIVED')")
 public class MediaVariantEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
