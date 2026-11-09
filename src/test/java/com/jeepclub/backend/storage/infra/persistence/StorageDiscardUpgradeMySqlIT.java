@@ -16,12 +16,18 @@ class StorageDiscardUpgradeMySqlIT {
             sql.executeUpdate("insert into storage_media_assets (id,origin,source_context,subject_type,purpose,classification,physical_state,created_at,updated_at,version) values (1,'LEGACY_IMPORT','UNKNOWN','UNKNOWN','UPGRADE_FIXTURE','UNCLASSIFIED','UNKNOWN',CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),0)");
             sql.executeUpdate("insert into storage_media_control (media_id,received_sha256,state,retention_sensitive,legal_hold,version) values (1,repeat('a',64),'DISCARDED',true,true,7)");
             sql.executeUpdate("insert into storage_governance_events (media_id,operation,state,occurred_at) values (1,'LOGICAL_DISCARD','DISCARDED',CURRENT_TIMESTAMP(6))");
+            sql.executeUpdate("insert into storage_media_assets (id,origin,source_context,subject_type,purpose,classification,physical_state,created_at,updated_at,version) values (2,'LEGACY_IMPORT','UNKNOWN','UNKNOWN','UPGRADE_FIXTURE','UNCLASSIFIED','UNKNOWN',CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),0)");
+            sql.executeUpdate("insert into storage_media_control (media_id,received_sha256,state,retention_sensitive,legal_hold,version) values (2,repeat('b',64),'VISIBLE',true,false,8)");
+            sql.executeUpdate("insert into storage_governance_events (media_id,operation,state,occurred_at) values (2,'LOGICAL_DISCARD','DISCARDED',CURRENT_TIMESTAMP(6)),(2,'MODERATION','VISIBLE',CURRENT_TIMESTAMP(6))");
         }
         Flyway.configure().dataSource(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword()).load().migrate();
         try(var connection=DriverManager.getConnection(MYSQL.getJdbcUrl(),MYSQL.getUsername(),MYSQL.getPassword());var sql=connection.createStatement()) {
             try(var row=sql.executeQuery("select discarded,state,legal_hold,version from storage_media_control where media_id=1")) {
                 assertThat(row.next()).isTrue();assertThat(row.getBoolean(1)).isTrue();assertThat(row.getString(2)).isEqualTo("VISIBLE");
                 assertThat(row.getBoolean(3)).isTrue();assertThat(row.getLong(4)).isEqualTo(7);
+            }
+            try(var row=sql.executeQuery("select discarded,state,version from storage_media_control where media_id=2")) {
+                assertThat(row.next()).isTrue();assertThat(row.getBoolean(1)).isTrue();assertThat(row.getString(2)).isEqualTo("VISIBLE");assertThat(row.getLong(3)).isEqualTo(8);
             }
             try(var row=sql.executeQuery("select count(*) from storage_governance_events where media_id=1")) {assertThat(row.next()).isTrue();assertThat(row.getLong(1)).isEqualTo(1);}
         }

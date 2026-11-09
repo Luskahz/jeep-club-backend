@@ -260,6 +260,32 @@ class StorageUploadFlowTest {
         assertThat(jdbc.queryForObject("select count(*) from storage_media_variants where media_id=?",Long.class,id)).isEqualTo(1);
         assertThat(blobs.read(blob)).containsExactly(bytes);
     }
+    @Test void realLegacySourcePersistsVerifiedMimeAndDimensionsWithoutCopy() throws Exception {
+        String key="images/2026/11/09/550e8400-e29b-41d4-a716-446655440000.jpg";byte[] bytes=image(99);
+        var provider=org.mockito.Mockito.mock(com.jeepclub.backend.shared.storage.FileStorage.class);
+        org.mockito.Mockito.when(provider.load(key)).thenReturn(new com.jeepclub.backend.shared.storage.StorageResource(key,bytes));
+        var source=new com.jeepclub.backend.storage.infra.blob.LegacyMediaSourceAdapter(provider);
+        var importer=new LegacyBackfillAdapter(quotaEntityManager,blobs,source,catalog,governance,admin,manager,true);
+        long before=jdbc.queryForObject("select count(*) from storage_blobs",Long.class);
+        var result=importer.apply(key,new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null));
+        var variant=catalog.findVariant(result.mediaId(),"MASTER").orElseThrow();
+        assertThat(variant.storageKey()).isEqualTo(key);assertThat(variant.mimeType()).isEqualTo("image/png");
+        assertThat(variant.width()).isEqualTo(80);assertThat(variant.height()).isEqualTo(60);
+        assertThat(jdbc.queryForObject("select count(*) from storage_blobs",Long.class)).isEqualTo(before);
+        org.mockito.Mockito.verify(provider).load(key);org.mockito.Mockito.verifyNoMoreInteractions(provider);
+    }
+    @Test void concurrentUploadAdmissionNeverExceedsTheSharedUserLimit() throws Exception {
+        var warmup=admission.reserve(99);admission.finish(warmup);
+        var pool=Executors.newFixedThreadPool(4);var start=new CountDownLatch(1);var granted=new ArrayList<UploadAdmission.Permit>();
+        try {
+            var futures=new ArrayList<Future<UploadAdmission.Permit>>();
+            for(int i=0;i<4;i++) futures.add(pool.submit(() -> {start.await();try{return admission.reserve(99);}catch(UploadAdmission.LimitExceeded denied){return null;}}));
+            start.countDown();for(var future:futures){var permit=future.get(20,TimeUnit.SECONDS);if(permit!=null) granted.add(permit);}
+            assertThat(granted).hasSize(2);
+            assertThat(jdbc.queryForObject("select in_flight from storage_upload_budgets where scope_id=99",Integer.class)).isEqualTo(2);
+        } finally {for(var permit:granted) admission.finish(permit);pool.shutdownNow();}
+        assertThat(jdbc.queryForObject("select in_flight from storage_upload_budgets where scope_id=99",Integer.class)).isZero();
+    }
     @Test void historicalReferenceRemainsReadableWhenItsConsumerAuthorizesIt() throws Exception {
         var a=upload.upload(44,MediaContext.IDENTITY_PROFILE,"44",image(4));
         var now=Instant.now();catalog.endReference(catalog.findReference(a.referenceId()).orElseThrow().end(now,44L,"REPLACED"),new MediaAuditContext(MediaActorKind.USER,44L,now,null));
