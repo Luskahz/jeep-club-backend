@@ -11,7 +11,7 @@ import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "storage_media_variants",
-        uniqueConstraints = {@UniqueConstraint(name = "uk_storage_variant_code", columnNames = {"media_id", "variant_code"}), @UniqueConstraint(name = "uk_storage_variant_location", columnNames = {"provider", "namespace", "storage_key"}), @UniqueConstraint(name = "uk_storage_variant_target", columnNames = {"media_id", "id"})})
+        uniqueConstraints = {@UniqueConstraint(name = "uk_storage_variant_code", columnNames = {"media_id", "variant_code"}), @UniqueConstraint(name = "uk_storage_legacy_location", columnNames = {"provider", "namespace", "legacy_storage_key"}), @UniqueConstraint(name = "uk_storage_variant_target", columnNames = {"media_id", "id"})})
 @Getter @Setter
 @org.hibernate.annotations.Immutable
 @Check(name = "ck_storage_variant_size", constraints = "size_bytes >= 0")
@@ -43,6 +43,10 @@ public class MediaVariantEntity {
 
     @Column(name = "storage_key", nullable = false, length = 512)
     private String storageKey;
+
+    @Column(name="legacy_storage_key", insertable=false, updatable=false,
+        columnDefinition="varchar(512) generated always as (case when namespace = 'storage-blobs' then null else storage_key end)")
+    private String legacyStorageKey;
 
     @Column(name = "mime_type", nullable = false, length = 127)
     private String mimeType;
