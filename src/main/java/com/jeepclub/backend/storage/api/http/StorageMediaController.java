@@ -20,9 +20,10 @@ public class StorageMediaController {
     public ResponseEntity<MediaUploadService.Uploaded> upload(@AuthenticationPrincipal UserPrincipal user,@RequestPart("file") MultipartFile file) throws IOException {
         if(user==null) throw new AccessDeniedException("Media unavailable");
         if(file.getSize()<=0 || file.getSize()>10*1024*1024) throw new IllegalArgumentException("Invalid upload size");
-        byte[] bytes;
-        try(var input=file.getInputStream()) { bytes=input.readNBytes(10*1024*1024+1); }
-        return ResponseEntity.status(201).cacheControl(CacheControl.noStore()).body(upload.upload(user.getUserId(),MediaContext.IDENTITY_PROFILE,user.getUserId().toString(),bytes));
+        return ResponseEntity.status(201).cacheControl(CacheControl.noStore()).body(upload.upload(user.getUserId(),MediaContext.IDENTITY_PROFILE,user.getUserId().toString(),() -> {
+            try(var input=file.getInputStream()) {return input.readNBytes(10*1024*1024+1);}
+            catch(IOException failure) {throw new java.io.UncheckedIOException(failure);}
+        }));
     }
     public record Association(MediaContext context,String consumerId,String role) {}
     @PostMapping("/{mediaId}/references") public long associate(@AuthenticationPrincipal UserPrincipal user,@PathVariable long mediaId,@RequestBody Association association) {

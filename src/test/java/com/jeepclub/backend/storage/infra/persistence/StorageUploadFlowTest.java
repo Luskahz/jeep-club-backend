@@ -37,7 +37,7 @@ import static org.assertj.core.api.Assertions.*;
 @DataJpaTest(showSql=false,properties="storage.legacy-backfill.enabled=true") @ActiveProfiles("test")
 @ContextConfiguration(classes=StorageUploadFlowTest.Configuration.class)
 @Import({MediaCatalogRepositoryAdapter.class,BlobCatalogAdapter.class,LocalPhysicalBlobStore.class,MediaGovernanceAdapter.class,
-    MediaImageProcessingAdapter.class,MediaUploadService.class,MediaResolutionService.class,MediaReferenceService.class,MediaAdministrationAdapter.class,BlobInspectionAdapter.class,LegacyBackfillAdapter.class})
+    MediaImageProcessingAdapter.class,MediaUploadService.class,MediaResolutionService.class,MediaReferenceService.class,MediaAdministrationAdapter.class,BlobInspectionAdapter.class,LegacyBackfillAdapter.class,SqlUploadAdmission.class})
 @Transactional(propagation=Propagation.NOT_SUPPORTED)
 class StorageUploadFlowTest {
     @TestConfiguration @EntityScan(basePackageClasses=MediaAssetEntity.class)
@@ -58,6 +58,7 @@ class StorageUploadFlowTest {
         final java.util.concurrent.ConcurrentMap<String,byte[]> changes=new ConcurrentHashMap<>();
         public byte[] read(String key) {return changes.getOrDefault(key,("legacy-fixture:"+key).getBytes(java.nio.charset.StandardCharsets.UTF_8)).clone();}
     }
+    @Autowired UploadAdmission admission;
     @Autowired LegacyFixture legacySource;
     @Autowired MediaUploadService upload; @Autowired MediaResolutionService resolution;
     @Autowired BlobCatalog blobs; @Autowired PhysicalBlobStore physical; @Autowired MediaCatalogRepository catalog;
@@ -106,7 +107,7 @@ class StorageUploadFlowTest {
         byte[] bytes=image(77);
         var image=new MediaImageProcessor.Representation("MASTER",bytes,"image/png",80,60);
         MediaImageProcessor broken=(input,context) -> new MediaImageProcessor.Processed(BlobCatalogAdapter.digest(input),List.of(image,image));
-        var service=new MediaUploadService(catalog,blobs,broken,governance,List.of(new Configuration().policy()),manager,new SimpleMeterRegistry());
+        var service=new MediaUploadService(catalog,blobs,broken,governance,List.of(new Configuration().policy()),manager,new SimpleMeterRegistry(),admission);
         assertThatThrownBy(() -> service.upload(77,MediaContext.IDENTITY_PROFILE,"77",bytes)).isInstanceOf(RuntimeException.class);
         assertThat(jdbc.queryForObject("select count(*) from storage_media_assets where owner_user_id=77",Long.class)).isZero();
         var hash=BlobCatalogAdapter.digest(bytes);
@@ -205,6 +206,59 @@ class StorageUploadFlowTest {
         governance.legalHold(a.mediaId(),false,"Private release justification",audit);
         assertThat(jdbc.queryForObject("select internal_note from storage_governance_events where media_id=? and operation='LEGAL_HOLD_RELEASED'",String.class,a.mediaId())).isEqualTo("Private release justification");
         assertThat(admin.events(a.mediaId(),0,100).toString()).doesNotContain("Private release justification");
+    }
+    @Test void uploadAdmissionSerializesPerUserConcurrencyAndRetainsCustodyCharges() {
+        var a=admission.reserve(94);var b=admission.reserve(94);
+        assertThatThrownBy(() -> admission.reserve(94)).isInstanceOf(UploadAdmission.LimitExceeded.class);
+        admission.finish(a);var c=admission.reserve(94);admission.charge(c,1000);admission.finish(c);admission.finish(c);admission.finish(b);
+        assertThat(jdbc.queryForObject("select used_bytes from storage_upload_budgets where scope_id=94",Long.class)).isEqualTo(1000);
+        assertThat(jdbc.queryForObject("select in_flight from storage_upload_budgets where scope_id=94",Integer.class)).isZero();
+    }
+    @Test void hourlyAndLifetimeLimitsRejectBeforeProcessingOrStorage() {
+        var limited=new SqlUploadAdmission(emForQuota(),manager,64L*1024*1024,100L*1024*1024,1,1,10);
+        var permit=limited.reserve(95);limited.finish(permit);
+        assertThatThrownBy(() -> limited.reserve(95)).isInstanceOf(UploadAdmission.LimitExceeded.class);
+    }
+    @Test void byteAndRetainedUploadBudgetsRemainIndependentOfHourlyAllowance() {
+        var byteLimited=new SqlUploadAdmission(emForQuota(),manager,20L*1024*1024,100L*1024*1024,30,2,10);
+        var pending=byteLimited.reserve(96);assertThatThrownBy(() -> byteLimited.reserve(96)).isInstanceOf(UploadAdmission.LimitExceeded.class);byteLimited.finish(pending);
+        var retained=new SqlUploadAdmission(emForQuota(),manager,64L*1024*1024,100L*1024*1024,30,2,1);
+        var charged=retained.reserve(97);retained.charge(charged,1000);retained.finish(charged);
+        assertThatThrownBy(() -> retained.reserve(97)).isInstanceOf(UploadAdmission.LimitExceeded.class);
+    }
+    @Autowired jakarta.persistence.EntityManager quotaEntityManager;
+    private jakarta.persistence.EntityManager emForQuota() {return quotaEntityManager;}
+    @Test void reconciliationBatchesSqlRegardlessOfPageSize() {
+        var stats=quotaEntityManager.getEntityManagerFactory().unwrap(org.hibernate.SessionFactory.class).getStatistics();boolean previous=stats.isStatisticsEnabled();stats.setStatisticsEnabled(true);
+        try {
+            for(int i=1;i<=12;i++) blobs.store(new byte[]{(byte)(100+i)});
+            stats.clear();inspection.inspect("",1);long small=stats.getPrepareStatementCount();
+            stats.clear();inspection.inspect("",12);long large=stats.getPrepareStatementCount();
+            assertThat(small).isBetween(1L,3L);assertThat(large).isLessThanOrEqualTo(small);
+            var fs=inspection.inspect("",2,null,true);assertThat(fs.uncataloguedFiles()).hasSizeLessThanOrEqualTo(2);
+        } finally {stats.setStatisticsEnabled(previous);}
+    }
+    @Test void admissionRejectsBeforeReadingTheUploadPayload() {
+        var a=admission.reserve(98);var b=admission.reserve(98);
+        try {assertThatThrownBy(() -> upload.upload(98,MediaContext.IDENTITY_PROFILE,"98",() -> {throw new AssertionError("Payload read before admission");})).isInstanceOf(UploadAdmission.LimitExceeded.class);}
+        finally {admission.finish(a);admission.finish(b);}
+    }
+    @Test void publishedWave3CopiedCheckpointIsReappliedWithoutCreatingAnotherAssetOrCopy() {
+        String key="images/wave3-copy.jpg";byte[] bytes=legacySource.read(key);var blob=blobs.store(bytes);
+        var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);
+        long id=new TransactionTemplate(manager).execute(status -> {
+            String sourceId=BlobCatalogAdapter.digest(("LOCAL\0"+key).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            var asset=catalog.registerAsset(MediaAsset.create(MediaOrigin.LEGACY_IMPORT,MediaContext.UNKNOWN,sourceId,null,null,MediaSubjectType.UNKNOWN,null,"LEGACY_CUSTODY",audit.occurredAt()),audit);
+            var variant=catalog.registerVariant(new MediaVariant(null,asset.mediaId(),"MASTER",MediaVariantRole.MASTER,"LOCAL","storage-blobs",blob.storageKey(),"application/octet-stream",bytes.length,null,null,"SHA-256",blob.sha256(),null,"LEGACY_V1",null,audit.occurredAt()),audit);
+            blobs.bind(variant.variantId(),blob);governance.initialize(asset.mediaId(),blob.sha256(),true,audit);
+            governance.legalHold(asset.mediaId(),true,"Published legacy custody",audit);
+            var checkpoint=new com.jeepclub.backend.storage.infra.persistence.entity.LegacyMediaCheckpointEntity();checkpoint.setSourceId(sourceId);checkpoint.setLegacyKey(key);checkpoint.setMediaId(asset.mediaId());quotaEntityManager.persist(checkpoint);
+            return asset.mediaId();
+        });
+        legacy.rollback(key,audit);assertThat(legacy.apply(key,audit).mediaId()).isEqualTo(id);
+        assertThat(catalog.findVariant(id,"MASTER").orElseThrow().storageKey()).isEqualTo(blob.storageKey());
+        assertThat(jdbc.queryForObject("select count(*) from storage_media_variants where media_id=?",Long.class,id)).isEqualTo(1);
+        assertThat(blobs.read(blob)).containsExactly(bytes);
     }
     @Test void historicalReferenceRemainsReadableWhenItsConsumerAuthorizesIt() throws Exception {
         var a=upload.upload(44,MediaContext.IDENTITY_PROFILE,"44",image(4));

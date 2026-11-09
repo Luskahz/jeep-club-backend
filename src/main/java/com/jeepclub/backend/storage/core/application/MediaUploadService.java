@@ -14,17 +14,23 @@ import java.util.List;
 @Service
 public class MediaUploadService {
     public record Uploaded(long mediaId,long referenceId) {}
-    private final MediaCatalogRepository catalog; private final BlobCatalog blobs;
+    private final UploadAdmission admission;private final MediaCatalogRepository catalog; private final BlobCatalog blobs;
     private final MediaImageProcessor images; private final MediaGovernance governance;
     private final List<StorageConsumerPolicy> policies; private final TransactionTemplate transaction;private final io.micrometer.core.instrument.MeterRegistry metrics;
     public MediaUploadService(MediaCatalogRepository catalog,BlobCatalog blobs,MediaImageProcessor images,MediaGovernance governance,
-        List<StorageConsumerPolicy> policies,PlatformTransactionManager manager,io.micrometer.core.instrument.MeterRegistry metrics) {
-        this.metrics=metrics;this.catalog=catalog;this.blobs=blobs;this.images=images;this.governance=governance;this.policies=List.copyOf(policies);transaction=new TransactionTemplate(manager);
+        List<StorageConsumerPolicy> policies,PlatformTransactionManager manager,io.micrometer.core.instrument.MeterRegistry metrics,UploadAdmission admission) {
+        this.admission=admission;this.metrics=metrics;this.catalog=catalog;this.blobs=blobs;this.images=images;this.governance=governance;this.policies=List.copyOf(policies);transaction=new TransactionTemplate(manager);
     }
     public Uploaded upload(long actor,MediaContext context,String consumerId,byte[] bytes) {
+        return upload(actor,context,consumerId,() -> bytes);
+    }
+    public Uploaded upload(long actor,MediaContext context,String consumerId,java.util.function.Supplier<byte[]> content) {
         long started=System.nanoTime();try {
         if(actor<=0 || policies.stream().filter(p -> p.context()==context).noneMatch(p -> p.mayUpload(actor,consumerId))) throw new AccessDeniedException("Media unavailable");
-        var processed=images.process(bytes,context);
+        var permit=admission.reserve(actor);
+        try {
+        var processed=images.process(content.get(),context);
+        admission.charge(permit,processed.images().stream().mapToLong(i -> i.bytes().length).sum());
         var stored=processed.images().stream().map(i -> blobs.store(i.bytes())).toList();
         return transaction.execute(status -> {
             Instant now=Instant.now(); var audit=new MediaAuditContext(MediaActorKind.USER,actor,now,null);
@@ -40,6 +46,7 @@ public class MediaUploadService {
             governance.initialize(asset.mediaId(),processed.receivedSha256(),java.util.Set.of(MediaContext.DEPENDENT_PHOTO,MediaContext.MEDICAL_IMAGE,MediaContext.IDENTIFICATION_PHOTO).contains(context),audit);
             return new Uploaded(asset.mediaId(),ref.referenceId());
         });
+        } finally {admission.finish(permit);}
         } finally { metrics.timer("storage.upload.duration").record(System.nanoTime()-started,java.util.concurrent.TimeUnit.NANOSECONDS); }
     }
 }
