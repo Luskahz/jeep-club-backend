@@ -96,6 +96,17 @@ class MediaCatalogPersistenceTest {
         assertThat(catalog.findVariant(first.variantId()).orElseThrow().storageKey()).isEqualTo(key);
         assertThat(second.storageKey()).isNotEqualTo(first.storageKey());
     }
+    @Test void generatedLegacyKeyPreservesLegacyLocationsButExcludesSharedBlobs() {
+        var legacy = catalog.registerVariant(variant(asset().mediaId(), "MASTER", UUID.randomUUID().toString()), audit());
+        var sharedAsset = asset();
+        var shared = catalog.registerVariant(new MediaVariant(null, sharedAsset.mediaId(), "MASTER", MediaVariantRole.MASTER,
+                "LOCAL", "storage-blobs", "storage-blobs/" + UUID.randomUUID(), "image/jpeg", 120,
+                null, null, null, null, null, null, null, NOW), audit());
+        assertThat(jdbc.queryForObject("select legacy_storage_key from storage_media_variants where id=?", String.class, legacy.variantId()))
+                .isEqualTo(legacy.storageKey());
+        assertThat(jdbc.queryForObject("select legacy_storage_key from storage_media_variants where id=?", String.class, shared.variantId()))
+                .isNull();
+    }
     @Test void referencesSupportMultipleCurrentConsumersAndPreserveHistory() {
         var a = asset();
         var one = catalog.recordReference(reference(a.mediaId(), "100"), audit());

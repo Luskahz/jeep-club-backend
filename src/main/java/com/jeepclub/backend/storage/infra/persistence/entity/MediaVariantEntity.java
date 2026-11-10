@@ -44,8 +44,8 @@ public class MediaVariantEntity {
     @Column(name = "storage_key", nullable = false, length = 512)
     private String storageKey;
 
-    @Column(name="legacy_storage_key", insertable=false, updatable=false,
-        columnDefinition="varchar(512) generated always as (case when namespace = 'storage-blobs' then null else storage_key end)")
+    @Column(name="legacy_storage_key", insertable=false, updatable=false, length=512)
+    @org.hibernate.annotations.GeneratedColumn("case when namespace = 'storage-blobs' then null else storage_key end")
     private String legacyStorageKey;
 
     @Column(name = "mime_type", nullable = false, length = 127)
