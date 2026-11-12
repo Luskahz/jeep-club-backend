@@ -56,4 +56,25 @@ class MediaResolutionServiceTest {
         assertThatThrownBy(()->service.resolve(11,1,2,"MASTER")).isInstanceOf(AccessDeniedException.class);
         verifyNoInteractions(legacy);
     }
+    @Test void realLegacyFileIsReadInPlaceAndChangedOrMissingFileIsNeverDelivered(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        fixture("images",digest());
+        String key="images/2026/11/12/550e8400-e29b-41d4-a716-446655440000.png";
+        when(catalog.findVariant(1L,"MASTER")).thenReturn(Optional.of(new MediaVariant(3L,1L,"MASTER",MediaVariantRole.MASTER,
+            "LOCAL","images",key,"image/png",bytes.length,1,1,"SHA-256",digest(),null,null,null,now)));
+        var file=root.resolve(key);java.nio.file.Files.createDirectories(file.getParent());java.nio.file.Files.write(file,bytes);
+        var modified=java.nio.file.Files.getLastModifiedTime(file);
+        var properties=new com.jeepclub.backend.platform.storage.properties.StorageProperties();properties.local().setRootDirectory(root);
+        var provider=new com.jeepclub.backend.storage.infra.blob.LegacyMediaSourceAdapter(
+            new com.jeepclub.backend.platform.storage.local.LocalFileStorage(properties,java.time.Clock.systemUTC()));
+        var resolver=new MediaResolutionService(catalog,blobs,governance,List.of(policy),provider);
+        assertThat(resolver.resolve(11,1,2,"MASTER").bytes()).containsExactly(bytes);
+        assertThat(java.nio.file.Files.readAllBytes(file)).containsExactly(bytes);
+        assertThat(java.nio.file.Files.getLastModifiedTime(file)).isEqualTo(modified);
+        verifyNoInteractions(blobs);
+        java.nio.file.Files.write(file,new byte[]{3,2,1});
+        assertThatThrownBy(()->resolver.resolve(11,1,2,"MASTER")).isInstanceOf(AccessDeniedException.class);
+        java.nio.file.Files.delete(file); // Test fixture only, never application behavior.
+        assertThatThrownBy(()->resolver.resolve(11,1,2,"MASTER"))
+            .isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);
+    }
 }
