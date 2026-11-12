@@ -18,4 +18,14 @@ public class ProfileStoragePolicy implements StorageConsumerPolicy {
     @Override public boolean mayRead(long actor,MediaReference reference,boolean master) {
         return reference.context()==context() && mayUpload(actor,reference.consumerId());
     }
+    @Override public UploadIdentity uploadIdentity(long actor,String resource) {
+        if(!mayUpload(actor,resource)) throw new org.springframework.security.access.AccessDeniedException("Media unavailable");
+        return new UploadIdentity(actor,com.jeepclub.backend.storage.core.domain.enums.MediaSubjectType.USER,actor);
+    }
+    @Override public boolean mayAssociate(long actor,com.jeepclub.backend.storage.core.domain.model.MediaAsset asset,String resource,String role) {
+        return "PHOTO".equals(role) && mayUpload(actor,resource) && Long.valueOf(actor).equals(asset.ownerUserId());
+    }
+    @Override public boolean mayDissociate(long actor,MediaReference reference) {
+        return reference.context()==context() && mayUpload(actor,reference.consumerId());
+    }
 }

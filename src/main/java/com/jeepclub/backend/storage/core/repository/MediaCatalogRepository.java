@@ -6,6 +6,8 @@ import java.util.List;
 
 /** Internal persistence port, NOT an authorized consumer API. No bytes, keys lookup or delete operations. */
 public interface MediaCatalogRepository {
+    /** Lock affected assets in ascending order after the consumer aggregate lock. */
+    void lockAssets(List<Long> mediaIds);
     Optional<MediaAsset> findAsset(Long mediaId);
     Optional<MediaVariant> findVariant(Long variantId);
     Optional<MediaVariant> findVariant(Long mediaId, String code);

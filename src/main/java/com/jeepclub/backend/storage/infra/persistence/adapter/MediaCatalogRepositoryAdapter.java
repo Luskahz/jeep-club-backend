@@ -22,6 +22,13 @@ import java.util.Optional;
 @Transactional(readOnly = true)
 public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
     private final EntityManager entityManager;
+    @Override @Transactional
+    public void lockAssets(List<Long> mediaIds) {
+        mediaIds.stream().distinct().sorted().forEach(id -> {
+            require(id!=null && id>0,"Invalid media identity");
+            require(entityManager.find(MediaAssetEntity.class,id,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)!=null,"Unknown media");
+        });
+    }
 
     @Override public Optional<MediaAsset> findAsset(Long id) {
         return Optional.ofNullable(entityManager.find(MediaAssetEntity.class, id)).map(MediaCatalogMapper::toDomain);
@@ -106,6 +113,13 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
         entityManager.find(MediaAssetEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         var control=entityManager.find(MediaControlEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
         require(control==null || !control.isDiscarded(),"Media logically discarded");
+        if(reference.isCurrent()) {
+            var existing=entityManager.createQuery("select r from MediaReferenceEntity r where r.mediaId=:media and r.context=:context and r.consumerId=:consumer and r.role=:role and r.unlinkedAt is null",MediaReferenceEntity.class)
+                .setParameter("media",reference.mediaId()).setParameter("context",reference.context())
+                .setParameter("consumer",reference.consumerId()).setParameter("role",reference.role()).getResultList();
+            var same=existing.stream().filter(r -> Objects.equals(r.getPosition(),reference.position())).findFirst();
+            if(same.isPresent()) return MediaCatalogMapper.toDomain(same.get());
+        }
         if(control!=null && java.util.Set.of(com.jeepclub.backend.storage.core.domain.enums.MediaContext.DEPENDENT_PHOTO,com.jeepclub.backend.storage.core.domain.enums.MediaContext.MEDICAL_IMAGE,com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTIFICATION_PHOTO).contains(reference.context())) control.setSensitive(true);
         auditTime(audit, reference.unlinkedAt() == null ? reference.linkedAt() : reference.unlinkedAt());
         var entity = MediaCatalogMapper.toEntity(reference);

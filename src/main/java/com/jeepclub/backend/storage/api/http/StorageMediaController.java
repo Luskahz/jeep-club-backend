@@ -28,10 +28,11 @@ public class StorageMediaController {
     public record Association(MediaContext context,String consumerId,String role) {}
     @PostMapping("/{mediaId}/references") public long associate(@AuthenticationPrincipal UserPrincipal user,@PathVariable long mediaId,@RequestBody Association association) {
         if(user==null) throw new AccessDeniedException("Media unavailable");
-        return references.associate(user.getUserId(),mediaId,association.context(),association.consumerId(),association.role());
+        // Only the owning consumer can change its aggregate and reference atomically.
+        throw new AccessDeniedException("Media unavailable");
     }
     @DeleteMapping("/{mediaId}/references/{referenceId}") public void dissociate(@AuthenticationPrincipal UserPrincipal user,@PathVariable long mediaId,@PathVariable long referenceId) {
-        if(user==null) throw new AccessDeniedException("Media unavailable");references.dissociate(user.getUserId(),mediaId,referenceId);
+        throw new AccessDeniedException("Media unavailable");
     }
     @GetMapping("/{mediaId}/references/{referenceId}/variants/{code}")
     public ResponseEntity<byte[]> read(@AuthenticationPrincipal UserPrincipal user,@PathVariable long mediaId,@PathVariable long referenceId,@PathVariable String code) {

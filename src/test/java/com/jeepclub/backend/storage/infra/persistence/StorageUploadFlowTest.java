@@ -51,6 +51,9 @@ class StorageUploadFlowTest {
         @Bean StorageConsumerPolicy policy() { return new StorageConsumerPolicy() {
             public MediaContext context() { return MediaContext.IDENTITY_PROFILE; }
             public boolean mayUpload(long actor,String id) { return Long.toString(actor).equals(id); }
+            public UploadIdentity uploadIdentity(long actor,String id) { return new UploadIdentity(actor,MediaSubjectType.USER,actor); }
+            public boolean mayAssociate(long actor,MediaAsset asset,String id,String role) {return mayUpload(actor,id) && Long.valueOf(actor).equals(asset.ownerUserId());}
+            public boolean mayDissociate(long actor,MediaReference ref) {return mayUpload(actor,ref.consumerId());}
             public boolean mayRead(long actor,MediaReference ref,boolean master) { return mayUpload(actor,ref.consumerId()); }
         }; }
     }
@@ -64,13 +67,24 @@ class StorageUploadFlowTest {
     @Autowired BlobCatalog blobs; @Autowired PhysicalBlobStore physical; @Autowired MediaCatalogRepository catalog;
     @Autowired MediaGovernance governance; @Autowired JdbcTemplate jdbc; @Autowired PlatformTransactionManager manager;
     @Autowired MediaAdministration admin; @Autowired MediaReferenceService references; @Autowired LegacyBackfill legacy; @Autowired BlobInspection inspection;
+    long attach(long actor,long media,MediaContext context,String resource,String role) {
+        return new TransactionTemplate(manager).execute(s -> references.associate(actor,media,context,resource,role));
+    }
+    void detach(long actor,long media,long ref) {
+        new TransactionTemplate(manager).executeWithoutResult(s -> references.dissociate(actor,media,ref));
+    }
+    MediaUploadService.Uploaded attachedUpload(long actor,MediaContext context,String resource,byte[] bytes) {
+        var uploaded=upload.upload(actor,context,resource,bytes);
+        assertThat(uploaded.referenceId()).isNull();
+        return new MediaUploadService.Uploaded(uploaded.mediaId(),attach(actor,uploaded.mediaId(),context,resource,"PHOTO"));
+    }
     byte[] image(int color) throws Exception {
         var image=new BufferedImage(80,60,BufferedImage.TYPE_INT_RGB);image.setRGB(1,1,color);
         var out=new ByteArrayOutputStream();ImageIO.write(image,"png",out);return out.toByteArray();
     }
     @Test void identicalUploadsHaveIndependentIdentityAndSharePhysicalRepresentations() throws Exception {
-        var a=upload.upload(11,MediaContext.IDENTITY_PROFILE,"11",image(1));
-        var b=upload.upload(22,MediaContext.IDENTITY_PROFILE,"22",image(1));
+        var a=attachedUpload(11,MediaContext.IDENTITY_PROFILE,"11",image(1));
+        var b=attachedUpload(22,MediaContext.IDENTITY_PROFILE,"22",image(1));
         assertThat(a.mediaId()).isNotEqualTo(b.mediaId());
         var va=catalog.findVariant(a.mediaId(),"MASTER").orElseThrow();var vb=catalog.findVariant(b.mediaId(),"MASTER").orElseThrow();
         assertThat(blobs.findByVariant(va.variantId())).isEqualTo(blobs.findByVariant(vb.variantId()));
@@ -80,6 +94,46 @@ class StorageUploadFlowTest {
         governance.moderate(new ModerationDecision(a.mediaId(),null,ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"private note",11,Instant.now()));
         assertThatThrownBy(() -> resolution.resolve(11,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
         assertThat(resolution.resolve(22,b.mediaId(),b.referenceId(),"MASTER").bytes()).isNotEmpty();
+    }
+    @Test void unattachedUploadHasNoActiveReferenceAndRetentionStartsAtUpload() throws Exception {
+        var a=upload.upload(101,MediaContext.IDENTITY_PROFILE,"101",image(101));
+        assertThat(a.referenceId()).isNull();
+        assertThat(catalog.findReferences(a.mediaId(),0,100)).isEmpty();
+        var asset=catalog.findAsset(a.mediaId()).orElseThrow();
+        var review=admin.review(a.mediaId(),new MediaAuditContext(MediaActorKind.USER,101L,Instant.now(),null));
+        assertThat(review.decision()).isEqualTo("WAITING");
+        assertThat(review.unusedSince()).isEqualTo(asset.createdAt());
+    }
+    @Test void associationIsIdempotentAndRollsBackWithConsumerTransaction() throws Exception {
+        var a=upload.upload(102,MediaContext.IDENTITY_PROFILE,"102",image(102));
+        long first=attach(102,a.mediaId(),MediaContext.IDENTITY_PROFILE,"102","PHOTO");
+        assertThat(attach(102,a.mediaId(),MediaContext.IDENTITY_PROFILE,"102","PHOTO")).isEqualTo(first);
+        assertThat(catalog.findReferences(a.mediaId(),0,100)).hasSize(1);
+        assertThatThrownBy(() -> new TransactionTemplate(manager).execute(s -> {
+            references.dissociate(102,a.mediaId(),first);
+            throw new IllegalStateException("consumer rollback");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(catalog.findReference(first).orElseThrow().isCurrent()).isTrue();
+        assertThatThrownBy(() -> references.associate(102,a.mediaId(),MediaContext.IDENTITY_PROFILE,"102","PHOTO"))
+            .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+        assertThatThrownBy(() -> attach(103,a.mediaId(),MediaContext.IDENTITY_PROFILE,"103","PHOTO"))
+            .isInstanceOf(AccessDeniedException.class);
+    }
+    @Test void replacementPreservesHistoryAndRollsBackAtomically() throws Exception {
+        var a=attachedUpload(104,MediaContext.IDENTITY_PROFILE,"104",image(104));
+        var b=upload.upload(104,MediaContext.IDENTITY_PROFILE,"104",image(105));
+        assertThatThrownBy(() -> new TransactionTemplate(manager).execute(s -> {
+            references.replace(104,a.referenceId(),b.mediaId(),MediaContext.IDENTITY_PROFILE,"104","PHOTO");
+            throw new IllegalStateException("consumer save failed");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(catalog.findReference(a.referenceId()).orElseThrow().isCurrent()).isTrue();
+        assertThat(catalog.findReferences(b.mediaId(),0,100)).isEmpty();
+        long next=new TransactionTemplate(manager).execute(s -> references.replace(104,a.referenceId(),b.mediaId(),MediaContext.IDENTITY_PROFILE,"104","PHOTO"));
+        var old=catalog.findReference(a.referenceId()).orElseThrow();
+        assertThat(old.unlinkReasonCode()).isEqualTo("REPLACED");
+        assertThat(old.unlinkedAt()).isNotNull();
+        assertThat(catalog.findReference(next).orElseThrow().isCurrent()).isTrue();
+        assertThat(blobs.findByVariant(catalog.findVariant(a.mediaId(),"MASTER").orElseThrow().variantId())).isPresent();
     }
     @Test void concurrentStoresCommitOneBlobAndNoPartialObject() throws Exception {
         byte[] bytes=image(2);var pool=Executors.newFixedThreadPool(4);var start=new CountDownLatch(1);
@@ -115,18 +169,18 @@ class StorageUploadFlowTest {
         assertThat(physical.readVerified(hash,bytes.length)).containsExactly(bytes);
     }
     @Test void retentionHoldDiscardAndSensitiveHistoryArePersisted() throws Exception {
-        var a=upload.upload(55,MediaContext.IDENTITY_PROFILE,"55",image(5));
+        var a=attachedUpload(55,MediaContext.IDENTITY_PROFILE,"55",image(5));
         Instant now=Instant.now();var audit=new MediaAuditContext(MediaActorKind.USER,55L,now,null);
         assertThatThrownBy(() -> admin.discard(a.mediaId(),audit)).isInstanceOf(IllegalArgumentException.class);
         var sensitive=catalog.recordReference(new MediaReference(null,a.mediaId(),MediaContext.IDENTIFICATION_PHOTO,"55","CARD",null,MediaOrigin.UPLOAD,now,55L,null,null,null,null),audit);
-        references.dissociate(55,a.mediaId(),a.referenceId());
+        detach(55,a.mediaId(),a.referenceId());
         now=Instant.now();catalog.endReference(sensitive.end(now,55L,"END"),new MediaAuditContext(MediaActorKind.USER,55L,now,null));
         assertThat(admin.review(a.mediaId(),new MediaAuditContext(MediaActorKind.USER,55L,now.plusSeconds(91L*86400),null)).retentionClass()).isEqualTo("SENSITIVE");
         governance.legalHold(a.mediaId(),true,"Retention fixture obligation",audit);
         assertThat(admin.review(a.mediaId(),audit).decision()).isEqualTo("LEGAL_HOLD");
         admin.discard(a.mediaId(),audit);
         assertThatThrownBy(() -> resolution.resolve(55,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> references.associate(55,a.mediaId(),MediaContext.IDENTITY_PROFILE,"55","PHOTO")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> attach(55,a.mediaId(),MediaContext.IDENTITY_PROFILE,"55","PHOTO")).isInstanceOf(IllegalArgumentException.class);
     }
     @Test void backfillIsIdempotentUnknownHeldAndRollbackPreservesBytes() {
         var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);
@@ -155,8 +209,8 @@ class StorageUploadFlowTest {
         assertThat(legacy.inspect(key).mediaId()).isEqualTo(first.mediaId());
     }
     @Test void referenceModerationDoesNotHideAnotherReferenceAndCanBeRestored() throws Exception {
-        var a=upload.upload(66,MediaContext.IDENTITY_PROFILE,"66",image(6));
-        long second=references.associate(66,a.mediaId(),MediaContext.IDENTITY_PROFILE,"66","GALLERY");
+        var a=attachedUpload(66,MediaContext.IDENTITY_PROFILE,"66",image(6));
+        long second=attach(66,a.mediaId(),MediaContext.IDENTITY_PROFILE,"66","GALLERY");
         governance.moderate(new ModerationDecision(a.mediaId(),a.referenceId(),ModerationDecision.State.HIDDEN,ModerationDecision.Reason.PRIVACY,"internal",66,Instant.now()));
         assertThatThrownBy(() -> resolution.resolve(66,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
         assertThat(resolution.resolve(66,a.mediaId(),second,"MASTER").bytes()).isNotEmpty();
@@ -164,24 +218,24 @@ class StorageUploadFlowTest {
         assertThat(resolution.resolve(66,a.mediaId(),a.referenceId(),"MASTER").bytes()).isNotEmpty();
     }
     @Test void contextualBlockSurvivesReassociationUntilAuthorizedRestoration() throws Exception {
-        var a=upload.upload(91,MediaContext.IDENTITY_PROFILE,"91",image(91));
+        var a=attachedUpload(91,MediaContext.IDENTITY_PROFILE,"91",image(91));
         governance.moderate(new ModerationDecision(a.mediaId(),a.referenceId(),ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"scope",91,Instant.now()));
-        references.dissociate(91,a.mediaId(),a.referenceId());
-        long second=references.associate(91,a.mediaId(),MediaContext.IDENTITY_PROFILE,"91","PHOTO");
+        detach(91,a.mediaId(),a.referenceId());
+        long second=attach(91,a.mediaId(),MediaContext.IDENTITY_PROFILE,"91","PHOTO");
         assertThatThrownBy(() -> resolution.resolve(91,a.mediaId(),second,"MASTER")).isInstanceOf(AccessDeniedException.class);
-        long separate=references.associate(91,a.mediaId(),MediaContext.IDENTITY_PROFILE,"91","GALLERY");
+        long separate=attach(91,a.mediaId(),MediaContext.IDENTITY_PROFILE,"91","GALLERY");
         assertThat(resolution.resolve(91,a.mediaId(),separate,"MASTER").bytes()).isNotEmpty();
         governance.moderate(new ModerationDecision(a.mediaId(),a.referenceId(),ModerationDecision.State.VISIBLE,ModerationDecision.Reason.RESTORED,null,91,Instant.now()));
         assertThat(resolution.resolve(91,a.mediaId(),second,"MASTER").bytes()).isNotEmpty();
     }
     @Test void moderationCannotResurrectDiscardedMedia() throws Exception {
-        var a=upload.upload(92,MediaContext.IDENTITY_PROFILE,"92",image(92));references.dissociate(92,a.mediaId(),a.referenceId());
+        var a=attachedUpload(92,MediaContext.IDENTITY_PROFILE,"92",image(92));detach(92,a.mediaId(),a.referenceId());
         admin.discard(a.mediaId(),new MediaAuditContext(MediaActorKind.USER,92L,Instant.now(),null));
         for(var state:List.of(ModerationDecision.State.VISIBLE,ModerationDecision.State.HIDDEN,ModerationDecision.State.BLOCKED)) {
             assertThatThrownBy(() -> governance.moderate(new ModerationDecision(a.mediaId(),null,state,state==ModerationDecision.State.VISIBLE?ModerationDecision.Reason.RESTORED:ModerationDecision.Reason.PRIVACY,null,92,Instant.now()))).isInstanceOf(IllegalArgumentException.class);
         }
         assertThatThrownBy(() -> resolution.resolve(92,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
-        assertThatThrownBy(() -> references.associate(92,a.mediaId(),MediaContext.IDENTITY_PROFILE,"92","PHOTO")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> attach(92,a.mediaId(),MediaContext.IDENTITY_PROFILE,"92","PHOTO")).isInstanceOf(IllegalArgumentException.class);
     }
     @Test void backfillReappliesSameAssetAfterRollbackAndRejectsChangedSource() throws Exception {
         var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);String key="images/reapply.jpg";
@@ -198,7 +252,7 @@ class StorageUploadFlowTest {
         assertThat(legacy.inspect(key).state()).isEqualTo("ROLLED_BACK");
     }
     @Test void holdRequiresPrivateJustificationForBothTransitions() throws Exception {
-        var a=upload.upload(93,MediaContext.IDENTITY_PROFILE,"93",image(93));var audit=new MediaAuditContext(MediaActorKind.USER,93L,Instant.now(),null);
+        var a=attachedUpload(93,MediaContext.IDENTITY_PROFILE,"93",image(93));var audit=new MediaAuditContext(MediaActorKind.USER,93L,Instant.now(),null);
         assertThatThrownBy(() -> governance.legalHold(a.mediaId(),true," ",audit)).isInstanceOf(IllegalArgumentException.class);
         governance.legalHold(a.mediaId(),true,"Private retention justification",audit);
         assertThatThrownBy(() -> governance.legalHold(a.mediaId(),false,null,audit)).isInstanceOf(IllegalArgumentException.class);
@@ -287,7 +341,7 @@ class StorageUploadFlowTest {
         assertThat(jdbc.queryForObject("select in_flight from storage_upload_budgets where scope_id=99",Integer.class)).isZero();
     }
     @Test void historicalReferenceRemainsReadableWhenItsConsumerAuthorizesIt() throws Exception {
-        var a=upload.upload(44,MediaContext.IDENTITY_PROFILE,"44",image(4));
+        var a=attachedUpload(44,MediaContext.IDENTITY_PROFILE,"44",image(4));
         var now=Instant.now();catalog.endReference(catalog.findReference(a.referenceId()).orElseThrow().end(now,44L,"REPLACED"),new MediaAuditContext(MediaActorKind.USER,44L,now,null));
         assertThat(resolution.resolve(44,a.mediaId(),a.referenceId(),"AVATAR_SMALL").bytes()).isNotEmpty();
     }

@@ -30,6 +30,8 @@ class StorageHttpFlowTest {
     static {try {ROOT=Files.createTempDirectory("storage-http-fixture-");}catch(Exception e){throw new ExceptionInInitializerError(e);}}
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {r.add("storage.local.root-directory",() -> ROOT.toString());}
     @Autowired MockMvc mvc; @Autowired UserRegistration users; @Autowired UserQuery query; @Autowired MediaGovernance governance;
+    @Autowired com.jeepclub.backend.storage.core.application.MediaReferenceService references;
+    @Autowired org.springframework.transaction.PlatformTransactionManager manager;
     @Test void authenticatedOwnerReadsMasterWhileOtherUsersAndModerationCannotBypassIt() throws Exception {
         var owner=users.registerAndAuthenticate(new UserRegistrationData("Storage fixture",null,"storage-fixture@example.com","52998224725",null,null,null,Instant.now()),"Password@123");
         var other=users.registerAndAuthenticate(new UserRegistrationData("Other fixture",null,"other-storage-fixture@example.com","16899535009",null,null,null,Instant.now()),"Password@123");
@@ -37,13 +39,20 @@ class StorageHttpFlowTest {
         String response=mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.png","image/png",bytes.toByteArray()))
             .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isCreated())
             .andExpect(jsonPath("$.storageKey").doesNotExist()).andExpect(jsonPath("$.sha256").doesNotExist()).andReturn().getResponse().getContentAsString();
-        long media=((Number)JsonPath.read(response,"$.mediaId")).longValue(),ref=((Number)JsonPath.read(response,"$.referenceId")).longValue();
+        long media=((Number)JsonPath.read(response,"$.mediaId")).longValue();
+        org.assertj.core.api.Assertions.assertThat((Object)JsonPath.read(response,"$.referenceId")).isNull();
+        long actor=query.findByCpf("52998224725").orElseThrow().id();
+        mvc.perform(post("/storage/media/"+media+"/references").header("Authorization","Bearer "+owner.accessToken())
+            .contentType("application/json").content("{\"context\":\"IDENTITY_PROFILE\",\"consumerId\":\""+actor+"\",\"role\":\"PHOTO\"}"))
+            .andExpect(status().isNotFound());
+        // Explicit reference fixture: this is resolver coverage, not consumer integration proof.
+        long ref=new org.springframework.transaction.support.TransactionTemplate(manager).execute(s -> references.associate(actor,media,
+            com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTITY_PROFILE,Long.toString(actor),"PHOTO"));
         String url="/storage/media/"+media+"/references/"+ref+"/variants/MASTER";
         mvc.perform(get(url).header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isOk()).andExpect(header().string("Cache-Control","private, no-store"));
         mvc.perform(get(url).header("Authorization","Bearer "+other.accessToken())).andExpect(status().isNotFound());
         mvc.perform(get(url)).andExpect(status().isUnauthorized());
         mvc.perform(get("/admin/storage/media").header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isNotFound());
-        long actor=query.findByCpf("52998224725").orElseThrow().id();
         governance.moderate(new ModerationDecision(media,null,ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"internal fixture",actor,Instant.now()));
         mvc.perform(get(url).header("Authorization","Bearer "+owner.accessToken()).header("If-None-Match","*"))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.reasonCode").value("CONTENT_UNAVAILABLE"));
