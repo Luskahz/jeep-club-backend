@@ -58,7 +58,8 @@ public final class SynchronousImageProcessor {
             BufferedImage source = ExifOrientation.apply(decoded, orientation);
             int limit = (category == Category.OTHER ? 5 : 2) * 1024 * 1024;
             byte[] preserved = orientation == 1 && source.getWidth() <= 4096 && source.getHeight() <= 4096
-                    ? (isWebp(snapshot) ? sanitizeWebpWithoutRecompression(snapshot) : sanitizePngWithoutRecompression(snapshot)) : null;
+                    ? (isWebp(snapshot) ? sanitizeWebpWithoutRecompression(snapshot)
+                        : isJpeg(snapshot) ? sanitizeJpegWithoutRecompression(snapshot,source) : sanitizePngWithoutRecompression(snapshot)) : null;
             if (preserved != null && preserved.length > limit) preserved = null;
             BufferedImage masterImage = resize(source, 4096, 4096);
             byte[] masterBytes = preserved != null ? preserved : encode(masterImage);
@@ -67,7 +68,7 @@ public final class SynchronousImageProcessor {
                 masterBytes=encode(masterImage);
             }
             if (masterBytes.length > limit) throw new IllegalArgumentException("MASTER exceeds category limit");
-            String mime = preserved != null ? (isWebp(preserved) ? "image/webp" : "image/png")
+            String mime = preserved != null ? (isWebp(preserved) ? "image/webp" : isJpeg(preserved) ? "image/jpeg" : "image/png")
                     : (masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg");
             Image master = image("MASTER", masterImage, masterBytes, mime);
             // Derivatives use the actual persisted, sanitized MASTER, not a parallel source image.
@@ -99,6 +100,58 @@ public final class SynchronousImageProcessor {
             }
             return new Result(hash(snapshot), master, List.copyOf(variants));
         } finally { capacity.release(); }
+    }
+    /** Remove application/comment segments while preserving entropy; fall back if color interpretation changes. */
+    private static byte[] sanitizeJpegWithoutRecompression(byte[] bytes,BufferedImage original) throws IOException {
+        var out=new ByteArrayOutputStream(bytes.length);out.write(bytes,0,2);
+        int pos=2;boolean scan=false;
+        while (pos<bytes.length) {
+            int start=pos;
+            if ((bytes[pos++]&255)!=255) return null;
+            while (pos<bytes.length && (bytes[pos]&255)==255) pos++;
+            if (pos>=bytes.length) return null;
+            int marker=bytes[pos++]&255;
+            if (marker==0xd9) {
+                if (!scan || pos!=bytes.length) return null;
+                out.write(bytes,start,pos-start);
+                byte[] sanitized=out.toByteArray();
+                BufferedImage candidate;
+                try { candidate=decode(sanitized); }
+                catch (IOException | IllegalArgumentException invalid) { return null; }
+                if (candidate.getWidth()!=original.getWidth() || candidate.getHeight()!=original.getHeight()) return null;
+                int w=original.getWidth();int[] a=new int[w],b=new int[w];
+                for(int y=0;y<original.getHeight();y++) {
+                    original.getRGB(0,y,w,1,a,0,w);candidate.getRGB(0,y,w,1,b,0,w);
+                    if(!java.util.Arrays.equals(a,b)) return null;
+                }
+                return sanitized;
+            }
+            if (marker==0 || marker==0xd8 || marker>=0xd0 && marker<=0xd7) return null;
+            if (marker==1) {out.write(bytes,start,pos-start);continue;}
+            if (pos+2>bytes.length) return null;
+            int length=((bytes[pos]&255)<<8)|(bytes[pos+1]&255);
+            if (length<2 || (long)pos+length>bytes.length) return null;
+            int end=pos+length;
+            boolean app=marker>=0xe0 && marker<=0xef;
+            // ICC profiles can carry color semantics; avoid preserving/reinterpreting them without recoding.
+            if (marker==0xe2 && length>=14 && bytes[pos+2]=='I' && bytes[pos+3]=='C' && bytes[pos+4]=='C') return null;
+            boolean adobe=marker==0xee && length==14 && bytes[pos+2]=='A' && bytes[pos+3]=='d' && bytes[pos+4]=='o' && bytes[pos+5]=='b' && bytes[pos+6]=='e';
+            if ((!app && marker!=0xfe) || adobe) out.write(bytes,start,end-start);
+            pos=end;
+            if (marker==0xda) {
+                scan=true;int begin=pos;
+                while(pos<bytes.length) {
+                    if((bytes[pos]&255)!=255) {pos++;continue;}
+                    int next=pos+1;while(next<bytes.length && (bytes[next]&255)==255) next++;
+                    if(next>=bytes.length) return null;
+                    int code=bytes[next]&255;
+                    if(code==0 || code>=0xd0 && code<=0xd7) {pos=next+1;continue;}
+                    break;
+                }
+                out.write(bytes,begin,pos-begin);
+            }
+        }
+        return null;
     }
     /** Preserve compressed image chunks only; profiles/unknown chunks require a fresh encoding. */
     private static byte[] sanitizeWebpWithoutRecompression(byte[] bytes) throws IOException {
@@ -181,6 +234,7 @@ public final class SynchronousImageProcessor {
         return b.length>=12 && b[0]=='R' && b[1]=='I' && b[2]=='F' && b[3]=='F'
                 && b[8]=='W' && b[9]=='E' && b[10]=='B' && b[11]=='P';
     }
+    private static boolean isJpeg(byte[] b) {return b.length>=4 && (b[0]&255)==255 && (b[1]&255)==216;}
     /** Reject incomplete or corrupted containers even when a decoder tolerates them. */
     private static void validateContainer(byte[] bytes) {
         if (isWebp(bytes)) {
