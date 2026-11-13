@@ -218,13 +218,24 @@ class StorageHttpFlowTest {
             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(otherReconcile))).andExpect(status().isBadRequest());
         mvc.perform(post("/admin/storage/media/reconciliation").param("limit","1").param("blobCursor",cursor)
             .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(reconcileAuth))).andExpect(status().isOk());
-        org.mockito.Mockito.doThrow(new IllegalStateException("audit unavailable")).when(governance)
+        org.mockito.Mockito.doThrow(new IllegalStateException("secret path /private-images/fixture and private note")).when(governance)
             .previewAccess(org.mockito.ArgumentMatchers.eq(media),org.mockito.ArgumentMatchers.eq(ref),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
         try {
-            mvc.perform(get(preview).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth)))
-                .andExpect(status().isServiceUnavailable()).andExpect(header().string("Cache-Control","private, no-store"));
+            String failure=mvc.perform(get(preview).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth)))
+                .andExpect(status().isServiceUnavailable()).andExpect(header().string("Cache-Control","private, no-store"))
+                .andReturn().getResponse().getContentAsString();
+            org.assertj.core.api.Assertions.assertThat(failure).doesNotContain("secret path","private-images","fixture","private note");
         } finally {org.mockito.Mockito.doCallRealMethod().when(governance).previewAccess(org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());}
         governance.moderate(new ModerationDecision(media,null,ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"internal fixture",actor,Instant.now()));
+        String auditUrl="/admin/storage/media/"+media+"/audit";
+        mvc.perform(get(auditUrl).with(adminUser)).andExpect(status().isForbidden());
+        var auditor=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("audit-operator")
+            .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("STORAGE_MEDIA_AUDIT_READ"));
+        String events=mvc.perform(get(auditUrl).with(auditor)).andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control","private, no-store"))
+            .andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(events).contains("BLOCKED","PRIVACY","ADMIN_PREVIEW")
+            .doesNotContain("internal fixture","internalNote","storageKey","sha256","consumerId","actorUserId");
         mvc.perform(get(url).header("Authorization","Bearer "+owner.accessToken()).header("If-None-Match","*"))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.reasonCode").value("CONTENT_UNAVAILABLE"));
         mvc.perform(head(url).header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isNotFound());
