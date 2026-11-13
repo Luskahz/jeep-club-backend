@@ -1,0 +1,78 @@
+package com.jeepclub.backend.storage.api.http;
+
+import com.jeepclub.backend.iam.identity.api.module.UserRegistration;
+import com.jeepclub.backend.iam.identity.api.module.UserRegistrationData;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.mysql.MySQLContainer;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import javax.imageio.ImageIO;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(properties={"storage.media.enabled=true","storage.legacy-backfill.enabled=false"})
+@AutoConfigureMockMvc @ActiveProfiles("test") @Testcontainers
+@EnabledIfSystemProperty(named="storage.dedup.httpTiming",matches="true")
+class StorageHttpTimingMySqlIT {
+    @Container static final MySQLContainer MYSQL=new MySQLContainer("mysql:8.0.46");
+    static final Path ROOT;
+    static {try {ROOT=Files.createTempDirectory("storage-http-timing-");}catch(Exception e){throw new ExceptionInInitializerError(e);}}
+    @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {
+        r.add("storage.local.root-directory",() -> ROOT.toString());
+        r.add("storage.upload.max-hourly-attempts",() -> 120);
+        r.add("spring.datasource.url",MYSQL::getJdbcUrl);r.add("spring.datasource.username",MYSQL::getUsername);r.add("spring.datasource.password",MYSQL::getPassword);
+        r.add("spring.datasource.driver-class-name",() -> "com.mysql.cj.jdbc.Driver");r.add("spring.jpa.database-platform",() -> "org.hibernate.dialect.MySQLDialect");
+        r.add("spring.jpa.hibernate.ddl-auto",() -> "validate");r.add("spring.flyway.enabled",() -> true);
+    }
+    @Autowired MockMvc mvc;
+    @Autowired UserRegistration users;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private byte[] png(Random rng) throws Exception {
+        var image=new BufferedImage(128,128,BufferedImage.TYPE_INT_RGB);int[] pixels=new int[128*128];
+        for(int i=0;i<pixels.length;i++) pixels[i]=rng.nextInt(0x1000000);
+        image.setRGB(0,0,128,128,pixels,0,128);var out=new ByteArrayOutputStream();ImageIO.write(image,"png",out);return out.toByteArray();
+    }
+    private void send(String token,byte[] bytes) throws Exception {
+        mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","fixture.png","image/png",bytes))
+                .header("Authorization","Bearer "+token)).andExpect(status().isCreated());
+    }
+    @Test
+    void diagnosticHttpTimingForAnotherUsersPreviouslyStoredImage() throws Exception {
+        var victim=users.registerAndAuthenticate(new UserRegistrationData("Synthetic victim",null,"timing-victim@example.com","11144477735",null,null,null,Instant.now()),"Password@123");
+        var actor=users.registerAndAuthenticate(new UserRegistrationData("Synthetic actor",null,"timing-actor@example.com","93541134780",null,null,null,Instant.now()),"Password@123");
+        var rng=new Random(829);var existing=new ArrayList<byte[]>();var fresh=new ArrayList<byte[]>();
+        for(int i=0;i<20;i++){byte[] a=png(rng),b=png(rng);existing.add(a);fresh.add(b);send(victim.accessToken(),a);}
+        for(int i=0;i<4;i++) send(actor.accessToken(),png(rng));
+        record Request(boolean reused,byte[] data) {}
+        var requests=new ArrayList<Request>();for(int i=0;i<20;i++){requests.add(new Request(true,existing.get(i)));requests.add(new Request(false,fresh.get(i)));}
+        Collections.shuffle(requests,new Random(1234));var newTimes=new ArrayList<Long>();var reuseTimes=new ArrayList<Long>();
+        long previous=jdbc.queryForObject("select count(*) from storage_blobs",Long.class);
+        for(var request:requests){
+            long start=System.nanoTime();send(actor.accessToken(),request.data());long ms=TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-start);
+            long current=jdbc.queryForObject("select count(*) from storage_blobs",Long.class);
+            if(request.reused()) org.assertj.core.api.Assertions.assertThat(current).isEqualTo(previous);
+            else org.assertj.core.api.Assertions.assertThat(current).isGreaterThan(previous);
+            previous=current;(request.reused()?reuseTimes:newTimes).add(ms);
+        }
+        Collections.sort(newTimes);Collections.sort(reuseTimes);
+        System.out.println("HTTP_TIMING_DIAGNOSTIC n=20 pixels=128x128 warmup=4 order=randomized mysql=8.0.46 new_median_ms="+newTimes.get(9)+" new_p95_ms="+newTimes.get(18)+" reused_median_ms="+reuseTimes.get(9)+" reused_p95_ms="+reuseTimes.get(18));
+    }
+}
