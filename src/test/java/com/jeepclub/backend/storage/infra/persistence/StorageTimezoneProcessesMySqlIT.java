@@ -29,10 +29,13 @@ class StorageTimezoneProcessesMySqlIT {
         String oldId=probe(output,"America/Sao_Paulo","write",false,"0");
         String baseline=probe(output,"UTC","read",false,oldId);
         String changed=probe(output,"America/Sao_Paulo","read",true,oldId);
+        String baselineFilter=probe(output,"UTC","query",false,oldId);
         String utcId=probe(output,"America/Sao_Paulo","write",true,"0");
         String configured=probe(output,"UTC","read",true,utcId);
-        System.out.println("PROCESS_TIMEZONE_DIAGNOSTIC written="+expected+" baseline="+baseline+" changed="+changed+" configured="+configured);
+        String configuredFilter=probe(output,"UTC","query",true,utcId);
+        System.out.println("PROCESS_TIMEZONE_DIAGNOSTIC written="+expected+" baseline="+baseline+" changed="+changed+" configured="+configured+" baselineFilter="+baselineFilter+" configuredFilter="+configuredFilter);
         assertThat(configured).isEqualTo(expected);
+        assertThat(configuredFilter).isEqualTo("1");
     }
     private String probe(Path output,String zone,String operation,boolean utc,String id) throws Exception {
         Path log=Files.createTempFile(output,"probe-",".log");
@@ -64,6 +67,13 @@ class StorageTimezoneProcessesMySqlIT {
                     e.setSubjectType(MediaSubjectType.USER);e.setSubjectId(990346L);e.setPurpose("PHOTO");e.setClassification(MediaClassification.CLASSIFIED);
                     e.setPhysicalState(MediaPhysicalState.PRESENT);e.setCreatedAt(instant);e.setUpdatedAt(instant);session.persist(e);tx.commit();
                     System.out.println("TZ_PROBE_RESULT="+e.getMediaId());
+                } else if(args[0].equals("query")) {
+                    var count=session.createQuery("select count(a) from MediaAssetEntity a where a.mediaId = :id and a.createdAt >= :fromDate and a.createdAt < :beforeDate",Long.class)
+                        .setParameter("id",Long.parseLong(args[2]))
+                        .setParameter("fromDate",Instant.parse("2026-11-13T11:59:00Z"))
+                        .setParameter("beforeDate",Instant.parse("2026-11-13T12:01:00Z"))
+                        .getSingleResult();
+                    System.out.println("TZ_PROBE_RESULT="+count);
                 } else {
                     var entity=session.find(MediaAssetEntity.class,Long.parseLong(args[2]));
                     System.out.println("TZ_PROBE_RESULT="+entity.getCreatedAt());
