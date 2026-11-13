@@ -21,10 +21,13 @@ public class MediaImageProcessingAdapter implements MediaImageProcessor {
         try {
             if (context == null || options == null) throw new IllegalArgumentException("Invalid image options");
             boolean profile=context==MediaContext.IDENTITY_PROFILE || context==MediaContext.DEPENDENT_PHOTO;
-            var presets=profile ? List.of(new SynchronousImageProcessor.Preset("AVATAR_SMALL",64,64,null),
+            var presets=new ArrayList<>(profile ? List.of(new SynchronousImageProcessor.Preset("AVATAR_SMALL",64,64,null),
                 new SynchronousImageProcessor.Preset("PROFILE_PREVIEW",320,320,null))
                 : List.of(new SynchronousImageProcessor.Preset("THUMBNAIL",240,180,null),
-                new SynchronousImageProcessor.Preset("GALLERY",1600,1200,null));
+                new SynchronousImageProcessor.Preset("GALLERY",1600,1200,null)));
+            // Card export is opt-in: its bounds are the existing MASTER ceiling, not a UI measurement.
+            if (context==MediaContext.IDENTITY_PROFILE && options.crops().containsKey("CARD_PORTRAIT"))
+                presets.add(new SynchronousImageProcessor.Preset("CARD_PORTRAIT",4096,4096,null));
             var codes=presets.stream().map(SynchronousImageProcessor.Preset::code).collect(java.util.stream.Collectors.toSet());
             if (!codes.containsAll(options.crops().keySet())) throw new IllegalArgumentException("Unknown crop variant");
             var result=processor.process(input,profile ? SynchronousImageProcessor.Category.PROFILE : SynchronousImageProcessor.Category.OTHER,presets,options.crops());

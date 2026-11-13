@@ -87,7 +87,7 @@ class StorageHttpFlowTest {
         mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.webp","image/webp",java.util.Arrays.copyOf(webp,webp.length-1)))
             .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isBadRequest());
         var options=new MockMultipartFile("options","","application/json",
-            "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0,\"y\":0,\"width\":0.75,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0,\"y\":0,\"width\":0.75,\"height\":1},\"CARD_PORTRAIT\":{\"x\":0,\"y\":0,\"width\":0.375,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         String response=mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.png","image/png",bytes.toByteArray()))
             .file(options)
             .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isCreated())
@@ -106,6 +106,11 @@ class StorageHttpFlowTest {
         var decoded=avatar.length>12 && avatar[8]=='W' && avatar[9]=='E' && avatar[10]=='B' && avatar[11]=='P'
             ? dev.matrixlab.webp4j.WebPCodec.decodeImage(avatar) : ImageIO.read(new java.io.ByteArrayInputStream(avatar));
         org.assertj.core.api.Assertions.assertThat(decoded.getWidth()).isEqualTo(decoded.getHeight());
+        var card=mvc.perform(get("/storage/media/"+media+"/references/"+ref+"/variants/CARD_PORTRAIT")
+            .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        var cardImage=card.length>12 && card[8]=='W' && card[9]=='E' && card[10]=='B' && card[11]=='P'
+            ? dev.matrixlab.webp4j.WebPCodec.decodeImage(card) : ImageIO.read(new java.io.ByteArrayInputStream(card));
+        org.assertj.core.api.Assertions.assertThat(cardImage.getWidth()).isLessThan(cardImage.getHeight());
         var invalid=new MockMultipartFile("options","","application/json",
             "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0.9,\"y\":0,\"width\":0.5,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.png","image/png",bytes.toByteArray()))

@@ -83,6 +83,10 @@ public final class SynchronousImageProcessor {
                     int right=Math.min(masterImage.getWidth(),(int)Math.ceil((normalized.x()+normalized.width())*masterImage.getWidth()));
                     int bottom=Math.min(masterImage.getHeight(),(int)Math.ceil((normalized.y()+normalized.height())*masterImage.getHeight()));
                     selected=new Crop(x,y,right-x,bottom-y);
+                    if (preset.code().equals("AVATAR_SMALL") && Math.abs(selected.width()-selected.height())>1)
+                        throw new IllegalArgumentException("Avatar crop must be square");
+                    if (preset.code().equals("CARD_PORTRAIT") && selected.width()>=selected.height())
+                        throw new IllegalArgumentException("Card crop must be portrait");
                 }
                 BufferedImage cropped = crop(masterImage, selected);
                 BufferedImage resized = resize(cropped, preset.maxWidth(), preset.maxHeight());
