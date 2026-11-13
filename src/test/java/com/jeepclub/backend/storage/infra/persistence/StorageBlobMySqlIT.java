@@ -7,6 +7,22 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @Testcontainers
 class StorageBlobMySqlIT extends StorageUploadFlowTest {
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="storage.dedup.timing",matches="true")
+    void diagnosticTimingNewAndPreviouslyStoredSyntheticBlobs() throws Exception {
+        var rng=new java.util.Random(537);
+        var existing=new java.util.ArrayList<byte[]>();var fresh=new java.util.ArrayList<byte[]>();
+        for(int i=0;i<50;i++) {byte[] a=new byte[65536],b=new byte[65536];rng.nextBytes(a);rng.nextBytes(b);existing.add(a);fresh.add(b);blobs.store(a);}
+        for(int i=0;i<10;i++) {byte[] warm=new byte[65536];rng.nextBytes(warm);blobs.store(warm);blobs.store(warm);}
+        record Request(boolean reused,byte[] data) {}
+        var requests=new java.util.ArrayList<Request>();
+        for(int i=0;i<50;i++) {requests.add(new Request(true,existing.get(i)));requests.add(new Request(false,fresh.get(i)));}
+        java.util.Collections.shuffle(requests,new java.util.Random(1234));
+        var reuseTimes=new java.util.ArrayList<Long>();var freshTimes=new java.util.ArrayList<Long>();
+        for(var request:requests) {long start=System.nanoTime();blobs.store(request.data());long us=java.util.concurrent.TimeUnit.NANOSECONDS.toMicros(System.nanoTime()-start);(request.reused()?reuseTimes:freshTimes).add(us);}
+        java.util.Collections.sort(reuseTimes);java.util.Collections.sort(freshTimes);
+        System.out.println("BLOB_TIMING_DIAGNOSTIC n=50 bytes=65536 warmup=10 order=randomized single-thread mysql=8.0.46 new_median_us="+freshTimes.get(24)+" new_p95_us="+freshTimes.get(47)+" reused_median_us="+reuseTimes.get(24)+" reused_p95_us="+reuseTimes.get(47));
+    }
     @org.junit.jupiter.api.Test void identicalStoreWaitsForExistingBlobLockAndReusesTheSameBytes() throws Exception {
         byte[] bytes=image(221);
         var original=blobs.store(bytes);
