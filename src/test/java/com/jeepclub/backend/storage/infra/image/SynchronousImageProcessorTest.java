@@ -21,7 +21,7 @@ class SynchronousImageProcessorTest {
         assertThat(result.variants()).extracting(SynchronousImageProcessor.Image::width).containsExactly(32, 60);
         assertThat(result.variants()).extracting(SynchronousImageProcessor.Image::height).containsExactly(32, 80);
         assertThat(result.master().sha256()).hasSize(64);
-        assertThat(result.receivedSha256()).isNotEqualTo(result.master().sha256());
+        assertThat(result.receivedSha256()).isEqualTo(result.master().sha256());
     }
     @Test void returnedBytesCannotMutateTheHashedRepresentation() throws Exception {
         var result = new SynchronousImageProcessor().process(image(), SynchronousImageProcessor.Category.PROFILE, List.of());
@@ -73,5 +73,24 @@ class SynchronousImageProcessorTest {
         byte[] valid = image();
         assertThatThrownBy(() -> processor.process(java.util.Arrays.copyOf(valid, valid.length - 12),
                 SynchronousImageProcessor.Category.PROFILE, List.of())).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void pngMasterDropsTextWithoutRecompressingPixelsOrLosingTransparency() throws Exception {
+        var input = new BufferedImage(12, 8, BufferedImage.TYPE_INT_ARGB);
+        input.setRGB(2, 3, 0x40112233);
+        var encoded = new ByteArrayOutputStream(); ImageIO.write(input, "png", encoded);
+        byte[] original = encoded.toByteArray();
+        byte[] text = "Comment\0private location".getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+        var chunk = new ByteArrayOutputStream();
+        var data = new java.io.DataOutputStream(chunk);
+        data.writeInt(text.length); data.writeBytes("tEXt"); data.write(text);
+        var crc = new java.util.zip.CRC32(); crc.update("tEXt".getBytes(java.nio.charset.StandardCharsets.US_ASCII)); crc.update(text);
+        data.writeInt((int) crc.getValue());
+        var withMetadata = new ByteArrayOutputStream();
+        withMetadata.write(original, 0, 33); withMetadata.write(chunk.toByteArray()); withMetadata.write(original, 33, original.length - 33);
+        var result = new SynchronousImageProcessor().process(withMetadata.toByteArray(), SynchronousImageProcessor.Category.PROFILE, List.of());
+        assertThat(result.master().mimeType()).isEqualTo("image/png");
+        assertThat(result.master().bytes()).containsExactly(original);
+        assertThat(result.receivedSha256()).isNotEqualTo(result.master().sha256());
+        assertThat(ImageIO.read(new java.io.ByteArrayInputStream(result.master().bytes())).getRGB(2,3)).isEqualTo(0x40112233);
     }
 }

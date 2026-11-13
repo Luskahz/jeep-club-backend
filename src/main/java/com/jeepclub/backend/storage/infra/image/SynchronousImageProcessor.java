@@ -53,16 +53,20 @@ public final class SynchronousImageProcessor {
         if (!capacity.tryAcquire()) throw new IllegalStateException("Image processing capacity exceeded");
         try {
             byte[] snapshot = input.clone();
-            BufferedImage source = ExifOrientation.apply(decode(snapshot), ExifOrientation.read(snapshot));
+            int orientation = ExifOrientation.read(snapshot);
+            BufferedImage source = ExifOrientation.apply(decode(snapshot), orientation);
             int limit = (category == Category.OTHER ? 5 : 2) * 1024 * 1024;
+            byte[] preserved = orientation == 1 && source.getWidth() <= 4096 && source.getHeight() <= 4096
+                    ? sanitizePngWithoutRecompression(snapshot) : null;
+            if (preserved != null && preserved.length > limit) preserved = null;
             BufferedImage masterImage = resize(source, 4096, 4096);
-            byte[] masterBytes = encode(masterImage);
+            byte[] masterBytes = preserved != null ? preserved : encode(masterImage);
             while(masterBytes.length > limit && Math.max(masterImage.getWidth(),masterImage.getHeight()) > 256) {
                 masterImage=resize(masterImage,Math.max(1,masterImage.getWidth()*3/4),Math.max(1,masterImage.getHeight()*3/4));
                 masterBytes=encode(masterImage);
             }
             if (masterBytes.length > limit) throw new IllegalArgumentException("MASTER exceeds category limit");
-            String mime = masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg";
+            String mime = preserved != null || masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg";
             Image master = image("MASTER", masterImage, masterBytes, mime);
             // Derivatives use the actual persisted, sanitized MASTER, not a parallel source image.
             masterImage = decode(masterBytes);
@@ -89,6 +93,25 @@ public final class SynchronousImageProcessor {
             }
             return new Result(hash(snapshot), master, List.copyOf(variants));
         } finally { capacity.release(); }
+    }
+    /** Called only after full container and image validation. Unknown critical/color profiles use re-encoding. */
+    private static byte[] sanitizePngWithoutRecompression(byte[] bytes) throws IOException {
+        if (bytes.length < 8 || (bytes[0] & 255) != 137) return null;
+        var kept = java.util.Set.of("IHDR", "PLTE", "IDAT", "IEND", "tRNS", "gAMA", "cHRM", "sRGB");
+        var out = new ByteArrayOutputStream(bytes.length);
+        out.write(bytes, 0, 8);
+        int pos = 8;
+        while (pos < bytes.length) {
+            int n = java.nio.ByteBuffer.wrap(bytes, pos, 4).getInt();
+            String type = new String(bytes, pos + 4, 4, java.nio.charset.StandardCharsets.US_ASCII);
+            if (type.equals("iCCP") || (!kept.contains(type) && Character.isUpperCase(type.charAt(0)))) return null;
+            if ((type.equals("gAMA") && n != 4) || (type.equals("cHRM") && n != 32)
+                    || (type.equals("sRGB") && n != 1) || (type.equals("PLTE") && (n == 0 || n > 768 || n % 3 != 0))
+                    || (type.equals("tRNS") && n > 256)) return null;
+            if (kept.contains(type)) out.write(bytes, pos, n + 12);
+            pos += n + 12;
+        }
+        return out.toByteArray();
     }
     private static BufferedImage decode(byte[] bytes) throws IOException {
         validateContainer(bytes);
