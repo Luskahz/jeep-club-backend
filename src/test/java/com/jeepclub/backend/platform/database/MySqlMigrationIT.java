@@ -382,7 +382,9 @@ class MySqlMigrationIT {
             assertThat(row.getObject(1)).isNull();
         }
         assertThat(fixtureRows(existing,"membership_applications")).isEqualTo(applicationsBefore);
-        assertThat(fixtureRows(existing,"authorization_permissions")).isEqualTo(permissionsBefore);
+        assertThat(fixtureRows(existing,"authorization_permissions")).containsAll(permissionsBefore)
+                .hasSize(permissionsBefore.size() + 8);
+        assertStoragePermissions(existing);
         assertThat(count(existing,"membership_members")).isZero();
         try(var c=connection(existing);var st=c.createStatement();var rows=st.executeQuery("select next_value from membership_registry_sequence where id=1")) {
             assertThat(rows.next()).isTrue();assertThat(rows.getObject(1)).isNull();
@@ -637,11 +639,37 @@ class MySqlMigrationIT {
     // The provider key uses MySQL NO PAD binary comparison; JPA stays dialect-neutral.
     private static void storagePhysicalConstraints(String name) throws Exception {
         try (var c = connection(name); var st = c.createStatement()) {
+            String oldType;
+            try (var row = st.executeQuery("select column_type from information_schema.columns where table_schema=database() and table_name='authorization_permissions' and column_name='code'")) {
+                assertThat(row.next()).isTrue(); oldType = row.getString(1);
+            }
+            String storageCodes = "'STORAGE_MEDIA_READ','STORAGE_MEDIA_MODERATE','STORAGE_MEDIA_RESTORE','STORAGE_MEDIA_AUDIT_READ','STORAGE_MEDIA_LEGAL_HOLD','STORAGE_MEDIA_RETENTION_REVIEW','STORAGE_MEDIA_RECONCILE',";
+            assertThat(oldType).contains("'PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL'");
+            String expandedType = oldType.replace("'PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL'", storageCodes + "'PUBLICATIONS_EVENT_GUEST_REQUEST_CANCEL'");
+            st.execute("alter table authorization_permissions modify code " + expandedType.substring(0, expandedType.length()-1) + ",'STORAGE_MEDIA_PREVIEW') not null");
+            st.execute("alter table authorization_permissions modify module enum('AUTHENTICATION','AUTHORIZATION','BILLING','DEPENDENTS','MEMBERSHIP','TOOLS','HEALTH','IDENTITY','VEHICLES','PUBLICATIONS','STORAGE') not null");
             for (var column : Map.of("provider",32,"namespace",64,"storage_key",512,"variant_code",64).entrySet()) {
                 st.execute("ALTER TABLE storage_media_variants MODIFY " + column.getKey() + " VARCHAR(" + column.getValue()
                         + ") CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_bin NOT NULL");
             }
+            st.execute("alter table storage_media_variants modify legacy_storage_key varchar(512) character set utf8mb4 collate utf8mb4_0900_bin generated always as (case when namespace='storage-blobs' then null else storage_key end) stored, add index ix_storage_variant_location(provider,namespace,storage_key)");
+            st.execute("alter table storage_media_references add index ix_storage_reference_usage(media_id,context,consumer_id,role,id)");
+            st.execute("alter table storage_variant_blobs drop foreign key fk_storage_binding_blob");
+            st.execute("alter table storage_blobs modify sha256 varchar(64) character set ascii collate ascii_bin not null, modify ready boolean not null, add constraint ck_storage_blob_size check(size_bytes > 0 and size_bytes <= 10485760)");
+            st.execute("alter table storage_variant_blobs modify sha256 varchar(64) character set ascii collate ascii_bin not null, drop index fk_storage_binding_blob, add index ix_storage_binding_blob(sha256), add constraint fk_storage_binding_blob foreign key(sha256) references storage_blobs(sha256) on delete restrict on update restrict, add constraint fk_storage_binding_variant foreign key(variant_id) references storage_media_variants(id) on delete restrict on update restrict");
+            st.execute("alter table storage_media_control modify discarded boolean not null default false, modify legal_hold boolean not null, modify retention_sensitive boolean not null, add constraint fk_storage_control_asset foreign key(media_id) references storage_media_assets(id) on delete restrict on update restrict");
+            st.execute("alter table storage_governance_events add index ix_storage_moderation_scope(media_id,operation,reference_id,id), add constraint fk_storage_governance_reference foreign key(media_id,reference_id) references storage_media_references(media_id,id) on delete restrict on update restrict");
+            st.execute("alter table storage_legacy_checkpoints modify legacy_key varchar(512) character set utf8mb4 collate utf8mb4_0900_bin not null, modify rolled_back boolean not null");
+            st.execute("alter table storage_upload_budgets add constraint ck_storage_upload_budget check(used_bytes>=0 and in_flight>=0 and window_attempts>=0 and charged_uploads>=0)");
+            st.execute("alter table storage_upload_permits modify charged boolean not null, modify completed boolean not null, add index ix_storage_upload_actor(actor_user_id,completed), add constraint ck_storage_upload_permit check(actor_user_id>0 and accounted_bytes>=0)");
         }
+    }
+
+    private static void assertStoragePermissions(String name) throws Exception {
+        assertThat(rows(name, "select code from authorization_permissions where module='STORAGE' order by cast(code as char)"))
+                .containsExactly("[STORAGE_MEDIA_AUDIT_READ]", "[STORAGE_MEDIA_LEGAL_HOLD]", "[STORAGE_MEDIA_MODERATE]",
+                        "[STORAGE_MEDIA_PREVIEW]", "[STORAGE_MEDIA_READ]", "[STORAGE_MEDIA_RECONCILE]",
+                        "[STORAGE_MEDIA_RESTORE]", "[STORAGE_MEDIA_RETENTION_REVIEW]");
     }
 
     // Independently describe DB-only constraints missing from the JPA mappings.
@@ -790,7 +818,8 @@ class MySqlMigrationIT {
         }
         var columns=fixtureColumns(db,"dependents_dependent");var before=fixtureRows(db,"dependents_dependent",columns);
         var historyColumns=fixtureColumns(db,"dependents_dependent_history");var historyBefore=fixtureRows(db,"dependents_dependent_history",historyColumns);
-        flyway(db).migrate();validateJpa(db);
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword()).locations("classpath:db/migration")
+                .target("7").cleanDisabled(true).load().migrate();
         assertThat(fixtureRows(db,"dependents_dependent",columns)).isEqualTo(before);
         assertThat(fixtureRows(db,"dependents_dependent_history",historyColumns)).isEqualTo(historyBefore);
         try(var c=connection(db);var st=c.createStatement()) {
@@ -799,6 +828,11 @@ class MySqlMigrationIT {
             org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V7__dependent_private_photo.sql"));
             try(var row=st.executeQuery("SELECT photo_storage_key FROM dependents_dependent WHERE id=901")) {assertThat(row.next()).isTrue();assertThat(row.getString(1)).startsWith("private-images/");}
         }
+        flyway(db).migrate(); validateJpa(db);
+        assertThat(fixtureRows(db,"dependents_dependent",columns)).isEqualTo(before);
+        assertThat(fixtureRows(db,"dependents_dependent_history",historyColumns)).isEqualTo(historyBefore);
+        assertThat(rows(db,"select photo_storage_key from dependents_dependent where id=901"))
+                .containsExactly("[private-images/2026/10/19/550e8400-e29b-41d4-a716-446655440000.png]");
         assertThat(flyway(db).migrate().migrationsExecuted).isZero();
     }
     private static void jpa(String name, int version, String action) throws Exception {
@@ -908,6 +942,15 @@ class MySqlMigrationIT {
         var auditBefore=rows(db,"select * from membership_member_audits order by id");
         var permissionsBefore=rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions order by id");
         var processStatesBefore=rows(db,"select table_name,column_name,column_type from information_schema.columns where table_schema=database() and data_type='enum' and table_name not in ('identity_users','dependents_dependent','dependents_dependent_history','vehicles_vehicle','vehicles_vehicle_history','tools','tools_tool_history','authorization_roles','authorization_permissions') order by table_name,column_name");
+        Flyway.configure().dataSource(url(db),MYSQL.getUsername(),MYSQL.getPassword())
+                .locations("classpath:db/migration").target("5").cleanDisabled(true).load().migrate();
+        var historyBefore=rows(db,"select * from authorization_role_deletion_history order by original_id");
+        try(var c=connection(db)) {
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V5__principal_entity_lifecycle.sql"));
+        }
+        assertThat(rows(db,"select * from authorization_role_deletion_history order by original_id")).isEqualTo(historyBefore);
+        assertThat(count(db,"authorization_role_permission_deletion_history")).isEqualTo(1);
+        assertThat(count(db,"authorization_user_role_deletion_history")).isEqualTo(1);
         flyway(db).migrate();validateJpa(db);
         columns.forEach((table,selected) -> {
             try { assertThat(fixtureRows(db,table,selected)).isEqualTo(unchanged.get(table)); }
@@ -929,12 +972,9 @@ class MySqlMigrationIT {
         assertThat(rows(db,"select * from membership_member_audits where operation<>'LEGACY_CLAIM_SNAPSHOT' order by id")).isEqualTo(auditBefore);
         assertThat(rows(db,"select member_id,new_number,actor_user_id,reason,outcome from membership_member_audits where operation='LEGACY_CLAIM_SNAPSHOT'"))
                 .containsExactly("[790, 512700, 700, Synthetic migration fixture, SUCCESS]");
-        assertThat(rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions order by id")).isEqualTo(permissionsBefore);
+        assertThat(rows(db,"select id,code,code+0,module,description,created_at,updated_at from authorization_permissions where code='IDENTITY_USER_READ' order by id")).isEqualTo(permissionsBefore);
+        assertStoragePermissions(db);
         assertThat(rows(db,"select table_name,column_name,column_type from information_schema.columns where table_schema=database() and data_type='enum' and table_name not in ('identity_users','dependents_dependent','dependents_dependent_history','vehicles_vehicle','vehicles_vehicle_history','tools','tools_tool_history','authorization_roles','authorization_permissions') order by table_name,column_name")).isEqualTo(processStatesBefore);
-        var historyBefore=rows(db,"select * from authorization_role_deletion_history order by original_id");
-        try(var c=connection(db)) {
-            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(c,new org.springframework.core.io.ClassPathResource("db/migration/V5__principal_entity_lifecycle.sql"));
-        }
         assertThat(rows(db,"select * from authorization_role_deletion_history order by original_id")).isEqualTo(historyBefore);
         assertThat(count(db,"authorization_role_permission_deletion_history")).isEqualTo(1);
         assertThat(count(db,"authorization_user_role_deletion_history")).isEqualTo(1);
