@@ -59,7 +59,16 @@ class StorageUploadFlowTest {
     }
     static class LegacyFixture implements LegacyMediaSource {
         final java.util.concurrent.ConcurrentMap<String,byte[]> changes=new ConcurrentHashMap<>();
-        public byte[] read(String key) {return changes.getOrDefault(key,("legacy-fixture:"+key).getBytes(java.nio.charset.StandardCharsets.UTF_8)).clone();}
+        final java.util.Set<String> missing=java.util.concurrent.ConcurrentHashMap.newKeySet();
+        final java.util.concurrent.atomic.AtomicInteger reads=new java.util.concurrent.atomic.AtomicInteger();
+        public byte[] read(String key) {
+            reads.incrementAndGet();
+            if(missing.contains(key)) throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException();
+            return changes.getOrDefault(key,("legacy-fixture:"+key).getBytes(java.nio.charset.StandardCharsets.UTF_8)).clone();
+        }
+        public Metadata identify(byte[] bytes) {
+            return new com.jeepclub.backend.storage.infra.blob.LegacyMediaSourceAdapter(org.mockito.Mockito.mock(com.jeepclub.backend.shared.storage.FileStorage.class)).identify(bytes);
+        }
     }
     @Autowired UploadAdmission admission;
     @Autowired LegacyFixture legacySource;
@@ -207,6 +216,116 @@ class StorageUploadFlowTest {
         assertThat(legacy.inspect(key).state()).isEqualTo("SOURCE_CHANGED");
         assertThatThrownBy(() -> legacy.apply(key,audit)).isInstanceOf(IllegalStateException.class);
         assertThat(legacy.inspect(key).mediaId()).isEqualTo(first.mediaId());
+    }
+    @Test void backfillConfirmsPresenceAndResolvesOnlyAuthorizedReference() throws Exception {
+        var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);
+        String key="images/physical-regression.jpg";
+        legacySource.changes.put(key,image(111));
+        var result=legacy.apply(key,audit);
+        var asset=catalog.findAsset(result.mediaId()).orElseThrow();
+        assertThat(asset.physicalState()).isEqualTo(MediaPhysicalState.PRESENT);
+        assertThat(asset.ownerUserId()).isNull();
+        var now=Instant.now();
+        var ref=catalog.recordReference(new MediaReference(null,result.mediaId(),MediaContext.IDENTITY_PROFILE,"111","PHOTO",null,MediaOrigin.LEGACY_IMPORT,now,null,null,null,null,null),
+            new MediaAuditContext(MediaActorKind.SYSTEM,null,now,null));
+        assertThat(resolution.resolve(111,result.mediaId(),ref.referenceId(),"MASTER").bytes()).containsExactly(legacySource.read(key));
+        assertThatThrownBy(()->resolution.resolve(112,result.mediaId(),ref.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThat(legacy.apply(key,new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null)).mediaId()).isEqualTo(result.mediaId());
+        int reads=legacySource.reads.get();
+        var noPolicy=new MediaResolutionService(catalog,blobs,governance,List.of(),legacySource);
+        assertThatThrownBy(()->noPolicy.resolve(111,result.mediaId(),ref.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThat(legacySource.reads.get()).isEqualTo(reads);
+        legacySource.changes.put(key,image(112));
+        assertThatThrownBy(()->resolution.resolve(111,result.mediaId(),ref.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
+        legacySource.missing.add(key);
+        assertThatThrownBy(()->resolution.resolve(111,result.mediaId(),ref.referenceId(),"MASTER"))
+            .isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);
+    }
+    @Test void unknownOrCorruptLegacyContentCannotBecomePresent() {
+        var result=legacy.apply("images/not-an-image.jpg",systemAudit());
+        assertThat(catalog.findAsset(result.mediaId()).orElseThrow().physicalState()).isEqualTo(MediaPhysicalState.UNKNOWN);
+        String missing="images/absent-regression.jpg";legacySource.missing.add(missing);
+        assertThatThrownBy(()->legacy.apply(missing,systemAudit())).isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);
+    }
+    MediaAuditContext systemAudit() {return new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);}
+    @Test void realBackfillFilesystemAndAuthorizedHttpGetPreserveLegacyFile(@org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        String key="images/2026/11/12/550e8400-e29b-41d4-a716-446655440001.png";byte[] bytes=image(114);
+        var file=root.resolve(key);Files.createDirectories(file.getParent());Files.write(file,bytes);
+        var modified=Files.getLastModifiedTime(file);
+        var properties=new StorageProperties();properties.local().setRootDirectory(root);
+        var source=new com.jeepclub.backend.storage.infra.blob.LegacyMediaSourceAdapter(
+            new com.jeepclub.backend.platform.storage.local.LocalFileStorage(properties,java.time.Clock.systemUTC()));
+        var importer=new LegacyBackfillAdapter(quotaEntityManager,blobs,source,catalog,governance,admin,manager,true);
+        long id=importer.apply(key,systemAudit()).mediaId();
+        assertThat(catalog.findAsset(id).orElseThrow().physicalState()).isEqualTo(MediaPhysicalState.PRESENT);
+        var audit=systemAudit();var ref=catalog.recordReference(new MediaReference(null,id,MediaContext.IDENTITY_PROFILE,"114","PHOTO",null,
+            MediaOrigin.LEGACY_IMPORT,audit.occurredAt(),null,null,null,null,null),audit);
+        var resolver=new MediaResolutionService(catalog,blobs,governance,List.of(new Configuration().policy()),source);
+        var controller=new com.jeepclub.backend.storage.api.http.StorageMediaController(upload,resolver,references);
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller)
+            .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                public boolean supportsParameter(org.springframework.core.MethodParameter p) {return p.getParameterType()==com.jeepclub.backend.platform.security.principal.UserPrincipal.class;}
+                public Object resolveArgument(org.springframework.core.MethodParameter p,org.springframework.web.method.support.ModelAndViewContainer m,
+                    org.springframework.web.context.request.NativeWebRequest r,org.springframework.web.bind.support.WebDataBinderFactory b) {
+                    return new com.jeepclub.backend.platform.security.principal.UserPrincipal(114L,1L,null,Instant.now().plusSeconds(60));
+                }
+            }).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/storage/media/"+id+"/references/"+ref.referenceId()+"/variants/MASTER"))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().bytes(bytes));
+        assertThat(Files.readAllBytes(file)).containsExactly(bytes);assertThat(Files.getLastModifiedTime(file)).isEqualTo(modified);
+        assertThat(importer.apply(key,systemAudit()).mediaId()).isEqualTo(id);
+    }
+    MediaAsset physicalCandidate(String key,byte[] bytes) {
+        var result=legacy.apply(key,systemAudit());
+        return catalog.findAsset(result.mediaId()).orElseThrow();
+    }
+    @Test void physicalConfirmationChecksDigestVersionAndAuditAtomicity() {
+        var asset=physicalCandidate("images/proof-audit.jpg",new byte[]{1});
+        var variant=catalog.findVariant(asset.mediaId(),"MASTER").orElseThrow();
+        byte[] proof=legacySource.read(variant.storageKey());
+        assertThatThrownBy(()->catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),new byte[]{1},systemAudit())).isInstanceOf(IllegalArgumentException.class);
+        assertThat(catalog.findAsset(asset.mediaId()).orElseThrow().physicalState()).isEqualTo(MediaPhysicalState.UNKNOWN);
+        String constraint="ck_r61_physical_audit_failure";
+        jdbc.execute("alter table storage_governance_events add constraint "+constraint+" check (operation <> 'PHYSICAL_PRESENCE_CONFIRMED')");
+        try {
+            assertThatThrownBy(()->catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),proof,systemAudit())).isInstanceOf(RuntimeException.class);
+            assertThat(catalog.findAsset(asset.mediaId()).orElseThrow()).isEqualTo(asset);
+            assertThat(catalog.findAuditEvents(asset.mediaId(),0,100)).noneMatch(e->e.operation()==MediaAuditOperation.ASSET_METADATA_UPDATED);
+        } finally {
+            boolean mysql=jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<Boolean>)c->c.getMetaData().getDatabaseProductName().contains("MySQL"));
+            jdbc.execute("alter table storage_governance_events drop "+(mysql?"check ":"constraint ")+constraint);
+        }
+        var confirmed=catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),proof,systemAudit());
+        assertThat(confirmed.physicalState()).isEqualTo(MediaPhysicalState.PRESENT);
+        assertThat(confirmed.version()).isEqualTo(asset.version()+1);
+        assertThatThrownBy(()->catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),proof,systemAudit())).isInstanceOf(jakarta.persistence.OptimisticLockException.class);
+    }
+    @Test void concurrentPhysicalConfirmationsHaveOneVersionedWinner() throws Exception {
+        var asset=physicalCandidate("images/proof-concurrent.jpg",new byte[]{1});
+        var variant=catalog.findVariant(asset.mediaId(),"MASTER").orElseThrow();byte[] proof=legacySource.read(variant.storageKey());
+        var pool=Executors.newFixedThreadPool(2);var start=new CountDownLatch(1);
+        try {
+            var futures=new ArrayList<Future<Boolean>>();
+            for(int i=0;i<2;i++) futures.add(pool.submit(()->{start.await();try {
+                catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),proof,systemAudit());return true;
+            } catch(org.springframework.orm.ObjectOptimisticLockingFailureException | jakarta.persistence.OptimisticLockException conflict) {return false;}}));
+            start.countDown();int winners=0;for(var future:futures) if(future.get(20,TimeUnit.SECONDS)) winners++;
+            assertThat(winners).isEqualTo(1);
+            assertThat(jdbc.queryForObject("select count(*) from storage_governance_events where media_id=? and operation='PHYSICAL_PRESENCE_CONFIRMED'",Long.class,asset.mediaId())).isEqualTo(1);
+        } finally {pool.shutdownNow();}
+    }
+    @Test void verifiedBackfillReapplicationPreservesModerationHoldAndIdentity() throws Exception {
+        String key="images/proof-reapply.jpg";legacySource.changes.put(key,image(113));
+        long id=legacy.apply(key,systemAudit()).mediaId();
+        governance.moderate(new ModerationDecision(id,null,ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"fixture",113,Instant.now()));
+        legacy.rollback(key,systemAudit());
+        assertThat(legacy.apply(key,systemAudit()).mediaId()).isEqualTo(id);
+        assertThat(catalog.findAsset(id).orElseThrow().physicalState()).isEqualTo(MediaPhysicalState.PRESENT);
+        assertThat(admin.list(0,100,MediaContext.UNKNOWN,"BLOCKED")).extracting(MediaAdministration.Entry::mediaId).contains(id);
+        assertThat(admin.review(id,systemAudit()).decision()).isEqualTo("LEGAL_HOLD");
+        assertThat(jdbc.queryForObject("select count(*) from storage_media_variants where media_id=?",Long.class,id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select count(*) from storage_legacy_checkpoints where media_id=?",Long.class,id)).isEqualTo(1);
     }
     @Test void referenceModerationDoesNotHideAnotherReferenceAndCanBeRestored() throws Exception {
         var a=attachedUpload(66,MediaContext.IDENTITY_PROFILE,"66",image(6));

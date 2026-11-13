@@ -16,6 +16,8 @@ public interface MediaCatalogRepository {
     List<MediaAuditEvent> findAuditEvents(Long mediaId, long afterId, int limit);
     MediaAsset registerAsset(MediaAsset asset, MediaAuditContext audit);
     MediaAsset updateAssetMetadata(MediaAsset asset, MediaAuditContext audit);
+    /** Classify only a catalogued representation whose bytes were actually read and verified. */
+    MediaAsset confirmPhysicalPresence(Long mediaId, Long expectedVersion, Long variantId, byte[] verifiedBytes, MediaAuditContext audit);
     MediaVariant registerVariant(MediaVariant variant, MediaAuditContext audit);
     MediaReference recordReference(MediaReference reference, MediaAuditContext audit);
     MediaReference endReference(MediaReference reference, MediaAuditContext audit);

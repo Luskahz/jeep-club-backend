@@ -108,6 +108,26 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
     }
 
     @Override @Transactional
+    public MediaAsset confirmPhysicalPresence(Long mediaId, Long version, Long variantId, byte[] bytes, MediaAuditContext audit) {
+        var asset=entityManager.find(MediaAssetEntity.class,mediaId,jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        require(asset!=null,"Unknown media");
+        expectedVersion(asset.getVersion(),version);
+        var variant=entityManager.find(MediaVariantEntity.class,variantId);
+        require(variant!=null && mediaId.equals(variant.getMediaId()),"Representation mismatch");
+        require(bytes!=null && bytes.length==variant.getSizeBytes() && "SHA-256".equals(variant.getChecksumAlgorithm())
+            && BlobCatalogAdapter.digest(bytes).equals(variant.getChecksum()),"Physical integrity mismatch");
+        if(asset.getPhysicalState()==com.jeepclub.backend.storage.core.domain.enums.MediaPhysicalState.PRESENT) return MediaCatalogMapper.toDomain(asset);
+        auditTime(audit,asset.getUpdatedAt());
+        asset.setPhysicalState(com.jeepclub.backend.storage.core.domain.enums.MediaPhysicalState.PRESENT);
+        asset.setUpdatedAt(audit.occurredAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS));entityManager.flush();
+        append(new MediaAuditEvent(null,mediaId,variantId,null,MediaAuditOperation.ASSET_METADATA_UPDATED,audit,version,asset.getVersion()));
+        var event=new MediaModerationEntity();event.setMediaId(mediaId);event.setOperation("PHYSICAL_PRESENCE_CONFIRMED");
+        event.setState("PRESENT");event.setReason("CHECKSUM_VERIFIED");event.setActorUserId(audit.actorUserId());
+        event.setOccurredAt(audit.occurredAt());entityManager.persist(event);entityManager.flush();
+        return MediaCatalogMapper.toDomain(asset);
+    }
+
+    @Override @Transactional
     public MediaReference recordReference(MediaReference reference, MediaAuditContext audit) {
         require(reference.referenceId() == null, "Reference already recorded");
         entityManager.find(MediaAssetEntity.class,reference.mediaId(),jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);

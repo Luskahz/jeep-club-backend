@@ -17,9 +17,12 @@ public class LegacyMediaSourceAdapter implements LegacyMediaSource {
                 };
                 int width=reader.getWidth(0),height=reader.getHeight(0);
                 if(mime==null || width<=0 || height<=0 || width>10000 || height>10000 || (long)width*height>20_000_000L) return LegacyMediaSource.super.identify(bytes);
+                // A readable header alone does not prove that the encoded image is intact.
+                var decoded=reader.read(0);
+                if(decoded==null || decoded.getWidth()!=width || decoded.getHeight()!=height) return LegacyMediaSource.super.identify(bytes);
                 return new Metadata(mime,width,height);
             } finally {reader.dispose();}
-        } catch(java.io.IOException invalid) {return LegacyMediaSource.super.identify(bytes);}
+        } catch(java.io.IOException | IllegalArgumentException invalid) {return LegacyMediaSource.super.identify(bytes);}
     }
     @Override public byte[] read(String key) {
         if(key!=null && key.startsWith("private-images/")) PrivateImageReference.require(key);else ImageReference.require(key);

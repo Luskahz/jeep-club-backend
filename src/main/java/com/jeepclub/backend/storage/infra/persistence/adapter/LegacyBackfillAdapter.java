@@ -49,22 +49,32 @@ public class LegacyBackfillAdapter implements LegacyBackfill {
             var row=em.find(LegacyMediaCheckpointEntity.class,id,LockModeType.PESSIMISTIC_WRITE);
             if(row.getMediaId()!=null) {
                 var master=catalog.findVariant(row.getMediaId(),"MASTER").orElseThrow();
-                if(!digest.equals(master.checksum())) throw new IllegalStateException("Legacy source changed since checkpoint");
+                if(!"SHA-256".equals(master.checksumAlgorithm()) || bytes.length!=master.sizeBytes() || !digest.equals(master.checksum()))
+                    throw new IllegalStateException("Legacy source changed since checkpoint");
                 if(master.namespace().equals("storage-blobs")) blobs.read(blobs.findByVariant(master.variantId()).orElseThrow());
                 if(row.isRolledBack()) {
                     var asset=catalog.findAsset(row.getMediaId()).orElseThrow();
                     if(!id.equals(asset.sourceRecordId())) throw new IllegalStateException("Legacy checkpoint mismatch");
                     admin.reapplyLegacy(row.getMediaId(),actor);row.setRolledBack(false);em.flush();
                 }
+                var current=catalog.findAsset(row.getMediaId()).orElseThrow();
+                if(verifiedImage(metadata,master.mimeType(),master.width(),master.height()))
+                    catalog.confirmPhysicalPresence(current.mediaId(),current.version(),master.variantId(),bytes,actor);
                 return new Result("CATALOGUED",row.getMediaId(),bytes.length);
             }
             Instant now=actor.occurredAt();
             var asset=catalog.registerAsset(MediaAsset.create(MediaOrigin.LEGACY_IMPORT,MediaContext.UNKNOWN,id,null,null,MediaSubjectType.UNKNOWN,null,"LEGACY_CUSTODY",now),actor);
             if(!(key.startsWith("images/") || key.startsWith("private-images/"))) throw new IllegalArgumentException("Unsupported legacy namespace");
-            catalog.registerVariant(new MediaVariant(null,asset.mediaId(),"MASTER",MediaVariantRole.MASTER,"LOCAL",key.substring(0,key.indexOf('/')),key,metadata.mimeType(),bytes.length,metadata.width(),metadata.height(),"SHA-256",digest,null,"LEGACY_V2",null,now),actor);
+            var variant=catalog.registerVariant(new MediaVariant(null,asset.mediaId(),"MASTER",MediaVariantRole.MASTER,"LOCAL",key.substring(0,key.indexOf('/')),key,metadata.mimeType(),bytes.length,metadata.width(),metadata.height(),"SHA-256",digest,null,"LEGACY_V2",null,now),actor);
+            if(verifiedImage(metadata,variant.mimeType(),variant.width(),variant.height()))
+                catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),bytes,actor);
             governance.initialize(asset.mediaId(),digest,true,actor);governance.legalHold(asset.mediaId(),true,"Unknown legacy provenance pending classification",actor);
             row.setMediaId(asset.mediaId());em.flush();return new Result("CATALOGUED",asset.mediaId(),bytes.length);
         });
+    }
+    private boolean verifiedImage(LegacyMediaSource.Metadata actual,String mime,Integer width,Integer height) {
+        return actual.width()!=null && actual.height()!=null && actual.mimeType().startsWith("image/")
+            && actual.mimeType().equals(mime) && actual.width().equals(width) && actual.height().equals(height);
     }
     @Override public void rollback(String key,MediaAuditContext actor) {
         if(!enabled) throw new IllegalStateException("Legacy backfill disabled");
