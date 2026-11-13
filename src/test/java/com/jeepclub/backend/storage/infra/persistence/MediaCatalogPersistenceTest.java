@@ -120,6 +120,35 @@ class MediaCatalogPersistenceTest {
         assertThat(events(a.mediaId())).isEqualTo(5);
         assertThatThrownBy(() -> catalog.endReference(historical.end(NOW.plusSeconds(2), null, null), audit())).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void orderedReferencesKeepDistinctIdentityAndHistoricalPositions() {
+        var a=asset();var ids=new java.util.ArrayList<Long>();
+        for(int position=0;position<3;position++) {
+            var ref=new MediaReference(null,a.mediaId(),MediaContext.VEHICLE_PHOTO,"ordered-fixture","GALLERY",position,MediaOrigin.UNKNOWN,NOW,null,null,null,null,null);
+            var saved=catalog.recordReference(ref,audit());ids.add(saved.referenceId());
+            assertThat(catalog.recordReference(ref,audit()).referenceId()).isEqualTo(saved.referenceId());
+        }
+        assertThat(catalog.findReferences(a.mediaId(),0,100)).extracting(MediaReference::position).containsExactly(0,1,2);
+        var previous=catalog.findReference(ids.get(1)).orElseThrow();catalog.endReference(previous.end(NOW.plusSeconds(1),null,"REPLACED"),audit());
+        var fresh=catalog.recordReference(new MediaReference(null,a.mediaId(),MediaContext.VEHICLE_PHOTO,"ordered-fixture","GALLERY",1,MediaOrigin.UNKNOWN,NOW.plusSeconds(2),null,null,null,null,null),audit());
+        assertThat(fresh.referenceId()).isNotEqualTo(previous.referenceId());
+        assertThat(catalog.findReference(previous.referenceId()).orElseThrow().position()).isEqualTo(1);
+        assertThat(catalog.findReference(previous.referenceId()).orElseThrow().isCurrent()).isFalse();
+        assertThat(events(a.mediaId())).isEqualTo(6);
+    }
+    @Test void physicalProofUpdatesOnlyStateAndVersionWithAuditableRepresentation() {
+        var a=asset();byte[] bytes={4,5,6};
+        var representation=catalog.registerVariant(new MediaVariant(null,a.mediaId(),"MASTER",MediaVariantRole.MASTER,"LOCAL","images","images/proof-fixture",
+            "application/octet-stream",bytes.length,null,null,"SHA-256",com.jeepclub.backend.storage.infra.persistence.adapter.BlobCatalogAdapter.digest(bytes),null,null,null,NOW),audit());
+        var confirmed=catalog.confirmPhysicalPresence(a.mediaId(),a.version(),representation.variantId(),bytes,audit());
+        assertThat(confirmed.physicalState()).isEqualTo(MediaPhysicalState.PRESENT);
+        assertThat(confirmed.origin()).isEqualTo(a.origin());assertThat(confirmed.ownerUserId()).isNull();assertThat(confirmed.uploadedByUserId()).isNull();
+        assertThat(confirmed.subjectType()).isEqualTo(a.subjectType());assertThat(confirmed.purpose()).isEqualTo(a.purpose());
+        assertThat(confirmed.version()).isEqualTo(a.version()+1);
+        assertThat(catalog.findAuditEvents(a.mediaId(),0,100)).anyMatch(e->e.operation()==MediaAuditOperation.ASSET_METADATA_UPDATED
+            && representation.variantId().equals(e.variantId()) && a.version().equals(e.previousVersion()) && confirmed.version().equals(e.resultingVersion()));
+        assertThat(catalog.confirmPhysicalPresence(a.mediaId(),confirmed.version(),representation.variantId(),bytes,audit())).isEqualTo(confirmed);
+        assertThat(events(a.mediaId())).isEqualTo(3);
+    }
     @Test void databaseRejectsOrphansAndParentRemovalIncludingHistoricalReferences() {
         assertThatThrownBy(() -> catalog.registerVariant(variant(Long.MAX_VALUE, "MASTER", UUID.randomUUID().toString()), audit())).isInstanceOf(RuntimeException.class);
         assertThatThrownBy(() -> catalog.recordReference(reference(Long.MAX_VALUE, "1"), audit())).isInstanceOf(RuntimeException.class);

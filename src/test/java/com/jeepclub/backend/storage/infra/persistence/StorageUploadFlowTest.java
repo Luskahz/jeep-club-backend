@@ -79,6 +79,88 @@ class StorageUploadFlowTest {
     long attach(long actor,long media,MediaContext context,String resource,String role) {
         return new TransactionTemplate(manager).execute(s -> references.associate(actor,media,context,resource,role));
     }
+    long positionedAttach(long actor,long media,Integer position) {
+        return new TransactionTemplate(manager).execute(s->references.associate(actor,media,MediaContext.IDENTITY_PROFILE,Long.toString(actor),"GALLERY",position));
+    }
+    @Test void orderedGallerySupportsReplacementAndIndependentPositions() throws Exception {
+        var a=upload.upload(201,MediaContext.IDENTITY_PROFILE,"201",image(201));
+        var b=upload.upload(201,MediaContext.IDENTITY_PROFILE,"201",image(202));
+        var c=upload.upload(201,MediaContext.IDENTITY_PROFILE,"201",image(203));
+        long zero=positionedAttach(201,a.mediaId(),0),one=positionedAttach(201,b.mediaId(),1),two=positionedAttach(201,c.mediaId(),2);
+        assertThat(jdbc.queryForList("select position from storage_media_references where consumer_id='201' and role='GALLERY' and unlinked_at is null order by position",Integer.class)).containsExactly(0,1,2);
+        assertThat(positionedAttach(201,b.mediaId(),1)).isEqualTo(one);
+        long repeatedAsset=positionedAttach(201,a.mediaId(),3);
+        assertThat(repeatedAsset).isNotEqualTo(zero);
+        var d=upload.upload(201,MediaContext.IDENTITY_PROFILE,"201",image(204));
+        long replacement=new TransactionTemplate(manager).execute(s->references.replace(201,one,d.mediaId(),MediaContext.IDENTITY_PROFILE,"201","GALLERY",1));
+        assertThat(catalog.findReference(replacement).orElseThrow().position()).isEqualTo(1);
+        var history=catalog.findReference(one).orElseThrow();
+        assertThat(history.position()).isEqualTo(1);assertThat(history.unlinkReasonCode()).isEqualTo("REPLACED");
+        assertThat(history.isCurrent()).isFalse();assertThat(catalog.findReference(two).orElseThrow().isCurrent()).isTrue();
+        assertThat(positionedAttach(201,b.mediaId(),1)).isNotEqualTo(one);
+        assertThatThrownBy(()->new TransactionTemplate(manager).execute(s->references.replace(201,one,d.mediaId(),MediaContext.IDENTITY_PROFILE,"201","GALLERY",1)))
+            .isInstanceOfAny(jakarta.persistence.OptimisticLockException.class,org.springframework.orm.ObjectOptimisticLockingFailureException.class);
+    }
+    @Test void logicalReorderingKeepsOldPositionAndCreatesNewInterval() throws Exception {
+        var a=upload.upload(202,MediaContext.IDENTITY_PROFILE,"202",image(205));
+        long old=positionedAttach(202,a.mediaId(),0);
+        long reordered=new TransactionTemplate(manager).execute(s->references.replace(202,old,a.mediaId(),MediaContext.IDENTITY_PROFILE,"202","GALLERY",2));
+        assertThat(reordered).isNotEqualTo(old);
+        assertThat(catalog.findReference(old).orElseThrow().position()).isZero();
+        assertThat(catalog.findReference(old).orElseThrow().isCurrent()).isFalse();
+        assertThat(catalog.findReference(reordered).orElseThrow().position()).isEqualTo(2);
+        assertThat(catalog.findReference(reordered).orElseThrow().isCurrent()).isTrue();
+        assertThat(positionedAttach(202,a.mediaId(),2)).isEqualTo(reordered);
+        long unpositioned=attach(202,a.mediaId(),MediaContext.IDENTITY_PROFILE,"202","PHOTO");
+        assertThat(catalog.findReference(unpositioned).orElseThrow().position()).isNull();
+    }
+    @Test void negativePositionAndMissingConsumerTransactionAreRejected() throws Exception {
+        var a=upload.upload(203,MediaContext.IDENTITY_PROFILE,"203",image(206));
+        assertThatThrownBy(()->positionedAttach(203,a.mediaId(),-1)).isInstanceOf(IllegalArgumentException.class);
+        long old=positionedAttach(203,a.mediaId(),0);
+        assertThatThrownBy(()->new TransactionTemplate(manager).execute(s->references.replace(203,old,a.mediaId(),MediaContext.IDENTITY_PROFILE,"203","GALLERY",-1)))
+            .isInstanceOf(IllegalArgumentException.class);
+        assertThat(catalog.findReference(old).orElseThrow().isCurrent()).isTrue();
+        assertThatThrownBy(()->references.associate(203,a.mediaId(),MediaContext.IDENTITY_PROFILE,"203","GALLERY",1))
+            .isInstanceOf(org.springframework.transaction.IllegalTransactionStateException.class);
+    }
+    @Test void concurrentIdenticalPositionAssociationReturnsOneReferenceAndAudit() throws Exception {
+        var a=upload.upload(204,MediaContext.IDENTITY_PROFILE,"204",image(207));
+        var pool=Executors.newFixedThreadPool(4);var start=new CountDownLatch(1);
+        try {
+            var futures=new ArrayList<Future<Long>>();
+            for(int i=0;i<4;i++) futures.add(pool.submit(()->{start.await();return positionedAttach(204,a.mediaId(),1);}));
+            start.countDown();var ids=new HashSet<Long>();for(var future:futures) ids.add(future.get(20,TimeUnit.SECONDS));
+            assertThat(ids).hasSize(1);assertThat(catalog.findReferences(a.mediaId(),0,100)).hasSize(1);
+            assertThat(catalog.findAuditEvents(a.mediaId(),0,100).stream().filter(e->e.operation()==MediaAuditOperation.REFERENCE_RECORDED)).hasSize(1);
+        } finally {pool.shutdownNow();}
+    }
+    @Test void positionedReplacementAndAssociationRollBackTogether() throws Exception {
+        var a=upload.upload(205,MediaContext.IDENTITY_PROFILE,"205",image(208));
+        var b=upload.upload(205,MediaContext.IDENTITY_PROFILE,"205",image(209));
+        long old=positionedAttach(205,a.mediaId(),1);int auditCount=catalog.findAuditEvents(a.mediaId(),0,100).size();
+        assertThatThrownBy(()->new TransactionTemplate(manager).execute(s->{
+            references.replace(205,old,b.mediaId(),MediaContext.IDENTITY_PROFILE,"205","GALLERY",1);
+            references.associate(205,b.mediaId(),MediaContext.IDENTITY_PROFILE,"205","GALLERY",2);
+            throw new IllegalStateException("aggregate save failed");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(catalog.findReference(old).orElseThrow().isCurrent()).isTrue();
+        assertThat(catalog.findReference(old).orElseThrow().position()).isEqualTo(1);
+        assertThat(catalog.findReferences(b.mediaId(),0,100)).isEmpty();
+        assertThat(catalog.findAuditEvents(a.mediaId(),0,100)).hasSize(auditCount);
+    }
+    @Test void orderedReferencesDoNotShareAuthorizationThroughPhysicalDeduplication() throws Exception {
+        byte[] bytes=image(210);
+        var a=upload.upload(206,MediaContext.IDENTITY_PROFILE,"206",bytes);
+        var b=upload.upload(207,MediaContext.IDENTITY_PROFILE,"207",bytes);
+        long first=positionedAttach(206,a.mediaId(),0),second=positionedAttach(207,b.mediaId(),2);
+        assertThat(blobs.findByVariant(catalog.findVariant(a.mediaId(),"MASTER").orElseThrow().variantId()))
+            .isEqualTo(blobs.findByVariant(catalog.findVariant(b.mediaId(),"MASTER").orElseThrow().variantId()));
+        assertThat(resolution.resolve(206,a.mediaId(),first,"MASTER").bytes()).isNotEmpty();
+        assertThat(resolution.resolve(207,b.mediaId(),second,"MASTER").bytes()).isNotEmpty();
+        assertThatThrownBy(()->resolution.resolve(207,a.mediaId(),first,"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(()->positionedAttach(207,a.mediaId(),2)).isInstanceOf(AccessDeniedException.class);
+    }
     void detach(long actor,long media,long ref) {
         new TransactionTemplate(manager).executeWithoutResult(s -> references.dissociate(actor,media,ref));
     }
@@ -287,7 +369,7 @@ class StorageUploadFlowTest {
         assertThatThrownBy(()->catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),new byte[]{1},systemAudit())).isInstanceOf(IllegalArgumentException.class);
         assertThat(catalog.findAsset(asset.mediaId()).orElseThrow().physicalState()).isEqualTo(MediaPhysicalState.UNKNOWN);
         String constraint="ck_r61_physical_audit_failure";
-        jdbc.execute("alter table storage_governance_events add constraint "+constraint+" check (operation <> 'PHYSICAL_PRESENCE_CONFIRMED')");
+        jdbc.execute("alter table storage_governance_events add constraint "+constraint+" check (media_id <> "+asset.mediaId()+" or operation <> 'PHYSICAL_PRESENCE_CONFIRMED')");
         try {
             assertThatThrownBy(()->catalog.confirmPhysicalPresence(asset.mediaId(),asset.version(),variant.variantId(),proof,systemAudit())).isInstanceOf(RuntimeException.class);
             assertThat(catalog.findAsset(asset.mediaId()).orElseThrow()).isEqualTo(asset);
