@@ -4,9 +4,26 @@ import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/** Bounded JPEG APP1 TIFF orientation parsing; malformed metadata is rejected, never used as an offset unchecked. */
+/** Bounded EXIF TIFF orientation parsing; malformed metadata is rejected. */
 final class ExifOrientation {
     static int read(byte[] bytes) {
+        if (SynchronousImageProcessor.isWebp(bytes)) {
+            int pos=12; boolean seen=false; int orientation=1;
+            while (pos <= bytes.length-8) {
+                long length=Integer.toUnsignedLong(ByteBuffer.wrap(bytes,pos+4,4).order(ByteOrder.LITTLE_ENDIAN).getInt());
+                long end=pos+8L+length+(length&1);
+                if (end>bytes.length) throw new IllegalArgumentException("Invalid WebP metadata");
+                if (bytes[pos]=='E' && bytes[pos+1]=='X' && bytes[pos+2]=='I' && bytes[pos+3]=='F') {
+                    if (seen) throw new IllegalArgumentException("Duplicate WebP EXIF");
+                    seen=true; int start=pos+8, size=(int)length;
+                    if (size>=6 && bytes[start]=='E' && bytes[start+1]=='x' && bytes[start+2]=='i' && bytes[start+3]=='f' && bytes[start+4]==0 && bytes[start+5]==0) {start+=6;size-=6;}
+                    orientation=tiff(bytes,start,size);
+                }
+                pos=(int)end;
+            }
+            if (pos!=bytes.length) throw new IllegalArgumentException("Invalid WebP metadata");
+            return orientation;
+        }
         if(bytes.length>=8 && (bytes[0]&255)==137 && bytes[1]=='P' && bytes[2]=='N' && bytes[3]=='G') {
             int pos=8;
             while(pos+12<=bytes.length) {

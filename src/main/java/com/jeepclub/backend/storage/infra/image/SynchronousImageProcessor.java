@@ -53,8 +53,9 @@ public final class SynchronousImageProcessor {
         if (!capacity.tryAcquire()) throw new IllegalStateException("Image processing capacity exceeded");
         try {
             byte[] snapshot = input.clone();
+            BufferedImage decoded = decode(snapshot);
             int orientation = ExifOrientation.read(snapshot);
-            BufferedImage source = ExifOrientation.apply(decode(snapshot), orientation);
+            BufferedImage source = ExifOrientation.apply(decoded, orientation);
             int limit = (category == Category.OTHER ? 5 : 2) * 1024 * 1024;
             byte[] preserved = orientation == 1 && source.getWidth() <= 4096 && source.getHeight() <= 4096
                     ? sanitizePngWithoutRecompression(snapshot) : null;
@@ -115,6 +116,16 @@ public final class SynchronousImageProcessor {
     }
     private static BufferedImage decode(byte[] bytes) throws IOException {
         validateContainer(bytes);
+        if (isWebp(bytes)) {
+            if (!dev.matrixlab.webp4j.WebPCodec.isAvailable()) throw new IllegalStateException("WebP decoder unavailable");
+            int[] dimensions=dev.matrixlab.webp4j.WebPCodec.getWebPInfo(bytes);
+            if (dimensions==null || dimensions.length<2) throw new IllegalArgumentException("Invalid WebP dimensions");
+            validateDimensions(dimensions[0],dimensions[1]);
+            BufferedImage image=dev.matrixlab.webp4j.WebPCodec.decodeImage(bytes);
+            if (image==null || image.getWidth()!=dimensions[0] || image.getHeight()!=dimensions[1])
+                throw new IllegalArgumentException("Invalid WebP image");
+            return image;
+        }
         try (ImageInputStream stream = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             if (stream == null) throw new IllegalArgumentException("Invalid image");
             Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
@@ -127,16 +138,39 @@ public final class SynchronousImageProcessor {
                 boolean[] warning = {false};
                 reader.addIIOReadWarningListener((ignored, message) -> warning[0] = true);
                 int width = reader.getWidth(0), height = reader.getHeight(0);
-                if (width < 1 || height < 1 || width > MAX_SIDE || height > MAX_SIDE || (long) width * height > MAX_PIXELS)
-                    throw new IllegalArgumentException("Image dimensions exceed limits");
+                validateDimensions(width,height);
                 BufferedImage image = reader.read(0);
                 if (image == null || warning[0]) throw new IllegalArgumentException("Invalid image");
                 return image;
             } finally { reader.dispose(); }
         }
     }
+    private static void validateDimensions(int width,int height) {
+        if (width < 1 || height < 1 || width > MAX_SIDE || height > MAX_SIDE || (long) width * height > MAX_PIXELS)
+            throw new IllegalArgumentException("Image dimensions exceed limits");
+    }
+    static boolean isWebp(byte[] b) {
+        return b.length>=12 && b[0]=='R' && b[1]=='I' && b[2]=='F' && b[3]=='F'
+                && b[8]=='W' && b[9]=='E' && b[10]=='B' && b[11]=='P';
+    }
     /** Reject incomplete or corrupted containers even when a decoder tolerates them. */
     private static void validateContainer(byte[] bytes) {
+        if (isWebp(bytes)) {
+            long declared=Integer.toUnsignedLong(java.nio.ByteBuffer.wrap(bytes,4,4).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt());
+            if (declared+8!=bytes.length) throw new IllegalArgumentException("Invalid WebP length");
+            int pos=12;
+            while (pos<=bytes.length-8) {
+                long length=Integer.toUnsignedLong(java.nio.ByteBuffer.wrap(bytes,pos+4,4).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt());
+                long end=pos+8L+length+(length&1);
+                if (end>bytes.length) throw new IllegalArgumentException("Incomplete WebP chunk");
+                String type=new String(bytes,pos,4,java.nio.charset.StandardCharsets.US_ASCII);
+                if (type.equals("ANIM") || type.equals("ANMF") || (type.equals("VP8X") && length>=1 && (bytes[pos+8]&2)!=0))
+                    throw new IllegalArgumentException("Animated WebP unsupported");
+                pos=(int)end;
+            }
+            if (pos!=bytes.length) throw new IllegalArgumentException("Incomplete WebP");
+            return;
+        }
         if (bytes.length >= 4 && (bytes[0] & 255) == 0xff && (bytes[1] & 255) == 0xd8) {
             if ((bytes[bytes.length - 2] & 255) != 0xff || (bytes[bytes.length - 1] & 255) != 0xd9)
                 throw new IllegalArgumentException("Incomplete JPEG");

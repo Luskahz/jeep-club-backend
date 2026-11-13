@@ -81,6 +81,11 @@ class StorageHttpFlowTest {
         var owner=users.registerAndAuthenticate(new UserRegistrationData("Storage fixture",null,"storage-fixture@example.com","52998224725",null,null,null,Instant.now()),"Password@123");
         var other=users.registerAndAuthenticate(new UserRegistrationData("Other fixture",null,"other-storage-fixture@example.com","16899535009",null,null,null,Instant.now()),"Password@123");
         var image=new BufferedImage(80,60,BufferedImage.TYPE_INT_RGB);var bytes=new ByteArrayOutputStream();ImageIO.write(image,"png",bytes);
+        byte[] webp=dev.matrixlab.webp4j.WebPCodec.encodeLosslessImage(image);
+        mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.webp","image/webp",webp))
+            .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isCreated());
+        mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.webp","image/webp",java.util.Arrays.copyOf(webp,webp.length-1)))
+            .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isBadRequest());
         var options=new MockMultipartFile("options","","application/json",
             "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0,\"y\":0,\"width\":0.75,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         String response=mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.png","image/png",bytes.toByteArray()))

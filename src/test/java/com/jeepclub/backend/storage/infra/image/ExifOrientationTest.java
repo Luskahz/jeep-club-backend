@@ -29,4 +29,20 @@ class ExifOrientationTest {
             assertThat(colors).hasSize(6);
         }
     }
+    @Test void webpExifIsAppliedThenRemovedFromMaster() throws Exception {
+        byte[] webp=dev.matrixlab.webp4j.WebPCodec.encodeLosslessImage(new BufferedImage(32,16,BufferedImage.TYPE_INT_ARGB));
+        var tiff=ByteBuffer.allocate(26);
+        tiff.putShort((short)0x4d4d).putShort((short)42).putInt(8).putShort((short)1)
+            .putShort((short)0x112).putShort((short)3).putInt(1).putShort((short)6).putShort((short)0).putInt(0);
+        var out=new ByteArrayOutputStream();out.write(webp);out.write(new byte[]{'E','X','I','F',26,0,0,0});out.write(tiff.array());
+        byte[] source=out.toByteArray();ByteBuffer.wrap(source,4,4).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(source.length-8);
+        var result=new SynchronousImageProcessor().process(source,SynchronousImageProcessor.Category.PROFILE,List.of());
+        assertThat(result.master().width()).isEqualTo(16);
+        assertThat(result.master().height()).isEqualTo(32);
+        assertThat(ExifOrientation.read(result.master().bytes())).isEqualTo(1);
+        assertThat(result.master().mimeType()).isEqualTo("image/png");
+        byte[] truncated=java.util.Arrays.copyOf(source,source.length-1);
+        assertThatThrownBy(() -> new SynchronousImageProcessor().process(truncated,SynchronousImageProcessor.Category.PROFILE,List.of()))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
 }
