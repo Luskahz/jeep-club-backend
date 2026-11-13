@@ -20,14 +20,18 @@ class StorageTimezoneMySqlIT {
             var baseline=timezoneRoundTrip(MYSQL.getJdbcUrl(),false,instant);
             var url=MYSQL.getJdbcUrl()+(MYSQL.getJdbcUrl().contains("?")?"&":"?")+"serverTimezone=UTC";
             var configuredUrl=timezoneRoundTrip(url,false,instant);var configuredHibernate=timezoneRoundTrip(MYSQL.getJdbcUrl(),true,instant);
-            System.out.println("CROSS_TIMEZONE_DIAGNOSTIC written="+instant+" baseline="+baseline+" serverTimezoneUTC="+configuredUrl+" hibernateJdbcUTC="+configuredHibernate);
+            var changedConfiguration=timezoneRoundTrip(MYSQL.getJdbcUrl(),false,true,"America/Sao_Paulo",instant);
+            System.out.println("CROSS_TIMEZONE_DIAGNOSTIC written="+instant+" baseline="+baseline+" serverTimezoneUTC="+configuredUrl+" hibernateJdbcUTC="+configuredHibernate+" changedConfiguration="+changedConfiguration);
             org.assertj.core.api.Assertions.assertThat(configuredUrl).isEqualTo(instant);
             org.assertj.core.api.Assertions.assertThat(configuredHibernate).isEqualTo(instant);
         } finally {java.util.TimeZone.setDefault(original);}
     }
     private java.time.Instant timezoneRoundTrip(String url,boolean jdbcUtc,java.time.Instant instant) {
+        return timezoneRoundTrip(url,jdbcUtc,jdbcUtc,"UTC",instant);
+    }
+    private java.time.Instant timezoneRoundTrip(String url,boolean writerUtc,boolean readerUtc,String readerZone,java.time.Instant instant) {
         Long id;java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("America/Sao_Paulo"));
-        var registry=timezoneRegistry(url,jdbcUtc);
+        var registry=timezoneRegistry(url,writerUtc);
         try(var factory=new org.hibernate.boot.MetadataSources(registry).addAnnotatedClass(com.jeepclub.backend.storage.infra.persistence.entity.MediaAssetEntity.class).buildMetadata().buildSessionFactory();var session=factory.openSession()) {
             var tx=session.beginTransaction();var e=new com.jeepclub.backend.storage.infra.persistence.entity.MediaAssetEntity();
             e.setOrigin(com.jeepclub.backend.storage.core.domain.enums.MediaOrigin.UPLOAD);e.setSourceContext(com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTITY_PROFILE);
@@ -35,7 +39,7 @@ class StorageTimezoneMySqlIT {
             e.setPurpose("PHOTO");e.setClassification(com.jeepclub.backend.storage.core.domain.enums.MediaClassification.CLASSIFIED);e.setPhysicalState(com.jeepclub.backend.storage.core.domain.enums.MediaPhysicalState.PRESENT);
             e.setCreatedAt(instant);e.setUpdatedAt(instant);session.persist(e);tx.commit();id=e.getMediaId();
         } finally {org.hibernate.boot.registry.StandardServiceRegistryBuilder.destroy(registry);}
-        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));var second=timezoneRegistry(url,jdbcUtc);
+        java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(readerZone));var second=timezoneRegistry(url,readerUtc);
         try(var factory=new org.hibernate.boot.MetadataSources(second).addAnnotatedClass(com.jeepclub.backend.storage.infra.persistence.entity.MediaAssetEntity.class).buildMetadata().buildSessionFactory();var session=factory.openSession()) {
             return session.find(com.jeepclub.backend.storage.infra.persistence.entity.MediaAssetEntity.class,id).getCreatedAt();
         } finally {org.hibernate.boot.registry.StandardServiceRegistryBuilder.destroy(second);}
