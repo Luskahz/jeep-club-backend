@@ -21,9 +21,11 @@ class StorageTimezoneMySqlIT {
             var url=MYSQL.getJdbcUrl()+(MYSQL.getJdbcUrl().contains("?")?"&":"?")+"serverTimezone=UTC";
             var configuredUrl=timezoneRoundTrip(url,false,instant);var configuredHibernate=timezoneRoundTrip(MYSQL.getJdbcUrl(),true,instant);
             var changedConfiguration=timezoneRoundTrip(MYSQL.getJdbcUrl(),false,true,"America/Sao_Paulo",instant);
-            System.out.println("CROSS_TIMEZONE_DIAGNOSTIC written="+instant+" baseline="+baseline+" serverTimezoneUTC="+configuredUrl+" hibernateJdbcUTC="+configuredHibernate+" changedConfiguration="+changedConfiguration);
+            var composeThenHibernate=timezoneRoundTrip(url,false,true,"America/Sao_Paulo",instant);
+            System.out.println("CROSS_TIMEZONE_DIAGNOSTIC written="+instant+" baseline="+baseline+" serverTimezoneUTC="+configuredUrl+" hibernateJdbcUTC="+configuredHibernate+" changedConfiguration="+changedConfiguration+" composeThenHibernate="+composeThenHibernate);
             org.assertj.core.api.Assertions.assertThat(configuredUrl).isEqualTo(instant);
             org.assertj.core.api.Assertions.assertThat(configuredHibernate).isEqualTo(instant);
+            org.assertj.core.api.Assertions.assertThat(composeThenHibernate).isEqualTo(instant);
         } finally {java.util.TimeZone.setDefault(original);}
     }
     private java.time.Instant timezoneRoundTrip(String url,boolean jdbcUtc,java.time.Instant instant) {
