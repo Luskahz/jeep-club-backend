@@ -59,4 +59,19 @@ class SynchronousImageProcessorTest {
         assertThatThrownBy(() -> processor.process(image(), SynchronousImageProcessor.Category.OTHER, List.of(preset))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> processor.process(image(), SynchronousImageProcessor.Category.OTHER, List.of(preset, preset))).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void rejectsTruncatedJpegAndPngWithBrokenCrc() throws Exception {
+        var processor = new SynchronousImageProcessor();
+        var out = new ByteArrayOutputStream();
+        ImageIO.write(new BufferedImage(12, 8, BufferedImage.TYPE_INT_RGB), "jpeg", out);
+        byte[] jpeg = out.toByteArray();
+        assertThatThrownBy(() -> processor.process(java.util.Arrays.copyOf(jpeg, jpeg.length - 2),
+                SynchronousImageProcessor.Category.PROFILE, List.of())).isInstanceOf(IllegalArgumentException.class);
+        byte[] png = image();
+        png[29] ^= 1; // IHDR CRC, without altering the dimensions.
+        assertThatThrownBy(() -> processor.process(png, SynchronousImageProcessor.Category.PROFILE, List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+        byte[] valid = image();
+        assertThatThrownBy(() -> processor.process(java.util.Arrays.copyOf(valid, valid.length - 12),
+                SynchronousImageProcessor.Category.PROFILE, List.of())).isInstanceOf(IllegalArgumentException.class);
+    }
 }

@@ -91,6 +91,7 @@ public final class SynchronousImageProcessor {
         } finally { capacity.release(); }
     }
     private static BufferedImage decode(byte[] bytes) throws IOException {
+        validateContainer(bytes);
         try (ImageInputStream stream = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             if (stream == null) throw new IllegalArgumentException("Invalid image");
             Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
@@ -100,14 +101,50 @@ public final class SynchronousImageProcessor {
                 String format = reader.getFormatName();
                 if (!format.equalsIgnoreCase("JPEG") && !format.equalsIgnoreCase("PNG")) throw new IllegalArgumentException("Unsupported image format");
                 reader.setInput(stream, true, true);
+                boolean[] warning = {false};
+                reader.addIIOReadWarningListener((ignored, message) -> warning[0] = true);
                 int width = reader.getWidth(0), height = reader.getHeight(0);
                 if (width < 1 || height < 1 || width > MAX_SIDE || height > MAX_SIDE || (long) width * height > MAX_PIXELS)
                     throw new IllegalArgumentException("Image dimensions exceed limits");
                 BufferedImage image = reader.read(0);
-                if (image == null) throw new IllegalArgumentException("Invalid image");
+                if (image == null || warning[0]) throw new IllegalArgumentException("Invalid image");
                 return image;
             } finally { reader.dispose(); }
         }
+    }
+    /** Reject incomplete or corrupted containers even when a decoder tolerates them. */
+    private static void validateContainer(byte[] bytes) {
+        if (bytes.length >= 4 && (bytes[0] & 255) == 0xff && (bytes[1] & 255) == 0xd8) {
+            if ((bytes[bytes.length - 2] & 255) != 0xff || (bytes[bytes.length - 1] & 255) != 0xd9)
+                throw new IllegalArgumentException("Incomplete JPEG");
+            return;
+        }
+        byte[] signature = {(byte)137, 80, 78, 71, 13, 10, 26, 10};
+        if (bytes.length < signature.length || !java.util.Arrays.equals(signature, java.util.Arrays.copyOf(bytes, signature.length)))
+            throw new IllegalArgumentException("Unsupported image format");
+        int pos = signature.length;
+        boolean header = false, data = false;
+        while (pos <= bytes.length - 12) {
+            long length = Integer.toUnsignedLong(java.nio.ByteBuffer.wrap(bytes, pos, 4).getInt());
+            if (length > bytes.length - (long) pos - 12) throw new IllegalArgumentException("Incomplete PNG");
+            int n = (int) length;
+            String type = new String(bytes, pos + 4, 4, java.nio.charset.StandardCharsets.US_ASCII);
+            var crc = new java.util.zip.CRC32();
+            crc.update(bytes, pos + 4, n + 4);
+            long expected = Integer.toUnsignedLong(java.nio.ByteBuffer.wrap(bytes, pos + 8 + n, 4).getInt());
+            if (crc.getValue() != expected) throw new IllegalArgumentException("Invalid PNG checksum");
+            if (!header) {
+                if (!type.equals("IHDR") || n != 13) throw new IllegalArgumentException("Invalid PNG header");
+                header = true;
+            } else if (type.equals("IHDR")) throw new IllegalArgumentException("Duplicate PNG header");
+            if (type.equals("IDAT")) data = true;
+            pos += n + 12;
+            if (type.equals("IEND")) {
+                if (n != 0 || !data || pos != bytes.length) throw new IllegalArgumentException("Invalid PNG end");
+                return;
+            }
+        }
+        throw new IllegalArgumentException("Incomplete PNG");
     }
     private static BufferedImage crop(BufferedImage src, Crop c) {
         if (c == null) return src;
