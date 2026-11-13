@@ -48,4 +48,3 @@ class StorageTimezoneMySqlIT {
         if(jdbcUtc) builder.applySetting("hibernate.jdbc.time_zone","UTC");return builder.build();
     }
 }
-
