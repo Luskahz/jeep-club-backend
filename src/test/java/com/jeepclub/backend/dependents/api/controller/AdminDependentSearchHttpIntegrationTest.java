@@ -65,7 +65,14 @@ class AdminDependentSearchHttpIntegrationTest {
     @Test
     void ownerNameIsAppliedBeforePageCountAndSelectedFieldsDoNotLeakAuxiliaryIdOrStorageKey() throws Exception {
         long owner = owner("Literal %_! Titular");
-        var first = dependent(owner, "Ana Dependent", "11122233344", RelationshipType.CHILD, "11999990001", "private/dep-1.jpg");
+        var first = dependent(
+                owner,
+                "Ana Dependent",
+                "11122233344",
+                RelationshipType.CHILD,
+                "11999990001",
+                "private-images/2026/06/30/00000000-0000-0000-0000-000000000001.jpg"
+        );
         var second = dependent(owner, "Bruno Dependent", "22233344455", RelationshipType.SPOUSE, "11999990002", null);
         dependent(owner("Outro Titular"), "Carlos Dependent", "33344455566", RelationshipType.CHILD, "11999990003", null);
 
