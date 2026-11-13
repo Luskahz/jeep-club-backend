@@ -67,4 +67,28 @@ class AdminDependentControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(10L));
     }
+
+    @Test
+    void listsAndGetsAdminDependentsAcrossAllUsers() throws Exception {
+        Instant now = Instant.parse("2026-06-30T12:00:00Z");
+        var searchRow = new com.jeepclub.backend.dependents.core.application.result.AdminDependentSearchResult(
+                10L, "Pedro Silva", "52998224725", LocalDate.of(2010, 5, 20),
+                RelationshipType.CHILD, "11988887777", 5L, "João Silva",
+                DependentStatus.ACTIVE, now, now, null, "/users/5/dependents/10/photo"
+        );
+        when(adminDependentService.search(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(searchRow)));
+        when(adminDependentService.findAdminById(10L)).thenReturn(searchRow);
+
+        mockMvc.perform(get("/admin/dependents").param("q", "Pedro"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(10L))
+                .andExpect(jsonPath("$.content[0].ownerName").value("João Silva"))
+                .andExpect(jsonPath("$.content[0].photoUrl").value("/users/5/dependents/10/photo"));
+
+        mockMvc.perform(get("/admin/dependents/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(10L))
+                .andExpect(jsonPath("$.ownerName").value("João Silva"));
+    }
 }

@@ -142,3 +142,8 @@ secreto. Query pública para Health/Publications e exports CSV/PDF não expõem 
 privada. A proteção ampla de dados/históricos da BACK-482 permanece fora deste escopo.
 Exemplos de frontend, segurança, testes e checklist em
 [BACK-524](../../../../../../../../docs/back-524-dependent-photo.md).
+
+## Consulta administrativa paginada
+
+`GET /admin/dependents` e `GET /admin/dependents/{id}` exigem `DEPENDENTS_DEPENDENT_READ`.
+A listagem paginada usa `AdminDependentJpaQuery` (Criteria tuple query sem materialização de entidades ou acesso direto a `UserEntity`) e `UserNameCriteria` da API pública de Identity para correlacionar o nome do titular via `EXISTS`, sem limite de cardinalidade. `q` aplica `OR` entre nome do dependente, nome do titular e, somente quando composto por dígitos e pontuação de documento/telefone, CPF e telefone. `name`, `cpf`, `userId`, `relationshipType` e `status` combinam com `AND` antes da paginação e do count. `fields` seleciona apenas as colunas pedidas sem expor `photoStorageKey` ou `userId` auxiliar.

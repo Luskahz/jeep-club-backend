@@ -1,6 +1,11 @@
 package com.jeepclub.backend.dependents.core.repository;
 
+import com.jeepclub.backend.dependents.core.application.query.AdminDependentField;
+import com.jeepclub.backend.dependents.core.application.query.AdminDependentFilter;
+import com.jeepclub.backend.dependents.core.application.result.AdminDependentSearchResult;
 import com.jeepclub.backend.dependents.core.domain.model.Dependent;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Collection;
 import java.time.Instant;
@@ -9,6 +14,11 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface DependentRepository {
+    Page<AdminDependentSearchResult> search(
+            AdminDependentFilter filter,
+            Set<AdminDependentField> fields,
+            Pageable pageable
+    );
     Optional<DependentPhotoReference> findPhotoReference(Long id);
     List<Dependent> findByIds(Collection<Long> ids);
     List<Dependent> findByUserAfterId(Long userId, long afterId, int limit);
