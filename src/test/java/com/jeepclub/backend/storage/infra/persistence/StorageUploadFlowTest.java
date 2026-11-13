@@ -118,6 +118,24 @@ class StorageUploadFlowTest {
         assertThatThrownBy(() -> admin.detail(Long.MAX_VALUE,0,0,20))
                 .isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);
     }
+    @Test void administrativeSearchKeepsQueryCountBoundedAcrossMultiplePages() {
+        var values=new ArrayList<Object[]>();
+        for(int i=0;i<250;i++) values.add(new Object[]{"BULK_"+i});
+        jdbc.batchUpdate("insert into storage_media_assets (origin,source_context,source_record_id,uploaded_by_user_id,owner_user_id,subject_type,purpose,classification,physical_state,created_at,updated_at,version) values ('UPLOAD','IDENTITY_PROFILE',?,990001,990001,'UNKNOWN','PHOTO','CLASSIFIED','PRESENT',CURRENT_TIMESTAMP,CURRENT_TIMESTAMP,0)",values);
+        jdbc.update("insert into storage_media_control (media_id,received_sha256,state,retention_sensitive,legal_hold,discarded,version) select id,?,'VISIBLE',false,false,false,0 from storage_media_assets where uploaded_by_user_id=990001","a".repeat(64));
+        var stats=quotaEntityManager.getEntityManagerFactory().unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        boolean previous=stats.isStatisticsEnabled();stats.setStatisticsEnabled(true);stats.clear();
+        try {
+            var ids=new ArrayList<Long>();long after=0;
+            for(int page=0;page<3;page++) {
+                var result=admin.search(new MediaAdministration.Search(after,100,MediaContext.IDENTITY_PROFILE,null,990001L,null,null,null,null,null,null,null));
+                assertThat(result).hasSize(page<2 ? 100 : 50);
+                ids.addAll(result.stream().map(MediaAdministration.Entry::mediaId).toList());after=result.get(result.size()-1).mediaId();
+            }
+            assertThat(ids).hasSize(250).doesNotHaveDuplicates().isSorted();
+            assertThat(stats.getPrepareStatementCount()).isEqualTo(3);
+        } finally {stats.setStatisticsEnabled(previous);}
+    }
     long attach(long actor,long media,MediaContext context,String resource,String role) {
         return new TransactionTemplate(manager).execute(s -> references.associate(actor,media,context,resource,role));
     }
@@ -227,6 +245,19 @@ class StorageUploadFlowTest {
         governance.moderate(new ModerationDecision(a.mediaId(),null,ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"private note",11,Instant.now()));
         assertThatThrownBy(() -> resolution.resolve(11,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
         assertThat(resolution.resolve(22,b.mediaId(),b.referenceId(),"MASTER").bytes()).isNotEmpty();
+    }
+    @Test void logicalDiscardOfOneAssetDoesNotRemoveSharedBlobOrAffectOtherAsset() throws Exception {
+        byte[] bytes=image(620);var a=attachedUpload(620,MediaContext.IDENTITY_PROFILE,"620",bytes);
+        var b=attachedUpload(621,MediaContext.IDENTITY_PROFILE,"621",bytes);
+        var va=catalog.findVariant(a.mediaId(),"MASTER").orElseThrow();
+        var vb=catalog.findVariant(b.mediaId(),"MASTER").orElseThrow();
+        var shared=blobs.findByVariant(va.variantId()).orElseThrow();
+        assertThat(blobs.findByVariant(vb.variantId())).contains(shared);
+        detach(620,a.mediaId(),a.referenceId());
+        admin.discard(a.mediaId(),new MediaAuditContext(MediaActorKind.USER,620L,Instant.now(),null));
+        assertThatThrownBy(() -> resolution.resolve(620,a.mediaId(),a.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThat(blobs.read(shared)).isNotEmpty();
+        assertThat(resolution.resolve(621,b.mediaId(),b.referenceId(),"MASTER").bytes()).isNotEmpty();
     }
     @Test void unattachedUploadHasNoActiveReferenceAndRetentionStartsAtUpload() throws Exception {
         var a=upload.upload(101,MediaContext.IDENTITY_PROFILE,"101",image(101));

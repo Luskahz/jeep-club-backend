@@ -30,6 +30,18 @@ O upload novo de perfil aceita part JSON opcional `options`, no formato `{"crops
 
 ## Deduplicação e transações
 
+```mermaid
+flowchart LR
+  Consumer[Contexto proprietário] -->|autoriza uso| Reference[MediaReference]
+  Reference -->|pertence a| Asset[MediaAsset]
+  Variant[MediaVariant] -->|pertence a| Asset
+  Variant -->|binding| Blob[StoredBlob SHA-256]
+  Asset --> Control[Moderação e retenção]
+  Blob --> Provider[Provider físico privado]
+```
+
+Vários assets podem apontar, por variantes, ao mesmo blob; referências, moderação e retenção continuam ligadas à identidade lógica. Nenhuma seta de compartilhamento concede autorização.
+
 SHA-256 indexado identifica bytes físicos exatos, nunca identidade lógica ou direito de acesso. `StoredBlob` compartilhado preserva assets, referências, moderação e auditoria independentes. A reserva e IO físico precedem a transação lógica; asset, variantes, bindings e governança são persistidos atomicamente. O upload isolado retorna referência nula: associação posterior deve ser transacional com o agregado dono, usando o contrato interno adequado. Falha SQL posterior pode deixar custódia reservada ou pronta sem vínculo para reconciliação, não um objeto autorizado. Verificar integridade em reuso/leitura e falhar fechado em corrupção. A serialização por banco pressupõe catálogo SQL e root compartilhados; crash de máquina, durabilidade de diretório, processos independentes e canais temporais não são comprovados por testes locais, conforme ADR 002.
 
 ## Entrega e dependências
