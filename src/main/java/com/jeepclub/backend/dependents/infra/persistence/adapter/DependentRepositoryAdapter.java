@@ -27,6 +27,23 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DependentRepositoryAdapter implements DependentRepository {
     private final jakarta.persistence.EntityManager entityManager;
+    private com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setOwnerNames(com.jeepclub.backend.iam.identity.api.module.UserNameCriteria ownerNames) {
+        this.ownerNames = ownerNames;
+    }
+
+    @Override
+    public org.springframework.data.domain.Page<com.jeepclub.backend.dependents.core.application.result.AdminDependentSearchResult> search(
+            com.jeepclub.backend.dependents.core.application.query.AdminDependentFilter filter,
+            java.util.Set<com.jeepclub.backend.dependents.core.application.query.AdminDependentField> fields,
+            org.springframework.data.domain.Pageable pageable
+    ) {
+        return new com.jeepclub.backend.dependents.infra.persistence.query.AdminDependentJpaQuery(entityManager, ownerNames)
+                .findAll(filter, fields, pageable);
+    }
+
     @Override public Optional<com.jeepclub.backend.dependents.core.repository.DependentPhotoReference> findPhotoReference(Long id) {
         // Scalar projection bypasses any preloaded entity in an open persistence context.
         return entityManager.createQuery("select d.userId,d.status,d.photoStorageKey from DependentEntity d where d.id=:id",Object[].class)

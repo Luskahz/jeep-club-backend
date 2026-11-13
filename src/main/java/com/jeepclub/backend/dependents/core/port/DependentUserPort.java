@@ -1,5 +1,8 @@
 package com.jeepclub.backend.dependents.core.port;
 
+import java.util.Collection;
+import java.util.Map;
+
 public interface DependentUserPort {
 
     /** Lock retained history identities before taking a dependent lock. */
@@ -10,4 +13,8 @@ public interface DependentUserPort {
     boolean existsActiveById(Long userId);
 
     boolean existsByCpf(String cpf);
+
+    default Map<Long, String> findNamesByIds(Collection<Long> userIds) {
+        return Map.of();
+    }
 }

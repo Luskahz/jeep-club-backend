@@ -37,4 +37,15 @@ public class DependentIdentityAdapter implements DependentUserPort {
     public boolean existsByCpf(String cpf) {
         return identityQuery.existsByCpf(cpf);
     }
+
+    @Override
+    public java.util.Map<Long, String> findNamesByIds(java.util.Collection<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return identityQuery.findByIds(userIds).stream().collect(java.util.stream.Collectors.toMap(
+                com.jeepclub.backend.iam.identity.api.module.UserDetails::id,
+                com.jeepclub.backend.iam.identity.api.module.UserDetails::name
+        ));
+    }
 }

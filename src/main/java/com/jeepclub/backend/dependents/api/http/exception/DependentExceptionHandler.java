@@ -15,6 +15,47 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = "com.jeepclub.backend.dependents")
 public class DependentExceptionHandler extends ApiExceptionHandler {
+    @ExceptionHandler(com.jeepclub.backend.dependents.core.application.exception.InvalidDependentSearchException.class)
+    public ResponseEntity<ApiErrorResponse> invalidSearch(Exception failure) {
+        return buildErrorResponse("DEPENDENT_INVALID_SEARCH", failure.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConstraintViolation(
+            jakarta.validation.ConstraintViolationException exception
+    ) {
+        ResponseEntity<ApiErrorResponse> response = buildErrorResponse(
+                "VALIDATION_ERROR",
+                "The request contains invalid fields.",
+                HttpStatus.BAD_REQUEST
+        );
+        response.getBody().setErrors(
+                exception.getConstraintViolations().stream()
+                        .map(DependentExceptionHandler::toFieldErrorResponse)
+                        .toList()
+        );
+        return response;
+    }
+
+    private static com.jeepclub.backend.platform.web.exception.ValidationFieldErrorResponse toFieldErrorResponse(
+            jakarta.validation.ConstraintViolation<?> violation
+    ) {
+        String field = violation.getPropertyPath().toString();
+        String constraintCode = violation.getConstraintDescriptor()
+                .getAnnotation()
+                .annotationType()
+                .getSimpleName();
+        String responseCode = constraintCode
+                .replaceAll("([a-z])([A-Z])", "$1_$2")
+                .toUpperCase(java.util.Locale.ROOT);
+
+        return new com.jeepclub.backend.platform.web.exception.ValidationFieldErrorResponse(
+                field,
+                responseCode,
+                violation.getMessage()
+        );
+    }
+
     @ExceptionHandler(org.springframework.dao.ConcurrencyFailureException.class)
     public ResponseEntity<ApiErrorResponse> handleConcurrentMutation(org.springframework.dao.ConcurrencyFailureException exception) {
         return buildErrorResponse("DEPENDENT_CONCURRENT_MODIFICATION", "Concurrent modification; retry the operation.", HttpStatus.CONFLICT);

@@ -56,6 +56,7 @@ class DependentSecurityIntegrationTest {
     @CsvSource({
             "GET,/dependents", "POST,/dependents", "GET,/dependents/10",
             "PUT,/dependents/10", "DELETE,/dependents/10",
+            "GET,/admin/dependents", "GET,/admin/dependents/10",
             "GET,/users/1/dependents", "GET,/users/1/dependents/10"
     })
     void unauthenticatedRequestIsRejected(String method, String path) throws Exception {
@@ -105,6 +106,16 @@ class DependentSecurityIntegrationTest {
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
 
         mockMvc.perform(get("/users/1/dependents/10")
+                        .header("Authorization", "Bearer user-token"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(get("/admin/dependents")
+                        .header("Authorization", "Bearer user-token"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+
+        mockMvc.perform(get("/admin/dependents/10")
                         .header("Authorization", "Bearer user-token"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
