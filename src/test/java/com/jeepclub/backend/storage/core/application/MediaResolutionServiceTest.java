@@ -49,7 +49,7 @@ class MediaResolutionServiceTest {
     }
     @Test void changedLegacyContentIsNotDelivered() throws Exception {
         fixture("images",digest());when(legacy.read("images/fixture.png")).thenReturn(new byte[]{3,2,1});
-        assertThatThrownBy(()->service.resolve(11,1,2,"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(()->service.resolve(11,1,2,"MASTER")).isInstanceOf(MediaIntegrityException.class);
     }
     @Test void missingNewBlobDoesNotFallBackToLegacy() throws Exception {
         fixture("storage-blobs",digest());
@@ -72,7 +72,7 @@ class MediaResolutionServiceTest {
         assertThat(java.nio.file.Files.getLastModifiedTime(file)).isEqualTo(modified);
         verifyNoInteractions(blobs);
         java.nio.file.Files.write(file,new byte[]{3,2,1});
-        assertThatThrownBy(()->resolver.resolve(11,1,2,"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(()->resolver.resolve(11,1,2,"MASTER")).isInstanceOf(MediaIntegrityException.class);
         java.nio.file.Files.delete(file); // Test fixture only, never application behavior.
         assertThatThrownBy(()->resolver.resolve(11,1,2,"MASTER"))
             .isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);

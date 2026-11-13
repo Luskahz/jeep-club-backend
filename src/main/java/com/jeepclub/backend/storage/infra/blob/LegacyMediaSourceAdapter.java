@@ -27,7 +27,7 @@ public class LegacyMediaSourceAdapter implements LegacyMediaSource {
     @Override public byte[] read(String key) {
         if(key!=null && key.startsWith("private-images/")) PrivateImageReference.require(key);else ImageReference.require(key);
         byte[] bytes=storage.load(key).content();
-        if(bytes.length==0 || bytes.length>10*1024*1024) throw new IllegalArgumentException("Legacy image exceeds custody limit");
+        if(bytes.length==0 || bytes.length>10*1024*1024) throw new com.jeepclub.backend.storage.core.application.MediaIntegrityException();
         return bytes;
     }
 }

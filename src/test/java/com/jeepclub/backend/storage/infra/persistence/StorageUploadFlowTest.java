@@ -236,7 +236,7 @@ class StorageUploadFlowTest {
         assertThatThrownBy(()->noPolicy.resolve(111,result.mediaId(),ref.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
         assertThat(legacySource.reads.get()).isEqualTo(reads);
         legacySource.changes.put(key,image(112));
-        assertThatThrownBy(()->resolution.resolve(111,result.mediaId(),ref.referenceId(),"MASTER")).isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(()->resolution.resolve(111,result.mediaId(),ref.referenceId(),"MASTER")).isInstanceOf(MediaIntegrityException.class);
         legacySource.missing.add(key);
         assertThatThrownBy(()->resolution.resolve(111,result.mediaId(),ref.referenceId(),"MASTER"))
             .isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);

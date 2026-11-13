@@ -32,13 +32,13 @@ public class MediaResolutionService {
         if("storage-blobs".equals(variant.namespace())) {
             var blob=blobs.findByVariant(variant.variantId()).orElseThrow(MediaResolutionService::unavailable);
             if(!"SHA-256".equals(variant.checksumAlgorithm()) || !blob.sha256().equals(variant.checksum())
-                || blob.sizeBytes()!=variant.sizeBytes() || !blob.storageKey().equals(variant.storageKey())) throw unavailable();
+                || blob.sizeBytes()!=variant.sizeBytes() || !blob.storageKey().equals(variant.storageKey())) throw new MediaIntegrityException();
             bytes=blobs.read(blob);
         } else if(java.util.Set.of("images","private-images").contains(variant.namespace())) {
             if(!variant.storageKey().startsWith(variant.namespace()+"/") || !"SHA-256".equals(variant.checksumAlgorithm())) throw unavailable();
             bytes=legacy.read(variant.storageKey());
         } else throw unavailable();
-        if(bytes.length!=variant.sizeBytes() || !digest(bytes).equals(variant.checksum())) throw unavailable();
+        if(bytes.length!=variant.sizeBytes() || !digest(bytes).equals(variant.checksum())) throw new MediaIntegrityException();
         return new Content(bytes,variant.mimeType());
     }
     private static String digest(byte[] bytes) {

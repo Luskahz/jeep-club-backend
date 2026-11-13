@@ -7,6 +7,13 @@ import java.nio.file.Files;
 import static org.assertj.core.api.Assertions.*;
 
 class LocalPhysicalBlobStoreTest {
+    @Test void missingBlobIsDistinguishedFromCorruptContent() throws Exception {
+        var root=Files.createTempDirectory("storage-missing-fixture-");var properties=new StorageProperties();properties.local().setRootDirectory(root);
+        var physical=new LocalPhysicalBlobStore(properties);byte[] bytes={1,2,3};String hash=BlobCatalogAdapter.digest(bytes);
+        assertThatThrownBy(()->physical.readVerified(hash,bytes.length)).isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);
+        physical.putVerified(hash,bytes);
+        assertThat(physical.readVerified(hash,bytes.length)).containsExactly(bytes);
+    }
     @Test void privateObjectsUseRestrictivePosixModesWhenSupported() throws Exception {
         var root=Files.createTempDirectory("storage-mode-fixture-");
         org.junit.jupiter.api.Assumptions.assumeTrue(Files.getFileStore(root).supportsFileAttributeView(java.nio.file.attribute.PosixFileAttributeView.class));

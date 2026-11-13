@@ -52,7 +52,8 @@ public class LocalPhysicalBlobStore implements PhysicalBlobStore {
     @Override public byte[] readVerified(String digest,long size) {
         try {
             safe(); Path target=path(digest);
-            if (size<=0 || size>10*1024*1024 || !Files.isRegularFile(target,LinkOption.NOFOLLOW_LINKS) || Files.size(target)!=size)
+            var attributes=Files.readAttributes(target,java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+            if (size<=0 || size>10*1024*1024 || !attributes.isRegularFile() || attributes.size()!=size)
                 throw new IOException("Blob unavailable or inconsistent");
             if(posix()) Files.setPosixFilePermissions(target,java.nio.file.attribute.PosixFilePermissions.fromString("rw-------"));
             try(var input=Files.newInputStream(target,LinkOption.NOFOLLOW_LINKS)) {
@@ -60,7 +61,8 @@ public class LocalPhysicalBlobStore implements PhysicalBlobStore {
                 if (bytes.length!=size || !BlobCatalogAdapter.digest(bytes).equals(digest)) throw new IOException("Blob integrity mismatch");
                 return bytes;
             }
-        } catch(IOException e) { throw new IllegalStateException("Physical blob verification failed",e); }
+        } catch(NoSuchFileException missing) {throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException();}
+        catch(IOException e) { throw new IllegalStateException("Physical blob verification failed",e); }
     }
     private static final class Scan {
         final DirectoryStream<Path> directory;final java.util.Iterator<Path> iterator;final long expires;
