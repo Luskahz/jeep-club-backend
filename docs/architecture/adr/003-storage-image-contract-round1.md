@@ -1,0 +1,29 @@
+# ADR 003 — Contrato de imagem e fronteiras da Rodada 1
+
+Data: 12/11/2026. Complementa [ADR 001](001-storage-catalog-foundation.md) e [ADR 002](002-storage-shared-custody.md); não aprova merge, ativação nem encerramento da BACK-547. Fonte de produto: BACK-547 D01–D15 e adendos, em particular comentário 10453; [inventário BACK-591](../back-591-round1-discovery.md). As decisões abaixo distinguem obrigação de implementação existente e de trabalho posterior.
+
+## Modelo e acesso
+
+Storage é módulo de negócio separado do provider físico. `MediaAsset` identifica custódia lógica, `MediaVariant` uma representação, e `MediaReference` um intervalo de uso em agregado proprietário. Uploader, proprietário, sujeito e autor podem diferir; legado desconhecido não ganha autoria inventada. A mesma mídia pode ter múltiplos usos atuais ou históricos; ser histórico, isoladamente, não determina invisibilidade.
+
+O contexto consumidor autoriza o recurso e a referência específicos; Storage confirma relação asset/referência/variante, disponibilidade e moderação global e contextual. Não autorizar por key, hash ou conhecimento de URL. Uma restrição global prevalece sobre restauro contextual. `MASTER` é privada, não é concedida automaticamente a administradores; fotos de dependentes mantêm controles e auditoria próprios. Catálogo, preview, moderação, restauro e auditoria requerem capacidades distintas conforme Authorization existente. Preview exige policy aplicável, finalidade/auditoria e `private, no-store`.
+
+Cache de conteúdo comum só é admissível com revalidação de ACL e moderação em toda requisição, inclusive condicional; dados sensíveis e MASTER exigem `private, no-store`. As rotas novas atualmente usam `private, no-store`, abordagem conservadora. O GET legado não implementa essas garantias contextuais e permanece inalterado nesta rodada; integração e cutover exigem validação separada.
+
+## Entrada, MASTER e derivados
+
+Aceitar no máximo 10.485.760 bytes recebidos; validar conteúdo decodificável e MIME real, limites de lados e pixels antes de alocar imagem completa, e controlar concorrência/tempo/recursos. Orientação EXIF é aplicada antes de interpretar enquadramento. GPS e demais metadados não devem sobreviver a nenhuma representação persistida. MASTER preserva a fonte visual independentemente dos recortes e tem limite persistido de 2 MiB em perfil/dependente e 5 MiB nos demais contextos; se a sanitização permitir preservar dados comprimidos sem alterar orientação, dimensão ou exceder limite, evitar recompressão com perda. Quando otimização não atingir limite com qualidade aceitável, rejeitar de modo controlado.
+
+Cada derivado pertence ao mesmo asset e herda os controles de acesso e moderação. Crop/foco é opcional, tipado e independente por finalidade; ausência não deve produzir enquadramento inesperado. Coordenadas devem ser documentadas e validadas contra a imagem orientada. Não ampliar imagens. Avatar quadrado e carteirinha vertical são finalidades diferentes, não prova de que há tela ou endpoint de carteirinha neste backend. Seleção de variantes e dimensões deve seguir necessidades demonstradas pela matriz e não gerar famílias indiscriminadamente. Os valores existentes no adapter são implementação anterior, não dimensões de tela aprovadas.
+
+WebP é preferido para apresentação quando codec Java 17 confiável e validado estiver disponível; JPEG para imagem opaca e PNG quando necessário preservar transparência são fallback. Um codec que falha deve produzir erro controlado ou fallback seguro, sem rotular bytes com MIME incorreto; testar leitura, escrita, corrupção, transparência e compatibilidade da distribuição. A fonte visual pode ser recomprimida, logo digest do upload recebido e digest dos bytes persistidos têm significados diferentes. Não há AVIF obrigatório.
+
+Processamento é síncrono e somente responde após as variantes obrigatórias e transação lógica concluírem; alvo p95 inferior a 10 s deve ser medido com concorrência e ambiente descritos, não inferido de timers. Semáforo local não coordena múltiplas instâncias. Custódia física e reserva são conservadoras: erro parcial não pode tornar asset incompleto acessível, e blobs já guardados não são apagados automaticamente.
+
+## Deduplicação e transações
+
+SHA-256 indexado identifica bytes físicos exatos, nunca identidade lógica ou direito de acesso. `StoredBlob` compartilhado preserva assets, referências, moderação e auditoria independentes. A reserva e IO físico precedem a transação lógica; asset, variantes, bindings e governança são persistidos atomicamente. O upload isolado retorna referência nula: associação posterior deve ser transacional com o agregado dono, usando o contrato interno adequado. Falha SQL posterior pode deixar custódia reservada ou pronta sem vínculo para reconciliação, não um objeto autorizado. Verificar integridade em reuso/leitura e falhar fechado em corrupção. A serialização por banco pressupõe catálogo SQL e root compartilhados; crash de máquina, durabilidade de diretório, processos independentes e canais temporais não são comprovados por testes locais, conforme ADR 002.
+
+## Entrega e dependências
+
+Rodada 1 inspeciona contratos existentes sem modificar consumidores, frontend, GET legado ou dados operacionais. As integrações contextuais de cada módulo, projeção de autor por lote em comentários, emissão/exportação de carteirinha, dimensões visuais, cache do proxy e cutover são dependências da Rodada 2. Billing permanece fora do MVP. A ausência de frontend acessível impede afirmar cobertura visual ou medidas; não impede implementar e testar o núcleo backend com as limitações declaradas. Nenhuma exclusão física ou backfill produtivo está autorizada. Flags permanecem desligadas por padrão e migrations existentes V13–V23 são preservadas.
