@@ -37,7 +37,6 @@ class StorageHttpTimingMySqlIT {
     static {try {ROOT=Files.createTempDirectory("storage-http-timing-");}catch(Exception e){throw new ExceptionInInitializerError(e);}}
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {
         r.add("storage.local.root-directory",() -> ROOT.toString());
-        r.add("storage.upload.max-hourly-attempts",() -> 120);
         r.add("spring.datasource.url",MYSQL::getJdbcUrl);r.add("spring.datasource.username",MYSQL::getUsername);r.add("spring.datasource.password",MYSQL::getPassword);
         r.add("spring.datasource.driver-class-name",() -> "com.mysql.cj.jdbc.Driver");r.add("spring.jpa.database-platform",() -> "org.hibernate.dialect.MySQLDialect");
         r.add("spring.jpa.hibernate.ddl-auto",() -> "validate");r.add("spring.flyway.enabled",() -> true);
@@ -45,6 +44,7 @@ class StorageHttpTimingMySqlIT {
     @Autowired MockMvc mvc;
     @Autowired UserRegistration users;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired com.jeepclub.backend.storage.core.repository.UploadAdmission admission;
     private byte[] png(Random rng) throws Exception {
         var image=new BufferedImage(128,128,BufferedImage.TYPE_INT_RGB);int[] pixels=new int[128*128];
         for(int i=0;i<pixels.length;i++) pixels[i]=rng.nextInt(0x1000000);
@@ -56,13 +56,15 @@ class StorageHttpTimingMySqlIT {
     }
     @Test
     void diagnosticHttpTimingForAnotherUsersPreviouslyStoredImage() throws Exception {
+        Object target=org.springframework.test.util.AopTestUtils.getUltimateTargetObject(admission);
+        org.assertj.core.api.Assertions.assertThat(org.springframework.test.util.ReflectionTestUtils.getField(target,"hourly")).isEqualTo(30);
         var victim=users.registerAndAuthenticate(new UserRegistrationData("Synthetic victim",null,"timing-victim@example.com","11144477735",null,null,null,Instant.now()),"Password@123");
         var actor=users.registerAndAuthenticate(new UserRegistrationData("Synthetic actor",null,"timing-actor@example.com","93541134780",null,null,null,Instant.now()),"Password@123");
         var rng=new Random(829);var existing=new ArrayList<byte[]>();var fresh=new ArrayList<byte[]>();
-        for(int i=0;i<20;i++){byte[] a=png(rng),b=png(rng);existing.add(a);fresh.add(b);send(victim.accessToken(),a);}
+        for(int i=0;i<12;i++){byte[] a=png(rng),b=png(rng);existing.add(a);fresh.add(b);send(victim.accessToken(),a);}
         for(int i=0;i<4;i++) send(actor.accessToken(),png(rng));
         record Request(boolean reused,byte[] data) {}
-        var requests=new ArrayList<Request>();for(int i=0;i<20;i++){requests.add(new Request(true,existing.get(i)));requests.add(new Request(false,fresh.get(i)));}
+        var requests=new ArrayList<Request>();for(int i=0;i<12;i++){requests.add(new Request(true,existing.get(i)));requests.add(new Request(false,fresh.get(i)));}
         Collections.shuffle(requests,new Random(1234));var newTimes=new ArrayList<Long>();var reuseTimes=new ArrayList<Long>();
         long previous=jdbc.queryForObject("select count(*) from storage_blobs",Long.class);
         for(var request:requests){
@@ -73,6 +75,6 @@ class StorageHttpTimingMySqlIT {
             previous=current;(request.reused()?reuseTimes:newTimes).add(ms);
         }
         Collections.sort(newTimes);Collections.sort(reuseTimes);
-        System.out.println("HTTP_TIMING_DIAGNOSTIC n=20 pixels=128x128 warmup=4 order=randomized mysql=8.0.46 new_median_ms="+newTimes.get(9)+" new_p95_ms="+newTimes.get(18)+" reused_median_ms="+reuseTimes.get(9)+" reused_p95_ms="+reuseTimes.get(18));
+        System.out.println("HTTP_TIMING_DIAGNOSTIC n=12 pixels=128x128 warmup=4 order=randomized mysql=8.0.46 default_attempt_limit=true new_median_ms="+newTimes.get(5)+" new_p95_ms="+newTimes.get(11)+" reused_median_ms="+reuseTimes.get(5)+" reused_p95_ms="+reuseTimes.get(11));
     }
 }
