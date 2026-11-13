@@ -81,7 +81,10 @@ class StorageHttpFlowTest {
         var owner=users.registerAndAuthenticate(new UserRegistrationData("Storage fixture",null,"storage-fixture@example.com","52998224725",null,null,null,Instant.now()),"Password@123");
         var other=users.registerAndAuthenticate(new UserRegistrationData("Other fixture",null,"other-storage-fixture@example.com","16899535009",null,null,null,Instant.now()),"Password@123");
         var image=new BufferedImage(80,60,BufferedImage.TYPE_INT_RGB);var bytes=new ByteArrayOutputStream();ImageIO.write(image,"png",bytes);
+        var options=new MockMultipartFile("options","","application/json",
+            "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0,\"y\":0,\"width\":0.75,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
         String response=mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.png","image/png",bytes.toByteArray()))
+            .file(options)
             .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isCreated())
             .andExpect(jsonPath("$.storageKey").doesNotExist()).andExpect(jsonPath("$.sha256").doesNotExist()).andReturn().getResponse().getContentAsString();
         long media=((Number)JsonPath.read(response,"$.mediaId")).longValue();
@@ -93,6 +96,14 @@ class StorageHttpFlowTest {
         // Explicit reference fixture: this is resolver coverage, not consumer integration proof.
         long ref=new org.springframework.transaction.support.TransactionTemplate(manager).execute(s -> references.associate(actor,media,
             com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTITY_PROFILE,Long.toString(actor),"PHOTO"));
+        var avatar=mvc.perform(get("/storage/media/"+media+"/references/"+ref+"/variants/AVATAR_SMALL")
+            .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        var decoded=ImageIO.read(new java.io.ByteArrayInputStream(avatar));
+        org.assertj.core.api.Assertions.assertThat(decoded.getWidth()).isEqualTo(decoded.getHeight());
+        var invalid=new MockMultipartFile("options","","application/json",
+            "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0.9,\"y\":0,\"width\":0.5,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(multipart("/storage/media/profile").file(new MockMultipartFile("file","photo.png","image/png",bytes.toByteArray()))
+            .file(invalid).header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isBadRequest());
         String url="/storage/media/"+media+"/references/"+ref+"/variants/MASTER";
         mvc.perform(get(url).header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isOk()).andExpect(header().string("Cache-Control","private, no-store"));
         mvc.perform(get(url).header("Authorization","Bearer "+other.accessToken())).andExpect(status().isNotFound());

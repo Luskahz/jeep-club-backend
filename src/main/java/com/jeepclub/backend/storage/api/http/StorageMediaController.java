@@ -17,13 +17,14 @@ public class StorageMediaController {
     private final MediaUploadService upload;private final MediaResolutionService resolution;private final MediaReferenceService references;
     public StorageMediaController(MediaUploadService upload,MediaResolutionService resolution,MediaReferenceService references) { this.upload=upload;this.resolution=resolution;this.references=references; }
     @PostMapping(value="/profile",consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<MediaUploadService.Uploaded> upload(@AuthenticationPrincipal UserPrincipal user,@RequestPart("file") MultipartFile file) throws IOException {
+    public ResponseEntity<MediaUploadService.Uploaded> upload(@AuthenticationPrincipal UserPrincipal user,@RequestPart("file") MultipartFile file,
+        @RequestPart(value="options",required=false) com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Options options) throws IOException {
         if(user==null) throw new AccessDeniedException("Media unavailable");
         if(file.getSize()<=0 || file.getSize()>10*1024*1024) throw new IllegalArgumentException("Invalid upload size");
         return ResponseEntity.status(201).cacheControl(CacheControl.noStore()).body(upload.upload(user.getUserId(),MediaContext.IDENTITY_PROFILE,user.getUserId().toString(),() -> {
             try(var input=file.getInputStream()) {return input.readNBytes(10*1024*1024+1);}
             catch(IOException failure) {throw new java.io.UncheckedIOException(failure);}
-        }));
+        },options == null ? com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Options.defaults() : options));
     }
     public record Association(MediaContext context,String consumerId,String role) {}
     @PostMapping("/{mediaId}/references") public long associate(@AuthenticationPrincipal UserPrincipal user,@PathVariable long mediaId,@RequestBody Association association) {

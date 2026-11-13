@@ -26,6 +26,9 @@ public class MediaUploadService {
         return upload(actor,context,consumerId,() -> bytes);
     }
     public Uploaded upload(long actor,MediaContext context,String consumerId,java.util.function.Supplier<byte[]> content) {
+        return upload(actor,context,consumerId,content,MediaImageProcessor.Options.defaults());
+    }
+    public Uploaded upload(long actor,MediaContext context,String consumerId,java.util.function.Supplier<byte[]> content,MediaImageProcessor.Options options) {
         long started=System.nanoTime();try {
         if(actor<=0) throw new AccessDeniedException("Media unavailable");
         var policy=policies.stream().filter(p -> p.context()==context && p.mayUpload(actor,consumerId)).findFirst()
@@ -33,7 +36,7 @@ public class MediaUploadService {
         var identity=policy.uploadIdentity(actor,consumerId);
         var permit=admission.reserve(actor);
         try {
-        var processed=images.process(content.get(),context);
+        var processed=images.process(content.get(),context,options);
         admission.charge(permit,processed.images().stream().mapToLong(i -> i.bytes().length).sum());
         var stored=processed.images().stream().map(i -> blobs.store(i.bytes())).toList();
         return transaction.execute(status -> {

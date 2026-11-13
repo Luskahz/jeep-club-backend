@@ -30,6 +30,27 @@ class SynchronousImageProcessorTest {
         exposed[0] ^= 1;
         assertThat(result.master().bytes()).containsExactly(original);
     }
+    @Test void normalizedCropsAreIndependentAndOmissionDoesNotCrop() throws Exception {
+        var processor = new SynchronousImageProcessor();
+        var presets = List.of(new SynchronousImageProcessor.Preset("AVATAR_SMALL", 64, 64, null),
+                new SynchronousImageProcessor.Preset("CARD", 64, 64, null));
+        byte[] source = image();
+        var uncropped = processor.process(source, SynchronousImageProcessor.Category.PROFILE, presets);
+        var crops = java.util.Map.of("AVATAR_SMALL", new com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Crop(0, 0, 2d/3d, 1),
+                "CARD", new com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Crop(0, 0, .5, 1));
+        var cropped = processor.process(source, SynchronousImageProcessor.Category.PROFILE, presets, crops);
+        assertThat(uncropped.variants().get(0).width()).isEqualTo(64);
+        assertThat(uncropped.variants().get(0).height()).isEqualTo(43);
+        assertThat(cropped.variants().get(0).width()).isEqualTo(64);
+        assertThat(cropped.variants().get(0).height()).isEqualTo(64);
+        assertThat(cropped.variants().get(1).width()).isEqualTo(48);
+        assertThat(cropped.variants().get(1).height()).isEqualTo(64);
+        assertThat(cropped.master().bytes()).containsExactly(uncropped.master().bytes());
+        assertThatThrownBy(() -> new com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Crop(Double.NaN, 0, 1, 1)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Crop(.5, 0, .6, 1)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> processor.process(source, SynchronousImageProcessor.Category.PROFILE, presets,
+                java.util.Map.of("MASTER", crops.get("CARD")))).isInstanceOf(IllegalArgumentException.class);
+    }
     @Test void rejectsInvalidInputDuplicatePresetsAndOutOfBoundsCrop() throws Exception {
         var processor = new SynchronousImageProcessor();
         assertThatThrownBy(() -> processor.process(new byte[11 * 1024 * 1024], SynchronousImageProcessor.Category.OTHER, List.of())).isInstanceOf(IllegalArgumentException.class);

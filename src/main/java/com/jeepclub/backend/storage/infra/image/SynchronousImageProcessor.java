@@ -42,8 +42,13 @@ public final class SynchronousImageProcessor {
     public record Result(String receivedSha256, Image master, List<Image> variants) {}
 
     public Result process(byte[] input, Category category, List<Preset> presets) throws IOException {
+        return process(input, category, presets, java.util.Map.of());
+    }
+    public Result process(byte[] input, Category category, List<Preset> presets,
+                          java.util.Map<String, com.jeepclub.backend.storage.core.repository.MediaImageProcessor.Crop> crops) throws IOException {
         if (input == null || input.length == 0 || input.length > MAX_INPUT || category == null || presets == null || presets.size() > 16
-                || presets.stream().map(Preset::code).distinct().count() != presets.size())
+                || crops == null || presets.stream().map(Preset::code).distinct().count() != presets.size()
+                || !presets.stream().map(Preset::code).collect(java.util.stream.Collectors.toSet()).containsAll(crops.keySet()))
             throw new IllegalArgumentException("Invalid upload");
         if (!capacity.tryAcquire()) throw new IllegalStateException("Image processing capacity exceeded");
         try {
@@ -59,15 +64,21 @@ public final class SynchronousImageProcessor {
             if (masterBytes.length > limit) throw new IllegalArgumentException("MASTER exceeds category limit");
             String mime = masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg";
             Image master = image("MASTER", masterImage, masterBytes, mime);
+            // Derivatives use the actual persisted, sanitized MASTER, not a parallel source image.
+            masterImage = decode(masterBytes);
             var variants = new java.util.ArrayList<Image>();
             long derivedPixels=0,totalBytes=masterBytes.length;
             for (Preset preset : presets) {
                 Crop selected=preset.crop();
-                if(selected==null && preset.code().equals("AVATAR_SMALL")) {
-                    int side=Math.min(source.getWidth(),source.getHeight());
-                    selected=new Crop((source.getWidth()-side)/2,(source.getHeight()-side)/2,side,side);
+                var normalized = crops.get(preset.code());
+                if (normalized != null) {
+                    int x=(int)Math.floor(normalized.x()*masterImage.getWidth());
+                    int y=(int)Math.floor(normalized.y()*masterImage.getHeight());
+                    int right=Math.min(masterImage.getWidth(),(int)Math.ceil((normalized.x()+normalized.width())*masterImage.getWidth()));
+                    int bottom=Math.min(masterImage.getHeight(),(int)Math.ceil((normalized.y()+normalized.height())*masterImage.getHeight()));
+                    selected=new Crop(x,y,right-x,bottom-y);
                 }
-                BufferedImage cropped = crop(source, selected);
+                BufferedImage cropped = crop(masterImage, selected);
                 BufferedImage resized = resize(cropped, preset.maxWidth(), preset.maxHeight());
                 derivedPixels+=(long)resized.getWidth()*resized.getHeight();
                 if(derivedPixels>20_000_000L) throw new IllegalArgumentException("Variant pixel budget exceeded");
