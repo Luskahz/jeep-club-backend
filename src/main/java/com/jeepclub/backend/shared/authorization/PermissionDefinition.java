@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 public enum PermissionDefinition {
     STORAGE_MEDIA_READ(PermissionCode.STORAGE_MEDIA_READ, ModuleCode.STORAGE, "Storage: read"),
+    STORAGE_MEDIA_PREVIEW(PermissionCode.STORAGE_MEDIA_PREVIEW, ModuleCode.STORAGE, "Storage: preview content"),
     STORAGE_MEDIA_MODERATE(PermissionCode.STORAGE_MEDIA_MODERATE, ModuleCode.STORAGE, "Storage: moderate"),
     STORAGE_MEDIA_RESTORE(PermissionCode.STORAGE_MEDIA_RESTORE, ModuleCode.STORAGE, "Storage: restore"),
     STORAGE_MEDIA_AUDIT_READ(PermissionCode.STORAGE_MEDIA_AUDIT_READ, ModuleCode.STORAGE, "Storage: audit read"),

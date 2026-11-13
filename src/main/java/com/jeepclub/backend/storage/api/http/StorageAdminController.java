@@ -45,12 +45,13 @@ public class StorageAdminController {
     public record ReferenceView(long referenceId,MediaContext context,String consumerId,String role,Instant linkedAt,Instant unlinkedAt) {}
     @GetMapping("/{mediaId}/audit") @PreAuthorize("hasAuthority('STORAGE_MEDIA_AUDIT_READ')") @RequiredPermission("STORAGE_MEDIA_AUDIT_READ")
     public List<MediaAdministration.Event> audit(@PathVariable long mediaId,@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit) { return admin.events(mediaId,afterId,limit); }
-    @GetMapping("/{mediaId}/references/{referenceId}/preview/{code}") @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
-    public org.springframework.http.ResponseEntity<byte[]> preview(@PathVariable long mediaId,@PathVariable long referenceId,@PathVariable String code,@AuthenticationPrincipal UserPrincipal actor) {
+    @GetMapping("/{mediaId}/references/{referenceId}/preview/{code}") @PreAuthorize("hasAuthority('STORAGE_MEDIA_PREVIEW')") @RequiredPermission("STORAGE_MEDIA_PREVIEW")
+    public org.springframework.http.ResponseEntity<byte[]> preview(@PathVariable long mediaId,@PathVariable long referenceId,@PathVariable String code,
+        @RequestParam MediaGovernance.PreviewPurpose purpose,@AuthenticationPrincipal UserPrincipal actor) {
         com.jeepclub.backend.storage.core.application.MediaResolutionService.Content content;
         try { content=resolution.resolve(actor.getUserId(),mediaId,referenceId,code); }
         catch (org.springframework.security.access.AccessDeniedException denied) { throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException(); }
-        governance.previewAccess(mediaId,referenceId,audit(actor));
+        governance.previewAccess(mediaId,referenceId,purpose,audit(actor));
         return org.springframework.http.ResponseEntity.ok().header("Cache-Control","private, no-store").contentType(org.springframework.http.MediaType.parseMediaType(content.mimeType())).body(content.bytes());
     }
     public record Moderate(Long referenceId,ModerationDecision.State state,ModerationDecision.Reason reason,String internalNote) {}

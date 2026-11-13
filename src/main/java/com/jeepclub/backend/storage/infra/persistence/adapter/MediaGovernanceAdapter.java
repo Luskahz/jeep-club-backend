@@ -35,10 +35,11 @@ public class MediaGovernanceAdapter implements MediaGovernance {
         }
         event(decision.mediaId(),decision.referenceId(),"MODERATION",decision.state().name(),decision.reason().name(),decision.internalNote(),decision.actorUserId(),decision.occurredAt());
     }
-    @Override public void previewAccess(long mediaId,long referenceId,MediaAuditContext audit) {
+    @Override public void previewAccess(long mediaId,long referenceId,PreviewPurpose purpose,MediaAuditContext audit) {
+        if (purpose==null) throw new IllegalArgumentException("Preview purpose required");
         var reference=em.find(MediaReferenceEntity.class,referenceId);
         if(reference==null || !reference.getMediaId().equals(mediaId)) throw new IllegalArgumentException("Reference mismatch");
-        event(mediaId,referenceId,"ADMIN_PREVIEW",null,null,null,audit.actorUserId(),audit.occurredAt());
+        event(mediaId,referenceId,"ADMIN_PREVIEW",null,purpose.name(),null,audit.actorUserId(),audit.occurredAt());
     }
     @Override public void legalHold(long id,boolean held,String justification,MediaAuditContext audit) {
         if(justification==null || justification.isBlank() || justification.length()>2000) throw new IllegalArgumentException("Hold justification required");

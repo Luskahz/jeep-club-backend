@@ -2,6 +2,7 @@ package com.jeepclub.backend.shared.authorization;
 
 public enum PermissionCode {
     STORAGE_MEDIA_READ,
+    STORAGE_MEDIA_PREVIEW,
     STORAGE_MEDIA_MODERATE,
     STORAGE_MEDIA_RESTORE,
     STORAGE_MEDIA_AUDIT_READ,
