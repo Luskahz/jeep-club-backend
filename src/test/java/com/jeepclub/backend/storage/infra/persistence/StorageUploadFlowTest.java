@@ -498,8 +498,8 @@ class StorageUploadFlowTest {
         try {assertThatThrownBy(() -> upload.upload(98,MediaContext.IDENTITY_PROFILE,"98",() -> {throw new AssertionError("Payload read before admission");})).isInstanceOf(UploadAdmission.LimitExceeded.class);}
         finally {admission.finish(a);admission.finish(b);}
     }
-    @Test void publishedWave3CopiedCheckpointIsReappliedWithoutCreatingAnotherAssetOrCopy() {
-        String key="images/wave3-copy.jpg";byte[] bytes=legacySource.read(key);var blob=blobs.store(bytes);
+    @Test void publishedWave3CopiedCheckpointIsReappliedWithoutCreatingAnotherAssetOrCopy() throws Exception {
+        String key="images/wave3-copy.jpg";byte[] bytes=image(115);legacySource.changes.put(key,bytes);var blob=blobs.store(bytes);
         var audit=new MediaAuditContext(MediaActorKind.SYSTEM,null,Instant.now(),null);
         long id=new TransactionTemplate(manager).execute(status -> {
             String sourceId=BlobCatalogAdapter.digest(("LOCAL\0"+key).getBytes(java.nio.charset.StandardCharsets.UTF_8));
@@ -511,9 +511,19 @@ class StorageUploadFlowTest {
             return asset.mediaId();
         });
         legacy.rollback(key,audit);assertThat(legacy.apply(key,audit).mediaId()).isEqualTo(id);
+        assertThat(catalog.findAsset(id).orElseThrow().physicalState()).isEqualTo(MediaPhysicalState.PRESENT);
         assertThat(catalog.findVariant(id,"MASTER").orElseThrow().storageKey()).isEqualTo(blob.storageKey());
         assertThat(jdbc.queryForObject("select count(*) from storage_media_variants where media_id=?",Long.class,id)).isEqualTo(1);
         assertThat(blobs.read(blob)).containsExactly(bytes);
+    }
+    @Test void reapplyingCheckpointDoesNotUndoIndependentLogicalDiscard() throws Exception {
+        String key="images/independently-discarded.jpg";legacySource.changes.put(key,image(116));
+        long id=legacy.apply(key,systemAudit()).mediaId();admin.discard(id,systemAudit());
+        assertThat(legacy.apply(key,systemAudit()).mediaId()).isEqualTo(id);
+        assertThat(admin.list(0,100,MediaContext.UNKNOWN,"DISCARDED")).extracting(MediaAdministration.Entry::mediaId).contains(id);
+        var now=systemAudit();
+        assertThatThrownBy(()->catalog.recordReference(new MediaReference(null,id,MediaContext.IDENTITY_PROFILE,"116","PHOTO",null,
+            MediaOrigin.LEGACY_IMPORT,now.occurredAt(),null,null,null,null,null),now)).isInstanceOf(IllegalArgumentException.class);
     }
     @Test void realLegacySourcePersistsVerifiedMimeAndDimensionsWithoutCopy() throws Exception {
         String key="images/2026/11/09/550e8400-e29b-41d4-a716-446655440000.jpg";byte[] bytes=image(99);

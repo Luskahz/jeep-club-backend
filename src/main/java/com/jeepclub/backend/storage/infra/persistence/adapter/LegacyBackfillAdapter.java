@@ -74,7 +74,8 @@ public class LegacyBackfillAdapter implements LegacyBackfill {
     }
     private boolean verifiedImage(LegacyMediaSource.Metadata actual,String mime,Integer width,Integer height) {
         return actual.width()!=null && actual.height()!=null && actual.mimeType().startsWith("image/")
-            && actual.mimeType().equals(mime) && actual.width().equals(width) && actual.height().equals(height);
+            && ("application/octet-stream".equals(mime) || actual.mimeType().equals(mime))
+            && ((width==null && height==null) || (actual.width().equals(width) && actual.height().equals(height)));
     }
     @Override public void rollback(String key,MediaAuditContext actor) {
         if(!enabled) throw new IllegalStateException("Legacy backfill disabled");
