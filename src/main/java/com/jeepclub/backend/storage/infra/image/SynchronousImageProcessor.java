@@ -58,7 +58,7 @@ public final class SynchronousImageProcessor {
             BufferedImage source = ExifOrientation.apply(decoded, orientation);
             int limit = (category == Category.OTHER ? 5 : 2) * 1024 * 1024;
             byte[] preserved = orientation == 1 && source.getWidth() <= 4096 && source.getHeight() <= 4096
-                    ? sanitizePngWithoutRecompression(snapshot) : null;
+                    ? (isWebp(snapshot) ? sanitizeWebpWithoutRecompression(snapshot) : sanitizePngWithoutRecompression(snapshot)) : null;
             if (preserved != null && preserved.length > limit) preserved = null;
             BufferedImage masterImage = resize(source, 4096, 4096);
             byte[] masterBytes = preserved != null ? preserved : encode(masterImage);
@@ -67,7 +67,8 @@ public final class SynchronousImageProcessor {
                 masterBytes=encode(masterImage);
             }
             if (masterBytes.length > limit) throw new IllegalArgumentException("MASTER exceeds category limit");
-            String mime = preserved != null || masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg";
+            String mime = preserved != null ? (isWebp(preserved) ? "image/webp" : "image/png")
+                    : (masterImage.getColorModel().hasAlpha() ? "image/png" : "image/jpeg");
             Image master = image("MASTER", masterImage, masterBytes, mime);
             // Derivatives use the actual persisted, sanitized MASTER, not a parallel source image.
             masterImage = decode(masterBytes);
@@ -94,6 +95,29 @@ public final class SynchronousImageProcessor {
             }
             return new Result(hash(snapshot), master, List.copyOf(variants));
         } finally { capacity.release(); }
+    }
+    /** Preserve compressed image chunks only; profiles/unknown chunks require a fresh encoding. */
+    private static byte[] sanitizeWebpWithoutRecompression(byte[] bytes) throws IOException {
+        var out = new ByteArrayOutputStream(bytes.length);
+        out.write(bytes, 0, 12);
+        int pos=12;
+        while (pos<bytes.length) {
+            int n=java.nio.ByteBuffer.wrap(bytes,pos+4,4).order(java.nio.ByteOrder.LITTLE_ENDIAN).getInt();
+            int size=8+n+(n&1);
+            String type=new String(bytes,pos,4,java.nio.charset.StandardCharsets.US_ASCII);
+            if (type.equals("EXIF") || type.equals("XMP ")) { pos+=size; continue; }
+            if (!java.util.Set.of("VP8X","VP8 ","VP8L","ALPH").contains(type)) return null;
+            if (type.equals("VP8X")) {
+                if (n!=10 || (bytes[pos+8]&0x20)!=0) return null;
+                byte[] chunk=java.util.Arrays.copyOfRange(bytes,pos,pos+size);
+                chunk[8]=(byte)(chunk[8]&~0x0c); // EXIF and XMP flags
+                out.write(chunk);
+            } else out.write(bytes,pos,size);
+            pos+=size;
+        }
+        byte[] sanitized=out.toByteArray();
+        java.nio.ByteBuffer.wrap(sanitized,4,4).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(sanitized.length-8);
+        return sanitized;
     }
     /** Called only after full container and image validation. Unknown critical/color profiles use re-encoding. */
     private static byte[] sanitizePngWithoutRecompression(byte[] bytes) throws IOException {

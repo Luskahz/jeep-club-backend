@@ -109,4 +109,20 @@ class SynchronousImageProcessorTest {
         assertThat(jpegFallback.mime()).isEqualTo("image/jpeg");
         assertThat(ImageIO.read(new java.io.ByteArrayInputStream(jpegFallback.bytes()))).isNotNull();
     }
+    @Test void webpMasterRemovesMetadataWithoutRecompressingImage() throws Exception {
+        var image = new BufferedImage(12, 8, BufferedImage.TYPE_INT_ARGB);
+        image.setRGB(2,3,0x40112233);
+        byte[] original=dev.matrixlab.webp4j.WebPCodec.encodeLosslessImage(image);
+        var out=new ByteArrayOutputStream(); out.write(original);
+        byte[] metadata="private-location".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        out.write(new byte[]{'X','M','P',' ',(byte)metadata.length,0,0,0}); out.write(metadata);
+        if ((metadata.length&1)!=0) out.write(0);
+        byte[] uploaded=out.toByteArray();
+        java.nio.ByteBuffer.wrap(uploaded,4,4).order(java.nio.ByteOrder.LITTLE_ENDIAN).putInt(uploaded.length-8);
+        var result=new SynchronousImageProcessor().process(uploaded,SynchronousImageProcessor.Category.PROFILE,List.of());
+        assertThat(result.master().mimeType()).isEqualTo("image/webp");
+        assertThat(result.master().bytes()).containsExactly(original);
+        assertThat(result.receivedSha256()).isNotEqualTo(result.master().sha256());
+        assertThat(dev.matrixlab.webp4j.WebPCodec.decodeImage(result.master().bytes()).getRGB(2,3)).isEqualTo(0x40112233);
+    }
 }
