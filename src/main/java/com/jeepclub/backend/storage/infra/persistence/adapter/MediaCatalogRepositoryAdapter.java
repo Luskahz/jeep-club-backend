@@ -136,7 +136,10 @@ public class MediaCatalogRepositoryAdapter implements MediaCatalogRepository {
         if(reference.isCurrent()) {
             var existing=entityManager.createQuery("select r from MediaReferenceEntity r where r.mediaId=:media and r.context=:context and r.consumerId=:consumer and r.role=:role and r.unlinkedAt is null",MediaReferenceEntity.class)
                 .setParameter("media",reference.mediaId()).setParameter("context",reference.context())
-                .setParameter("consumer",reference.consumerId()).setParameter("role",reference.role()).getResultList();
+                .setParameter("consumer",reference.consumerId()).setParameter("role",reference.role())
+                // MySQL REPEATABLE_READ must see the winner committed before our asset lock,
+                // rather than the snapshot established by the consumer's earlier reads.
+                .setLockMode(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE).getResultList();
             var same=existing.stream().filter(r -> Objects.equals(r.getPosition(),reference.position())).findFirst();
             if(same.isPresent()) return MediaCatalogMapper.toDomain(same.get());
         }
