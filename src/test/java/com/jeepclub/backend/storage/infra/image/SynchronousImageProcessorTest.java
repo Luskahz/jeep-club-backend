@@ -20,6 +20,7 @@ class SynchronousImageProcessorTest {
         assertThat(result.master().bytes().length).isLessThanOrEqualTo(2 * 1024 * 1024);
         assertThat(result.variants()).extracting(SynchronousImageProcessor.Image::width).containsExactly(32, 60);
         assertThat(result.variants()).extracting(SynchronousImageProcessor.Image::height).containsExactly(32, 80);
+        assertThat(result.variants()).extracting(SynchronousImageProcessor.Image::mimeType).containsExactly("image/webp", "image/webp");
         assertThat(result.master().sha256()).hasSize(64);
         assertThat(result.receivedSha256()).isEqualTo(result.master().sha256());
     }
@@ -92,5 +93,20 @@ class SynchronousImageProcessorTest {
         assertThat(result.master().bytes()).containsExactly(original);
         assertThat(result.receivedSha256()).isNotEqualTo(result.master().sha256());
         assertThat(ImageIO.read(new java.io.ByteArrayInputStream(result.master().bytes())).getRGB(2,3)).isEqualTo(0x40112233);
+    }
+    @Test void webpCodecPreservesTransparencyAndHasSafeFallbacks() throws Exception {
+        assertThat(dev.matrixlab.webp4j.WebPCodec.isAvailable()).isTrue();
+        var image = new BufferedImage(12, 8, BufferedImage.TYPE_INT_ARGB);
+        image.setRGB(2, 3, 0x40112233);
+        var encoded = SynchronousImageProcessor.encodePresentation(image,
+                value -> dev.matrixlab.webp4j.WebPCodec.encodeLosslessImage(value));
+        assertThat(encoded.mime()).isEqualTo("image/webp");
+        assertThat(dev.matrixlab.webp4j.WebPCodec.decodeImage(encoded.bytes()).getRGB(2,3)).isEqualTo(0x40112233);
+        var pngFallback = SynchronousImageProcessor.encodePresentation(image, value -> { throw new java.io.IOException("codec failed"); });
+        assertThat(pngFallback.mime()).isEqualTo("image/png");
+        assertThat(ImageIO.read(new java.io.ByteArrayInputStream(pngFallback.bytes())).getRGB(2,3)).isEqualTo(0x40112233);
+        var jpegFallback = SynchronousImageProcessor.encodePresentation(new BufferedImage(2,2,BufferedImage.TYPE_INT_RGB), value -> new byte[]{1,2});
+        assertThat(jpegFallback.mime()).isEqualTo("image/jpeg");
+        assertThat(ImageIO.read(new java.io.ByteArrayInputStream(jpegFallback.bytes()))).isNotNull();
     }
 }

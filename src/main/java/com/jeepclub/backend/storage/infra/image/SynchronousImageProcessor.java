@@ -184,20 +184,23 @@ public final class SynchronousImageProcessor {
         finally { g.dispose(); }
         return out;
     }
-    private record Encoded(byte[] bytes,String mime) {}
+    record Encoded(byte[] bytes,String mime) {}
+    @FunctionalInterface interface WebpEncoder { byte[] encode(BufferedImage image) throws IOException; }
     private static Encoded encodePresentation(BufferedImage image) throws IOException {
-        var writers=ImageIO.getImageWritersByFormatName("webp");
-        if(!writers.hasNext()) return new Encoded(encode(image),image.getColorModel().hasAlpha()?"image/png":"image/jpeg");
-        var writer=writers.next();
-        try(var bytes=new ByteArrayOutputStream();var output=ImageIO.createImageOutputStream(bytes)) {
-            writer.setOutput(output);var param=writer.getDefaultWriteParam();
-            if(param.canWriteCompressed()) {
-                param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-                var types=param.getCompressionTypes();if(types!=null && types.length>0) param.setCompressionType(types[0]);
-                param.setCompressionQuality(0.85f);
-            }
-            writer.write(null,new IIOImage(image,null,null),param);output.flush();return new Encoded(bytes.toByteArray(),"image/webp");
-        } finally { writer.dispose(); }
+        return encodePresentation(image, i -> {
+            if (!dev.matrixlab.webp4j.WebPCodec.isAvailable()) throw new IOException("WebP unavailable");
+            return dev.matrixlab.webp4j.WebPCodec.encodeImage(i, 85f, i.getColorModel().hasAlpha());
+        });
+    }
+    static Encoded encodePresentation(BufferedImage image, WebpEncoder encoder) throws IOException {
+        try {
+            byte[] bytes = encoder.encode(image);
+            if (bytes == null || bytes.length < 12 || bytes[0]!='R' || bytes[1]!='I' || bytes[2]!='F' || bytes[3]!='F'
+                    || bytes[8]!='W' || bytes[9]!='E' || bytes[10]!='B' || bytes[11]!='P') throw new IOException("Invalid WebP result");
+            return new Encoded(bytes,"image/webp");
+        } catch (IOException | RuntimeException | LinkageError unavailable) {
+            return new Encoded(encode(image),image.getColorModel().hasAlpha()?"image/png":"image/jpeg");
+        }
     }
     private static byte[] encode(BufferedImage image) throws IOException {
         boolean alpha = image.getColorModel().hasAlpha();

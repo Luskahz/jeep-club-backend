@@ -98,7 +98,8 @@ class StorageHttpFlowTest {
             com.jeepclub.backend.storage.core.domain.enums.MediaContext.IDENTITY_PROFILE,Long.toString(actor),"PHOTO"));
         var avatar=mvc.perform(get("/storage/media/"+media+"/references/"+ref+"/variants/AVATAR_SMALL")
             .header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
-        var decoded=ImageIO.read(new java.io.ByteArrayInputStream(avatar));
+        var decoded=avatar.length>12 && avatar[8]=='W' && avatar[9]=='E' && avatar[10]=='B' && avatar[11]=='P'
+            ? dev.matrixlab.webp4j.WebPCodec.decodeImage(avatar) : ImageIO.read(new java.io.ByteArrayInputStream(avatar));
         org.assertj.core.api.Assertions.assertThat(decoded.getWidth()).isEqualTo(decoded.getHeight());
         var invalid=new MockMultipartFile("options","","application/json",
             "{\"crops\":{\"AVATAR_SMALL\":{\"x\":0.9,\"y\":0,\"width\":0.5,\"height\":1}}}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
