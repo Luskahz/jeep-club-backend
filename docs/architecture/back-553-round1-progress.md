@@ -1,0 +1,15 @@
+# BACK-553 — detalhe e consulta administrativa
+
+`GET /admin/storage/media` combina uploader, owner, intervalo de criação `[createdFrom, createdBefore)`, contexto de origem, MIME de qualquer variante, uso, moderação e estado físico. O cursor `afterId` é exclusivo e a ordenação é por ID ascendente; o limite aceito é 1–100. Por padrão são omitidos assets descartados; `state=DISCARDED` os inclui. `usage=ACTIVE` exige vínculo atual; `HISTORICAL_ONLY` exige histórico e nenhum atual; `UNREFERENCED` exige ausência de vínculos. O filtro por MIME usa `exists`, sem multiplicar assets por variante. Não há snapshot entre páginas diante de escritas concorrentes.
+
+`GET /admin/storage/media/{mediaId}` retorna estado físico, moderação e descarte separadamente, classificação, datas, lista sanitizada de variantes e intervalos de referência atuais/históricos. `afterVariantId` e `afterReferenceId` são cursores independentes; `nextVariantId`/`nextReferenceId` indicam continuação. O detalhe omite key, caminho, digest, nota interna, sujeito e `consumerId` (o token do consumidor não é garantidamente livre de dados pessoais). Ele não deve ser confundido com autorização de acesso ao binário.
+
+Falta de autenticação responde 401; falta da permission administrativa responde 403; mídia inexistente ou preview negado pelo contexto responde 404. Preview continua exigindo policy contextual e grava auditoria antes de devolver bytes, com `private, no-store`; falha de auditoria impede o retorno de bytes. **Limitação:** preview ainda usa `STORAGE_MEDIA_READ` mais policy contextual, sem permission independente de visualização de conteúdo restrito; a segregação pedida no Jira permanece pendente. O endpoint antigo de referências ainda expõe `consumerId` e precisa ser revisto para minimização sem quebrar o contrato existente.
+
+## Evidências locais
+
+- `mvnw.cmd -Dtest=StorageHttpFlowTest,StorageUploadFlowTest#administrativeSearchCombinesFiltersAndDetailPagesWithoutExposingLocation test`: 5 testes, 4 passaram e benchmark opt-in ignorado; HTTP 401/403/404, JSON sanitizado, OpenAPI, preview autorizado/negado e falha de auditoria. O operador autorizado usa principal de teste com permission explícita; as negativas sem permissão usam JWT real. Busca com filtros combinados gerou uma consulta SQL no teste com estatísticas Hibernate.
+- `mvnw.cmd -Pmysql-migrations -DskipUnitTests=true -Dit.test=StorageBlobMySqlIT#administrativeSearchCombinesFiltersAndDetailPagesWithoutExposingLocation verify`: 1 teste passou em MySQL 8.0.46 com Flyway V1–V23 e Hibernate validate.
+- `mvnw.cmd -Ppublications-postgresql -DskipUnitTests=true -Dit.test=StorageAdminPostgresIT#administrativeSearchCombinesFiltersAndDetailPagesWithoutExposingLocation verify`: 1 teste passou em PostgreSQL 17.6 com DDL Hibernate; não valida Flyway MySQL em PostgreSQL.
+
+Os testes de banco foram executados antes das alterações finais restritas a anotações OpenAPI e testes HTTP; não são evidência de uma suíte global nem de CI. A quantidade fixa de consultas não constitui benchmark de volume. Não há migration, integração de consumidores, deploy ou mudança de flags nesta etapa.

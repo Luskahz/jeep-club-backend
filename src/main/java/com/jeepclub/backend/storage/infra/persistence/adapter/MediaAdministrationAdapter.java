@@ -21,11 +21,63 @@ public class MediaAdministrationAdapter implements MediaAdministration {
         this.em=em;this.commonDays=commonDays;this.sensitiveDays=sensitiveDays;
     }
     @Override @Transactional(readOnly=true) public List<Entry> list(long afterId,int limit,MediaContext context,String state) {
-        page(afterId,limit);
-        return em.createQuery("select a,c from MediaAssetEntity a,MediaControlEntity c where a.mediaId=c.mediaId and a.mediaId>:after and (:context is null or a.sourceContext=:context) and ((:state is null and c.discarded=false) or (:state='DISCARDED' and c.discarded=true) or (c.discarded=false and c.state=:state)) order by a.mediaId",Object[].class)
-            .setParameter("after",afterId).setParameter("context",context).setParameter("state",state).setMaxResults(limit).getResultList().stream().map(row -> {
+        return search(new Search(afterId,limit,context,state,null,null,null,null,null,null,null,null));
+    }
+    @Override @Transactional(readOnly=true) public List<Entry> search(Search f) {
+        if (f==null) throw new IllegalArgumentException("Missing filter");
+        page(f.afterId(),f.limit());
+        if ((f.uploader()!=null && f.uploader()<=0) || (f.owner()!=null && f.owner()<=0)
+                || (f.createdFrom()!=null && f.createdBefore()!=null && !f.createdFrom().isBefore(f.createdBefore()))
+                || (f.mime()!=null && !f.mime().matches("[a-z0-9.+-]{1,60}/[a-z0-9.+-]{1,60}"))
+                || (f.state()!=null && !java.util.Set.of("DISCARDED","VISIBLE","UNDER_REVIEW","HIDDEN","BLOCKED").contains(f.state()))
+                || (f.moderation()!=null && !java.util.Set.of("VISIBLE","UNDER_REVIEW","HIDDEN","BLOCKED").contains(f.moderation())))
+            throw new IllegalArgumentException("Invalid media filter");
+        var jpql=new StringBuilder("select a,c from MediaAssetEntity a,MediaControlEntity c where a.mediaId=c.mediaId and a.mediaId>:after");
+        if(f.context()!=null) jpql.append(" and a.sourceContext=:context");
+        if(f.state()==null) jpql.append(" and c.discarded=false");
+        else if(f.state().equals("DISCARDED")) jpql.append(" and c.discarded=true");
+        else jpql.append(" and c.discarded=false and c.state=:state");
+        if(f.uploader()!=null) jpql.append(" and a.uploadedByUserId=:uploader");
+        if(f.owner()!=null) jpql.append(" and a.ownerUserId=:owner");
+        if(f.createdFrom()!=null) jpql.append(" and a.createdAt>=:fromDate");
+        if(f.createdBefore()!=null) jpql.append(" and a.createdAt<:beforeDate");
+        if(f.mime()!=null) jpql.append(" and exists (select v.variantId from MediaVariantEntity v where v.mediaId=a.mediaId and v.mimeType=:mime)");
+        if(f.moderation()!=null) jpql.append(" and c.state=:moderation");
+        if(f.physicalState()!=null) jpql.append(" and a.physicalState=:physical");
+        if(f.usage()==Usage.ACTIVE) jpql.append(" and exists (select r.referenceId from MediaReferenceEntity r where r.mediaId=a.mediaId and r.unlinkedAt is null)");
+        if(f.usage()==Usage.HISTORICAL_ONLY) jpql.append(" and exists (select r.referenceId from MediaReferenceEntity r where r.mediaId=a.mediaId and r.unlinkedAt is not null) and not exists (select r.referenceId from MediaReferenceEntity r where r.mediaId=a.mediaId and r.unlinkedAt is null)");
+        if(f.usage()==Usage.UNREFERENCED) jpql.append(" and not exists (select r.referenceId from MediaReferenceEntity r where r.mediaId=a.mediaId)");
+        var q=em.createQuery(jpql.append(" order by a.mediaId").toString(),Object[].class).setParameter("after",f.afterId()).setMaxResults(f.limit());
+        if(f.context()!=null) q.setParameter("context",f.context());
+        if(f.state()!=null && !f.state().equals("DISCARDED")) q.setParameter("state",f.state());
+        if(f.uploader()!=null) q.setParameter("uploader",f.uploader());
+        if(f.owner()!=null) q.setParameter("owner",f.owner());
+        if(f.createdFrom()!=null) q.setParameter("fromDate",f.createdFrom());
+        if(f.createdBefore()!=null) q.setParameter("beforeDate",f.createdBefore());
+        if(f.mime()!=null) q.setParameter("mime",f.mime());
+        if(f.moderation()!=null) q.setParameter("moderation",f.moderation());
+        if(f.physicalState()!=null) q.setParameter("physical",f.physicalState());
+        return q.getResultList().stream().map(row -> {
                 var a=(MediaAssetEntity)row[0];var c=(MediaControlEntity)row[1];return new Entry(a.getMediaId(),a.getSourceContext(),a.getCreatedAt(),c.isDiscarded()?"DISCARDED":c.getState(),c.isSensitive(),c.isLegalHold());
             }).toList();
+    }
+    @Override @Transactional(readOnly=true) public Detail detail(long mediaId,long afterVariantId,long afterReferenceId,int limit) {
+        if (mediaId<=0) throw new IllegalArgumentException("Invalid media id");
+        page(afterVariantId,limit);page(afterReferenceId,limit);
+        var rows=em.createQuery("select a,c from MediaAssetEntity a,MediaControlEntity c where a.mediaId=c.mediaId and a.mediaId=:id",Object[].class)
+                .setParameter("id",mediaId).getResultList();
+        if (rows.isEmpty()) throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException();
+        var a=(MediaAssetEntity)rows.get(0)[0];var c=(MediaControlEntity)rows.get(0)[1];
+        var variants=em.createQuery("select v from MediaVariantEntity v where v.mediaId=:id and v.variantId>:after order by v.variantId",MediaVariantEntity.class)
+                .setParameter("id",mediaId).setParameter("after",afterVariantId).setMaxResults(limit+1).getResultList();
+        var references=em.createQuery("select r from MediaReferenceEntity r where r.mediaId=:id and r.referenceId>:after order by r.referenceId",MediaReferenceEntity.class)
+                .setParameter("id",mediaId).setParameter("after",afterReferenceId).setMaxResults(limit+1).getResultList();
+        Long nextVariant=variants.size()>limit ? variants.get(limit-1).getVariantId() : null;
+        Long nextReference=references.size()>limit ? references.get(limit-1).getReferenceId() : null;
+        return new Detail(mediaId,a.getSourceContext(),a.getOrigin().name(),a.getClassification().name(),a.getPhysicalState().name(),
+                c.getState(),c.isDiscarded(),c.isSensitive(),c.isLegalHold(),a.getCreatedAt(),a.getUpdatedAt(),
+                variants.stream().limit(limit).map(v->new Variant(v.getVariantId(),v.getVariantCode(),v.getRole().name(),v.getMimeType(),v.getSizeBytes(),v.getWidth(),v.getHeight())).toList(),nextVariant,
+                references.stream().limit(limit).map(r->new Reference(r.getReferenceId(),r.getContext(),r.getRole(),r.getPosition(),r.getLinkedAt(),r.getUnlinkedAt())).toList(),nextReference);
     }
     @Override @Transactional(readOnly=true) public List<Event> events(long mediaId,long afterId,int limit) {
         page(afterId,limit);

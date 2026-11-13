@@ -14,12 +14,30 @@ import java.util.List;
 
 @RestController @RequestMapping("/admin/storage/media")
 @ConditionalOnProperty(name="storage.media.enabled",havingValue="true")
+@io.swagger.v3.oas.annotations.responses.ApiResponses({
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="401",description="Autenticação necessária"),
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="403",description="Permissão administrativa insuficiente"),
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="404",description="Mídia ou conteúdo indisponível")
+})
 public class StorageAdminController {
     private final MediaAdministration admin;private final MediaGovernance governance;private final MediaCatalogRepository catalog;private final BlobInspection inspection;private final com.jeepclub.backend.storage.core.application.MediaResolutionService resolution;
     public StorageAdminController(MediaAdministration admin,MediaGovernance governance,MediaCatalogRepository catalog,BlobInspection inspection,com.jeepclub.backend.storage.core.application.MediaResolutionService resolution) {this.admin=admin;this.governance=governance;this.catalog=catalog;this.inspection=inspection;this.resolution=resolution;}
     @GetMapping @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
+    @io.swagger.v3.oas.annotations.Operation(summary="Pesquisar catálogo de mídias",description="Filtros combináveis por uploader, owner, intervalo de criação [from,before), contexto, MIME, uso, moderação e estado físico. Cursor afterId exclusivo, ordem ascendente e limite máximo 100.")
     public List<MediaAdministration.Entry> list(@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit,
-        @RequestParam(required=false) MediaContext context,@RequestParam(required=false) String state) { return admin.list(afterId,limit,context,state); }
+        @RequestParam(required=false) MediaContext context,@RequestParam(required=false) String state,
+        @RequestParam(required=false) Long uploader,@RequestParam(required=false) Long owner,
+        @RequestParam(required=false) Instant createdFrom,@RequestParam(required=false) Instant createdBefore,
+        @RequestParam(required=false) String mime,@RequestParam(required=false) MediaAdministration.Usage usage,
+        @RequestParam(required=false) String moderation,@RequestParam(required=false) MediaPhysicalState physicalState) {
+        return admin.search(new MediaAdministration.Search(afterId,limit,context,state,uploader,owner,createdFrom,createdBefore,mime,usage,moderation,physicalState));
+    }
+    @GetMapping("/{mediaId}") @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
+    @io.swagger.v3.oas.annotations.Operation(summary="Detalhar mídia administrativa",description="Metadados sanitizados, variantes e intervalos de referência; cursores independentes e limite máximo de 100. Não inclui localização física, digest, notas ou dados de identidade.")
+    public MediaAdministration.Detail detail(@PathVariable long mediaId,@RequestParam(defaultValue="0") long afterVariantId,
+        @RequestParam(defaultValue="0") long afterReferenceId,@RequestParam(defaultValue="20") int limit) {
+        return admin.detail(mediaId,afterVariantId,afterReferenceId,limit);
+    }
     @GetMapping("/{mediaId}/references") @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
     public List<ReferenceView> references(@PathVariable long mediaId,@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit) {
         return catalog.findReferences(mediaId,afterId,limit).stream().map(r -> new ReferenceView(r.referenceId(),r.context(),r.consumerId(),r.role(),r.linkedAt(),r.unlinkedAt())).toList();
@@ -29,7 +47,9 @@ public class StorageAdminController {
     public List<MediaAdministration.Event> audit(@PathVariable long mediaId,@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit) { return admin.events(mediaId,afterId,limit); }
     @GetMapping("/{mediaId}/references/{referenceId}/preview/{code}") @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
     public org.springframework.http.ResponseEntity<byte[]> preview(@PathVariable long mediaId,@PathVariable long referenceId,@PathVariable String code,@AuthenticationPrincipal UserPrincipal actor) {
-        var content=resolution.resolve(actor.getUserId(),mediaId,referenceId,code);
+        com.jeepclub.backend.storage.core.application.MediaResolutionService.Content content;
+        try { content=resolution.resolve(actor.getUserId(),mediaId,referenceId,code); }
+        catch (org.springframework.security.access.AccessDeniedException denied) { throw new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException(); }
         governance.previewAccess(mediaId,referenceId,audit(actor));
         return org.springframework.http.ResponseEntity.ok().header("Cache-Control","private, no-store").contentType(org.springframework.http.MediaType.parseMediaType(content.mimeType())).body(content.bytes());
     }

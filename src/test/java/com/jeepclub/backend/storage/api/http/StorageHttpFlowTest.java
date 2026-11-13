@@ -29,7 +29,9 @@ class StorageHttpFlowTest {
     static final Path ROOT;
     static {try {ROOT=Files.createTempDirectory("storage-http-fixture-");}catch(Exception e){throw new ExceptionInInitializerError(e);}}
     @DynamicPropertySource static void properties(DynamicPropertyRegistry r) {r.add("storage.local.root-directory",() -> ROOT.toString());}
-    @Autowired MockMvc mvc; @Autowired UserRegistration users; @Autowired UserQuery query; @Autowired MediaGovernance governance;
+    @Autowired MockMvc mvc; @Autowired UserRegistration users; @Autowired UserQuery query;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean MediaGovernance governance;
+    @Autowired com.jeepclub.backend.storage.core.repository.MediaAdministration administration;
     @Autowired com.jeepclub.backend.storage.core.application.MediaReferenceService references;
     @Autowired org.springframework.transaction.PlatformTransactionManager manager;
     @Autowired com.jeepclub.backend.storage.core.repository.LegacyBackfill backfill;
@@ -76,6 +78,14 @@ class StorageHttpFlowTest {
             .andExpect(header().string("Cache-Control","private, no-store")).andReturn();
         String json=result.getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(json).doesNotContain("storageKey","sha256","SHA-256","namespace","private-images","fixture","secret path");
+    }
+    @Test void openApiPublishesAdministrativeDetailAndFilters() throws Exception {
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+            .andExpect(jsonPath("$['paths']['/admin/storage/media/{mediaId}']['get']['responses']['401']").exists())
+            .andExpect(jsonPath("$['paths']['/admin/storage/media/{mediaId}']['get']['responses']['403']").exists())
+            .andExpect(jsonPath("$['paths']['/admin/storage/media/{mediaId}']['get']['responses']['404']").exists())
+            .andExpect(jsonPath("$['paths']['/admin/storage/media']['get']['parameters'][*].name")
+                .value(org.hamcrest.Matchers.hasItems("uploader","owner","createdFrom","createdBefore","context","mime","usage","moderation","physicalState","afterId","limit")));
     }
     @Test
     @org.junit.jupiter.api.condition.EnabledIfSystemProperty(named="storage.benchmark",matches="true")
@@ -157,7 +167,38 @@ class StorageHttpFlowTest {
         mvc.perform(get(url).header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isOk()).andExpect(header().string("Cache-Control","private, no-store"));
         mvc.perform(get(url).header("Authorization","Bearer "+other.accessToken())).andExpect(status().isNotFound());
         mvc.perform(get(url)).andExpect(status().isUnauthorized());
-        mvc.perform(get("/admin/storage/media").header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isNotFound());
+        mvc.perform(get("/admin/storage/media").header("Authorization","Bearer "+owner.accessToken())).andExpect(status().isForbidden());
+        mvc.perform(get("/admin/storage/media/"+media)).andExpect(status().isUnauthorized());
+        var adminUser=org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("catalog-operator")
+            .authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("STORAGE_MEDIA_READ"));
+        var adminResponse=mvc.perform(get("/admin/storage/media/"+media).with(adminUser)).andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control","private, no-store"))
+            .andExpect(jsonPath("$.mediaId").value(media)).andExpect(jsonPath("$.variants").isArray())
+            .andExpect(jsonPath("$.references").isArray()).andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(adminResponse).doesNotContain("storageKey","checksum","sha256","namespace","internalNote","sourceRecordId","subjectId");
+        mvc.perform(get("/admin/storage/media/9223372036854775807").with(adminUser)).andExpect(status().isNotFound());
+        mvc.perform(get("/admin/storage/media").param("uploader",Long.toString(actor)).param("owner",Long.toString(actor))
+            .param("usage","ACTIVE").param("physicalState","PRESENT").with(adminUser)).andExpect(status().isOk());
+        var authority=new org.springframework.security.core.authority.SimpleGrantedAuthority("STORAGE_MEDIA_READ");
+        var principal=new com.jeepclub.backend.platform.security.principal.UserPrincipal(actor,1L,"fixture",Instant.now().plusSeconds(300));
+        var auth=org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(principal,"N/A",java.util.List.of(authority));
+        String preview="/admin/storage/media/"+media+"/references/"+ref+"/preview/AVATAR_SMALL";
+        mvc.perform(get(preview).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth)))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control","private, no-store"));
+        long auditCount=administration.events(media,0,100).stream().filter(e -> e.operation().equals("ADMIN_PREVIEW")).count();
+        org.assertj.core.api.Assertions.assertThat(auditCount).isEqualTo(1);
+        long otherId=query.findByCpf("16899535009").orElseThrow().id();
+        var otherPrincipal=new com.jeepclub.backend.platform.security.principal.UserPrincipal(otherId,1L,"other fixture",Instant.now().plusSeconds(300));
+        var otherAuth=org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(otherPrincipal,"N/A",java.util.List.of(authority));
+        mvc.perform(get(preview).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(otherAuth)))
+            .andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(administration.events(media,0,100).stream().filter(e -> e.operation().equals("ADMIN_PREVIEW"))).hasSize(1);
+        org.mockito.Mockito.doThrow(new IllegalStateException("audit unavailable")).when(governance)
+            .previewAccess(org.mockito.ArgumentMatchers.eq(media),org.mockito.ArgumentMatchers.eq(ref),org.mockito.ArgumentMatchers.any());
+        try {
+            mvc.perform(get(preview).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(auth)))
+                .andExpect(status().isServiceUnavailable()).andExpect(header().string("Cache-Control","private, no-store"));
+        } finally {org.mockito.Mockito.doCallRealMethod().when(governance).previewAccess(org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any());}
         governance.moderate(new ModerationDecision(media,null,ModerationDecision.State.BLOCKED,ModerationDecision.Reason.PRIVACY,"internal fixture",actor,Instant.now()));
         mvc.perform(get(url).header("Authorization","Bearer "+owner.accessToken()).header("If-None-Match","*"))
             .andExpect(status().isNotFound()).andExpect(jsonPath("$.reasonCode").value("CONTENT_UNAVAILABLE"));

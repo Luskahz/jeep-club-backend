@@ -8,7 +8,10 @@ import org.springframework.security.access.AccessDeniedException;
 @RestControllerAdvice(assignableTypes={StorageMediaController.class,StorageAdminController.class})
 public class StorageMediaErrors {
     @ExceptionHandler(com.jeepclub.backend.storage.core.repository.UploadAdmission.LimitExceeded.class) public ResponseEntity<ProblemDetail> limited() {return error(429,"Upload allowance exceeded");}
-    @ExceptionHandler({AccessDeniedException.class,com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class}) public ResponseEntity<ProblemDetail> denied() { return error(404,"Media unavailable"); }
+    @ExceptionHandler(AccessDeniedException.class) public ResponseEntity<ProblemDetail> denied(jakarta.servlet.http.HttpServletRequest request) {
+        return request.getRequestURI().startsWith(request.getContextPath()+"/admin/storage/") ? error(403,"Permission required") : error(404,"Media unavailable");
+    }
+    @ExceptionHandler(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class) public ResponseEntity<ProblemDetail> missing() { return error(404,"Media unavailable"); }
     @ExceptionHandler(IllegalArgumentException.class) public ResponseEntity<ProblemDetail> invalid() { return error(400,"Invalid media request"); }
     @ExceptionHandler({IllegalStateException.class,java.io.IOException.class,java.io.UncheckedIOException.class,com.jeepclub.backend.shared.storage.exception.StorageException.class}) public ResponseEntity<ProblemDetail> failed() { return error(503,"Media operation unavailable"); }
     private ResponseEntity<ProblemDetail> error(int status,String detail) { var problem=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status),detail);if(status==404) problem.setProperty("reasonCode","CONTENT_UNAVAILABLE");return ResponseEntity.status(status).header(HttpHeaders.CACHE_CONTROL,"private, no-store").body(problem); }

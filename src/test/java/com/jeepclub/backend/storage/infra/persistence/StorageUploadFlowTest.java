@@ -76,6 +76,39 @@ class StorageUploadFlowTest {
     @Autowired BlobCatalog blobs; @Autowired PhysicalBlobStore physical; @Autowired MediaCatalogRepository catalog;
     @Autowired MediaGovernance governance; @Autowired JdbcTemplate jdbc; @Autowired PlatformTransactionManager manager;
     @Autowired MediaAdministration admin; @Autowired MediaReferenceService references; @Autowired LegacyBackfill legacy; @Autowired BlobInspection inspection;
+    @Test void administrativeSearchCombinesFiltersAndDetailPagesWithoutExposingLocation() throws Exception {
+        var first=upload.upload(888,MediaContext.IDENTITY_PROFILE,"888",image(888));
+        var second=upload.upload(889,MediaContext.IDENTITY_PROFILE,"889",image(889));
+        long active=attach(888,first.mediaId(),MediaContext.IDENTITY_PROFILE,"888","PHOTO");
+        long historical=positionedAttach(888,first.mediaId(),1);
+        var ref=catalog.findReference(historical).orElseThrow();
+        catalog.endReference(ref.end(Instant.now(),888L,"REPLACED"),new MediaAuditContext(MediaActorKind.USER,888L,Instant.now(),null));
+        var asset=catalog.findAsset(first.mediaId()).orElseThrow();
+        var master=catalog.findVariant(first.mediaId(),"MASTER").orElseThrow();
+        var filter=new MediaAdministration.Search(0,20,MediaContext.IDENTITY_PROFILE,null,888L,888L,
+                asset.createdAt().minusSeconds(1),asset.createdAt().plusSeconds(1),master.mimeType(),
+                MediaAdministration.Usage.ACTIVE,"VISIBLE",MediaPhysicalState.PRESENT);
+        var stats=quotaEntityManager.getEntityManagerFactory().unwrap(org.hibernate.SessionFactory.class).getStatistics();
+        boolean previous=stats.isStatisticsEnabled();stats.setStatisticsEnabled(true);stats.clear();
+        try {
+            assertThat(admin.search(filter)).extracting(MediaAdministration.Entry::mediaId).containsExactly(first.mediaId());
+            assertThat(stats.getPrepareStatementCount()).isEqualTo(1);
+        } finally {stats.setStatisticsEnabled(previous);}
+        var detail=admin.detail(first.mediaId(),0,0,1);
+        assertThat(detail.variants()).hasSize(1);assertThat(detail.nextVariantId()).isNotNull();
+        assertThat(detail.references()).hasSize(1);assertThat(detail.nextReferenceId()).isNotNull();
+        var next=admin.detail(first.mediaId(),detail.nextVariantId(),detail.nextReferenceId(),1);
+        assertThat(next.references()).singleElement().satisfies(r -> assertThat(r.unlinkedAt()).isNotNull());
+        assertThat(detail.toString()).doesNotContain(master.storageKey(),master.checksum(),"receivedSha256","internalNote");
+        assertThat(admin.search(new MediaAdministration.Search(first.mediaId(),20,MediaContext.IDENTITY_PROFILE,null,null,null,null,null,null,
+                MediaAdministration.Usage.UNREFERENCED,null,null))).extracting(MediaAdministration.Entry::mediaId).contains(second.mediaId());
+        catalog.endReference(catalog.findReference(active).orElseThrow().end(Instant.now(),888L,"REPLACED"),
+                new MediaAuditContext(MediaActorKind.USER,888L,Instant.now(),null));
+        assertThat(admin.search(new MediaAdministration.Search(0,20,MediaContext.IDENTITY_PROFILE,null,888L,null,null,null,null,
+                MediaAdministration.Usage.HISTORICAL_ONLY,null,null))).extracting(MediaAdministration.Entry::mediaId).containsExactly(first.mediaId());
+        assertThatThrownBy(() -> admin.detail(Long.MAX_VALUE,0,0,20))
+                .isInstanceOf(com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException.class);
+    }
     long attach(long actor,long media,MediaContext context,String resource,String role) {
         return new TransactionTemplate(manager).execute(s -> references.associate(actor,media,context,resource,role));
     }
