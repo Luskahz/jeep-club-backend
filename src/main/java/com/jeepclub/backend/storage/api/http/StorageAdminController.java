@@ -20,8 +20,8 @@ import java.util.List;
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode="404",description="Mídia ou conteúdo indisponível")
 })
 public class StorageAdminController {
-    private final MediaAdministration admin;private final MediaGovernance governance;private final MediaCatalogRepository catalog;private final BlobInspection inspection;private final com.jeepclub.backend.storage.core.application.MediaResolutionService resolution;
-    public StorageAdminController(MediaAdministration admin,MediaGovernance governance,MediaCatalogRepository catalog,BlobInspection inspection,com.jeepclub.backend.storage.core.application.MediaResolutionService resolution) {this.admin=admin;this.governance=governance;this.catalog=catalog;this.inspection=inspection;this.resolution=resolution;}
+    private final MediaAdministration admin;private final MediaGovernance governance;private final MediaCatalogRepository catalog;private final BlobInspection inspection;private final com.jeepclub.backend.storage.core.application.MediaResolutionService resolution;private final BlobCursorRegistry cursors;
+    public StorageAdminController(MediaAdministration admin,MediaGovernance governance,MediaCatalogRepository catalog,BlobInspection inspection,com.jeepclub.backend.storage.core.application.MediaResolutionService resolution,BlobCursorRegistry cursors) {this.admin=admin;this.governance=governance;this.catalog=catalog;this.inspection=inspection;this.resolution=resolution;this.cursors=cursors;}
     @GetMapping @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
     @io.swagger.v3.oas.annotations.Operation(summary="Pesquisar catálogo de mídias",description="Filtros combináveis por uploader, owner, intervalo de criação [from,before), contexto, MIME, uso, moderação e estado físico. Cursor afterId exclusivo, ordem ascendente e limite máximo 100.")
     public List<MediaAdministration.Entry> list(@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit,
@@ -40,9 +40,9 @@ public class StorageAdminController {
     }
     @GetMapping("/{mediaId}/references") @PreAuthorize("hasAuthority('STORAGE_MEDIA_READ')") @RequiredPermission("STORAGE_MEDIA_READ")
     public List<ReferenceView> references(@PathVariable long mediaId,@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit) {
-        return catalog.findReferences(mediaId,afterId,limit).stream().map(r -> new ReferenceView(r.referenceId(),r.context(),r.consumerId(),r.role(),r.linkedAt(),r.unlinkedAt())).toList();
+        return catalog.findReferences(mediaId,afterId,limit).stream().map(r -> new ReferenceView(r.referenceId(),r.context(),r.role(),r.linkedAt(),r.unlinkedAt())).toList();
     }
-    public record ReferenceView(long referenceId,MediaContext context,String consumerId,String role,Instant linkedAt,Instant unlinkedAt) {}
+    public record ReferenceView(long referenceId,MediaContext context,String role,Instant linkedAt,Instant unlinkedAt) {}
     @GetMapping("/{mediaId}/audit") @PreAuthorize("hasAuthority('STORAGE_MEDIA_AUDIT_READ')") @RequiredPermission("STORAGE_MEDIA_AUDIT_READ")
     public List<MediaAdministration.Event> audit(@PathVariable long mediaId,@RequestParam(defaultValue="0") long afterId,@RequestParam(defaultValue="20") int limit) { return admin.events(mediaId,afterId,limit); }
     @GetMapping("/{mediaId}/references/{referenceId}/preview/{code}") @PreAuthorize("hasAuthority('STORAGE_MEDIA_PREVIEW')") @RequiredPermission("STORAGE_MEDIA_PREVIEW")
@@ -74,10 +74,11 @@ public class StorageAdminController {
     public void discard(@PathVariable long mediaId,@AuthenticationPrincipal UserPrincipal actor) {admin.discard(mediaId,audit(actor));}
     public record InventorySummary(int checked,int shared,int inconsistent,int uncatalogued,String nextBlobCursor,String nextInventoryCursor) {}
     @PostMapping("/reconciliation") @PreAuthorize("hasAuthority('STORAGE_MEDIA_RECONCILE')") @RequiredPermission("STORAGE_MEDIA_RECONCILE")
-    public InventorySummary reconcile(@RequestParam(defaultValue="") String afterDigest,@RequestParam(defaultValue="20") int limit,@RequestParam(required=false) String inventoryCursor,@RequestParam(defaultValue="false") boolean includeFilesystem) {
-        var report=inspection.inspect(afterDigest,limit,inventoryCursor,includeFilesystem);
+    public InventorySummary reconcile(@RequestParam(required=false) String blobCursor,@RequestParam(defaultValue="20") int limit,@RequestParam(required=false) String inventoryCursor,@RequestParam(defaultValue="false") boolean includeFilesystem,@AuthenticationPrincipal UserPrincipal actor) {
+        if(actor==null) throw new org.springframework.security.access.AccessDeniedException("Permission required");
+        var report=inspection.inspect(cursors.resolve(actor.getUserId(),blobCursor),limit,inventoryCursor,includeFilesystem);
         return new InventorySummary(report.items().size(),(int)report.items().stream().filter(BlobInspection.Item::shared).count(),
-            (int)report.items().stream().filter(i -> !i.state().equals("READY") && !i.state().equals("UNREFERENCED_RETAINED")).count(),report.uncataloguedFiles().size(),report.nextBlobCursor(),report.nextInventoryCursor());
+            (int)report.items().stream().filter(i -> !i.state().equals("READY") && !i.state().equals("UNREFERENCED_RETAINED")).count(),report.uncataloguedFiles().size(),cursors.issue(actor.getUserId(),report.nextBlobCursor()),report.nextInventoryCursor());
     }
     private MediaAuditContext audit(UserPrincipal actor) {return new MediaAuditContext(MediaActorKind.USER,actor.getUserId(),Instant.now(),null);}
 }

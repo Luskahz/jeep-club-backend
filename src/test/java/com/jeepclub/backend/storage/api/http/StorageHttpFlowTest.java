@@ -178,6 +178,9 @@ class StorageHttpFlowTest {
             .andExpect(jsonPath("$.mediaId").value(media)).andExpect(jsonPath("$.variants").isArray())
             .andExpect(jsonPath("$.references").isArray()).andReturn().getResponse().getContentAsString();
         org.assertj.core.api.Assertions.assertThat(adminResponse).doesNotContain("storageKey","checksum","sha256","namespace","internalNote","sourceRecordId","subjectId");
+        var refs=mvc.perform(get("/admin/storage/media/"+media+"/references").with(adminUser)).andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(refs).doesNotContain("consumerId");
         mvc.perform(get("/admin/storage/media/9223372036854775807").with(adminUser)).andExpect(status().isNotFound());
         mvc.perform(get("/admin/storage/media").param("uploader",Long.toString(actor)).param("owner",Long.toString(actor))
             .param("usage","ACTIVE").param("physicalState","PRESENT").with(adminUser)).andExpect(status().isOk());
@@ -202,6 +205,19 @@ class StorageHttpFlowTest {
         mvc.perform(get(preview).with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(otherAuth)))
             .andExpect(status().isNotFound());
         org.assertj.core.api.Assertions.assertThat(administration.events(media,0,100).stream().filter(e -> e.operation().equals("ADMIN_PREVIEW"))).hasSize(1);
+        var reconcileAuthority=new org.springframework.security.core.authority.SimpleGrantedAuthority("STORAGE_MEDIA_RECONCILE");
+        var reconcileAuth=org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(principal,"N/A",java.util.List.of(reconcileAuthority));
+        var otherReconcile=org.springframework.security.authentication.UsernamePasswordAuthenticationToken.authenticated(otherPrincipal,"N/A",java.util.List.of(reconcileAuthority));
+        String page=mvc.perform(post("/admin/storage/media/reconciliation").param("limit","1")
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(reconcileAuth)))
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String cursor=JsonPath.read(page,"$.nextBlobCursor");
+        org.assertj.core.api.Assertions.assertThat(cursor).matches("[0-9a-f-]{36}");
+        org.assertj.core.api.Assertions.assertThat(page).doesNotContain("sha256","digest","storageKey");
+        mvc.perform(post("/admin/storage/media/reconciliation").param("limit","1").param("blobCursor",cursor)
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(otherReconcile))).andExpect(status().isBadRequest());
+        mvc.perform(post("/admin/storage/media/reconciliation").param("limit","1").param("blobCursor",cursor)
+            .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication(reconcileAuth))).andExpect(status().isOk());
         org.mockito.Mockito.doThrow(new IllegalStateException("audit unavailable")).when(governance)
             .previewAccess(org.mockito.ArgumentMatchers.eq(media),org.mockito.ArgumentMatchers.eq(ref),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
         try {

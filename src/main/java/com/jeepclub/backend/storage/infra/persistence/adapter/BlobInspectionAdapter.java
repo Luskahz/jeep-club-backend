@@ -25,7 +25,7 @@ public class BlobInspectionAdapter implements BlobInspection {
             long references=counts.getOrDefault(b.getSha256(),0L);
             String state=b.isReady()?"READY":"RESERVED";
             try {physical.readVerified(b.getSha256(),b.getSizeBytes());if(!b.isReady()) state="PRESENT_UNCONFIRMED";}
-            catch(IllegalStateException unavailable) {state=b.isReady()?"MISSING_OR_CORRUPT":"PENDING_WRITE";}
+            catch(IllegalStateException | com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException unavailable) {state=b.isReady()?"MISSING_OR_CORRUPT":"PENDING_WRITE";}
             if(state.equals("READY") && references==0) state="UNREFERENCED_RETAINED";
             items.add(new Item(b.getSha256(),state,references,references>1));
         }

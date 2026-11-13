@@ -76,6 +76,15 @@ class StorageUploadFlowTest {
     @Autowired BlobCatalog blobs; @Autowired PhysicalBlobStore physical; @Autowired MediaCatalogRepository catalog;
     @Autowired MediaGovernance governance; @Autowired JdbcTemplate jdbc; @Autowired PlatformTransactionManager manager;
     @Autowired MediaAdministration admin; @Autowired MediaReferenceService references; @Autowired LegacyBackfill legacy; @Autowired BlobInspection inspection;
+    @Test void reconciliationReportsMissingPhysicalBlob() {
+        var blob=blobs.store("missing-fixture-reconciliation".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var missing=org.mockito.Mockito.mock(PhysicalBlobStore.class);
+        org.mockito.Mockito.doThrow(new com.jeepclub.backend.shared.storage.exception.StorageObjectNotFoundException())
+            .when(missing).readVerified(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyLong());
+        var report=new BlobInspectionAdapter(quotaEntityManager,missing).inspect("",100);
+        assertThat(report.items()).filteredOn(item -> item.digest().equals(blob.sha256()))
+            .singleElement().satisfies(item -> assertThat(item.state()).isEqualTo("MISSING_OR_CORRUPT"));
+    }
     @Test void administrativeSearchCombinesFiltersAndDetailPagesWithoutExposingLocation() throws Exception {
         var first=upload.upload(888,MediaContext.IDENTITY_PROFILE,"888",image(888));
         var second=upload.upload(889,MediaContext.IDENTITY_PROFILE,"889",image(889));
