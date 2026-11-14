@@ -1,5 +1,13 @@
 # ADR preliminar — Fundação do catálogo Storage (BACK-549)
 
+> Atualização BACK-635: o texto abaixo registra o contexto original da entrega.
+> A decisão [BACK-547 #10453](https://jeep-club-developers.atlassian.net/browse/BACK-547?focusedCommentId=10453)
+> consolidou o contrato de produto D01–D15 e autorizou a implementação backend
+> não destrutiva; não é necessária nova aprovação genérica dos detalhes técnicos.
+> Isso não comprova implementação ou liberação de produção das capacidades futuras.
+> O estado integrado, as limitações e a matriz de evidências estão na
+> [entrada de Storage](../../../src/main/java/com/jeepclub/backend/storage/docs/README.md).
+
 **Status: PROPOSTO / preliminar; pendente de validação final na BACK-548.**
 
 Data: 05/11/2026. Implementação isolada autorizada excepcionalmente por BACK-548 #10357 e BACK-549 #10358. Este ADR não fecha o gate do MVP.

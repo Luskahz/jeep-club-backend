@@ -1,5 +1,12 @@
 # BACK-549 — Fundação isolada do catálogo Storage
 
+> Atualização BACK-635: este documento preserva o recorte histórico do PR #131.
+> Os gates de aprovação de produto descritos abaixo foram superados pela decisão
+> [BACK-547 #10453](https://jeep-club-developers.atlassian.net/browse/BACK-547?focusedCommentId=10453).
+> As decisões de produto aprovadas não comprovam a integração de cada fluxo.
+> Consulte a [entrada do módulo](../../src/main/java/com/jeepclub/backend/storage/docs/README.md)
+> para o estado integrado e a matriz de evidências.
+
 Data: 05/11/2026. Base inspecionada: `origin/develop` em `09dc0180d3dd433a1a15936d903e1c7814fb06cf`.
 
 ## Autoridade e escopo
