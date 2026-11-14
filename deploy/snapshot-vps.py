@@ -151,7 +151,7 @@ def collect(output, audit, reference, restore_evidence, audit_ok, script_dir, re
             journal_units[unit] = journal_units.get(unit, 0) + 1
         except ValueError:
             pass
-    rc, master = command("git", "ls-remote", "https://github.com/Luskahz/jeep-club-backend.git", "refs/heads/master", timeout=15)
+    rc, master = command("git", "ls-remote", "https://github.com/Jeep-Club/backend-application.git", "refs/heads/master", timeout=15)
     master_sha = master.split()[0] if rc == 0 and master.split() and SHA.fullmatch(master.split()[0]) else None
     deployed_sha = read(STATE / "current-commit")
     deployed_sha = deployed_sha if SHA.fullmatch(deployed_sha) else None
@@ -335,7 +335,7 @@ def collect(output, audit, reference, restore_evidence, audit_ok, script_dir, re
                    "diskUsage": {"sizeBytes": int(disk_fields[1]), "usedBytes": int(disk_fields[2]), "availableBytes": int(disk_fields[3]), "usedPercent": disk_fields[4]} if len(disk_fields) >= 5 else None,
                    "timeSync": {"timezone": time_props.get("Timezone"), "ntpSynchronized": time_props.get("NTPSynchronized") == "yes"},
                    "failedServices": failed_names, "criticalJournalEntries24hByUnit": journal_units},
-        "git": {"repository": "Luskahz/jeep-club-backend", "masterSha": master_sha, "deployedSha": deployed_sha,
+        "git": {"repository": "Jeep-Club/backend-application", "masterSha": master_sha, "deployedSha": deployed_sha,
                 "imageCommitMatches": image_match, "releaseDirectoryMatches": release_match,
                 "repositoryCheckoutSha": repo_head.strip() if SHA.fullmatch(repo_head.strip()) else None,
                 "cachedOriginMasterSha": repo_master.strip() if SHA.fullmatch(repo_master.strip()) else None},

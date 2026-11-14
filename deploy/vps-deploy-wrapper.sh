@@ -6,7 +6,7 @@ export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 unset BASH_ENV ENV CDPATH GIT_DIR GIT_WORK_TREE GIT_CONFIG GIT_CONFIG_COUNT
 repo=/opt/jeep-club-repo
 state=/var/lib/jeep-club-deploy
-origin=https://github.com/Luskahz/jeep-club-backend.git
+origin=https://github.com/Jeep-Club/backend-application.git
 mkdir -p "$state"
 exec 9>"$state/deploy.lock"
 flock -w 1200 9
