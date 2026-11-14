@@ -1,6 +1,6 @@
 # Jeep Club Backend — instruções para agentes de desenvolvimento
 
-Este arquivo orienta agentes que trabalham no repositório `Luskahz/jeep-club-backend`. É uma política de execução, não substitui o escopo aprovado no Jira, as instruções explícitas da tarefa nem a documentação arquitetural. Mantenha o comportamento verificável, a segurança e a compatibilidade acima da economia de tokens.
+Este arquivo orienta agentes que trabalham no repositório `Jeep-Club/backend-application`. É uma política de execução, não substitui o escopo aprovado no Jira, as instruções explícitas da tarefa nem a documentação arquitetural. Mantenha o comportamento verificável, a segurança e a compatibilidade acima da economia de tokens.
 
 ## 1. Responsabilidade e fonte de verdade
 
