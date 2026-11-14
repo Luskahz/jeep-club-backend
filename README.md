@@ -60,7 +60,7 @@ atualizar um banco existente.
 ## 1. Clone o repositório
 
 ```bash
-git clone https://github.com/Luskahz/jeep-club-backend.git
+git clone https://github.com/Jeep-Club/backend-application.git
 
 cd jeep-club-backend
 ```
