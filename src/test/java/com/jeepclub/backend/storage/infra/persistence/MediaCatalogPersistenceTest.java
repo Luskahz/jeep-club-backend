@@ -191,6 +191,21 @@ class MediaCatalogPersistenceTest {
         assertThat(jdbc.queryForObject("select count(*) from storage_media_variants where media_id=?",Long.class,media[0])).isZero();
         assertThat(jdbc.queryForObject("select count(*) from storage_media_references where media_id=?",Long.class,media[0])).isZero();
     }
+    @Test void rollbackOfReplacementPreservesExistingReferenceAndItsAuditHistory() {
+        var a = asset();
+        var original = catalog.recordReference(reference(a.mediaId(), "100"), audit());
+        long before = events(a.mediaId());
+
+        assertThatThrownBy(() -> tx(() -> {
+            catalog.endReference(original.end(NOW.plusSeconds(1), null, "REPLACED"), audit());
+            catalog.recordReference(reference(a.mediaId(), "200"), audit());
+            throw new IllegalStateException("synthetic replacement rollback");
+        })).hasMessage("synthetic replacement rollback");
+
+        assertThat(catalog.findReference(original.referenceId())).contains(original);
+        assertThat(catalog.findReferences(a.mediaId(), 0, 10)).containsExactly(original);
+        assertThat(events(a.mediaId())).isEqualTo(before);
+    }
     @Test void metadataUpdatesCannotReassignProvenanceOrRewriteReferenceTargets() {
         var a = asset();
         var forged = new MediaAsset(a.mediaId(), a.origin(), a.sourceContext(), a.sourceRecordId(), 999L,
